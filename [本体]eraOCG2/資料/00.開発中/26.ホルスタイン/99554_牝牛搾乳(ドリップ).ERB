@@ -1,0 +1,478 @@
+@CARDNAME_99554,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 【搾乳】ホルスタイン-ドリップ
+	CASE "略称"
+		RESULTS = ドリップ【搾乳】
+	CASE "カテゴリ"
+		RESULTS:0 = ホルスタイン
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+@CARD_99554(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常罠
+	CASE "追加日"
+		RETURN 250325
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99554(種類)
+#DIM DYNAMIC 種類
+#DIMS DYNAMIC 決闘者
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL このカード名の②の効果は１ターンに１度しか発動できない。
+CALLFORM CARD_ABLE(0,魔罠起動,手札起動,フリー誘発)
+PRINTL ①：メインフェイズ及びバトルフェイズに発動できる。自分の手札・墓地の「ホルスタイン」モンスターを１体選び特殊召喚する。
+PRINT この効果で特殊召喚したカードは以下の効果を得る。
+SETCOLOR C_GRAY
+PRINTL (※)
+RESETCOLOR
+PRINTL ●メインフェイズ及びバトルフェイズに発動できる。１ターンに１度、このカードの乳を搾り発情させる。
+PRINTL ●スタンバイフェイズに発動する。このカードの乳を搾り、攻撃力・守備力を２５０ポイントアップする。
+PRINTL 自分の魔法＆罠ゾーンにセットされたカードが存在しない場合、このカードは手札から捨てて発動できる。
+CALLFORM CARD_ABLE(1,墓地起動)
+PRINTL ②：バトルフェイズに発動できる。
+PRINTL 墓地のこのカードを除外し、自分フィールドの牝性モンスター１体を選択する。
+PRINTL そのモンスターに、①の効果で付与される効果を適用する。
+
+SETCOLOR C_GRAY
+PRINTL
+PRINTL ※：元々のカード名が「ホルスタイン」モンスターの場合、以下の効果も適用される
+PRINTL ●このカードが守備表示の場合、ホルスタイン以外のカードの効果が発動した場合に発動する。
+PRINTL このカードの乳を搾り、１００ＬＰ回復する。
+RESETCOLOR
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99554(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 対戦カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,99554)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 
+	SIF !(メインフェイズ == 1 || バトルフェイズ == 1 )
+		RETURN 0
+	IF ゾーン == "手札"
+		;セットカードがあれば使えない
+		CALL FULLRESET
+		効果範囲魔罠 = 1
+		効果条件表示 = 裏側表示
+		効果条件CNT = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT > 0
+			RETURN 0
+	ELSEIF ゾーン == "魔罠"
+		;セットしたターンには使えない
+		SIF GETVAR(@"%決闘者%_魔_表:場所") != 2
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	
+	;手札・墓地にホルスタインが居なければ使えない
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲墓地 = 1
+	効果条件カテゴリ = ホルスタイン
+	効果条件種類 = モン全般
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	
+	SIF 発動済_2(決闘者,99554)
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ゾーン != "墓地"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件性別 = 牝性
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 種類 == 戦場起動付与
+	SIF !(メインフェイズ == 1 || バトルフェイズ == 1 )
+		RETURN 0
+	SIF 効果発動済(決闘者,場所,ゾーン)
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 種類 == 付与効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99554(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 参照場所
+#DIM DYNAMIC 相手フラグ
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 牝牛対象
+#DIMS DYNAMIC 牝牛名称
+#DIMS DYNAMIC カテゴリ名称
+#DIM DYNAMIC 絶頂回数
+
+#DIM DYNAMIC 所有者
+#DIMS DYNAMIC 搾手名称
+#DIM DYNAMIC 搾手
+#DIM DYNAMIC 参照カードID
+#DIM DYNAMIC 現乳サイズ
+#DIM DYNAMIC T1ミルクml
+#DIM DYNAMIC ミルクml
+
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99554,1)
+	IF RESULT == 0
+		
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果範囲墓地 = 1
+		効果条件カテゴリ = ホルスタイン
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+	
+		IF RESULT != -1
+			選択カードID = RESULT:1
+			
+			;ドリップ状態を付与
+			CALL SET_FIELD_INFO(決闘者,"戦場",カード召喚先,"特殊状態",99554,2)
+			
+			CALL HORUSTEIN_GET_DATA(決闘者,カード召喚先,選択カードID)
+			牝牛名称 = %RESULTS:0%
+			牝牛対象 = RESULT:1
+			参照カードID = RESULT:99
+			
+			CALL HORUSTEIN_GET_BUST(参照カードID,GETVAR(@"%決闘者%_MZ_胸追:カード召喚先"))
+			現乳サイズ = RESULT:2
+			
+			SETCOLOR C_PINK
+			CUSTOMDRAWLINE —
+			PRINTFORML 
+			PRINTFORML %牝牛名称%はドリップ装置に繋がれてしまった…
+			PRINTFORML (守備表示の場合、ドリップ装置によって自動的に搾乳されます。)
+			PRINTFORML 
+			CUSTOMDRAWLINE —
+			PRINTFORMW 
+			RESETCOLOR
+			
+			;名前から胸のサイズの変動まで表示
+			CALL HORUSTEIN_PRINT_STATE(決闘者,カード召喚先,参照カードID,現乳サイズ,2);2乳上書き(比較なし)
+			
+			IF 牝牛対象 != -1
+				CALL PRINT_STATE_CLOTH(牝牛対象)
+			ENDIF
+			PRINTL
+			PRINTFORML
+			PRINTL □ 健康状態 □——————————————————————————————————————————————————————————————————————————————————
+			PRINTFORML 
+			PRINTFORML ・母乳の量　… 自動計量中
+			PRINTFORML ・母乳品質　…　 良　好
+			PRINTFORML ・乳 感 度　…　制 御 中 
+			PRINTFORML ・性　　欲　…　制 御 中
+			PRINTFORML ・触　　診　… 　な　し
+			PRINTFORM 　　　　　　　　　　　　
+			FONTSTYLE 8
+			PRINTFORML 　評 価：Ｓ 
+			FONTSTYLE 0
+			PRINTFORML 
+			PRINTL □ 特記事項 □——————————————————————————————————————————————————————————————————————————————————
+			PRINTFORML 
+			PRINTFORML ・このドリップ装置は通常の搾乳とは異なるアプローチで乳を絞り出す機械です。
+			PRINTFORML 　一度に大量に搾るのではなく、継続的に牝牛の乳から零れ落ちた乳を収穫しております。
+			PRINTFORML 　搾られた牝牛の個性が強く出た、通常とは異なる風味をお楽しみいただけます。
+			PRINTFORML 
+			SETCOLOR C_PINK
+			PRINTFORML ・ドリップ装置により発情を制御できます。
+			PRINTFORML 　必要に応じ、牝牛の「付与効果」より手動で搾乳を実行してください。
+			PRINTFORML 　この効果で付与された発情では攻撃は中断されません。
+			PRINTFORML 
+			RESETCOLOR
+			CUSTOMDRAWLINE —
+			PRINTFORMW 
+			
+		ENDIF
+		;テスト時はコメント化
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99554,2)
+	
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件性別 = 牝性
+		CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+		
+		IF RESULT != -1
+			選択カードID = RESULT:99
+			
+			;自分フィールドの牝性にドリップ状態を付与
+			CALL SET_FIELD_INFO(決闘者,"戦場",選択カード（CS）,"特殊状態",99554,2)
+			
+			CALL HORUSTEIN_GET_DATA(決闘者,選択カード（CS）,選択カードID)
+			牝牛名称 = %RESULTS:0%
+			参照場所 = RESULT:0
+			牝牛対象 = RESULT:1
+			参照カードID = RESULT:99
+			
+			CALL HORUSTEIN_GET_BUST(参照カードID,GETVAR(@"%決闘者%_MZ_胸追:選択カード（CS）"))
+			現乳サイズ = RESULT:2
+			
+			SETCOLOR C_PINK
+			CUSTOMDRAWLINE —
+			PRINTFORML 
+			PRINTFORML %牝牛名称%はドリップ装置に繋がれてしまった…
+			PRINTFORML 
+			CUSTOMDRAWLINE —
+			PRINTFORMW 
+			RESETCOLOR
+			
+			;ホルスタインモンスターではない場合、着替えさせる(着こんでると文字ハミ出しちゃうので…)
+			IF 牝牛対象 != -1 && 参照場所 == -1 && EQUIP:牝牛対象:15 != 33
+				PRINTFORML 
+				PRINTFORML %牝牛名称%は牛柄ビキニを着せられてしまった！
+				PRINTFORML 
+				;服装の変更(牛柄ビキニのみ)
+				;靴、靴下は触らない
+				;ズボン～インナーまでは全剥き
+				FOR カウンタ,6,13
+					EQUIP:牝牛対象:カウンタ = 0
+					CFLAG:牝牛対象:(200 + カウンタ) = 0
+				NEXT
+				;ワンピース：牛柄ビキニ
+				EQUIP:牝牛対象:15 = 33
+				CFLAG:牝牛対象:(200 + 15) = 33
+			ENDIF
+			
+			;名前から胸のサイズの変動まで表示
+			CALL HORUSTEIN_PRINT_STATE(決闘者,選択カード（CS）,参照カードID,現乳サイズ,2);2乳上書き(比較なし)
+			
+			IF 牝牛対象 != -1
+				CALL PRINT_STATE_CLOTH(牝牛対象)
+			ENDIF
+			PRINTL
+			PRINTFORML
+			PRINTL □ 健康状態 □——————————————————————————————————————————————————————————————————————————————————
+			PRINTFORML 
+			PRINTFORML ・母乳の量　… 自動計量中
+			PRINTFORML ・母乳品質　…　 良　好
+			PRINTFORML ・乳 感 度　…　制 御 中 
+			PRINTFORML ・性　　欲　…　制 御 中
+			PRINTFORML ・触　　診　… 　な　し
+			PRINTFORM 　　　　　　　　　　　　
+			FONTSTYLE 8
+			PRINTFORML 　評 価：Ｓ 
+			FONTSTYLE 0
+			PRINTFORML 
+			PRINTL □ 特記事項 □——————————————————————————————————————————————————————————————————————————————————
+			PRINTFORML 
+			IF 参照場所 == -1
+				SETCOLOR C_RED
+				;ホルスタインモスターではない場合
+				PRINTFORML 【警告】
+				RESETCOLOR
+				PRINTFORML 　ホルスタイン以外のモンスターに繋がれています。
+				PRINTFORML 　一時的に牝牛としての使命を植え付けますが、
+				PRINTFORML 　未登録のモンスターの乳は計測対象外となります。予めご了承ください。
+			ELSE
+				PRINTFORML ・このドリップ装置は通常の搾乳とは異なるアプローチで乳を絞り出す機械です。
+				PRINTFORML 　一度に大量に搾るのではなく、継続的に牝牛の乳から零れ落ちた乳を収穫しております。
+				PRINTFORML 　搾られた牝牛の個性が強く出た、通常とは異なる風味をお楽しみいただけます。
+			ENDIF
+			PRINTFORML 
+			PRINTFORML 
+			SETCOLOR C_PINK
+			PRINTFORML ・ドリップ装置により発情を制御できます。
+			PRINTFORML 　必要に応じ、牝牛の「付与効果」より手動で搾乳を実行してください。
+			PRINTFORML 　この効果で付与された発情では攻撃は中断されません。
+			PRINTFORML 
+			PRINTFORML 
+			RESETCOLOR
+			CUSTOMDRAWLINE —
+			PRINTFORMW 
+			
+			CALL CARD_DISPOSE(決闘者,ゾーン,場所,除外行き)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 戦場起動付与 || 種類 == 付与効果
+	
+	選択カードID = GETVAR(@"%決闘者%_MZ_ID:場所")
+	;ホルスタイン情報の取得
+	CALL HORUSTEIN_GET_DATA(決闘者,場所,選択カードID)
+	牝牛名称 = %RESULTS:0%
+	牝牛対象 = RESULT:1
+	T1ミルクml = RESULT:3	;搾乳量(1ターン中)
+	ミルクml = RESULT:4		;搾乳量(決闘中総量)
+	参照カードID = RESULT:99
+
+	SETCOLOR C_PINK
+	CUSTOMDRAWLINE —
+	PRINTFORML
+	PRINTFORML %牝牛名称%はドリップ装置に繋がれている…
+	PRINTFORML 
+	CUSTOMDRAWLINE —
+	RESETCOLOR
+	
+	IF 種類 == 戦場起動付与
+		CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,選択カードID,10)
+	
+		IF RESULT == 0
+
+			;ドリップ状態
+			PRINTFORML %牝牛名称%の胸に取り付けられた装置が吸引を始め、乳からポタポタと零れたモノがミルクサーバーに溜まっていく…
+			
+			;搾乳する(通常よりも少量)
+			CALL HORUSTEIN_GET_MILK(決闘者,参照カードID,GETVAR(@"%決闘者%_MZ_胸追:場所")-4)
+
+			;この効果で付与された発情は、攻撃中断しない
+			CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"発情",100)
+			
+			CALL HORUSTEIN_GET_BUST(参照カードID,GETVAR(@"%決闘者%_MZ_胸追:場所"))
+			現乳サイズ = RESULT:2
+			
+			;名前から胸のサイズの変動まで表示
+			CALL HORUSTEIN_PRINT_STATE(決闘者,場所,選択カードID,現乳サイズ,2);2乳上書き(比較なし)
+			
+			IF 牝牛対象 != -1
+				CALL PRINT_STATE_CLOTH(牝牛対象)
+			ENDIF
+			PRINTL
+			PRINTFORML
+			PRINTL □ 健康状態 □——————————————————————————————————————————————————————————————————————————————————
+			PRINTFORML 
+			PRINTFORML ・母乳の量　… 自動計量中
+			PRINTFORML ・母乳品質　…　 良　好
+			PRINTFORML ・乳 感 度　…　制 御 中 
+			PRINTFORML ・性　　欲　…　制 御 中
+			PRINTFORML ・触　　診　… 　な　し
+			PRINTFORM 　　　　　　　　　　　　
+			FONTSTYLE 8
+			PRINTFORML 　評 価：Ｓ 
+			FONTSTYLE 0
+			PRINTFORML 
+			PRINTL □ 特記事項 □——————————————————————————————————————————————————————————————————————————————————
+			PRINTFORML 
+			PRINTFORML ・このドリップ装置は通常の搾乳とは異なるアプローチで乳を絞り出す機械です。
+			PRINTFORML 　一度に大量に搾るのではなく、継続的に牝牛の乳から零れ落ちた乳を収穫しております。
+			PRINTFORML 　搾られた牝牛の個性が強く出た、通常とは異なる風味をお楽しみいただけます。
+			PRINTFORML 
+			SETCOLOR C_PINK
+			PRINTFORML ◆ドリップ中です…暫くお待ちください…
+			PRINTFORML 　加えて、牝牛を"リフレッシュ"しております。
+			PRINTFORML 　この効果で付与された発情では攻撃は中断されません。
+			PRINTFORML 
+			RESETCOLOR
+			CUSTOMDRAWLINE —
+			PRINTFORMW 
+			
+			IF 牝牛対象 != -1
+			
+				SKIPLOG 1
+				絶頂回数 = 0
+				WHILE 絶頂回数 == 0 || カウンタ <= 5
+					;絶頂するまで(絶頂しても5回は必ず搾られる)
+					CALL EROTIC_MOVE("バスト調教",牝牛対象,-1,300)
+					EXP:牝牛対象:噴乳経験 += 1
+					絶頂回数 = RESULT:1
+					
+					;搾乳する(通常よりも少量)
+					CALL HORUSTEIN_GET_MILK(決闘者,参照カードID,GETVAR(@"%決闘者%_MZ_胸追:場所")-10)
+					
+					IF 絶頂回数 > 0 && カウンタ >= 5
+						CALL CARD_EROTICS_END(牝牛対象)
+						SKIPLOG 0
+						;絶頂後の牝牛鳴き声
+						CALL HORUSTEIN_RAND_COW_TXT(絶頂回数,3);うるさい鳴き声
+						PRINTFORML %牝牛名称%は体中から体液を耐え流し、ぴくぴくと震えている…
+						PRINTFORML しっかりと"リフレッシュ"できたようだ。これなら攻撃中に手が止まることもないだろう…
+						PRINTFORML 
+						PRINTFORML [0] - リフレッシュを終了する
+						BINPUT
+					ELSEIF カウンタ % 5 == 0
+						PRINTFORML 
+						CALL HORUSTEIN_RAND_COW_TXT(1,3)
+						PRINTFORML 
+						;一瞬停止
+						TWAIT 1,0
+					ENDIF
+					カウンタ += 1
+				WEND
+			ELSE
+			
+				SKIPLOG 1
+				FOR カウンタ,0,9
+					CALL HORUSTEIN_RAND_COW_TXT(1,2,10);うるさい鳴き声
+					PRINTFORMW %牝牛名称%は"リフレッシュ"させられている…
+					PRINTFORMW 
+				NEXT
+				PRINTFORML 
+				SKIPLOG 0
+				;絶頂後の牝牛鳴き声
+				CALL HORUSTEIN_RAND_COW_TXT(5,3);うるさい鳴き声
+				PRINTFORML %牝牛名称%は体中から体液を耐え流し、ぴくぴくと震えている…
+				PRINTFORML しっかりと"リフレッシュ"できたようだ。これなら攻撃中に手が止まることもないだろう…
+				PRINTFORML 
+				PRINTFORML [0] - リフレッシュを終了する
+				BINPUT
+			ENDIF
+		ENDIF
+	ELSE
+		;付与効果(スタンバイフェイズに発動する)
+		
+		;ドリップ状態
+		PRINTFORML %牝牛名称%の胸に取り付けられた装置が揉むように乳を刺激し、零れ落ちたモノがミルクサーバーに溜まっていく…
+		
+		;搾乳する(通常よりも少量)
+		CALL HORUSTEIN_GET_MILK(決闘者,参照カードID,GETVAR(@"%決闘者%_MZ_胸追:場所")-2)
+
+		;攻撃力・守備力アップ
+		CALL SET_FIELD_INFO(決闘者,"戦場",場所,"永攻",250)
+		CALL SET_FIELD_INFO(決闘者,"戦場",場所,"永守",250)
+		
+		PRINTFORML じっくりとした乳へマッサージで、牝牛の潜在能力を引き出している…！
+		PRINTFORMW %牝牛名称%の攻守が250アップした！
+	ENDIF
+ENDIF

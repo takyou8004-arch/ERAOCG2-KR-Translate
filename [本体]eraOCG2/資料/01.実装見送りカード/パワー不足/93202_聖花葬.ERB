@@ -1,0 +1,142 @@
+﻿@CARDNAME_93202,参照先
+;ココで指定カードの名前、略称を返す予定
+;いったん隔離理由：墓地起動で初動などなど割れる
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = サンブルーム・フューネラル
+	CASE "略称"
+		RESULTS = 聖花葬
+	CASE "カテゴリ"
+		RESULTS:0 = サンアバロン
+		RESULTS:1 = ゲームオリジナル
+ENDSELECT
+
+
+@CARD_93202(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+
+		RETURN 通常罠
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93202(種類)
+#DIM DYNAMIC 種類
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+PRINTL ①：自分フィールドに「サンアバロン」Lモンスターが存在する場合、
+PRINTL 自分フィールドのモンスター１体を対象として発動できる。そのモンスターと同じ種族の
+PRINTL フィールドのモンスターの攻撃力の合計分、自分のLPを回復する。
+PRINTL ②：墓地のこのカードを除外して発動できる。お互いの墓地の
+PRINTL 魔法・罠カードの数以下のレベルを持つフィールドのモンスターを全て破壊し、
+PRINTL お互いにそれぞれ破壊された自身のモンスターの数×300ダメージを受ける。
+
+
+
+@CARDCAN_93202(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 効果先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,93202)
+SIF RESULT == 1
+	RETURN 0
+IF 種類 == 魔罠起動 || 種類 == 墓地起動 || 種類 == フリー誘発
+	IF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+			RETURN 0
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+		SIF 発動済_1(決闘者,93202)
+			RETURN 0
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件種類 = リンク
+		効果条件カテゴリ = サンアバロン
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		RETURN 1
+	ELSEIF ゾーン == "墓地"
+		SIF 発動済_2(決闘者,93202)
+			RETURN 0
+		SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+			RETURN 0
+		SIF モンスター数(決闘者) <= 0 && モンスター数(対面者) <= 0
+			RETURN 0
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果範囲相手墓地 = 1
+		効果条件種類 = 魔罠全般
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_93202(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択種族
+#DIM DYNAMIC 魔罠総数
+
+IF 種類 == 魔罠起動 || 種類 == 墓地起動 || 種類 == フリー誘発
+	IF ゾーン == "魔罠"
+		CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,93202,1)
+		IF RESULT == 0
+			CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+			CALL FULLRESET
+			効果条件種類 = モン全般
+			CALL CARD_CHOOSE_BASIC(決闘者,"戦場",ゾーン,場所)	
+			選択カード = RESULT
+			IF 選択カード != 9999
+				選択種族 = GETVAR(@"%決闘者%_MZ_種:選択カード")
+				効果範囲戦場 = 1
+				効果条件種類 = モン全般
+				効果条件CNT = 1
+				CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+				CALL LIFE_CHANGE(決闘者,"増加","効果",RESULT:3)
+			ENDIF
+		ENDIF
+	ELSEIF ゾーン == "墓地"
+		CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,93202,2)
+		IF RESULT == 0
+			CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+			CALL FULLRESET
+			効果範囲墓地 = 1
+			効果範囲相手墓地 = 1
+			効果条件種類 = 魔罠全般
+			効果条件CNT = 1
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			魔罠総数 = RESULT
+			CALL FULLRESET
+			効果条件種類 = レベル持ち
+			CALL 効果条件レベル_ADV(魔罠総数, "以下")
+			効果追加種類 = 3
+			CALL CARD_REMOVAL_BASIC(決闘者,"両戦場全体",場所,"墓地",300)
+		ENDIF
+	ENDIF
+ENDIF

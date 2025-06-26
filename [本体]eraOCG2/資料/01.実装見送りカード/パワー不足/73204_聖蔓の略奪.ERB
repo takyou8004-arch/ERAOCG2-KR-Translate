@@ -1,0 +1,147 @@
+﻿@CARDNAME_73204,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = サンヴァイン・プランダー
+	CASE "略称"
+		RESULTS = 聖蔓の略奪
+	CASE "カテゴリ"
+		RESULTS:0 = サンアバロン
+		RESULTS:1 = サンヴァイン
+		RESULTS:2 = ゲームオリジナル
+ENDSELECT
+
+
+@CARD_73204(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+
+		RETURN 永続魔法
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73204(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。
+PRINTL ①：相手のフィールド（表側表示）・墓地の魔法カード１枚を対象として、
+PRINTL ８００LPを払って発動できる。そのカードを自分の手札に加える。
+PRINTL ②：自分フィールドに「サンアバロン」Lモンスターが存在する限り、
+PRINTL 自分フィールドの表側表示の魔法・罠カードは対象耐性を得る。
+PRINTL ③：このカードがフィールドから離れた場合に発動する。
+PRINTL 自分フィールドの魔法・罠カードを全て破壊し、相手は１枚ドローする。
+
+
+
+@CARDCAN_73204(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,73204)
+SIF RESULT == 1
+	RETURN 0
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_1(決闘者,73204)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF GETVAR(@"ライフ_%決闘者%") <= 800
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手魔罠 = 1
+	効果条件表示 = 表側表示
+	効果範囲相手墓地 = 1
+	効果条件種類 = 魔法全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種類 = リンク
+	効果条件カテゴリ = サンアバロン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場→墓地 || 種類 == 破壊→墓地 || 種類 == 戦闘→墓地 || 種類 == 戦場→戦離 || 種類 == 除外時
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73204(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC ダメージ量
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73204,1)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(決闘者,"減少","コスト",800)
+		CALL FULLRESET
+		効果範囲相手魔罠 = 1
+		効果条件表示 = 表側表示
+		効果範囲相手墓地 = 1
+		効果条件種類 = 魔法全般
+		CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = GETVAR(@"%対面者%_魔罠:選択カード")
+			CALL CARD_RECONSTRUCT(対面者,ゾーン,選択カード,-1)
+			CALL CARD_GENERATE_HAND(決闘者,選択カード_ID)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73204)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL FULLRESET
+	効果条件表示 = 表側表示
+	効果条件種類 = 魔罠全般
+	CALL STATCHANGE_EFFECT(決闘者,"魔罠",場所,"対耐")	
+ELSEIF 種類 == 戦場→墓地 || 種類 == 破壊→墓地 || 種類 == 戦闘→墓地 || 種類 == 戦場→戦離 || 種類 == 除外時
+	CALL CARD_REMOVAL_BASIC(決闘者,"魔罠全体",場所,"墓地")
+	CALL CARDDRAW_BASIC(対面者,1)
+ENDIF

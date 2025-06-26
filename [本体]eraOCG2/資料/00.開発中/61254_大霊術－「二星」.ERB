@@ -1,0 +1,276 @@
+﻿@CARDNAME_61254,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 大霊術－「二星」
+	CASE "略称"
+		RESULTS = 大霊術－「二星」
+	CASE "カテゴリ"
+		RESULTS:0 = 霊使い
+		RESULTS:1 = ゲームオリジナル
+ENDSELECT
+
+
+@CARD_61254(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_61254(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 自分フィールドは「大霊術－「二星」」となる。
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,発動誘発)
+PRINTL ①：自分フィールドに光・闇属性の「霊使い」モンスターが存在する限り発動できる。
+PRINTL 相手が発動した魔法・罠の効果を無効にする。
+CALLFORM CARD_ABLE(2,魔罠起動)
+PRINTL ②：自分メインフェイズに発動できる。
+PRINTL 手札の光・闇属性の魔法使い族モンスター１体を相手に見せ、その属性によって以下の効果を適用する。
+PRINTL ●闇属性：デッキから光属性の「霊使い」モンスター１体、または「霊使い」魔法・罠カード１枚を手札に加える。
+PRINTL ●光属性：自分の墓地・除外状態の闇属性の「霊使い」モンスターと見せたモンスターを特殊召喚する。
+CALLFORM CARD_ABLE(0,破壊→墓地)
+PRINTL ③：このカードが相手の効果によって破壊され墓地へ送られた時に発動できる。
+PRINTL このカードと、光・闇属性の「霊使い」モンスターを１体ずつ除外し、
+PRINTL フィールドの全てのカードをいかなる耐性を無視して除外する。
+
+
+@条件達成属性検出_大霊術二星(決闘者,種類,ゾーン,場所,条達属性)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM REF 条達属性, 0
+
+CALL FULLRESET
+効果範囲手札 = 1
+効果条件属性 = 闇属性
+効果条件種族 = 魔法使い族
+CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+IF RESULT == 1
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件スーパー属性 = 光属性
+	効果条件スーパーカテゴリ = 霊使い
+	効果条件カテゴリ = 霊使い
+	効果条件種類 = 魔罠全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		条達属性:闇属性 = 1
+ENDIF
+
+CALL FULLRESET
+効果範囲手札 = 1
+効果条件属性 = 光属性
+効果条件種族 = 魔法使い族
+CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+IF RESULT == 1
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果範囲除外 = 1
+	効果条件属性 = 闇属性
+	効果条件カテゴリ = 霊使い
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1 && モンスター数(決闘者) <= 3
+		条達属性:光属性 = 1
+ENDIF
+
+
+@CARDCAN_61254(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC 条達属性, 8
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,61254)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_2(決闘者,61254)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+
+	CALL 条件達成属性検出_大霊術二星(決闘者,種類,ゾーン,場所,条達属性)
+	SIF !MATCH(条達属性, 1)
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 発動誘発
+	SIF 発動済_1(決闘者,61254)
+		RETURN 0
+	SIF ゾーン != "魔罠" 
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2	
+		RETURN 0
+
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件属性:0 = 光属性
+	効果条件属性:1 = 闇属性
+	効果条件カテゴリ = 霊使い
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果条件種類 = 魔罠全般
+	CALL CARD_CHECK_START_DATA(決闘者,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "魔罠" 
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 破壊→墓地
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件属性 = 光属性
+	効果条件カテゴリ = 霊使い
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件属性 = 闇属性
+	効果条件カテゴリ = 霊使い
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_61254(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 検出属性, 8
+#DIM DYNAMIC カウンタ
+
+CALL 対面者判定(決闘者)
+対面者 '= RESULTS
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,61254,2)
+	IF RESULT == 0
+		CALL 条件達成属性検出_大霊術二星(決闘者,種類,ゾーン,場所,検出属性)
+
+		CALL FULLRESET
+		効果範囲手札 = 1
+		CALL 効果条件属性_複数(検出属性)
+		効果条件種族 = 魔法使い族
+		CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+		選択カード = RESULT
+		選択カード_ID = RESULT:99
+		IF 選択カード != 9999
+			VARSET RESULT
+			CALLFORM CARD_{選択カード_ID}, "属性"
+			IF MATCH(RESULT, 闇属性)
+				CALL FULLRESET
+				効果条件スーパー属性 = 光属性
+				効果条件スーパーカテゴリ = 霊使い
+				効果条件カテゴリ = 霊使い
+				効果条件種類 = 魔罠全般
+				CALL CARD_ADD_BASIC(決闘者,"デッキ",ゾーン,場所)
+			ELSE
+				CALL FULLRESET
+				効果範囲墓地 = 1
+				効果範囲除外 = 1
+				効果条件属性 = 闇属性
+				効果条件カテゴリ = 霊使い
+				効果条件種類 = モン全般
+				CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+				IF RESULT == 1
+					CALL CARD_SELECT(決闘者,選択カード)
+					CALL CARD_SP_SUMMON(決闘者,本参照先（CS）,選択カード（CS）)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,61254)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == 発動誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,61254,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(決闘者,"発動無効",場所,"無効")
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL SET_FIELD_MAGIC_INFO(決闘者, "大霊術－「二星」")
+ELSEIF 種類 == 破壊→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,61254)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果条件属性 = 光属性
+		効果条件カテゴリ = 霊使い
+		CALL CARD_ADD_GY_BASIC(決闘者,"墓地",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果条件属性 = 闇属性
+			効果条件カテゴリ = 霊使い
+			CALL CARD_ADD_GY_BASIC(決闘者,"墓地",ゾーン,場所)
+			IF RESULT == 1
+				FOR カウンタ, 0, 5
+					SIF GETVAR(@"%決闘者%_戦場:カウンタ") == -1
+						CONTINUE
+					CALL CARD_DISPOSE(決闘者,"戦場",カウンタ,除外行き)
+				NEXT
+				FOR カウンタ, 0, 5
+					SIF GETVAR(@"%決闘者%_魔罠:カウンタ") == -1
+						CONTINUE
+					CALL CARD_DISPOSE(決闘者,"魔罠",カウンタ,除外行き)
+				NEXT
+				FOR カウンタ, 0, 5
+					SIF GETVAR(@"%対面者%_戦場:カウンタ") == -1
+						CONTINUE
+					CALL CARD_DISPOSE(対面者,"戦場",カウンタ,除外行き)
+				NEXT
+				FOR カウンタ, 0, 5
+					SIF GETVAR(@"%対面者%_魔罠:カウンタ") == -1
+						CONTINUE
+					CALL CARD_DISPOSE(対面者,"魔罠",カウンタ,除外行き)
+				NEXT
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

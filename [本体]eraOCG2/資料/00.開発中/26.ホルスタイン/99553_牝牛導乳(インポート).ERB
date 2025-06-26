@@ -1,0 +1,176 @@
+@CARDNAME_99553,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 【導乳】ホルスタインポート
+	CASE "略称"
+		RESULTS = インポｰﾄ【導乳】
+	CASE "カテゴリ"
+		RESULTS:0 = ホルスタイン
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+@CARD_99553(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常罠
+	CASE "追加日"
+		RETURN 250325
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99553(種類)
+#DIM DYNAMIC 種類
+#DIMS DYNAMIC 決闘者
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL このカード名の①②の効果は１ターンに１度しか発動できない。
+;CALLFORM CARD_ABLE(0,魔罠起動,手札起動)
+PRINTL ①：メインフェイズ及びバトルフェイズに発動できる。
+PRINTL 自分フィールドのカードを１枚選んで手札に戻す。その後、デッキから「ホルスタイン」カードを１枚選んで手札に加える。
+PRINTL 自分の魔法＆罠ゾーンにセットされたカードが存在しない場合、このカードは手札から捨てて発動できる。
+CALLFORM CARD_ABLE(1,墓地起動)
+PRINTL ②：バトルフェイズに発動できる。
+PRINTL 墓地のこのカードを除外し、手札・デッキから「ホルスタイン-ミルクファーム」を１枚選び表側表示で置く。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99553(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 対戦カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,99553)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 
+	SIF !(メインフェイズ == 1 || バトルフェイズ == 1 )
+		RETURN 0
+	
+	SIF 発動済_1(決闘者,99553)
+		RETURN 0
+	IF ゾーン == "手札"
+		;セットカードがあれば使えない
+		CALL FULLRESET
+		効果範囲魔罠 = 1
+		効果条件表示 = 裏側表示
+		効果条件CNT = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT > 0
+			RETURN 0
+	ELSEIF ゾーン == "魔罠"
+		;セットしたターンには使えない
+		SIF GETVAR(@"%決闘者%_魔_表:場所") != 2
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	
+	;フィールドにカードが無ければ使えない(ホルスタインで置かれたカードは予め除外する)
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件固カテゴリ:0 = 登録情報：ホルスタイン-美乳
+	効果条件固カテゴリ:1 = 登録情報：ホルスタイン-愛乳
+	効果条件固カテゴリ:2 = 登録情報：ホルスタイン-旨乳
+	効果条件固カテゴリ:3 = 登録情報：ホルスタイン-EX乳
+	効果条件固ID = 279555 ;発情制御装置(チュートリアル用)
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	;デッキにホルスタインが居なければ使えない
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = ホルスタイン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	
+	SIF 発動済_2(決闘者,99553)
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ゾーン != "墓地"
+		RETURN 0
+	;手札・デッキにミルクファームがなければ使えない
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲デッキ = 1
+	効果条件名前 = ホルスタイン-ミルクファーム
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99553(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99553,1)
+	IF RESULT == 0
+		
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲魔罠 = 1
+		効果条件固カテゴリ:0 = 登録情報：ホルスタイン-美乳
+		効果条件固カテゴリ:1 = 登録情報：ホルスタイン-愛乳
+		効果条件固カテゴリ:2 = 登録情報：ホルスタイン-旨乳
+		効果条件固カテゴリ:3 = 登録情報：ホルスタイン-EX乳
+		効果条件固ID = 279555 ;発情制御装置(チュートリアル用)
+		効果条件行先フラグ = 手札行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+	
+		IF RESULT != -1
+			CALL FULLRESET
+			効果条件カテゴリ = ホルスタイン
+			CALL CARD_ADD_BASIC(決闘者,"デッキ",ゾーン,場所)
+		ENDIF
+		;テスト時はコメント化
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99553,2)
+	
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果範囲デッキ = 1
+		効果条件名前 = ホルスタイン-ミルクファーム
+		CALL CARD_SET_ADV(決闘者,ゾーン,場所,"表側表示")
+		
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,除外行き)
+	ENDIF
+ENDIF

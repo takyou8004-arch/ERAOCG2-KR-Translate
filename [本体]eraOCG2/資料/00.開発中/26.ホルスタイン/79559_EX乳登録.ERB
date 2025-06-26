@@ -1,0 +1,1190 @@
+@CARDNAME_79559,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 【EX乳】ホルスタイン-エクストラ
+	CASE "略称"
+		RESULTS = 牝牛登録【EX乳】
+	CASE "カテゴリ"
+		RESULTS:0 = ホルス
+		RESULTS:1 = ホルスタイン
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79559(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "追加日"
+		RETURN 250325
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79559(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL このカードは１ターンに１度しか発動できない。
+PRINTL このカードの①の効果はデュエル中１度しか適用できず、①の効果で選択したカードは「牝牛」の登録情報として永続魔法となる。
+CALLFORM CARD_ABLE(1,魔罠起動,手札起動)
+PRINTL ①：手札・デッキ・EXデッキから「ホルスタイン」以外の牝性モンスターを１体選択し、そのモンスターを永続魔法カード扱いで自分の魔法＆罠ゾーンに表側表示で置く。
+PRINTL その後、デッキ外から「【EX乳】ホルスタイン」１体をEXデッキに加え、
+PRINTL 自分のEXデッキ・デッキ・手札・モンスターゾーン・墓地に存在する全ての同名カードを「【EX乳】ホルスタイン」に書き換え、EXデッキに追加する。
+PRINTL この効果の処理後、以下の効果から選択する。
+PRINTL ●デッキ・墓地から「ホルスタイン」モンスター１体を特殊召喚する。
+PRINTL ●デッキから「ホルスタイン」カードを１枚選んで手札に加える。
+
+;SETCOLOR C_GRAY
+;PRINTL (未実装)
+;PRINTL ②：相手のLPが0以下になった場合に発動できる。
+;PRINTL 墓地のこのカードを除外し、以下の効果を適用する。
+;PRINTL ●相手のLPが0になった場合、墓地の「ホルスタイン」カードを除外し相手のLPを1000に出来る。
+;PRINTL ●相手はこのデュエル中、効果を発動できない。
+;RESETCOLOR
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79559(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+;戦闘終了フラグを拾うためNEGATE前に記載
+IF 種類 == 永攻紋章起動 && (自分_決闘敗北フラグ > 0 || 相手_決闘敗北フラグ > 0 )
+	RETURN 1
+ENDIF
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,79559)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF 発動済_D1(決闘者,79559) 
+		RETURN 0
+	SIF 発動済_1(決闘者,79559) 
+		RETURN 0
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+		
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲デッキ = 1
+	効果範囲EXデッキ = 1
+	効果条件性別 = 牝性
+	効果条件固カテゴリ = ホルスタイン
+	
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永紋章起動
+	RETURN 1
+ELSEIF 種類 == 永攻紋章起動
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79559(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 参照カードID
+#DIM DYNAMIC 書換先カードID
+#DIM DYNAMIC 所有者
+#DIM DYNAMIC 参照場所
+#DIM DYNAMIC 牝牛対象
+#DIM DYNAMIC 牝牛所有
+#DIMS DYNAMIC 牝牛名称
+#DIMS DYNAMIC 牝牛略称
+#DIM DYNAMIC 牝牛属性
+#DIM DYNAMIC 牝牛攻撃力
+#DIM DYNAMIC 牝牛守備力
+#DIM DYNAMIC 牝牛乳サイズ
+#DIM DYNAMIC 牝牛ミルクml
+#DIM DYNAMIC 牝牛ミルク売却額
+#DIM DYNAMIC 条件達成
+#DIMS DYNAMIC カテゴリ名称
+#DIM DYNAMIC 牝牛守備表示数
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+書換先カードID = 179559
+カテゴリ名称 = 登録情報：ホルスタイン-EX乳
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,79559,1)
+	IF RESULT == 0 && 魔罠数(決闘者) < 5
+		
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果範囲デッキ = 1
+		効果範囲EXデッキ = 1
+		効果条件性別 = 牝性
+		効果条件固カテゴリ = ホルスタイン
+		効果追加カテ = %カテゴリ名称%
+		CALL CARD_SET_ADV(決闘者,ゾーン,場所,"表側表示",)
+		
+		選択カードID = RESULT:1
+		IF RESULT != 0
+			;魔罠に置く(デュエル中１度)
+			CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,79559,20)
+			
+			;ホルスタイン情報の取得(カードIDから各種情報を取得)
+			CALL HORUSTEIN_GET_DATA(決闘者,-1,書換先カードID)
+			牝牛名称 = %RESULTS:0%
+			牝牛略称 = %RESULTS:1%
+			参照場所 = RESULT:0
+			牝牛対象 = RESULT:1
+			参照カードID = RESULT:99
+			CALL HORUSTEIN_GET_BUST(参照カードID)
+			牝牛乳サイズ = RESULT:2
+			
+			;耐性と発動無効の付与
+			CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"破耐",2)
+			CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"対耐",2)
+			CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"発無",2)
+			
+			;---手札に加わった等の表示をスキップ
+			SKIPDISP 1
+			
+			;EXデッキに行く
+			;書き換え前のカードを一旦手札に加える。
+			CALL CARD_GENERATE_HAND(決闘者,選択カードID)
+			
+			;カードの書き換え
+			;戦場のカード
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%決闘者%_MZ_ID:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(決闘者,"戦場",カウンタ,書換先カードID)
+				CALL CARD_ADD(決闘者, "戦場", "EXデッキ",カウンタ)
+			NEXT
+			
+			;手札のカード
+			FOR カウンタ,0,現手札(決闘者)
+				SIF GETVAR(@"%決闘者%_手札:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(決闘者,"手札",カウンタ,書換先カードID)
+				CALL CARD_ADD(決闘者, "手札", "EXデッキ",カウンタ)
+			NEXT
+			
+			;デッキのカード
+			FOR カウンタ,0,現山札数(決闘者)
+				SIF GETVAR(@"%決闘者%_デッキ:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(決闘者,"デッキ",カウンタ,書換先カードID)
+				CALL CARD_ADD(決闘者, "デッキ", "EXデッキ",カウンタ)
+			NEXT
+			
+			;墓地のカード
+			FOR カウンタ,0,現墓地数(決闘者)
+				SIF GETVAR(@"%決闘者%_墓地:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(決闘者,"墓地",カウンタ,書換先カードID)
+				CALL CARD_ADD(決闘者, "墓地", "EXデッキ",カウンタ)
+			NEXT
+			
+			;EXデッキのカード
+			FOR カウンタ,0,現EX山札数(決闘者)
+				SIF GETVAR(@"%決闘者%_EXデッキ:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(決闘者,"EXデッキ",カウンタ,書換先カードID)
+			NEXT
+			;---スキップここまで
+			SKIPDISP 0
+			
+			PRINTFORMW 登録証に名前が刻まれると、どこからともなくホルスの守護者が現れた！
+			PRINTFORML %牝牛名称%は抵抗する間もなく三人の守護者に押さえつけられると、
+			PRINTFORML ピアスにカウベルの付いた首輪を取り付けられ、身体に管理タグを印字されてしまった…
+			PRINTFORML 
+			PRINTFORML 「…モォっ！…もォっ！？」
+			PRINTFORMW 
+			PRINTFORML %牝牛名称%は声を上げたが、その声は牝牛の鳴き声にしか聞こえなかった。
+			PRINTFORML …なんとかして抵抗しようとしているのだろう。しかし身体は既に牝牛になりきっているのか、媚びるような鳴き声しか上げることが出来ないようだ…
+			PRINTFORMW 何かを抗議する%牝牛名称%を無視して、守護者はそのガッチリとした手で乳を支え始めた…
+			SETCOLOR C_PINK
+			PRINTFORML 
+			PRINTFORML 「モォー…！？…モッっ❤」「モォゥっ❤ もォンっ❤」
+			PRINTFORMW 
+			RESETCOLOR
+			PRINTFORML …守護者に乳を支えられたことで、その乳は「相応しい乳」へと変わっていく…
+			PRINTFORML 
+			IF 牝牛乳サイズ >= 4
+				;魔乳以上の場合、1サイズアップする
+				
+				PRINTFORM %牝牛名称%の乳は
+				SETCOLOR C_PINK
+				PRINTFORM  [%GET_TALENTNAME(121,牝牛乳サイズ)%] 
+				RESETCOLOR
+				PRINTFORM から
+				SETCOLOR C_H_PINK
+				PRINTFORM  [%GET_TALENTNAME(121,牝牛乳サイズ+1)%] 
+				RESETCOLOR
+				PRINTFORML になってしまった…
+				PRINTFORMW
+				
+				;着替え
+				PRINTFORMW %牝牛名称%はデカすぎる自分の乳を確認すると、その乳を解き放つように服を次々と脱ぎ始めた…
+			ELSE
+				;魔乳未満の場合、規格外にする
+				PRINTFORM %牝牛名称%の乳は
+				SETCOLOR C_PINK
+				PRINTFORM  [%GET_TALENTNAME(121,牝牛乳サイズ)%] 
+				RESETCOLOR
+				PRINTFORM から
+				SETCOLOR C_H_PINK
+				PRINTFORM  [%GET_TALENTNAME(121,5)%] 
+				RESETCOLOR
+				PRINTFORML になってしまった…
+				PRINTFORMW
+				
+				;着替え
+				PRINTFORML 守護者は%牝牛名称%の一気に大きくなった乳を逃がすように服を脱がせてくれた…
+				PRINTFORMW %牝牛名称%は身体の重心が変わってしまった影響か、歩きにくそうだ…
+			ENDIF
+			
+			PRINTFORML 
+			PRINTFORML %牝牛名称%は足元に用意してあった衣装を拾…おうとしたが、乳がデカすぎて拾えなかった…
+			PRINTFORML 守護者は%牝牛名称%を取り囲むと、足元にあった牛柄ビキニに着替えさせた…
+			
+			;服装の変更(牛柄ビキニと角)
+			IF 牝牛対象 != -1 
+				;アクセサリ&帽子：つけ角・大(2枠目を変更)
+				EQUIP:牝牛対象:2 = 21
+				CFLAG:牝牛対象:(200 + 2) = 21
+				;靴、靴下は触らない
+				;ズボン～インナーまでは全剥き
+				FOR カウンタ,6,13
+					EQUIP:牝牛対象:カウンタ = 0
+					CFLAG:牝牛対象:(200 + カウンタ) = 0
+				NEXT
+				;ワンピース：牛柄ビキニ
+				EQUIP:牝牛対象:15 = 33
+				CFLAG:牝牛対象:(200 + 15) = 33
+				
+				;調教
+				CALL EROTIC_MOVE("バスト調教",牝牛対象,-1,300)
+			ENDIF
+			
+			PRINTFORML 
+				
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果範囲墓地 = 1
+			効果条件カテゴリ = ホルスタイン
+			効果条件種類 = モン全般
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			
+			IF RESULT == 1
+				PRINTFORML [1] - デッキ・墓地から「ホルスタイン」モンスターを特殊召喚する。
+			ELSE
+				SETCOLOR C_GRAY
+				PRINTFORML     - デッキ・墓地から「ホルスタイン」モンスターを特殊召喚する。
+				RESETCOLOR
+			ENDIF
+			
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件カテゴリ = ホルスタイン
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			
+			IF RESULT == 1
+				PRINTFORML [2] - デッキから「ホルスタイン」カードを手札に加える。
+			ELSE
+				SETCOLOR C_GRAY
+				PRINTFORML     - デッキから「ホルスタイン」カードを手札に加える。
+				RESETCOLOR
+				PRINTFORML
+				PRINTFORML [0] - 手札に加えられるカードが存在しません。
+			ENDIF
+			
+			BINPUT
+			
+			IF RESULT == 1
+				;デッキ・墓地から「ホルスタイン」モンスターを特殊召喚する
+				CALL FULLRESET
+				効果範囲デッキ = 1
+				効果範囲墓地 = 1
+				効果条件カテゴリ = ホルスタイン
+				CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+				
+				IF RESULT != -1
+					選択カードID = RESULT:1
+					CALL HORUSTEIN_GET_DATA(決闘者,カード召喚先,選択カードID)
+					;◆小さな胸でも違和感のない描写にする
+					SELECTCASE 選択カードID
+					CASE 179556
+						;美乳
+						PRINTFORMW %RESULTS:0%の美しい乳がしなやかに揺れた…
+						CALL HORUSTEIN_RAND_COW_TXT(1,0)
+					CASE 179557
+						;愛乳
+						PRINTFORMW %RESULTS:0%の可愛らしい乳首がぷるんと震えた…
+						CALL HORUSTEIN_RAND_COW_TXT(1,1)
+					CASE 179558
+						;旨乳
+						PRINTFORMW %RESULTS:0%の思わず吸い付きたくなる乳がしっとりと艶めいている…
+						CALL HORUSTEIN_RAND_COW_TXT(1,2)
+					ENDSELECT
+				ENDIF
+				PRINTFORMW 
+			ELSEIF RESULT == 2
+				;デッキから「ホルスタイン」カードを手札に加える
+				CALL FULLRESET
+				効果範囲デッキ = 1
+				効果条件カテゴリ = ホルスタイン
+				CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+			ENDIF
+			
+			PRINTFORML 
+			;永紋章の表示をスキップ
+			SKIPDISP 1
+			CALL CARD_RESERV(決闘者,79559,永紋章予約)
+			CALL CARD_RESERV(決闘者,79559,永攻紋章予約)
+			SKIPDISP 0
+			SETCOLOR C_YELLOW
+			PRINTFORML 「【EX乳】ホルスタイン」はフィールドに存在する場合「%牝牛名称%」として扱われます。
+			RESETCOLOR
+			PRINTFORMW
+			
+			IF 牝牛乳サイズ < 5
+				;規格外未満なら最低限として規格外にする
+				牝牛乳サイズ = 5 -(牝牛乳サイズ)
+			ELSE
+				;規格外なら+1する
+				牝牛乳サイズ = 1
+			ENDIF
+			;EX乳はカウンターを規格外以上になるように調整してスタート(乳サイズ：UP)
+			CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"個Ｃ",牝牛乳サイズ)
+		ELSE
+			PRINTFORMW 魔法＆罠ゾーンにカードを置けなかったため、登録できませんでした…
+		ENDIF
+		
+	ENDIF
+	
+	SKIPDISP 1
+	CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+	SKIPDISP 0
+	
+ELSEIF 種類 == 永紋章起動 || 種類 == 永攻紋章起動
+	;紋章を使用し、手札・フィールドの牝牛の情報を書き換え
+	CALL FULLRESET
+	CALL HORUSTEIN_GET_DATA(決闘者,,179559)
+	牝牛名称 = %RESULTS:0%
+	牝牛略称 = %RESULTS:1%
+	参照場所 = RESULT:0
+	牝牛対象 = RESULT:1
+	牝牛所有 = RESULT:2
+	牝牛ミルクml = RESULT:4		;搾乳量(決闘中総量)
+	参照カードID = RESULT:99
+	牝牛乳サイズ = GETVAR(@"%決闘者%_魔_個Ｃ:参照場所")
+	
+	;参照先カードが吹っ飛んでたら処理しない
+	IF 参照場所 != -1
+		
+		IF 決闘者 == "自分"
+			所有者 = 1
+		ELSEIF 決闘者 == "相手"
+			所有者 = 2
+		ENDIF
+		
+		;属性
+		TRYCALLFORM CARD_{参照カードID},"属性"
+		牝牛属性 = RESULT
+		
+		;生成したカードが効果を発動したら、こちらの攻守は読み込まないようにする
+		IF !発動済_1(決闘者,179559) 
+			TRYCALLFORM CARD_{参照カードID},"攻撃力"
+			牝牛攻撃力 = RESULT
+			TRYCALLFORM CARD_{参照カードID},"守備力"
+			牝牛守備力 = RESULT
+		ENDIF
+		;自分フィールドのカードで、所有者が自分
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%決闘者%_MZ_ID:カウンタ") != 書換先カードID
+				CONTINUE
+			SIF GETVAR(@"%決闘者%_MZ_所有:カウンタ") != 所有者
+				CONTINUE
+
+			IF 種類 == 永紋章起動 
+				CALL CARD_SET_RENAME(決闘者,"戦場",カウンタ,牝牛略称)
+				CALL STATCHANGE_EFFECT(決闘者,"自身",カウンタ,"変化元ID",参照カードID)
+			ELSEIF 種類 == 永攻紋章起動 
+				
+				CALL STATCHANGE_OTHER(決闘者,"自身",カウンタ,"属",牝牛属性)
+				CALL STATCHANGE_BASIC(決闘者,"自身",カウンタ,牝牛攻撃力,牝牛守備力)
+				CALL CARD_SET_CATEGORY(決闘者,"戦場",カウンタ,"E.R.A")
+				;カテゴリ2は未設定なら変更する
+				SIF GETVARS(@"%決闘者%_MZ_追カテ2:カウンタ") == ""
+					CALL CARD_SET_CATEGORY(決闘者,"戦場",カウンタ,"ホルスタイン",1)
+				
+				;永続魔法扱いの自分に乗ってるカウンターの数だけ乳を盛る
+				CALL STATCHANGE_OTHER(決闘者,"自身",カウンタ,"胸追",牝牛乳サイズ)
+			ENDIF
+		NEXT
+		
+		;相手フィールドのカードで、所有者が自分
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_MZ_ID:カウンタ") != 書換先カードID
+				CONTINUE
+			SIF GETVAR(@"%対面者%_MZ_所有:カウンタ") != 所有者
+				CONTINUE
+
+			IF 種類 == 永紋章起動 
+				CALL CARD_SET_RENAME(対面者,"戦場",カウンタ,牝牛略称)
+				CALL STATCHANGE_EFFECT(対面者,"自身",カウンタ,"変化元ID",参照カードID)
+			ELSEIF 種類 == 永攻紋章起動 
+				
+				CALL STATCHANGE_OTHER(対面者,"自身",カウンタ,"属",牝牛属性)
+				CALL STATCHANGE_BASIC(対面者,"自身",カウンタ,牝牛攻撃力,牝牛守備力)
+				CALL CARD_SET_CATEGORY(対面者,"戦場",カウンタ,"E.R.A")
+				;カテゴリ2は未設定なら変更する
+				SIF GETVARS(@"%対面者%_MZ_追カテ2:カウンタ") == ""
+					CALL CARD_SET_CATEGORY(対面者,"戦場",カウンタ,"ホルスタイン",1)
+				
+				CALL STATCHANGE_OTHER(対面者,"自身",カウンタ,"胸追",牝牛乳サイズ)
+			ENDIF
+		NEXT
+	ENDIF
+	
+	IF (自分_決闘敗北フラグ > 0 || 相手_決闘敗北フラグ > 0) && 牝牛ミルクml > 0
+		
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%決闘者%_戦場:{カウンタ}") == -1
+				CONTINUE
+			SIF GETVAR(@"%決闘者%_MZ_ID:{カウンタ}") != 179559
+				CONTINUE
+			;フィールドに牝牛EXが存在していれば、そちらの永続処理でミルクの買取を行う
+			;(攻守を参照して乳の大きさが変動するため。ここは攻守の変動を処理する場所なので処理前の値が入ったりする…)
+			
+			;(NEGATE前に拾うはずなので、効果無効状態でもなんとかなるはず)
+			参照カードID = -1
+			BREAK
+		NEXT
+
+		IF 参照カードID != -1
+			CALL HORUSTEIN_GET_BUST(参照カードID,牝牛乳サイズ)
+			牝牛乳サイズ = RESULT:2
+			牝牛ミルク売却額 = 牝牛ミルクml *10
+			
+			CUSTOMDRAWLINE —
+			PRINTFORML
+			;EX乳は何もしなくてもたくさん搾れるので価格が抑えめ
+			TIMES 牝牛ミルク売却額 , 0.15
+		
+			SETCOLOR C_H_PINK
+			PRINTFORM [%GET_TALENTNAME(121,牝牛乳サイズ)%] 
+			RESETCOLOR
+			PRINTFORML の乳は買取が難しいようだ…
+			PRINTFORML %牝牛名称%から搾った{牝牛ミルクml}mlのミルクを{牝牛ミルク売却額}円で売却した…
+			PRINTFORML
+			CUSTOMDRAWLINE —
+			
+			CALL MONEY_GET(牝牛ミルク売却額)
+
+				
+			;リセットも兼ねて、ミルクの情報を削除
+			CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"T1汎数",0,上書きモード)
+			CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"汎数",0,上書きモード)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+;ここから牝牛のカード処理-----
+
+@CARDNAME_179559,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC カード名
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カードID
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+			RESULTS = 【EX乳】ホルスタイン
+	CASE "略称"
+			RESULTS = 【EX乳】牝牛
+	CASE "カテゴリ"
+		RESULTS:0 = ホルス
+		RESULTS:1 = ホルスタイン
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_179559(参照先)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 参照先
+#DIMS DYNAMIC 参照先チェック
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カードID
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN リンク
+	CASE "属性"
+		;ドゥアムテフと同じ
+		RETURN 水属性
+	CASE "種族"
+		RETURN 獣族
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "性別"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_179559(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要リンク数 = 3
+素材条件カテゴリ = ホルスタイン
+
+IF EX参照 == 1
+	CALL LINCAN(決闘者,召喚カード,179559) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_179559(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 「ホルスタイン」モンスター３体
+PRINTL このカードの③の効果は１ターンに１度しか使用できない。
+PRINTL ①：L召喚成功時に発動できる。墓地から「ホルスタイン」モンスターを２体まで選び、守備表示で特殊召喚する。
+PRINTL この効果で特殊召喚したモンスターは、このターン素材に出来ない。
+PRINTL ②：自分メインフェイズに発動できる。このカードの乳を計測する。
+;CALLFORM CARD_ABLE(0,戦場起動)
+PRINTL ③：バトルフェイズに発動できる。このカードの乳を搾り発情させる。
+PRINTL その後、以下の効果を適用する。
+PRINTL ●このカードの攻撃力・守備力はフィールドの「ホルスタイン」モンスターの攻撃力・守備力の合計と同じ値になる。
+PRINTL ●このカードはフィールドの守備表示の「ホルスタイン」モンスターの数まで攻撃できる。
+CALLFORM CARD_ABLE(1,効果後誘発)
+PRINTL ④：発情したこのカードの攻撃が中断された場合に発動できる。
+PRINTL 攻撃対象のモンスターを「ホルスタイン」カードとして扱い、守備表示にする。以降、そのモンスターは攻撃対象にならない。
+PRINTL （この効果が適用されたモンスターしかフィールドに存在しない状態での攻撃は直接攻撃になる。）
+
+@CARDCAN_179559(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 別途カードID
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+;戦闘終了フラグを拾うため
+IF 種類 == 永続効果 && (自分_決闘敗北フラグ > 0 || 相手_決闘敗北フラグ > 0)
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,179559)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == EX召喚時
+	;墓地にホルスタインが居なければ使えない
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件カテゴリ = ホルスタイン
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場起動
+	SIF GETVARS(@"%決闘者%_フィールド名") != "ミルクファーム"
+		RETURN 0
+	IF メインフェイズ == 1
+		SIF ターンプレイヤー == "相手" ;ただ情報を表示するだけなので、NPCは使用しない(ターン1付けてないから多分連打するし…)
+			RETURN 0
+	ELSEIF バトルフェイズ == 1
+		SIF 発動済_1(決闘者,179559) 
+			RETURN 0
+	ENDIF
+	
+	RETURN 1
+ELSEIF 種類 == 攻撃後強制誘発;本当はミルクファームなきゃダメだけど、ただ致すだけだし良いか…
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_戦闘カード") != 場所
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_MZ_発情:場所") == 0
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_攻撃無効_保") != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 効果後誘発
+	SIF GETVARS(@"%決闘者%_フィールド名") != "ミルクファーム"
+		RETURN 0
+	;発情時に攻撃中断された場合
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_戦闘カード") != 場所
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_MZ_発情:場所") == 0
+		RETURN 0	
+	SIF GETVAR(@"%決闘者%_攻撃無効") != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 攻守変動 || 種類 == リアクション効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+
+	RETURN 1
+ELSEIF 種類 == 効果後強制誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	;守備表示の場合
+	SIF GETVAR(@"%決闘者%_MZ_表:場所") == 1 
+		RETURN 0
+	;自分が特殊状態：ドリップ(99554)の場合
+	SIF GETVAR(@"%決闘者%_MZ_特殊状態:場所") != 99554
+		RETURN 0
+	
+	CALL FULLRESET
+	効果条件固カテゴリ = ホルスタイン
+	CALL CARD_CHECK_FIN_DATA(決闘者,"効果発動")
+	SIF RESULT == 1
+		RETURN 1
+	
+	CALL FULLRESET
+	効果条件固カテゴリ = ホルスタイン
+	CALL CARD_CHECK_FIN_DATA(対面者,"効果発動")
+	SIF RESULT == 1
+		RETURN 1
+	
+	RETURN 0
+ENDIF
+
+@CARDEFFECT_179559(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 参照カードID
+#DIM DYNAMIC 書換先カードID
+#DIM DYNAMIC 参照場所
+#DIM DYNAMIC 牝牛対象
+#DIMS DYNAMIC 牝牛名称
+#DIM DYNAMIC 攻撃対象
+#DIM DYNAMIC 攻撃対象カードID
+#DIMS DYNAMIC 相手名称
+#DIMS DYNAMIC 搾手名称
+#DIM DYNAMIC 搾手
+#DIM DYNAMIC 絶頂回数
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC カテゴリ名称
+#DIM DYNAMIC 現乳サイズ
+#DIM DYNAMIC T1ミルクml
+#DIM DYNAMIC ミルクml
+#DIM DYNAMIC 牝牛攻撃力
+#DIM DYNAMIC 牝牛守備力
+#DIM DYNAMIC 牝牛守備表示数
+#DIM DYNAMIC ステ合計
+#DIM DYNAMIC 牝牛ミルク売却額
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+書換先カードID = 179559
+カテゴリ名称 = 登録情報：ホルスタイン-EX乳
+
+SIF (場所 < 0 || 場所 >= 5) && (自分_決闘敗北フラグ > 0 || 相手_決闘敗北フラグ > 0)
+	PRINTFORML 場所{場所};HORUSTEIN_GET_DATAで、永続効果でエラー。ミルク精算時に落ちることがある。(恐らく解決済み。念のため残す)
+
+;ホルスタイン情報の取得
+CALL HORUSTEIN_GET_DATA(決闘者,場所,179559)
+牝牛名称 = %RESULTS:0%
+参照場所 = RESULT:0
+牝牛対象 = RESULT:1
+T1ミルクml = RESULT:3	;搾乳量(1ターン中)
+ミルクml = RESULT:4		;搾乳量(決闘中総量)
+参照カードID = RESULT:99
+
+;乳サイズ取得
+CALL HORUSTEIN_GET_BUST(参照カードID,GETVAR(@"%決闘者%_MZ_胸追:場所"))
+現乳サイズ = RESULT:2 
+
+;実行者によって文章の相手を切り替える
+IF 決闘者 == "自分"
+	搾手名称 = %CALLNAME:MASTER%
+	搾手 = MASTER
+ELSE
+	;対戦相手
+	CALL CARD_EROTICS(相手プレイヤー,決闘者)
+	IF RESULT != -1
+		搾手名称 = %CALLNAME:RESULT%
+	ELSE
+		搾手名称 = "対戦者"
+	ENDIF
+	搾手 = RESULT
+ENDIF
+
+;攻撃対象の名前を取得
+IF 種類 == 攻撃後強制誘発 || 種類 == 効果後誘発
+	攻撃対象 = 戦闘場所(対面者)
+	;名称の設定
+	IF 攻撃対象 == 99
+		CALL CARD_EROTICS(相手プレイヤー,決闘者)
+		IF RESULT != -1
+			相手名称 = %CALLNAME:RESULT%
+		ELSE
+			相手名称 = "対戦相手"
+		ENDIF
+	ELSE
+		攻撃対象カードID = GETVAR(@"%対面者%_MZ_ID:攻撃対象")
+		TRYCALLFORM CARDNAME_{攻撃対象カードID},"略称"
+		相手名称 = %RESULTS%
+	ENDIF
+ENDIF
+
+IF 種類 == EX召喚時
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99554,1)
+	IF RESULT == 0
+		;墓地から「ホルスタイン」2体を守備表示で特殊召喚(素材不可)
+		
+		FOR カウンタ,0,2
+			CALL FULLRESET
+			効果範囲墓地 = 1
+			効果条件カテゴリ = ホルスタイン
+			効果追加種類 = 21	;素材不可
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所,"守備表示")
+			
+			IF RESULT != -1
+				選択カードID = RESULT:1
+				CALL HORUSTEIN_GET_DATA(決闘者,カード召喚先,選択カードID)
+				;◆小さな胸でも違和感のない描写にする
+				SELECTCASE 選択カードID
+				CASE 179556
+					;美乳
+					PRINTFORML %RESULTS:0%の美しい乳がしなやかに揺れた…
+					CALL HORUSTEIN_RAND_COW_TXT(1,0)
+				CASE 179557
+					;愛乳
+					PRINTFORML %RESULTS:0%の可愛らしい乳首がぷるんと震えた…
+					CALL HORUSTEIN_RAND_COW_TXT(1,1)
+				CASE 179558
+					;旨乳
+					PRINTFORML %RESULTS:0%の思わず吸い付きたくなる乳がしっとりと艶めいている…
+					CALL HORUSTEIN_RAND_COW_TXT(1,2)
+				ENDSELECT
+				
+				ステ合計 = 0
+				ステ合計 += GETVAR(@"%決闘者%_MZ_攻:カード召喚先")
+				ステ合計 += GETVAR(@"%決闘者%_MZ_守:カード召喚先")
+				
+				CUSTOMDRAWLINE —
+				PRINTFORML 
+				PRINTFORML %RESULTS:0%は%牝牛名称%のデカすぎる乳を支えている…
+				IF ステ合計 / 1000 > 0
+					SETCOLOR C_PINK
+					PRINTFORML (%牝牛名称%の乳のサイズが{ステ合計 / 1000}ランクUp)
+					RESETCOLOR
+				ENDIF
+				PRINTFORML 
+				CUSTOMDRAWLINE —
+				PRINTFORML
+				CALL SET_FIELD_INFO(決闘者,"戦場",カード召喚先,"リ数",1)
+				CALL SET_FIELD_INFO(決闘者,"戦場",カード召喚先,"表固",1)
+			ENDIF
+		NEXT
+		PRINTFORMW 
+	ENDIF
+ELSEIF 種類 == 戦場起動 && メインフェイズ == 1
+	;ステータス表示させるだけなので、無効にさせない
+	効果無効不能 = 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,書換先カードID)
+	IF RESULT == 0 && 参照カードID != -1
+		
+		PRINTFORML 
+		PRINTFORMW ホルスの従者達が%牝牛名称%を取り囲んでいる…
+		
+		;名前から胸のサイズの変動まで表示
+		CALL HORUSTEIN_PRINT_STATE(決闘者,場所,179559, GETVAR(@"%決闘者%_MZ_胸追:場所"))
+		
+
+	ENDIF
+ELSEIF 種類 == 戦場起動 && バトルフェイズ == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,書換先カードID,1)
+	
+	IF RESULT == 0 && 参照カードID != -1
+		;胸を搾る
+		IF GETVAR(@"%決闘者%_MZ_個Ｃ:場所") == 0
+			;1回目
+			PRINTFORML %搾手名称%は%牝牛名称%の乳に手を伸ばすと、その輪郭が変わらないように指を滑らせていく…
+			PRINTFORMW 肌から乳へと変化していく感触を楽しみながら、徐々にその中心へと搾るような動きで胸を意識させる。
+			PRINTFORM %牝牛名称%から
+			SETCOLOR C_PINK
+			PRINTFORM 「モー…❤」
+			RESETCOLOR
+			PRINTFORML と声が漏れるころには、%牝牛名称%の乳はピンっと張り、その先端は搾って欲しそうに艶めいていた…
+			PRINTFORML %搾手名称%はキュッと指を搾ると、%牝牛名称%は喜ぶように白い液体を滴らせた…
+			SETCOLOR C_PINK
+			PRINTFORMW 「もぉっ❤ んっぁっ❤ ―…❤」
+			RESETCOLOR
+			IF 牝牛対象 != -1
+				CALL EROTIC_MOVE("バスト調教",牝牛対象,搾手,300)
+			ENDIF
+			
+			CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"発情",175)
+			CALL SET_FIELD_INFO(決闘者,"戦場",場所,"個Ｃ",1,上書きモード)
+		ELSE
+			;2回目
+			PRINTFORML %搾手名称%は%牝牛名称%の乳に再び手を伸ばすと、その乳により白く濡れた指を滑らせた…
+			PRINTFORML 既に一度搾られているというのに、指が触れただけでも尖らせた先端からはポタポタと漏れてしまっている…
+			SETCOLOR C_PINK
+			PRINTFORML 「モー…❤ モー…❤」
+			RESETCOLOR
+			PRINTFORMW 優しく撫でるような刺激では物足りないのか、%牝牛名称%は%搾手名称%の手に胸を押し付け始めた…
+			PRINTFORML 
+			PRINTFORML %搾手名称%は期待を裏切るかのように丁寧に優しくなぞると、先端をパチンっと弾き、高まった性感を一気に解放させた！
+			PRINTFORML %牝牛名称%の乳は突然の刺激に耐えきれず、壊れた蛇口のように白い液体を零れさせていく…
+			SETCOLOR C_PINK
+			PRINTFORMW 「…ぁっ！？ ぉぉおっ～～～❤❤」
+			RESETCOLOR
+			IF 牝牛対象 != -1
+				CALL EROTIC_MOVE("バスト調教",牝牛対象,搾手,300)
+			ENDIF
+			
+			CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"発情",185)
+			CALL SET_FIELD_INFO(決闘者,"戦場",場所,"個Ｃ",0,上書きモード)
+		ENDIF
+		
+		;効果破壊の適用は発動済2で判定
+		
+		CALL HORUSTEIN_GET_MILK(決闘者,参照カードID,GETVAR(@"%決闘者%_MZ_胸追:場所"))
+		
+		;発情
+		SETCOLOR C_PINK
+		PRINTFORML 
+		PRINTFORML %牝牛名称%は乳を搾られた影響か、酷く発情している…
+		PRINTFORML
+		RESETCOLOR
+
+		IF ターンプレイヤー != 決闘者
+			;相手ターンに発動した場合
+			PRINTFORML %牝牛名称%は乳を搾られた余韻に浸っている…
+
+			;2回、うるさい鳴き
+			CALL HORUSTEIN_RAND_COW_TXT(2,3)
+		ENDIF
+		
+		PRINTFORMW
+	ENDIF
+
+ELSEIF 種類 == 攻撃後強制誘発
+	;発情時に攻撃が中断された場合
+	
+	;ひとりえっち(ここは一回触ってるので短めに。効果処理もあるしね)
+	PRINTFORML …発情した%牝牛名称%は%相手名称%にふらふらと近寄るが、視線を足元に向けると途中で足を止めてしまった。
+	PRINTFORML ふぅふぅと呼吸を荒げている%牝牛名称%は、自身の乳から目が離せなくなってしまう…
+	PRINTFORMW %牝牛名称%は%搾手名称%に搾って貰った記憶を呼び覚ますように、乳をゆっくりと擦り始めた…
+	
+	;1回、うるさい鳴き
+	CALL HORUSTEIN_RAND_COW_TXT(1,3)
+	
+	IF 牝牛対象 != -1
+		CALL EROTIC_MOVE("バスト調教",牝牛対象,-1,500)
+	ENDIF
+	絶頂回数 += RESULT:1
+	IF 絶頂回数 > 0
+		PRINTFORML %牝牛名称%は{絶頂回数}回絶頂したようだ。
+		PRINTFORMW 余程気持ち良かったのか、%牝牛名称%の周りには小さな白い斑点が飛び散ってしまっている…
+	ENDIF
+	
+	PRINTFORML 
+ELSEIF 種類 == 効果後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,書換先カードID)
+	
+	IF RESULT == 0
+		IF 攻撃対象 == 5 
+			;直接攻撃失敗時
+			;再び手を伸ばすと、相手フィールドに他に戦闘を行えるモンスターがいない為か、タガが外れたように…
+			
+			PRINTFORMW %牝牛名称%は相手フィールドに戦闘を行えるモンスター居ないことを確認すると、さらなる快楽を求めて指を動かし始めた…
+			絶頂回数 += 2
+			SETCOLOR C_PINK
+			
+			;牝牛の鳴き声を鳴らす
+			CALL HORUSTEIN_RAND_COW_TXT(絶頂回数,3)
+			
+			IF 牝牛対象 != -1
+				REPEAT 絶頂回数
+					CALL EROTIC_MOVE("バスト調教",牝牛対象,-1,200)
+				REND
+			ENDIF
+			
+			RESETCOLOR
+			PRINTFORML 鳴き声が響き終わると、%牝牛名称%は「ぱちゃんっ」と音を立てて白い水たまりに倒れ込んだ…
+			PRINTFORMW 好き放題気持ちよくなった%牝牛名称%は、満足そうな笑みを浮かべている…
+			;絶頂後の牝牛鳴き声
+			CALL HORUSTEIN_RAND_COW_TXT(3,3)
+			PRINTFORMW 
+		ELSE
+			;モンスター攻撃時に失敗
+			PRINTFORML %相手名称%は発情した%牝牛名称%の乳に押し潰された！
+			PRINTFORM %牝牛名称%は
+			SETCOLOR C_PINK
+			;EX乳
+			PRINTFORM 「モォォ❤」
+			RESETCOLOR
+			
+			PRINTFORML と鳴くと、規格外のデカすぎる乳で、そのまま%相手名称%を挟みこんでしまった！
+			PRINTFORMW 押し潰されまいと%相手名称%は、デカすぎるその乳を"持ち上げて"しまった…
+			PRINTFORML 
+			PRINTFORMW %相手名称%は潰されまいと%牝牛名称%の乳を支えている…
+			
+			;守備表示にして、攻撃対象から外れる
+			CALL SET_FIELD_INFO(対面者,"戦場",攻撃対象,"攻避",2)
+			CALL SET_FIELD_INFO(対面者,"戦場",攻撃対象,"表",2,上書きモード)
+			CALL CARD_SET_CATEGORY(対面者,"戦場",攻撃対象,"ホルスタイン")
+
+			ステ合計 += GETVAR(@"%対面者%_MZ_攻:攻撃対象")
+			ステ合計 += GETVAR(@"%対面者%_MZ_守:攻撃対象")
+			ステ合計 /= 1000
+			
+			;攻守の合計が1000毎に乳サイズ1UP
+			IF ステ合計 > 0
+				PRINTFORM %牝牛名称%の乳は更に大きくなったようだ…
+				SETCOLOR C_PINK
+				PRINTFORMW ({ステ合計}ランクUp)
+				RESETCOLOR
+				CALL HORUSTEIN_PRINT_STATE(決闘者,場所,書換先カードID, 現乳サイズ+ステ合計,2,1);2乳上書き(比較なし)、1画像アイコンのみ
+				
+				PRINTFORML 
+				;サイズアップ分鳴く、うるさい鳴き
+				CALL HORUSTEIN_RAND_COW_TXT(ステ合計,3)
+				PRINTFORMW 
+			ENDIF
+		ENDIF
+		
+	ENDIF
+ELSEIF 種類 == 攻守変動
+	
+	;攻守の合計が1000毎に乳サイズ1UP
+	CALL HORUSTEIN_GET_EX_SUM(決闘者)
+	IF RESULT > 0
+		;要確認★
+		CALL STATCHANGE_OTHER(決闘者,"自身",場所,"胸追",GETVAR(@"%決闘者%_MZ_胸追:場所")+RESULT)
+	ENDIF
+	
+	;効果使用済みなら処理をする
+	;●このカードの攻撃力はフィールドの「ホルスタイン」モンスターの攻撃力の合計と同じ値になる。
+	;●このカードはフィールドの守備表示の「ホルスタイン」モンスターの数まで攻撃できる。
+	
+	IF 発動済_1(決闘者,179559) 
+		
+		;EX乳の攻守はフィールドの合計の値になる
+		FOR カウンタ,0,5
+			;自分のカードチェック
+			;カードIDなし、もしくは自分自身は除外する
+			SIF GETVAR(@"%決闘者%_MZ_ID:カウンタ") == -1 || GETVAR(@"%決闘者%_MZ_ID:カウンタ") == 179559
+				CONTINUE
+			;フィールドのホルスタインは全て追加カテゴリで付与してるので、以下で取得できる。
+			SIF !(GETVARS(@"%決闘者%_MZ_追カテ:カウンタ") == "ホルスタイン" || GETVARS(@"%決闘者%_MZ_追カテ2:カウンタ") == "ホルスタイン")
+				CONTINUE
+			
+			牝牛攻撃力 += GETVAR(@"%決闘者%_MZ_攻:カウンタ")
+			牝牛守備力 += GETVAR(@"%決闘者%_MZ_守:カウンタ")
+			
+			;守備表示のカードを参照する
+			SIF GETVAR(@"%決闘者%_MZ_表:カウンタ") == 1 
+				CONTINUE
+			
+			牝牛守備表示数 += 1
+		NEXT
+		
+		FOR カウンタ,0,5
+			;相手のカードチェック
+			;カードIDなし、もしくは自分自身は除外する
+			SIF GETVAR(@"%対面者%_MZ_ID:カウンタ") == -1 || GETVAR(@"%対面者%_MZ_ID:カウンタ") == 179559
+				CONTINUE
+			;フィールドのホルスタインは全て追加カテゴリで付与してるので、以下で取得できる。
+			SIF !(GETVARS(@"%対面者%_MZ_追カテ:カウンタ") == "ホルスタイン" || GETVARS(@"%対面者%_MZ_追カテ2:カウンタ") == "ホルスタイン")
+				CONTINUE
+			
+			牝牛攻撃力 += GETVAR(@"%対面者%_MZ_攻:カウンタ")
+			牝牛守備力 += GETVAR(@"%対面者%_MZ_守:カウンタ")
+			
+			;守備表示のカードを参照する
+			SIF GETVAR(@"%対面者%_MZ_表:カウンタ") == 1 
+				CONTINUE
+			牝牛守備表示数 += 1
+		NEXT
+		
+		CALL STATCHANGE_BASIC(決闘者,"自身",場所,牝牛攻撃力,牝牛守備力)
+		CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"追戦",牝牛守備表示数-1)
+	ENDIF
+ELSEIF 種類 == 永続効果
+
+	IF (自分_決闘敗北フラグ > 0 || 相手_決闘敗北フラグ > 0) && ミルクml > 0
+			
+		;自分フィールドに牝牛EXが居れば、フィールドの攻守も参照する
+		
+		牝牛ミルク売却額 = ミルクml *10
+		
+		CUSTOMDRAWLINE —
+		PRINTFORML
+		;EX乳は何もしなくてもたくさん搾れるので価格が抑えめ
+		TIMES 牝牛ミルク売却額 , 0.15
+	
+		SETCOLOR C_H_PINK
+		PRINTFORM [%GET_TALENTNAME(121,現乳サイズ)%] 
+		RESETCOLOR
+		PRINTFORML の乳は買取が難しいようだ…
+		PRINTFORML %牝牛名称%から搾った{ミルクml}mlのミルクを{牝牛ミルク売却額}円で売却した…
+		PRINTFORML
+		CUSTOMDRAWLINE —
+		
+		CALL MONEY_GET(牝牛ミルク売却額)
+
+		
+		;リセットも兼ねて、ミルクの情報を削除
+		CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"T1汎数",0,上書きモード)
+		CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"汎数",0,上書きモード)
+	ENDIF
+ELSEIF 種類 == リアクション効果
+
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%決闘者%_戦場:カウンタ") == -1 || GETVAR(@"%決闘者%_MZ_ID:カウンタ") == 179559
+			CONTINUE
+		SIF GETVAR(@"%決闘者%_MZ_リ数:カウンタ") >= 1
+			CONTINUE
+		;フィールドのホルスタインは全て追加カテゴリで付与してるので、以下で取得できる。
+		SIF !(GETVARS(@"%決闘者%_MZ_追カテ:カウンタ") == "ホルスタイン" || GETVARS(@"%決闘者%_MZ_追カテ2:カウンタ") == "ホルスタイン")
+			CONTINUE
+		;守備表示のカードを参照する
+		SIF GETVAR(@"%決闘者%_MZ_表:カウンタ") == 1 
+			CONTINUE
+		
+		CALL HORUSTEIN_GET_DATA(決闘者,カウンタ,GETVAR(@"%決闘者%_MZ_ID:カウンタ"))
+		相手名称 = %RESULTS:0%
+		
+		ステ合計 = 0
+		ステ合計 += GETVAR(@"%決闘者%_MZ_攻:カウンタ")
+		ステ合計 += GETVAR(@"%決闘者%_MZ_守:カウンタ")
+		
+		CUSTOMDRAWLINE —
+		PRINTFORML 
+		PRINTFORML %相手名称%は%牝牛名称%のデカすぎる乳を支えている…
+		SETCOLOR C_PINK
+		PRINTFORML (%牝牛名称%の乳のサイズが{ステ合計 / 1000}ランクUp)
+		RESETCOLOR
+		PRINTFORML 
+		CUSTOMDRAWLINE —
+		PRINTFORML
+		CALL SET_FIELD_INFO(決闘者,"戦場",カウンタ,"リ数",1)
+		CALL SET_FIELD_INFO(決闘者,"戦場",カウンタ,"表固",1)
+	NEXT
+	
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%対面者%_戦場:カウンタ") == -1 || GETVAR(@"%対面者%_MZ_ID:カウンタ") == 179559
+			CONTINUE
+		SIF GETVAR(@"%対面者%_MZ_リ数:カウンタ") >= 1
+			CONTINUE
+		;フィールドのホルスタインは全て追加カテゴリで付与してるので、以下で取得できる。
+		SIF !(GETVARS(@"%対面者%_MZ_追カテ:カウンタ") == "ホルスタイン" || GETVARS(@"%対面者%_MZ_追カテ2:カウンタ") == "ホルスタイン")
+			CONTINUE
+		;守備表示のカードを参照する
+		SIF GETVAR(@"%対面者%_MZ_表:カウンタ") == 1 
+			CONTINUE
+		
+		CALL HORUSTEIN_GET_DATA(対面者,カウンタ,GETVAR(@"%対面者%_MZ_ID:カウンタ"))
+		相手名称 = %RESULTS:0%
+		
+		ステ合計 = 0
+		ステ合計 += GETVAR(@"%対面者%_MZ_攻:カウンタ")
+		ステ合計 += GETVAR(@"%対面者%_MZ_守:カウンタ")
+		
+		CUSTOMDRAWLINE —
+		PRINTFORML 
+		PRINTFORML %相手名称%は%牝牛名称%のデカすぎる乳を支えている…
+		SETCOLOR C_PINK
+		PRINTFORML (%牝牛名称%の乳のサイズが{ステ合計 / 1000}ランクUp)
+		RESETCOLOR
+		PRINTFORML 
+		CUSTOMDRAWLINE —
+		PRINTFORML 
+		CALL SET_FIELD_INFO(対面者,"戦場",カウンタ,"リ数",1)
+		CALL SET_FIELD_INFO(対面者,"戦場",カウンタ,"表固",1)
+	NEXT
+	
+ELSEIF 種類 == 効果後強制誘発
+	;ドリップ状態(守備表示時、ホルスタイン以外のカードが発動する度に搾られる)
+	
+	SETCOLOR C_PINK
+	CUSTOMDRAWLINE —
+	PRINTFORML
+	PRINTFORML %牝牛名称%はドリップ装置に繋がれている…
+	PRINTFORML 
+	CUSTOMDRAWLINE —
+	RESETCOLOR
+	
+	PRINTFORML
+	PRINTFORML %牝牛名称%の胸に取り付けられた装置が僅かに振動し、零れ落ちたモノがミルクサーバーに溜まっていく…
+	PRINTFORML
+	
+	;1回、うるさい鳴き、短め鳴き
+	CALL HORUSTEIN_RAND_COW_TXT(1,3,10)
+	PRINTFORML 
+	
+	;搾乳する(通常よりも少量)
+	CALL HORUSTEIN_GET_MILK(決闘者,参照カードID,GETVAR(@"%決闘者%_MZ_胸追:場所")-5)
+	PRINTFORML 
+	
+	;乳を吸ってLP回復
+	CALL LIFE_CHANGE(決闘者,"増加","効果",100)
+ENDIF
+

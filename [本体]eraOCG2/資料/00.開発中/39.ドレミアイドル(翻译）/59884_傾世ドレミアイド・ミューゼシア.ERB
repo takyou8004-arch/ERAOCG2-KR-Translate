@@ -1,0 +1,188 @@
+﻿@CARDNAME_59884,参照先
+;ココで指定卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前" 
+		RESULTS = 傾世ドレミアイドル・ミューゼシア
+	CASE "略称"
+		RESULTS = ♫ ミューゼシア
+	CASE "カテゴリ"
+		RESULTS:0 = ドレミコード
+		RESULTS:1 = ドレミアイドル
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59884(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN シンクロ
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 天使族
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 3000
+	CASE "性別"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 2093
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_59884(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 天使族チューナー＋チューナー以外のモンスター1体以上
+PRINTL このカード名はルール上も「ドレミコード」カードとして扱う。
+CALLFORM CARD_ABLE(1,発動誘発)
+PRINTL ①：相手が魔法・罠カードの効果を発動した時、
+PRINTL    EXデッキの表側表示のレベルが奇数と偶数の「ドレミコード」Pモンスター各1枚をデッキに戻して発動できる、その効果を無効にする。
+CALLFORM CARD_ABLE(2,永続効果)
+PRINTL ②：自身のフィールドに「ドレミアイドル」Pモンスターが存在する場合、相手モンスターはこのカードを攻撃対象に選択できない。
+
+@CARDSUMMON_59884(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 条件达成
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+IF EX参照 == 0 || EX参照 == 1
+	素材条件チューナー = 1
+	素材条件種族 = 天使族
+ELSEIF EX参照 >= 10
+	素材条件チューナー = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(決闘者,召喚カード,59884) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_59884(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要的卡
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,59884)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 発動誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果条件種類 = 魔罠全般
+	CALL CARD_CHECK_START_DATA(決闘者,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲EXデッキ = 1
+	効果条件カテゴリ = ドレミコード
+	効果条件種類 = EX以外全般
+	効果条件レベル:0 = 2
+	効果条件レベル:1 = 4
+	効果条件レベル:2 = 6
+	効果条件レベル:3 = 8
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲EXデッキ = 1
+	効果条件カテゴリ = ドレミコード
+	効果条件種類 = EX以外全般
+	効果条件レベル:0 = 1
+	効果条件レベル:1 = 3
+	効果条件レベル:2 = 5
+	効果条件レベル:3 = 7
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種類 = モン全般
+	効果条件カテゴリ = ドレミアイドル
+	効果条件分割 = ペンデュラム
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_59884(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 発動誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,59884,1)
+	IF RESULT == 0
+		カウンタ = 0
+		CALL FULLRESET
+		効果範囲EXデッキ = 1
+		効果条件カテゴリ = ドレミコード
+		効果条件種類 = EX以外全般
+		効果条件レベル:0 = 1
+		効果条件レベル:1 = 3
+		効果条件レベル:2 = 5
+		効果条件レベル:3 = 7
+		効果条件行先フラグ = デッキ行き
+		CALL CARD_ADD_GY_BASIC(決闘者,"EXデッキ",ゾーン,場所)
+		SIF RESULT != 9999
+			カウンタ++
+		CALL FULLRESET
+		効果範囲EXデッキ = 1
+		効果条件カテゴリ = ドレミコード
+		効果条件種類 = EX以外全般
+		効果条件レベル:0 = 2
+		効果条件レベル:1 = 4
+		効果条件レベル:2 = 6
+		効果条件レベル:3 = 8
+		効果条件行先フラグ = デッキ行き
+		CALL CARD_ADD_GY_BASIC(決闘者,"EXデッキ",ゾーン,場所)
+		SIF RESULT != 9999
+			カウンタ++	
+		IF カウンタ == 2
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"発動無効",場所,"無効",59884)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"攻避")
+ENDIF

@@ -1,0 +1,919 @@
+@CARDNAME_99556,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 【乳圧】ホルスタインプレッション
+	CASE "略称"
+		RESULTS = ﾌﾟﾚｯｼｮﾝ【乳圧】
+	CASE "カテゴリ"
+		RESULTS:0 = ホルスタイン
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+@CARD_99556(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常罠
+	CASE "追加日"
+		RETURN 250329
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99556(種類)
+#DIM DYNAMIC 種類
+#DIMS DYNAMIC 決闘者
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL このカード名の②の効果は１ターンに１度しか発動できない。
+CALLFORM CARD_ABLE(0,魔罠起動,手札起動)
+PRINTL ①：自分の魔法＆罠ゾーンに「ホルスタイン」カードの効果によって置かれたカードが存在する場合、バトルフェイズ・自分メインフェイズに発動できる。
+PRINTL 「ホルスタイン」カード以外の、自分フィールドの表側表示のカードを墓地に送る。
+PRINTL その後、選択したカードが牝性モンスターだった場合、以下の効果を適用できる。
+PRINTL ●：手札・墓地・デッキ・EXデッキ・相手の墓地から、墓地に送ったカードと同じカードを永続魔法カード扱いで自分の魔法＆罠ゾーンに表側表示で置き
+PRINTL 　　この決闘中、まだ発動していない「ホルスタイン」通常魔法を手札・デッキから除外し、その効果を全て適用する。
+PRINTL 自分の魔法＆罠ゾーンにセットされたカードが存在しない場合、このカードは手札から捨てて発動でき
+PRINTL １ターンに１度、自分の魔法＆罠ゾーンにカードが２枚以上存在する場合、相手フィールドのカードも選択することができる。
+CALLFORM CARD_ABLE(1,墓地起動)
+PRINTL ②：自分メインフェイズに発動できる。
+PRINTL 墓地のこのカードを除外し、墓地の「ホルスタイン」カードを手札に加える。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99556(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 魔罠数
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,99556)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 
+	SIF !(メインフェイズ == 1 && ターンプレイヤー == 決闘者) && バトルフェイズ != 1
+		RETURN 0
+	
+	IF ゾーン == "手札"
+		;セットカードがあれば使えない
+		CALL FULLRESET
+		効果範囲魔罠 = 1
+		効果条件表示 = 裏側表示
+		効果条件CNT = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT > 0
+			RETURN 0
+	ELSEIF ゾーン == "魔罠"
+		;セットしたターンには使えない
+		SIF GETVAR(@"%決闘者%_魔_表:場所") != 2
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	
+	;自分フィールドにホルスタインカードの効果で置いたカードが無ければ使えない。
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果条件カテゴリ:0 = 登録情報：ホルスタイン-美乳
+	効果条件カテゴリ:1 = 登録情報：ホルスタイン-愛乳
+	効果条件カテゴリ:2 = 登録情報：ホルスタイン-旨乳
+	効果条件カテゴリ:3 = 登録情報：ホルスタイン-EX乳
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 0
+		RETURN 0
+	
+	;フィールドに「ホルスタイン」以外の表側のカードがなければ使えない
+	;魔法罠ゾーンにカードが2枚上あれば相手のカードも対象にできる。
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	魔罠数 = RESULT
+	
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	IF 魔罠数 >= 2 && !発動済_1(決闘者,99556)
+		効果範囲相手戦場 = 1
+		効果範囲相手魔罠 = 1
+	ENDIF
+	効果条件表示 = 表側表示
+	効果条件固カテゴリ:0 = ホルスタイン
+	効果条件固カテゴリ:1 = 登録情報：ホルスタイン-美乳
+	効果条件固カテゴリ:2 = 登録情報：ホルスタイン-愛乳
+	効果条件固カテゴリ:3 = 登録情報：ホルスタイン-旨乳
+	効果条件固カテゴリ:4 = 登録情報：ホルスタイン-EX乳
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT <= 0
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	
+	SIF 発動済_2(決闘者,99556)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF ゾーン != "墓地"
+		RETURN 0
+	
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99556(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 参照場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 魔罠数
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 書換先カードID
+#DIM DYNAMIC 攻め牝牛参照カードID
+#DIM DYNAMIC 参照カードID
+#DIM DYNAMIC 牝牛対象
+#DIMS DYNAMIC 牝牛名称
+#DIM DYNAMIC 牝牛乳サイズ
+#DIM DYNAMIC 被牝牛対象
+#DIMS DYNAMIC 被牝牛名称
+#DIM DYNAMIC 被牝牛乳サイズ
+#DIMS DYNAMIC カテゴリ名称
+#DIM DYNAMIC 美乳チェック
+#DIM DYNAMIC 愛乳チェック
+#DIM DYNAMIC 旨乳チェック
+#DIM DYNAMIC EX乳チェック
+
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99556)
+	IF RESULT == 0
+		
+		CALL FULLRESET
+		効果範囲魔罠 = 1
+		効果条件カテゴリ:0 = 登録情報：ホルスタイン-美乳
+		効果条件カテゴリ:1 = 登録情報：ホルスタイン-愛乳
+		効果条件カテゴリ:2 = 登録情報：ホルスタイン-旨乳
+		効果条件カテゴリ:3 = 登録情報：ホルスタイン-EX乳
+		効果条件CNT = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		IF RESULT == 1
+			;選択肢なし
+			RESULT = 0
+		ELSE
+			PRINTFORML 誰が乳圧を掛けますか？
+			PRINTFORML 
+				
+			美乳チェック = -1
+			愛乳チェック = -1
+			旨乳チェック = -1
+			EX乳チェック = -1
+			
+			FOR カウンタ,0,5
+				IF GETVARS(@"%決闘者%_魔_追カテ:カウンタ") == "登録情報：ホルスタイン-美乳"
+					CALL HORUSTEIN_GET_DATA(決闘者,-1,179556)
+					牝牛名称 = %RESULTS:0%
+					PRINTFORML [{カウンタ}] - 【美乳】%RESULTS:0%
+					美乳チェック = カウンタ
+					CONTINUE
+				ENDIF
+				IF GETVARS(@"%決闘者%_魔_追カテ:カウンタ") == "登録情報：ホルスタイン-愛乳"
+					CALL HORUSTEIN_GET_DATA(決闘者,-1,179557)
+					牝牛名称 = %RESULTS:0%
+					PRINTFORML [{カウンタ}] - 【愛乳】%RESULTS:0%
+					愛乳チェック = カウンタ
+					CONTINUE
+				ENDIF
+				IF GETVARS(@"%決闘者%_魔_追カテ:カウンタ") == "登録情報：ホルスタイン-旨乳"
+					CALL HORUSTEIN_GET_DATA(決闘者,-1,179558)
+					牝牛名称 = %RESULTS:0%
+					PRINTFORML [{カウンタ}] - 【旨乳】%RESULTS:0%
+					旨乳チェック = カウンタ
+					CONTINUE
+				ENDIF
+				IF GETVARS(@"%決闘者%_魔_追カテ:カウンタ") == "登録情報：ホルスタイン-EX乳"
+					CALL HORUSTEIN_GET_DATA(決闘者,-1,179559)
+					牝牛名称 = %RESULTS:0%
+					PRINTFORML [{カウンタ}] - 【EX乳】%RESULTS:0%
+					EX乳チェック = カウンタ
+					CONTINUE
+				ENDIF
+				
+			NEXT
+			
+			PRINTFORML 
+			PRINTFORML [9] - おまかせ
+			IF 決闘者 == "自分"
+				BINPUT
+			ELSE
+				RESULT = 9
+			ENDIF
+		ENDIF
+		
+		IF RESULT == 9
+			SIF 美乳チェック != -1
+				RESULT = 美乳チェック
+			SIF 愛乳チェック != -1
+				RESULT = 愛乳チェック
+			SIF 旨乳チェック != -1
+				RESULT = 旨乳チェック
+			SIF EX乳チェック != -1
+				RESULT = EX乳チェック
+			
+			;雑ランダム処理
+			SIF 旨乳チェック != -1 && RAND:2 == 1
+				RESULT = 旨乳チェック
+			SIF 愛乳チェック != -1 && RAND:2 == 1
+				RESULT = 愛乳チェック
+			SIF 美乳チェック != -1 && RAND:2 == 1
+				RESULT = 美乳チェック
+		ENDIF
+		
+		FOR カウンタ,RESULT,5
+			IF GETVARS(@"%決闘者%_魔_追カテ:カウンタ") == "登録情報：ホルスタイン-美乳"
+				RESULT = カウンタ
+				攻め牝牛参照カードID = 179556
+				BREAK
+			ENDIF
+			IF GETVARS(@"%決闘者%_魔_追カテ:カウンタ") == "登録情報：ホルスタイン-愛乳"
+				RESULT = カウンタ
+				攻め牝牛参照カードID = 179557
+				BREAK
+			ENDIF
+			IF GETVARS(@"%決闘者%_魔_追カテ:カウンタ") == "登録情報：ホルスタイン-旨乳"
+				RESULT = カウンタ
+				攻め牝牛参照カードID = 179558
+				BREAK
+			ENDIF
+			IF GETVARS(@"%決闘者%_魔_追カテ:カウンタ") == "登録情報：ホルスタイン-EX乳"
+				RESULT = カウンタ
+				攻め牝牛参照カードID = 179559
+				BREAK
+			ENDIF
+		NEXT
+		
+		;ホルスタイン情報の取得
+		CALL HORUSTEIN_GET_DATA(決闘者,-1,攻め牝牛参照カードID)
+		牝牛名称 = %RESULTS:0%
+		参照場所 = RESULT:0
+		牝牛対象 = RESULT:1
+		牝牛乳サイズ = GETVAR(@"%決闘者%_魔_個Ｃ:参照場所");魔法罠の乳サイズ
+		CALL HORUSTEIN_GET_BUST(RESULT:99,牝牛乳サイズ)
+		牝牛乳サイズ = RESULT:2
+		
+		美乳チェック = 0
+		愛乳チェック = 0
+		旨乳チェック = 0
+		EX乳チェック = 0
+		
+		;墓地送り
+		CALL FULLRESET
+		効果範囲魔罠 = 1
+		効果条件CNT = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		魔罠数 = RESULT
+		
+		効果範囲戦場 = 1
+		効果範囲魔罠 = 1
+		IF 魔罠数 >= 2 && !発動済_1(決闘者,99556)
+			効果範囲相手戦場 = 1
+			効果範囲相手魔罠 = 1
+		ENDIF
+		効果条件表示 = 表側表示
+		効果条件固カテゴリ:0 = ホルスタイン
+		効果条件固カテゴリ:1 = 登録情報：ホルスタイン-美乳
+		効果条件固カテゴリ:2 = 登録情報：ホルスタイン-愛乳
+		効果条件固カテゴリ:3 = 登録情報：ホルスタイン-旨乳
+		効果条件固カテゴリ:4 = 登録情報：ホルスタイン-EX乳
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+	
+		IF RESULT != -1
+			選択カードID = RESULT:1
+			
+			;相手のカードを選んだら、使用済みにする
+			SIF 決闘者 != 対象者（CS）
+				CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99556,1)
+			
+			;ホルスタイン情報の取得(カードIDから名前を取得)
+			CALL HORUSTEIN_GET_DATA(決闘者,-1,選択カードID)
+			被牝牛名称 = %RESULTS:0%
+			
+			;今回は乳の大きさは魔法罠を参照して出している。
+			;MZの乳は「ホルスタイン」以外のカードの効果で変動してれば値がずれてしまうが、面倒なので今回はふわっとした表現に
+			;貧乳(-1)以下、巨乳(1)以下、巨乳より大きい
+			
+			PRINTFORM %牝牛名称%は%被牝牛名称%の上にのしかかると、
+			IF 牝牛乳サイズ <= -1
+				PRINTFORMW 可愛らしい乳で一生懸命%被牝牛名称%を押しつぶした…
+			ELSEIF 牝牛乳サイズ <= 1
+				;愛乳以外は巨乳以上になる
+				PRINTFORMW 大きな乳で%被牝牛名称%を押しつぶしてしまった…
+			ELSE
+				PRINTFORMW とても大きな乳で%被牝牛名称%を押しつぶしてしまった…
+			ENDIF
+			PRINTFORML
+			
+			;選択カードIDが自分のデッキ・EXデッキ・手札に存在する場合
+			;かつ、魔法罠ゾーンに空きがある場合
+			
+			CALL FULLRESET
+			効果範囲相手墓地 = 1
+			効果範囲手札 = 1
+			効果範囲墓地 = 1
+			効果範囲デッキ = 1
+			効果範囲EXデッキ = 1
+			効果条件性別 = 牝性
+			効果条件ID = 選択カードID
+			効果条件CNT = 1
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			IF RESULT != 0 && 魔罠数(決闘者) < 5
+				;存在する
+				
+				FOR カウンタ,0,5
+					;手札とデッキに発動していない〇〇登録があるか
+					CALL FULLRESET
+					効果範囲手札 = 1
+					効果範囲デッキ = 1
+					効果条件ID = 79556 + カウンタ
+					CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+					
+					;発動可能ﾁｪｯｸと存在チェック
+					IF RESULT != -1
+						SELECTCASE 79556 + カウンタ
+						CASE 79556
+							美乳チェック = 1
+							SIF 発動済_D1(決闘者,79556)
+								美乳チェック = -1
+						CASE 79557
+							愛乳チェック = 1
+							SIF 発動済_D1(決闘者,79557)
+								愛乳チェック = -1
+						CASE 79558
+							旨乳チェック = 1
+							SIF 発動済_D1(決闘者,79558)
+								旨乳チェック = -1
+						CASE 79559
+							EX乳チェック = 1
+							SIF 発動済_D1(決闘者,79559)
+								EX乳チェック = -1
+						ENDSELECT
+					ENDIF
+				NEXT
+				
+				IF 美乳チェック == 1 || 愛乳チェック == 1 || 旨乳チェック == 1 || EX乳チェック == 1
+					
+					;発動可能な登録カードがある
+					PRINTFORML 
+					PRINTFORML 手札・デッキ・EXデッキに牝牛に登録可能なカードが存在します。登録しますか？
+					PRINTFORML 
+					IF  美乳チェック == 1
+						PRINTFORML [0] - 【美乳】登録
+					ELSE
+						SETCOLOR C_GRAY
+						PRINTFORML     - 【美乳】登録
+						RESETCOLOR
+					ENDIF
+					IF  愛乳チェック == 1
+						PRINTFORML [1] - 【愛乳】登録
+					ELSE
+						SETCOLOR C_GRAY
+						PRINTFORML     - 【愛乳】登録
+						RESETCOLOR
+					ENDIF
+					IF  旨乳チェック == 1
+						PRINTFORML [2] - 【旨乳】登録
+					ELSE
+						SETCOLOR C_GRAY
+						PRINTFORML     - 【旨乳】登録
+						RESETCOLOR
+					ENDIF
+					IF  EX乳チェック == 1
+						PRINTFORML [3] - 【EX乳】登録
+					ELSE
+						SETCOLOR C_GRAY
+						PRINTFORML     - 【EX乳】登録
+						RESETCOLOR
+					ENDIF
+					PRINTFORML 
+					PRINTFORML [9] - 登録しない
+							
+					IF 決闘者 == "自分"
+						BINPUT
+					ELSE
+						SIF  EX乳チェック == 1
+							RESULT = 3
+						SIF  旨乳チェック == 1
+							RESULT = 2
+						SIF  愛乳チェック == 1
+							RESULT = 1
+						SIF  美乳チェック == 1
+							RESULT = 0
+					ENDIF
+				ELSE
+					;選択肢が出なければ終わり
+					RESULT = -1
+				ENDIF
+			ELSE 
+				;自分の手札デッキEXデッキにカードが無ければ、カードを潰して終わり
+				RESULT = -1
+			ENDIF
+		ELSE
+			;潰すのに失敗したら終わり
+			RESULT = -1
+		ENDIF
+		
+		SELECTCASE RESULT
+		CASE 0
+			美乳チェック = 2
+			書換先カードID = 179556
+			カテゴリ名称 = 登録情報：ホルスタイン-美乳
+		CASE 1
+			愛乳チェック = 2
+			書換先カードID = 179557
+			カテゴリ名称 = 登録情報：ホルスタイン-愛乳
+		CASE 2
+			旨乳チェック = 2
+			書換先カードID = 179558
+			カテゴリ名称 = 登録情報：ホルスタイン-旨乳
+		CASE 3
+			EX乳チェック = 2
+			書換先カードID = 179559
+			カテゴリ名称 = 登録情報：ホルスタイン-EX乳
+		CASEELSE
+			RESULT = -1
+		ENDSELECT
+		
+		IF RESULT != -1 && (美乳チェック == 2 || 愛乳チェック == 2 || 旨乳チェック == 2 || EX乳チェック == 2 )
+			;何かしら選択したなら登録開始
+			
+			;選んだカードをデッキか手札から除外する(デッキ優先)
+			RESULT = -1
+			;デッキのカード
+			FOR カウンタ,0,現山札数(決闘者)
+				SIF GETVAR(@"%決闘者%_デッキ:カウンタ") != 書換先カードID - 100000
+					CONTINUE
+				;見つかったら抜ける
+				CALL CARD_DISPOSE(決闘者,"デッキ",カウンタ,除外行き)
+				RESULT = 1
+				PRINTFORML デッキ
+				BREAK
+			NEXT
+			IF RESULT == -1
+				;手札のカード
+				FOR カウンタ,0,現手札(決闘者)
+					SIF GETVAR(@"%決闘者%_手札:カウンタ") != 書換先カードID - 100000
+						CONTINUE
+					;見つかったら抜ける
+					CALL CARD_DISPOSE(決闘者,"手札",カウンタ,除外行き)
+					PRINTFORML デッキ
+					BREAK
+				NEXT
+			ENDIF
+			
+			CALL FULLRESET
+			SIF 魔罠数 >= 2
+				効果範囲相手墓地 = 1
+			効果範囲手札 = 1
+			効果範囲墓地 = 1
+			効果範囲デッキ = 1
+			効果範囲EXデッキ = 1
+			効果条件性別 = 牝性
+			効果条件固カテゴリ = ホルスタイン
+			効果条件ID = 選択カードID
+			効果追加カテ = %カテゴリ名称%
+			CALL CARD_SET_ADV(決闘者,ゾーン,場所,"表側表示")
+			
+			;ホルスタイン情報の取得(カードIDから各種情報を取得)
+			CALL HORUSTEIN_GET_DATA(決闘者,-1,書換先カードID)
+			被牝牛名称 = %RESULTS:0%
+			参照場所 = RESULT:0
+			被牝牛対象 = RESULT:1
+			参照カードID = RESULT:99
+			CALL HORUSTEIN_GET_BUST(参照カードID)
+			被牝牛乳サイズ = RESULT:2
+			
+			;耐性と発動無効の付与
+			CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"破耐",2)
+			CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"対耐",2)
+			CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"発無",2)
+			
+			;---手札に加わった等の表示をスキップ
+			SKIPDISP 1
+			
+			;書き換え前のカードを一旦手札に加える。
+			CALL CARD_GENERATE_HAND(決闘者,選択カードID)
+			
+			;カードの書き換え
+			;戦場のカード
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%決闘者%_MZ_ID:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(決闘者,"戦場",カウンタ,書換先カードID)
+				SIF EX乳チェック == 2
+					CALL CARD_ADD(決闘者, "戦場", "EXデッキ",カウンタ)
+			NEXT
+			
+			;手札のカード
+			FOR カウンタ,0,現手札(決闘者)
+				SIF GETVAR(@"%決闘者%_手札:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(決闘者,"手札",カウンタ,書換先カードID)
+				SIF EX乳チェック == 2
+					CALL CARD_ADD(決闘者, "手札", "EXデッキ",カウンタ)
+			NEXT
+			
+			;デッキのカード
+			FOR カウンタ,0,現山札数(決闘者)
+				SIF GETVAR(@"%決闘者%_デッキ:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(決闘者,"デッキ",カウンタ,書換先カードID)
+				SIF EX乳チェック == 2
+					CALL CARD_ADD(決闘者, "デッキ", "EXデッキ",カウンタ)
+			NEXT
+			
+			;墓地のカード
+			FOR カウンタ,0,現墓地数(決闘者)
+				SIF GETVAR(@"%決闘者%_墓地:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(決闘者,"墓地",カウンタ,書換先カードID)
+			NEXT
+			
+			;EXデッキのカード
+			FOR カウンタ,0,現EX山札数(決闘者)
+				SIF GETVAR(@"%決闘者%_EXデッキ:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(決闘者,"EXデッキ",カウンタ,書換先カードID)
+				SIF EX乳チェック != 2
+					CALL CARD_ADD(決闘者, "EXデッキ", "デッキ",カウンタ)
+			NEXT
+			;---スキップここまで
+			SKIPDISP 0
+			
+			PRINTFORML
+			PRINTFORMW %牝牛名称%は自分の乳をきゅっと搾り、溢れたミルクを手で受け止めると、それをするすると自分の口元に流し込んでいく…
+			PRINTFORMW 口元からつぅ…と白いミルクを垂らすと、動けなくなった%被牝牛名称%に口移しで飲ませ始めた…
+			
+			IF 美乳チェック == 2
+				PRINTFORMW %牝牛名称%は%被牝牛名称%にパチン、とピアスを取り付けると、自分がそうされたように%被牝牛名称%も牝牛に相応しい"商品"へと"調整"していく…
+				PRINTFORML
+				PRINTFORM %被牝牛名称%の乳は
+				SETCOLOR C_PINK
+				PRINTFORM  [%GET_TALENTNAME(121,被牝牛乳サイズ)%] 
+				RESETCOLOR
+				PRINTFORM から
+				SETCOLOR C_H_PINK
+				PRINTFORM  [%GET_TALENTNAME(121,被牝牛乳サイズ+1)%] 
+				RESETCOLOR
+				PRINTFORMW になってしまった…
+				PRINTFORML
+				PRINTFORMW %牝牛名称%は%被牝牛名称%の乳を満足げに撫でると、相応しい服装へと整えていく…
+				被牝牛乳サイズ++ 
+			ELSEIF 愛乳チェック == 2
+				
+				IF 被牝牛乳サイズ >= 0
+					
+					SETCOLOR C_GRAY
+					PRINTFORML %牝牛名称%は%被牝牛名称%の乳を眺めている… 
+					PRINTFORML
+					RESETCOLOR
+					CALL YN_CHOICE(決闘者,"「貧乳」にする","乳のサイズを変更しない")
+				ENDIF
+
+				PRINTFORMW %牝牛名称%は意識の無い%被牝牛名称%にカウベルの付いた首輪を取り付けると、自分がそうされたように%被牝牛名称%も牝牛に相応しい"商品"へと"調整"していく…
+				PRINTFORML
+				
+				IF 被牝牛乳サイズ <= -1 || RESULT != はい
+					;元々貧乳未満の場合、変わらなかった…
+					
+					PRINTFORM %被牝牛名称%の乳は
+					IF 被牝牛乳サイズ <= -1
+						SETCOLOR C_L_BLUE
+					ELSE
+						SETCOLOR C_PINK
+					ENDIF
+					PRINTFORM  [%GET_TALENTNAME(121,被牝牛乳サイズ)%] 
+					RESETCOLOR
+					PRINTFORM から……特に変動はなかったようだ……
+					PRINTFORMW
+					
+					被牝牛乳サイズ = 0
+					;着替え
+					PRINTFORMW %牝牛名称%は%被牝牛名称%の熱を持った身体を冷ますべく、服を次々と脱がせ始めた…
+				ELSE
+					;貧乳より大きい場合、貧乳にする
+					PRINTFORM %被牝牛名称%の乳は
+					SETCOLOR C_PINK
+					PRINTFORM  [%GET_TALENTNAME(121,被牝牛乳サイズ)%] 
+					RESETCOLOR
+					PRINTFORM から
+					SETCOLOR C_L_BLUE
+					PRINTFORM  [%GET_TALENTNAME(121,-1)%] 
+					RESETCOLOR
+					PRINTFORML になってしまった…
+					PRINTFORMW
+					
+					;着替え
+					PRINTFORMW %牝牛名称%はサイズの合わなくなった服を%被牝牛名称%から剥ぎ取っていく…
+					
+					;元々が小柄体型じゃなければ表示(実際には変更しない)
+					IF 被牝牛対象 != -1 && TALENT:被牝牛対象:100 != -1
+						PRINTFORML
+						PRINTFORMW %被牝牛名称%は[小柄体型]になってしまったようだ…
+					ENDIF
+					
+					被牝牛乳サイズ = -1 -(被牝牛乳サイズ)
+				ENDIF
+				
+				
+			ELSEIF 旨乳チェック == 2
+				
+				PRINTFORML 意識の無い%被牝牛名称%は抵抗することもできず、身体に管理タグを印字されてしまった…
+				PRINTFORMW %牝牛名称%は自分がそうされたように%被牝牛名称%も牝牛に相応しい"商品"へと"調整"していく…
+				
+				IF 被牝牛乳サイズ >= 0
+					;元々普乳以上の場合、1サイズアップ
+					
+					PRINTFORM %被牝牛名称%の乳は
+					SETCOLOR C_PINK
+					PRINTFORM  [%GET_TALENTNAME(121,被牝牛乳サイズ)%] 
+					RESETCOLOR
+					PRINTFORM から
+					SETCOLOR C_H_PINK
+					PRINTFORM  [%GET_TALENTNAME(121,被牝牛乳サイズ+1)%] 
+					RESETCOLOR
+					PRINTFORML になってしまった…
+					PRINTFORMW
+					
+					;着替え
+					PRINTFORMW %牝牛名称%は%被牝牛名称%の濡れた身体に張り付いていた服を脱がせ始めた…
+				ELSE
+					;普乳未満の場合、巨乳にする
+					;一気に2サイズ以上アップする
+					
+					PRINTFORM %被牝牛名称%の乳は
+					SETCOLOR C_PINK
+					PRINTFORM  [%GET_TALENTNAME(121,被牝牛乳サイズ)%] 
+					RESETCOLOR
+					PRINTFORM から
+					SETCOLOR C_H_PINK
+					PRINTFORM  [%GET_TALENTNAME(121,1)%] 
+					RESETCOLOR
+					PRINTFORML になってしまった…
+					PRINTFORMW
+					
+					;着替え
+					PRINTFORMW %牝牛名称%は%被牝牛名称%の一気に大きくなった乳を逃がすように服を脱がせ始めた…
+				ENDIF
+				
+				;旨乳はカウンターを巨乳以上になるように調整してスタート(乳サイズ：UP)
+				IF 被牝牛乳サイズ <= 0
+					;普乳以下なら巨乳にする
+					被牝牛乳サイズ = 1 -(被牝牛乳サイズ)
+				ELSE
+					;巨乳以上なら1サイズUpする
+					被牝牛乳サイズ = 1
+				ENDIF
+				
+			ELSEIF EX乳チェック == 2
+				
+				PRINTFORML 意識の無い%被牝牛名称%は抵抗することもできず、
+				PRINTFORMW %牝牛名称%にピアスにカウベルの付いた首輪を取り付けられ、身体に管理タグを印字されてしまった…
+				PRINTFORMW %被牝牛名称%が牝牛に相応しい"商品"へと"調整"さていく過程を楽しむかのように、%牝牛名称%は丁寧に乳を揉みしだき始めた…
+				
+				IF 被牝牛乳サイズ >= 4
+					;魔乳以上の場合、1サイズアップする
+					
+					PRINTFORM %被牝牛名称%の乳は
+					SETCOLOR C_PINK
+					PRINTFORM  [%GET_TALENTNAME(121,被牝牛乳サイズ)%] 
+					RESETCOLOR
+					PRINTFORM から
+					SETCOLOR C_H_PINK
+					PRINTFORM  [%GET_TALENTNAME(121,被牝牛乳サイズ+1)%] 
+					RESETCOLOR
+					PRINTFORML になってしまった…
+					PRINTFORMW
+					
+				ELSE
+					;魔乳未満の場合、規格外にする
+					PRINTFORM %被牝牛名称%の乳は
+					SETCOLOR C_PINK
+					PRINTFORM  [%GET_TALENTNAME(121,被牝牛乳サイズ)%] 
+					RESETCOLOR
+					PRINTFORM から
+					SETCOLOR C_H_PINK
+					PRINTFORM  [%GET_TALENTNAME(121,5)%] 
+					RESETCOLOR
+					PRINTFORML になってしまった…
+					PRINTFORMW
+				ENDIF
+			
+				PRINTFORML 
+				;着替え
+				PRINTFORMW %牝牛名称%は%被牝牛名称%のデカすぎる乳を、満足げに指で感触を確かめている…
+				
+				;EX乳はカウンターを規格外以上になるように調整してスタート(乳サイズ：UP)
+				IF 被牝牛乳サイズ < 5
+					;規格外未満なら最低限として規格外にする
+					被牝牛乳サイズ = 5 -(被牝牛乳サイズ)
+				ELSE
+					;規格外なら+1する
+					被牝牛乳サイズ = 1
+				ENDIF
+			ENDIF
+			
+			PRINTFORML 
+			CALL SET_FIELD_INFO(決闘者,"魔罠",参照場所,"個Ｃ",被牝牛乳サイズ)
+			
+			
+			;服装の変更(牛柄ビキニと角)
+			IF 被牝牛対象 != -1 
+				;アクセサリ&帽子：つけ角・小(2枠目を変更)
+				EQUIP:被牝牛対象:2 = 20
+				CFLAG:被牝牛対象:(200 + 2) = 20
+				;靴、靴下は触らない
+				;ズボン～インナーまでは全剥き
+				FOR カウンタ,6,13
+					SIF EQUIP:被牝牛対象:カウンタ != 0
+						PRINTFORML %牝牛名称%は%被牝牛名称%の【%CLOTHNAME(カウンタ,EQUIP:被牝牛対象:カウンタ)%】を脱がせた…
+					EQUIP:被牝牛対象:カウンタ = 0
+					CFLAG:被牝牛対象:(200 + カウンタ) = 0
+				NEXT
+				
+				PRINTFORML
+				;ワンピース：牛柄ビキニ(マイクロビキニは無かった)
+				IF EQUIP:被牝牛対象:カウンタ != 0
+					PRINTFORML %牝牛名称%は%被牝牛名称%の【%CLOTHNAME(カウンタ,EQUIP:被牝牛対象:カウンタ)%】を脱がせ【牛柄ビキニ】を着せた…
+				ELSE
+					PRINTFORML %牝牛名称%は%被牝牛名称%に【牛柄ビキニ】を着せた…
+				ENDIF
+				EQUIP:被牝牛対象:15 = 33
+				CFLAG:被牝牛対象:(200 + 15) = 33
+				
+				;調教
+				IF 牝牛対象 != -1 
+					CALL EROTIC_MOVE("Ｂレズ愛撫",被牝牛対象,牝牛対象,300)
+				ELSE
+					CALL EROTIC_MOVE("Ｂレズ愛撫",被牝牛対象,-1,300)
+				ENDIF
+			ENDIF
+			
+			PRINTFORML %牝牛名称%は仕上がりつつある%被牝牛名称%の乳を眺めると、
+			PRINTFORMW 乳をなぞるように舌を這わせ、乳首からトロトロと溢れ始めた白い液体を、その出来栄えを確かめるように一番搾りを味わい始めた…
+			PRINTFORMW 何もわからず乳を商品にされてしまった%被牝牛名称%は無意識にも関わらず、乳を吸われる度にぴくんっぴくんっと身体を震わせている。
+			PRINTFORML 
+			PRINTFORMW 頼りになる"先輩"も居ることだ…%被牝牛名称%が目を覚ました頃には立派な雌牛に教育されていることだろう。
+			
+			;対応する紋章と○○登録のデュエル中１度効果を使用済みにする
+			SKIPDISP 1
+			CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,書換先カードID - 100000,20)
+			CALL CARD_RESERV(決闘者,書換先カードID - 100000,永紋章予約)
+			CALL CARD_RESERV(決闘者,書換先カードID - 100000,永攻紋章予約)
+			SKIPDISP 0
+			
+			SETCOLOR C_YELLOW
+			PRINTFORML
+			PRINTFORM 「【
+			IF 美乳チェック == 2
+				PRINTFORM 美乳
+			ELSEIF 愛乳チェック == 2
+				PRINTFORM 愛乳
+			ELSEIF 旨乳チェック == 2
+				PRINTFORM 旨乳
+			ELSEIF EX乳チェック == 2
+				PRINTFORM EX乳
+			ENDIF
+			
+			PRINTFORML 】ホルスタイン」はフィールドに存在する場合「%被牝牛名称%」として扱われます。
+			RESETCOLOR
+			PRINTFORMW
+			
+			;手札に加える効果
+			
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件カテゴリ = ホルスタイン
+			SIF 美乳チェック == 2
+				効果条件ID = 79555
+			SIF 愛乳チェック == 2
+				効果条件種類 = 通常魔法
+			SIF 旨乳チェック == 2
+				効果条件種類 = 罠全般
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			IF RESULT == 1
+				効果範囲デッキ = 1
+				効果条件カテゴリ = ホルスタイン
+				SIF 美乳チェック == 2
+					効果条件ID = 79555
+				SIF 愛乳チェック == 2
+					効果条件種類 = 通常魔法
+				SIF 旨乳チェック == 2
+					効果条件種類 = 罠全般
+				CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+			ELSE
+				PRINTFORML
+				PRINTFORMW デッキから手札に加えられる「ホルスタイン」カードは無いようだ…
+				PRINTFORML
+			ENDIF
+			
+			;特殊召喚効果
+			IF 美乳チェック == 2 || 愛乳チェック == 2 || 旨乳チェック == 2
+				;手札から特殊召喚
+				;選択時に【〇乳】ホルスタイン…と表示されるとｷﾞｮｯっとするので、手札から探して特殊召喚する
+				FOR カウンタ,0,現手札(決闘者)
+					SIF GETVAR(@"%決闘者%_手札:カウンタ") != 書換先カードID
+						CONTINUE
+					CALL CARD_SP_SUMMON(決闘者,"手札",カウンタ)
+					BREAK
+				NEXT
+				
+				IF RESULT != 0
+					IF 美乳チェック == 2
+						PRINTFORMW %被牝牛名称%の美しい乳がしなやかに揺れた…
+						CALL HORUSTEIN_RAND_COW_TXT(1,0)
+					ELSEIF 愛乳チェック == 2
+						PRINTFORMW %被牝牛名称%の可愛らしい乳首がぷるんと震えた…
+						CALL HORUSTEIN_RAND_COW_TXT(1,1)
+					ELSEIF 旨乳チェック == 2
+						PRINTFORMW %被牝牛名称%の思わず吸い付きたくなる乳がしっとりと艶めいている…
+						CALL HORUSTEIN_RAND_COW_TXT(1,2)
+					ENDIF
+				ENDIF
+			ELSEIF EX乳チェック == 2
+				CALL FULLRESET
+				効果範囲デッキ = 1
+				効果範囲墓地 = 1
+				効果条件カテゴリ = ホルスタイン
+				効果条件種類 = モン全般
+				CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+				
+				IF RESULT == 1
+					;デッキ・墓地から「ホルスタイン」モンスターを特殊召喚する
+					CALL FULLRESET
+					効果範囲デッキ = 1
+					効果範囲墓地 = 1
+					効果条件カテゴリ = ホルスタイン
+					CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+					
+					IF RESULT != -1
+						選択カードID = RESULT:1
+						CALL HORUSTEIN_GET_DATA(決闘者,カード召喚先,選択カードID)
+						;◆小さな胸でも違和感のない描写にする
+						SELECTCASE 選択カードID
+						CASE 179556
+							;美乳
+							PRINTFORMW %RESULTS:0%の美しい乳がしなやかに揺れた…
+							CALL HORUSTEIN_RAND_COW_TXT(1,0)
+						CASE 179557
+							;愛乳
+							PRINTFORMW %RESULTS:0%の可愛らしい乳首がぷるんと震えた…
+							CALL HORUSTEIN_RAND_COW_TXT(1,1)
+						CASE 179558
+							;旨乳
+							PRINTFORMW %RESULTS:0%の思わず吸い付きたくなる乳がしっとりと艶めいている…
+							CALL HORUSTEIN_RAND_COW_TXT(1,2)
+						ENDSELECT
+						PRINTFORMW 
+					ENDIF
+				ENDIF
+			ENDIF
+			
+		ENDIF
+		;テスト時はコメント化
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99556,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,除外行き)
+		
+		CALL FULLRESET
+		効果条件カテゴリ = ホルスタイン
+		CALL CARD_ADD_BASIC(決闘者,"墓地",場所)
+	ENDIF
+ENDIF

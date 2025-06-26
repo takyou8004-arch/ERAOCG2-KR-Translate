@@ -1,0 +1,132 @@
+﻿@CARDNAME_93204,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = サンアバロン・フォース
+	CASE "略称"
+		RESULTS = 聖天樹の威圧
+	CASE "カテゴリ"
+		RESULTS:0 = サンアバロン
+		RESULTS:1 = ゲームオリジナル
+ENDSELECT
+
+
+@CARD_93204(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 永続罠
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93204(種類)
+#DIM DYNAMIC 種類
+
+PRINTL ①：自分フィールドに「サンアバロン」Lモンスターが存在しない場合、このカードは破壊される。
+PRINTL ②：自分フィールドの「サンアバロン」Lモンスターは対象耐性を得る。
+PRINTL ③：自分フィールドのモンスターが戦闘でモンスターを破壊した場合、
+PRINTL 自分フィールドの植物族Lモンスター1体を対象として発動できる。
+PRINTL そのリンク数×200ダメージを相手に与える。
+
+
+
+@CARDCAN_93204(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,93204)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 効果後誘発 || 種類 == 攻撃後強制誘発 || 種類 == 発動強制誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種類 = リンク
+	効果条件カテゴリ = サンアバロン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 攻撃後誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 直前戦闘破壊ID(決闘者,1) == 0
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種類 = リンク
+	効果条件種族 = 植物族
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_93204(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 効果後誘発 || 種類 == 攻撃後強制誘発 || 種類 == 発動強制誘発
+	CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+ELSEIF 種類 == 永続効果
+	CALL FULLRESET
+	効果条件種類 = リンク
+	効果条件カテゴリ = サンアバロン
+	CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"対耐")
+ELSEIF 種類 == 攻撃後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,93204)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件種類 = リンク
+		効果条件種族 = 植物族
+		CALL CARD_CHOOSE_BASIC(決闘者,"戦場",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			ダメージ量 = GETVAR(@"%決闘者%_MZ_星:選択カード") * 200
+			CALL LIFE_CHANGE(決闘者,"減少","効果",ダメージ量,1)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 魔罠起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,93204)
+	IF RESULT == 0
+	ENDIF
+ENDIF

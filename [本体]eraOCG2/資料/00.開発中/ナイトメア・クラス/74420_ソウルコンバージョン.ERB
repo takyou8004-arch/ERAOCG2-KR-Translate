@@ -1,0 +1,93 @@
+﻿@CARDNAME_74420,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ソウルコンバージョン
+	CASE "略称"
+		RESULTS = 魂の捕食
+	CASE "カテゴリ"
+		RESULTS:0 = ナイトメア・クラス
+		RESULTS:4 = Shadowverse
+ENDSELECT
+
+
+@CARD_74420(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "追加日"
+		RETURN 250616
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_74420(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①の効果は１ターンに１枚しか使用できない。
+CALLFORM CARD_ABLE(1,魔罠起動,手札起動)
+PRINTL ①：自分フィールドの「ナイトメア・クラス」モンスター１体を破壊し、自分は２枚ドローする。
+PRINTL 
+PRINTL 
+
+
+@CARDCAN_74420(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,74420)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF 発動済_1(決闘者,74420)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = ナイトメア・クラス
+	効果条件除去種 = 墓地
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_74420(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,74420,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果条件行先フラグ = 破壊行き
+		CALL CARD_ADD_GY_BASIC(決闘者,"戦場",ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(決闘者,2)
+		ENDIF
+	ENDIF
+ENDIF

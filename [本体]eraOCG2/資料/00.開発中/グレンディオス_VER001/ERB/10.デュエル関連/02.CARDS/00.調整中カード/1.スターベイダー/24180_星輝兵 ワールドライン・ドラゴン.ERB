@@ -1,0 +1,134 @@
+@CARDNAME_24180,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 星輝兵 ワールドライン・ドラゴン
+	CASE "略称"
+		RESULTS = ワールドライン
+	CASE "カテゴリ"
+		RESULTS:0 = 星輝兵
+		RESULTS:1 = リンクジョーカー
+		RESULTS:4 = ヴァンガード
+ENDSELECT
+
+@CARD_24180(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 機械族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "性別"
+		RETURN 無性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24180(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,手札起動)
+PRINTL ①：自分メインフェイズに発動できる。
+PRINTL 手札のこのカードを墓地に送り、デッキから「グレンディオス」カード１枚を手札に加える。
+PRINTL この効果の発動後、自分は「グレンディオス」モンスターしかＥＸデッキから特殊召喚できない。
+CALL CARD_ABLE(2,墓地起動)
+PRINTL ②：自分メインフェイズに自分フィールドに「グレンディオス」モンスターが存在しない場合に発動できる。
+PRINTL 墓地のこのモンスターを特殊召喚する。
+PRINTL この効果の発動後、自分は「グレンディオス」モンスターしかＥＸデッキから特殊召喚できない。
+
+@CARDCAN_24180(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,24180)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF 発動済_1(決闘者,24180)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = グレンディオス
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	SIF 発動済_2(決闘者,24180)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,24180,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = グレンディオス
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_24180(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 選択カードID
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,24180,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = グレンディオス
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		CALL CARD_EX_RESTRICTION(決闘者,"グレンディオス")
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,24180,2)
+	IF RESULT == 0
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+		CALL CARD_EX_RESTRICTION(決闘者,"グレンディオス")
+	ENDIF
+ENDIF

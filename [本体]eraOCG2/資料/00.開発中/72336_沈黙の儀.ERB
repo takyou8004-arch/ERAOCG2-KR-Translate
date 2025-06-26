@@ -1,0 +1,151 @@
+﻿@CARDNAME_72336,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = サイレント・バトル
+	CASE "略称"
+		RESULTS = 沈黙の儀
+	CASE "カテゴリ"
+		RESULTS:0 = サイレント
+		RESULTS:2 = ゲームオリジナル
+ENDSELECT
+
+
+@CARD_72336(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 永続魔法
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72336(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の②③の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①：自分フィールドの「サイレント」モンスター１体を選択して発動できる。
+PRINTL そのカードが破壊された場合の効果を発動する。
+CALLFORM CARD_ABLE(2,攻守変動)
+PRINTL ②：このカードがフィールドに存在する限り、相手フィールドのモンスターは、
+PRINTL このカードが発動したターンを１ターン目と数えて、経過したターン×５００ダウンする。
+CALLFORM CARD_ABLE(3,効果後誘発)
+PRINTL ③：お互いのエンドフェイズに発動できる。
+PRINTL デッキからこのカード名以外の「サイレント」魔法・罠カード１枚をセットする。
+
+
+
+
+@CARDCAN_72336(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,72336)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_2(決闘者,72336)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = サイレント
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 攻守変動
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン終了時
+	SIF 発動済_3(決闘者,72336)
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件種類 = 魔罠全般
+	効果条件固名前 = サイレント・バトル
+	効果条件カテゴリ = サイレント
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72336(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 効果先
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,72336,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 光の黄金櫃
+		効果条件固名前 = 光の黄金櫃
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,72336)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+
+ELSEIF 種類 == 攻守変動
+	攻撃力修正 = 500 * (GETVAR(@"%決闘者%_魔_汎数:場所") + 1)
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(決闘者,"相手戦場",場所,-攻撃力修正,0,72336)
+ELSEIF 種類 == ターン終了時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,72336,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件種類 = 魔罠全般
+		効果条件固名前 = サイレント・バトル
+		効果条件カテゴリ = サイレント
+		CALL CARD_SET_ADV(決闘者,ゾーン,場所,"裏側表示")
+	ENDIF
+ENDIF

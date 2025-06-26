@@ -1,0 +1,395 @@
+﻿@CARDNAME_4410,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 冥界の番犬・ケルベロス
+	CASE "略称"
+		RESULTS = ケルベロス
+	CASE "カテゴリ"
+		RESULTS:0 = ナイトメア・クラス
+		RESULTS:4 = Shadowverse
+ENDSELECT
+
+
+@CARD_4410(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 炎属性
+	CASE "種族"
+		RETURN アンデット族
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2500
+	CASE "性別"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250616
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4410(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,手札起動,墓地起動)
+PRINTL ①：手札・墓地のこのカードは自分フィールドのモンスター１体を破壊して特殊召喚できる。
+CALLFORM CARD_ABLE(2,召喚時,特殊召喚時)
+PRINTL ②：このカードが召喚・特殊召喚した場合に発動できる。
+PRINTL デッキ外から「番犬の右腕・ミミ」と「番犬の左腕・ココ」を１体ずつ可能な限り特殊召喚する。
+PRINTL その後、自分の墓地のカードを６枚除外する事で、自分フィールドの他のモンスター全ての攻撃力を1000アップする。
+CALLFORM CARD_ABLE(10,戦場起動)
+PRINTL ③：このカードは自分メインフェイズ・バトルフェイズに１度だけ「進化」できる。
+PRINTL そうした場合、このカードの攻撃力・守備力は８００アップし、墓地からレベル１以下の「ナイトメア・クラス」モンスターを２体まで特殊召喚できる。
+PRINTL 「進化(覚醒)」は１ターンに１度しか行えない。
+
+
+
+@CARDCAN_4410(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,4410)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動 || 種類 == 墓地起動
+	SIF 発動済_1(決闘者,4410)
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,4410,ゾーン,1)
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件除去種 = 墓地
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_2(決闘者,4410)
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場起動
+	SIF GETVAR(@"%決闘者%_MZ_条達:場所") != 0
+		RETURN 0
+	SIF 発動済_1(決闘者,覚醒発動)
+		RETURN 0
+	;SIF メインフェイズ != 1
+	;	RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+; ELSEIF 種類 == チェーン可否
+; 	SIF !GROUPMATCH(チェーン可否種類,手札起動,墓地起動)
+; 		RETURN 0
+; 	RETURN 1
+ENDIF
+
+@CARDEFFECT_4410(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 守備力修正
+
+
+IF 種類 == 手札起動 || 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4410,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件行先フラグ = 破壊行き
+		CALL CARD_ADD_GY_BASIC(決闘者,"戦場",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)			
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4410,2)
+	IF RESULT == 0
+		CALL CARD_GENERATE(決闘者,104410)
+		CALL CARD_GENERATE(決闘者,204410)
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果条件種類 = モン全般
+		効果条件CNT = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		IF RESULT >= 6
+			CALL FULLRESET
+			効果範囲墓地 = 1
+			効果条件行先フラグ = 除外行き
+			効果条件複数 = 6
+			効果条件任意 = 1
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				効果条件他所 = 1
+				CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"永攻",1000)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,覚醒発動,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(決闘者,"戦場",場所,"条達",2,1)
+		CALL SET_FIELD_INFO(決闘者,"戦場",場所,"永攻",800)
+		CALL SET_FIELD_INFO(決闘者,"戦場",場所,"永守",800)
+
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果条件カテゴリ = ナイトメア・クラス
+		効果条件複数 = 98
+		効果条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+
+@CARDNAME_104410,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 番犬の右腕・ミミ
+	CASE "略称"
+		RESULTS = 番犬の右腕・ミミ
+	CASE "カテゴリ"
+		RESULTS:0 = ナイトメア・クラス
+ENDSELECT
+
+
+@CARD_104410(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 炎属性
+	CASE "種族"
+		RETURN アンデット族
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 500
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_104410(種類)
+#DIM DYNAMIC 種類
+
+PRINTL モンスターゾーンのこのカードは特殊召喚の素材にできない。
+CALLFORM CARD_ABLE(0,破壊→墓地)
+PRINTL ①：このカードが破壊された場合に発動できる。
+PRINTL 相手に1000ダメージを与える。
+
+
+@CARDCAN_104410(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,104410)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 破壊→墓地
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_104410(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 破壊→墓地
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,104410)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		SETCOLOR C_FUSE_PUR
+		PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+		PRINTL
+		PRINTFORML 「引っ掻いてやるワン！」
+		PRINTL
+		CUSTOMDRAWLINE ―
+		RESETCOLOR
+		;WAIT
+		PRINTL
+		CALL LIFE_CHANGE(決闘者,"減少","効果",1000,1)
+		
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL SET_FIELD_INFO(決闘者,"戦場",場所,"不材",3,1)
+ENDIF
+
+
+
+@CARDNAME_204410,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 番犬の左腕・ココ
+	CASE "略称"
+		RESULTS = 番犬の左腕・ココ
+	CASE "カテゴリ"
+		RESULTS:0 = ナイトメア・クラス
+ENDSELECT
+
+
+@CARD_204410(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 炎属性
+	CASE "種族"
+		RETURN アンデット族
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 1000
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_204410(種類)
+#DIM DYNAMIC 種類
+
+PRINTL モンスターゾーンのこのカードは特殊召喚の素材にできない。
+CALLFORM CARD_ABLE(0,破壊→墓地)
+PRINTL ①：このカードが破壊された場合に発動できる。
+PRINTL 自分は1000LP回復する。
+
+
+@CARDCAN_204410(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,204410)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 破壊→墓地
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_204410(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 破壊→墓地
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,204410)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		SETCOLOR C_FUSE_PUR
+		PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+		PRINTL
+		PRINTFORML 「噛んでやるワン！」
+		PRINTL
+		CUSTOMDRAWLINE ―
+		RESETCOLOR
+		;WAIT
+		PRINTL
+		CALL LIFE_CHANGE(決闘者,"増加","効果",1000)
+		
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL SET_FIELD_INFO(決闘者,"戦場",場所,"不材",3,1)
+ENDIF

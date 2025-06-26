@@ -1,0 +1,141 @@
+﻿@CARDNAME_79893,参照先
+;ココで指定卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ドレミアイドル・転場
+	CASE "略称"
+		RESULTS = ♫ 転場 
+	CASE "カテゴリ"
+		RESULTS:0 = ドレミコード
+		RESULTS:1 = ドレミアイドル
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79893(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 速攻魔法
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79893(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名はルール上も「ドレミコード」カードとして扱う。
+PRINTL このカード名のカードは1ターンに1枚しか発動できない。
+CALLFORM CARD_ABLE(1,魔罠起動,手札起動,フリー誘発)
+PRINTL ①：戦場・魔法・罠ゾーンの「ドレミコード」モンスターカード1枚を対象として発動できる
+PRINTL    そのカードを手札に戻し、デッキから「ドレミコード」Pモンスター1体を特殊召喚する。
+
+@CARDCAN_79893(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,79893)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	IF ゾーン == "手札"
+		SIF ターンプレイヤー != 決闘者
+			RETURN 0
+	ELSEIF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 発動済_1(決闘者,79893)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件種類 = モン全般
+	効果条件カテゴリ = ドレミコード
+	効果条件表示 = 表側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = ドレミコード
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79893(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 发情标识
+#DIM DYNAMIC 调教对象
+#DIM DYNAMIC 実行役対象
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	;卡片发动確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,79893,1)
+	IF RESULT == 0
+		;通常魔法汎用処理
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		SIF モンスター数(決闘者) < 5
+			効果範囲魔罠 = 1
+		効果条件種類 = モン全般
+		効果条件カテゴリ = ドレミコード
+		効果条件表示 = 表側表示
+		CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+		IF RESULT != 9999
+
+			CALL CARD_EROTICS_FIELD(対象者（CS）,参照先（CS）,選択カード（CS）)
+			调教对象 = RESULT
+
+			SIF 参照先（CS） == "戦場"
+				发情标识 = 自分_MZ_発情:選択カード（CS）
+
+			CALL CARD_DISPOSE(決闘者,参照先（CS）,選択カード（CS）,手札行き)
+
+			CALL CARD_SS_RESTRICTION(決闘者)
+			CALL CARD_EROTICS(相手プレイヤー,対面者)
+			実行役対象 = RESULT
+
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件カテゴリ = ドレミコード
+			効果条件種類 = モン全般
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+			SIF 调教对象 != -1 && 実行役対象 != -1
+				CALL DoSol_business(実行役対象,调教对象,发情标识)
+
+		ENDIF
+
+
+	ENDIF
+ENDIF

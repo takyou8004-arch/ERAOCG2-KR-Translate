@@ -1,0 +1,324 @@
+﻿@CARDNAME_39689,参照先
+;ココで指定卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ファドレミアイドル・ファンシア
+	CASE "略称"
+		RESULTS = ♫ ファンシア
+	CASE "カテゴリ"
+		RESULTS:0 = ドレミコード
+		RESULTS:1 = ドレミアイドル
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39689(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 炎属性
+	CASE "種族"
+		RETURN 天使族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 400
+	CASE "性別"
+		RETURN 牝性
+	CASE "分割"
+		RETURN ペンデュラム
+	CASE "連動ID"
+		RETURN 2089
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_39689(種類)
+#DIM DYNAMIC 種類
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名の①のP効果は1ターンに1度しか使用できない。
+CALLFORM CARD_ABLE(3,魔罠起動)
+PRINTL ①：自分のメインフェイズに発動できる。
+PRINTL    このカードを表側表示でEXデッキに加え、その後手札・EXデッキからレベルが奇数の「ドレミコード」Pモンスター1体を特殊召喚する。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL このカード名はルール上も「ドレミコード」カードとして扱う。
+PRINTL このカード名の①②のモンスター効果はそれぞれ1ターンに1度しか使用できない。
+CALLFORM CARD_ABLE(1,召喚時,特殊召喚時)
+PRINTL ①：このカードが召喚・特殊召喚に成功した場合に発動できる。
+PRINTL    デッキからレベルが奇数の「ドレミコード」Pモンスター1枚自分の魔法・罠ゾーンに表側表示で置く。
+CALLFORM CARD_ABLE(2,戦場起動)
+PRINTL ②：自分の魔法・罠ゾーンにレベルが偶数の「ドレミコード」Pモンスターが存在しない場合に発動できる。
+PRINTL    このカードを自分の魔法・罠ゾーンに表側表示で置き、デッキからレベルが奇数の「ドレミコード」Pモンスター1体を手札に加える。
+CALLFORM CARD_ABLE(4,攻撃時誘発)
+PRINTL  ●「ドレミアイドル・交響舞台」による付与効果：
+PRINTL    自分の魔法・罠ゾーンに「ファドレミアイドル・ファンシア」が存在せず、このカードが戦闘を行う場合に発動できる。
+PRINTL    このカードを自分の魔法・罠ゾーンに表側表示で置き、その戦闘を無効にし、そのモンスターを「ファンシア推し」にする。
+PRINTL    そのモンスターが既に「ファンシア推し」である場合、そのモンスターのコントロールを得る。
+PRINTL
+SETCOLOR C_D_GRAY
+PRINTL    自身のフィールドに「ファドレミアイドル・ファンシア」と「ファンシア推し」が同時に存在する場合………………
+RESETCOLOR
+
+@CARDSUMMON_AA_39689
+
+
+@CARDCAN_39689(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,39689)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果条件名前 = ファドレミアイドル・ファンシア
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_1(決闘者,39689)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = ドレミコード
+	効果条件種類 = モン全般
+	効果条件レベル:0 = 1
+	効果条件レベル:1 = 3
+	効果条件レベル:2 = 5
+	効果条件レベル:3 = 7
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場起動
+	SIF 発動済_2(決闘者,39689)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = ドレミコード
+	効果条件種類 = モン全般
+	効果条件レベル:0 = 1
+	効果条件レベル:1 = 3
+	効果条件レベル:2 = 5
+	効果条件レベル:3 = 7
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果条件カテゴリ = ドレミコード
+	効果条件種類 = モン全般
+	効果条件レベル:0 = 2
+	効果条件レベル:1 = 4
+	効果条件レベル:2 = 6
+	効果条件レベル:3 = 8
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動
+	SIF 発動済_3(決闘者,39689)
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF モンスター数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲EXデッキ = 1
+	効果条件カテゴリ = ドレミコード
+	効果条件種類 = EX以外全般
+	効果条件レベル:0 = 1
+	効果条件レベル:1 = 3
+	効果条件レベル:2 = 5
+	効果条件レベル:3 = 7
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 攻撃時誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF GETVARS(@"%決闘者%_フィールド名") != "ドレミアイドル・交響舞台"
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 場所
+		RETURN 0
+	SIF 戦闘場所(決闘者,1) == 5
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果条件名前 = ファドレミアイドル・ファンシア
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン終了時強制
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = ファンシア推し
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+;---------------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------------
+@CARDEFFECT_39689(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 选择卡片
+#DIM DYNAMIC 调教对象
+#DIM DYNAMIC 実行役対象
+
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39689)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39689,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = ドレミコード
+		効果条件種類 = モン全般
+		効果条件レベル:0 = 1
+		効果条件レベル:1 = 3
+		効果条件レベル:2 = 5
+		効果条件レベル:3 = 7
+		CALL CARD_SET_ADV(決闘者,ゾーン,場所,"表側表示")
+	ENDIF
+ELSEIF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39689,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = ドレミコード
+		効果条件種類 = モン全般
+		効果条件レベル:0 = 1
+		効果条件レベル:1 = 3
+		効果条件レベル:2 = 5
+		効果条件レベル:3 = 7
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 魔罠起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39689,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,EXデッキ行き)
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果範囲EXデッキ = 1
+		効果条件カテゴリ = ドレミコード
+		効果条件種類 = EX以外全般
+		効果条件レベル:0 = 1
+		効果条件レベル:1 = 3
+		効果条件レベル:2 = 5
+		効果条件レベル:3 = 7
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		
+
+		调教对象 = NO_TO_CHARANUM(2089)
+		CALL CARD_SS_RESTRICTION(決闘者)
+		CALL CARD_EROTICS(相手プレイヤー,対面者)
+		実行役対象 = RESULT
+		SIF 调教对象 != -1 && 実行役対象 != -1
+			CALL DoSol_business(実行役対象,调教对象,0)
+	ENDIF
+ELSEIF 種類 == 攻撃時誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39689,4)
+	IF RESULT == 0
+		CALL FULLRESET
+		选择卡片 = 戦闘場所(決闘者,1)
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+		调教对象 = NO_TO_CHARANUM(2089)
+
+			SETCOLOR C_W_RED
+		IF GETVARS(@"%対面者%_MZ_追カテ:选择卡片")  == "ファンシア推し"
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_戦場:选择卡片")}, "名前"
+			PRINTFORML
+			PRINTFORML 「%RESULTS%さん、わたしたちの親衛隊に入ってくれませんか♪」
+			PRINTFORML  %CALLNAME:调教对象%の魅力にすっかり魅了された%RESULTS%は、思わず強くうなずいてしまった！
+			PRINTFORMW
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"自動処理",选择卡片,"強奪",39689)
+		ELSE
+			CALL CARD_SET_CATEGORY(対面者,"戦場",选择卡片,"ファンシア推し")
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_戦場:选择卡片")}, "名前"
+			PRINTFORML 
+			PRINTFORML  %CALLNAME:调教对象%は蝶のように軽やかに後場へと舞いながら攻撃をかわす、敵対行為さえもショーの一部に昇華させる
+			PRINTFORML  %RESULTS%は%CALLNAME:调教对象%のアイドル姿に魅了された、「ファンシア推し」になってしまった！！
+			PRINTFORMW
+			CALL EVADE_ATTACK(決闘者)
+		ENDIF
+			RESETCOLOR
+	ENDIF
+ELSEIF 種類 == ターン終了時強制
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39689,4)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件カテゴリ = ファンシア推し
+		効果条件CNT = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		选择卡片 = RESULT	;亲卫队数目
+		调教对象 = NO_TO_CHARANUM(2089)
+
+		CALL DoSol_FansAttack(決闘者,場所,调教对象,选择卡片)
+		CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"発情",2)
+		CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"接可",2)
+	ENDIF
+ENDIF
+RETURN

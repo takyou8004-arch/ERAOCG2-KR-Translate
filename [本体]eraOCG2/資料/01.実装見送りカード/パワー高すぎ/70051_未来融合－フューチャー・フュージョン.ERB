@@ -1,0 +1,112 @@
+﻿@CARDNAME_70051,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 未来融合－フューチャー・フュージョン
+	CASE "略称"
+		RESULTS = 未来融合
+	CASE "カテゴリ"
+		RESULTS:0 = 融合
+ENDSELECT
+
+
+@CARD_70051(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 永続魔法
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_70051(種類)
+#DIM DYNAMIC 種類
+
+PRINTL ①：自分スタンバイフェイズに発動する。このカードを墓地へ送る。
+PRINTL その後、自分のデッキのモンスターを融合素材として墓地へ送り、
+PRINTL 融合モンスター１体を融合召喚する。
+
+
+@CARDCAN_70051(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,70051)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ELSE
+		SIF 魔罠数(決闘者) >= 5
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン開始時強制
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲デッキ = 1
+	CALL FULLRESET
+	効果範囲EXデッキ = 1
+	効果条件種類 = 融合
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_70051(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,70051)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == ターン開始時強制
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,70051,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL RESETAREA_MAT
+		素材範囲デッキ = 1
+		CALL FULLRESET
+		効果条件種類 = 融合
+		効果条件召喚可 = 1
+		CALL CARD_CHOOSE_BASIC(決闘者,"EXデッキ",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			;カードの条件を読み込む：
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%決闘者%_EXデッキ:{選択カード}")}(決闘者,選択カード)
+			;素材処理を読み込む
+			CALL FUSSUMMON(決闘者, 選択カード)
+		ENDIF
+	ENDIF
+ENDIF
