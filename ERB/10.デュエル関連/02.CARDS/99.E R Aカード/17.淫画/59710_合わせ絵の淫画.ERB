@@ -1,0 +1,234 @@
+@CARDNAME_59710,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 결합의 음화
+	CASE "略称"
+		RESULTS = 결합의 음화
+	CASE "カテゴリ"
+		RESULTS:0 =음화
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59710(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_59710(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 「음화" 몬스터 + 암컷 몬스터
+PRINTL 이 카드명의  ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,EX소환時強制)
+PRINTL ①：융합 소환한 이 카드의 이름은 재료로 사용한 암컷 몬스터 1장과 같은 이름의 카드로도 취급된다.
+CALL CARD_ABLE(2,攻守変動)
+PRINTL ②：이 카드의 공격력은 자신 / 상대의 필드 및 묘지에 있는 암컷 카드의 종류 수× 800이 된다.
+CALL CARD_ABLE(3,戦破壊→묘지)
+PRINTL ③：필드의 이 카드가 묘지로 보내질 경우 발동할 수 있다.
+PRINTL 묘지 / 제외 상태인 「음화」 마법 / 함정 카드를 2장까지 마법 & 함정 존에 놓는다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_AA_59710
+
+
+
+@CARDSUMMON_59710(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件素材ID起動 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 음화
+ELSEIF EX参照 >= 10
+	素材条件종류 = モン全般
+	素材条件성별 = 牝性
+ENDIF
+
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,59710) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_59710(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59710)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == EX소환時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == リアクション효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 필드→묘지 || 종류 == 破壊→묘지
+	SIF 발동済_3(듀얼리스트,59710)
+		RETURN 0
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊","リリース")
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 음화
+	素材条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") >= 1000
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_59710(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 取込カードID
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == EX소환時強制
+	;汎数に기록した素材があるかチェック
+	IF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") >= 0
+		;汎数読み込み
+		取込カードID = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+		;기록した素材の성별をチェック
+		TRYCALLFORM CARD_{取込カードID}, "성별"
+		;♀かふたなりなら続行
+		IF GROUPMATCH(RESULT,1,3)
+			;変化元IDに汎数を打ち込み
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",取込カードID,上書きモード)
+			;フレ-バ-、캐릭터リスト読み込み
+			CALL CARD_EROTICS(取込カードID)
+			SIF RESULT != -1
+		 		PRINTFORMW 결합의 음화에는 %NAME:RESULT%의 그림이 덮어쓰여져 있다…！
+		ENDIF
+	ENDIF
+	;使い終わった汎数を削除
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",0,上書きモード)
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과範囲묘지 = 1
+	효과範囲상대묘지 = 1
+	효과条件성별 = 牝性
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 800
+	CALL STATCHANGE_BASIC(듀얼리스트,"자신",場所,攻撃力修正)
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 필드→묘지 || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59710,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 음화
+		효과条件종류 = 마함全般
+		효과条件任意 = 1
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+		IF RESULT == 1 && 마함数(듀얼리스트) < 5
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲제외 = 1
+			효과条件カテゴリ = 음화
+			효과条件종류 = 마함全般
+			효과条件任意 = 1
+			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == リアクション효과
+	IF GETVAR(@"%듀얼리스트%_MZ_リ数:場所") < 10
+		CALL CARD_EROTICS(GETVAR(@"%듀얼리스트%_MZ_変化元ID:場所"))
+		IF RESULT != -1
+			조교대상 = RESULT
+				SETCOLOR C_PINK
+			PRINTFORML
+			PRINTFORML 결합의 음화에 그려진 %NAME:조교대상%의 그림은 다양한 형태로 괴롭혀지고 있다…！
+			PRINTFORML
+				RESETCOLOR
+			CALL EROTIC_MOVE("全身애무",조교대상,-1,100)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"リ数",1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	;汎数読み込み
+	取込カードID = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+	;기록した素材の성별をチェック
+	TRYCALLFORM CARD_{取込カードID}, "성별"
+	;♀かふたなりなら続行
+	選択カード = NO_TO_CHARANUM(取込カードID)
+	IF 選択カード >= 1 && オプション_성별
+		RESULT = TALENT:選択カード:성별
+	ENDIF
+	IF GETBIT(RESULT,0)
+		;変化元IDに汎数を打ち込み
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",取込カードID,上書きモード)
+		;フレ-バ-、캐릭터リスト読み込み
+		CALL CARD_EROTICS(取込カードID)
+		SIF RESULT != -1
+			PRINTFORMW 결합의 음화에는 %NAME:RESULT%의 그림이 덮어쓰여져 있다…！
+		;使い終わった汎数を削除
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",0,上書きモード)
+	ENDIF
+ENDIF

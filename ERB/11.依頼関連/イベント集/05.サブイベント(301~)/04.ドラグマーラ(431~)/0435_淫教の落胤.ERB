@@ -1,0 +1,295 @@
+@IRAI_EVENT_435(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP-DMR4)음교의 낙인
+	CASE "이벤트種"
+		RETURN 이벤트_施設
+	CASE "依頼先"
+		RETURN 場所_教会
+	CASE "詳細"
+		IF 依頼_完了횟수:435 == 0
+			PRINTL 信者が増えたある日、クエムから新しい提案を受けた
+		ELSE
+			PRINTL 임신している女に카드를 産ませようか…？
+		ENDIF
+		PRINTL 
+		PRINTL 
+	CASE "条件"
+		SIF TALENT:MASTER:성별 == 1
+			RETURN 0
+		CALL COUNT_EVENT433
+		SIF 12 > RESULT
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_435(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC 信徒数
+;いったんターゲットを非難させる（バグ回避用）
+
+
+IF 依頼_完了횟수:435 == 0
+	CALL IRAI_ACT_435_0
+ELSEIF 依頼_完了횟수:435 > 0
+	CALL IRAI_ACT_435_1
+ENDIF
+
+RETURN 2
+
+@IRAI_ACT_435_0(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC 信徒数
+이벤트主:0 = NO_TO_CHARANUM(1883);クエム
+
+PRINTFORMW 음교の거점となってる教会で、クエムから新しい提案を受けた。
+PRINTFORMW 「 %CALLNAME:MASTER%様の身は我らの신の化身に近付きつつあります。そこで、新しく身に付けられた力をお試しになられませんか？」
+PRINTFORMW 新しい力？それはどんなものだろう。
+PRINTFORMW 「女性が身籠った時、魂の카드를 使ってから子供が産まれるまでの時間が長く、面倒だと思った事はありませんか？」
+PRINTFORMW それは……全く無いとは言えないが。
+PRINTFORMW 「そこで、드래그마ーラ様の力を使えば、魂の카드를 使うまでもなく、受精卵を그대로 カードにして産まれさせる事が可能です」
+PRINTFORMW そんな事が出来るのか？！
+PRINTFORMW 「ええ。最初はこの身を使って体験していただきましょう。こちらへ」
+PRINTFORMW クエムに案内されて、침대のある部屋に導かれた。
+IF TALENT:(이벤트主:0):임신가능 == 0
+	PRINTFORMW 「先に %CALLNAME:MASTER%様の子種をいただきたく思います」
+	PRINTFORMW クエムに유혹され、彼女と交わりながらその体に精を放った。
+	TCVAR:MASTER:사정쾌락강도 = 1500
+	TCVAR:MASTER:사정대상캐릭터_1 = (이벤트主:0)
+	TCVAR:MASTER:사정부위플래그 = 1
+	CALL SOURCE_CALC_쾌Ｃ(MASTER, (이벤트主:0), 150)
+
+	EXP:(이벤트主:0):Ｖ경험 += 5
+	EXP:(이벤트主:0):Ｖ절정경험 += 1
+	CALL SOURCE_CALC_쾌Ｖ((이벤트主:0), MASTER, 150)
+	CALL SOURCE_CALC_접촉((이벤트主:0), MASTER, 100)
+	TALENT:(이벤트主:0):임신가능 = 1
+	CALL CARD_EROTICS_END(이벤트主:0)
+	PRINTFORMW これでクエムの準備は整った。
+
+ENDIF
+PRINTFORMW 「それでは早速始めましょう」
+PRINTFORMW 손가락導されるまま、침대の上に横たわったクエムに不思議な力を발동한 。
+PRINTFORMW すると、クエムの体にある本来赤ちゃんが産まれる場所から、카드가 産み落とされた！
+EXP:(이벤트主:0):Ｖ경험 += 3
+EXP:(이벤트主:0):고통쾌락경험 += 3
+EXP:(이벤트主:0):이상경험 += 1
+CALL CARD_EROTICS_END(이벤트主:0)
+CALL IRAI_ACT_435_10(이벤트主:0)
+CALL IRAI_ACT_435_10(이벤트主:0)
+CALL IRAI_ACT_435_10(이벤트主:0)
+TALENT:(이벤트主:0):임신가능 = 0
+
+PRINTFORML 
+PRINTFORMW 「はあ……はあ……いかがでしたか？このように、母体と속성、종족、攻撃力、守備力のどれかが同じ카드가 ３回産まれます
+PRINTFORMW 　そしてまれに、母体の得意とする能力の카드가 産まれる事もあります。
+PRINTFORMW 　ただし、新しく産まれた 카드는 ただのカードで정령が宿る事はありませんのでご留意ください」
+PRINTFORMW これは……子供ガチャをカードガチャに差し替えた感じなのだろうか。
+PRINTFORMW 「これで손가락導は終わりになります。今度からは、お気に入りの상대をお選びください」
+PRINTFORMW 今回はこれで解散のようだ。
+PRINTFORMW 今後、気が向いたら女を呼んで아이의대신에 카드를 産んで貰うとしよう。
+TIME += 60
+RETURN
+
+
+@IRAI_ACT_435_1(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC 캐릭터クター
+#DIM DYNAMIC 캐릭터クターID
+이벤트主:0 = NO_TO_CHARANUM(1883);クエム
+
+
+PRINTFORMW 女に카드를 産んで貰うべく、教会でクエムを呼び出した。
+PRINTFORMW 「はい、あなた様。誰に카드를 産ませますか？」
+
+$INPUT_LOOP
+FOR 캐릭터クター,0,CHARANUM
+	SIF CFLAG:캐릭터クター:소유함 != 1
+		CONTINUE
+	SIF TALENT:캐릭터クター:임신가능 == 0
+		CONTINUE
+	캐릭터クターID = NO:(캐릭터クター)
+	TRYCALLFORM CARDNAME_{캐릭터クターID},"名前"
+	SIF RESULTS == ""
+		CONTINUE
+	PRINTFORML [{캐릭터クター}] %NAME:캐릭터クター%
+NEXT
+CUSTOMDRAWLINE —
+PRINTL [9999] - 그만둔다
+BINPUT
+IF RESULT == 9999
+	PRINTFORMW 考え直して、今回はやめる事にした。
+	RETURN 2
+ELSEIF RESULT
+	이벤트主:1 = RESULT
+ENDIF
+
+CALL PRINT_STATE(이벤트主:1)
+PRINTFORMW 「《%NAME:(이벤트主:1)%》ですね？」
+PRINTFORML
+PRINTFORML [0] - 決める
+PRINTFORML [1] - 考え直す
+BINPUT
+IF RESULT == 0
+	PRINTFORMW 「かしこまりました。少々お待ちください」
+ELSEIF RESULT == 1
+	PRINTFORMW いや、別の女にしようか……？
+	PRINTFORML [0] - 別の候補を選ぶ
+	PRINTFORML [1] - 選択をやめる
+	BINPUT
+	IF RESULT == 0
+		GOTO INPUT_LOOP
+	ELSEIF RESULT == 1
+		PRINTFORMW 考え直して、今回はやめる事にした。
+		RETURN 2
+	ENDIF
+ENDIF
+
+PRINTFORMW 침대のある部屋でしばらく待つと、%NAME:(이벤트主:1)%が部屋に入って来た。
+PRINTFORMW %NAME:(이벤트主:1)%는 %CALLNAME:MASTER%に言われるまま침대に横たわる。
+PRINTFORMW %CALLNAME:MASTER%는 %NAME:(이벤트主:1)%に対して不思議な力を使い、카드를 産ませた！
+EXP:(이벤트主:1):Ｖ경험 += 3
+EXP:(이벤트主:1):고통쾌락경험 += 3
+EXP:(이벤트主:1):이상경험 += 1
+CALL CARD_EROTICS_END(이벤트主:1)
+TALENT:(이벤트主:1):임신가능 = 0
+
+PRINTFORMW 慣れない事をしたためか、%NAME:(이벤트主:1)%는肩で息をしている。
+PRINTFORMW そんな%NAME:(이벤트主:1)%を横目に、 %CALLNAME:MASTER%는産まれた카드를 回収した。
+CALL IRAI_ACT_435_10(이벤트主:1)
+CALL IRAI_ACT_435_10(이벤트主:1)
+CALL IRAI_ACT_435_10(이벤트主:1)
+PRINTFORML
+PRINTFORMW %NAME:(이벤트主:1)%는何が起こったのか訳の分からないまま混乱している。
+PRINTFORMW %CALLNAME:MASTER%는 %NAME:(이벤트主:1)%を休ませながら誤魔化し、教会を後にした。
+TIME += 60
+RETURN
+
+
+
+@IRAI_ACT_435_10(대상)
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 参照ステータス,10
+#DIM DYNAMIC ループ횟수
+#DIM DYNAMIC 新カード
+
+대상 = NO:대상
+
+;PRINTFORML 대상 = {대상}
+CALLFORM CARD_{대상},"속성"
+参照ステータス:0 = RESULT
+
+CALLFORM CARD_{대상},"종족"
+参照ステータス:1 = RESULT
+
+CALLFORM CARD_{대상},"攻撃力"
+参照ステータス:2 = RESULT
+
+CALLFORM CARD_{대상},"守備力"
+参照ステータス:3 = RESULT
+
+$LOOPPOINT00
+VARSET ループ횟수
+SELECTCASE RAND:6
+	CASE 0
+		$LOOPPOINT0
+		;PRINTFORML CASE 0
+		新カード = RAND:5001
+		TRYCALLFORM CARDNAME_{新カード},"カテゴリ"
+		SIF RESULTS == "듀얼리스트"
+			GOTO LOOPPOINT0
+		SIF 新カード == 대상
+			GOTO LOOPPOINT0
+		TRYCALLFORM CARDNAME_{新カード},"名前"
+		SIF RESULTS == ""
+			GOTO LOOPPOINT0
+		TRYCALLFORM CARD_{新カード},"속성"
+		SIF RESULT != 参照ステータス:0
+			GOTO LOOPPOINT0
+	CASE 1
+		$LOOPPOINT1
+		;PRINTFORML CASE 1
+		新カード = RAND:5001
+		TRYCALLFORM CARDNAME_{新カード},"カテゴリ"
+		SIF RESULTS == "듀얼리스트"
+			GOTO LOOPPOINT1
+		SIF 新カード == 대상
+			GOTO LOOPPOINT1
+		TRYCALLFORM CARDNAME_{新カード},"名前"
+		SIF RESULTS == ""
+			GOTO LOOPPOINT1
+		TRYCALLFORM CARD_{新カード},"종족"
+		SIF RESULT != 参照ステータス:1
+			GOTO LOOPPOINT1
+	CASE 2
+		$LOOPPOINT2
+		;PRINTFORML CASE 2
+		新カード = RAND:5001
+		TRYCALLFORM CARDNAME_{新カード},"カテゴリ"
+		SIF RESULTS == "듀얼리스트"
+			GOTO LOOPPOINT2
+		SIF 新カード == 대상
+			GOTO LOOPPOINT2
+		TRYCALLFORM CARDNAME_{新カード},"名前"
+		SIF RESULTS == ""
+			GOTO LOOPPOINT2
+		TRYCALLFORM CARD_{新カード},"攻撃力"
+		IF RESULT != 参照ステータス:2 && ループ횟수 < 5
+			ループ횟수 ++
+			GOTO LOOPPOINT2
+		ELSEIF RESULT != 参照ステータス:2 && ループ횟수 >= 5
+			GOTO LOOPPOINT00
+		ENDIF
+	CASE 3
+		$LOOPPOINT3
+		;PRINTFORML CASE 3
+		新カード = RAND:5001
+		TRYCALLFORM CARDNAME_{新カード},"カテゴリ"
+		SIF RESULTS == "듀얼리스트"
+			GOTO LOOPPOINT3
+		SIF 新カード == 대상
+			GOTO LOOPPOINT3
+		TRYCALLFORM CARDNAME_{新カード},"名前"
+		SIF RESULTS == ""
+			GOTO LOOPPOINT3
+		TRYCALLFORM CARD_{新カード},"守備力"
+		IF RESULT != 参照ステータス:3 && ループ횟수 < 5
+			ループ횟수 ++
+			GOTO LOOPPOINT3
+		ELSEIF RESULT != 参照ステータス:3 && ループ횟수 >= 5
+			GOTO LOOPPOINT00
+		ENDIF
+	CASE 4
+		;PRINTFORML CASE 4
+		新カード = 대상 + 60000
+		TRYCALLFORM CARDNAME_{新カード},"名前"
+		SIF RESULTS == ""
+			GOTO LOOPPOINT00
+	CASE 5
+		;PRINTFORML CASE 5
+		新カード = 대상 + 80000
+		TRYCALLFORM CARDNAME_{新カード},"名前"
+		SIF RESULTS == ""
+			GOTO LOOPPOINT00
+ENDSELECT
+
+;TRYCALLFORM CARDNAME_{新カード},"名前"
+;PRINTFORML 新カード = {新カード}、%RESULTS%
+CALL CARD_GET_SINGLE(新カード)
+
+RETURN
+
+

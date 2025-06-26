@@ -1,0 +1,109 @@
+@CARDNAME_279555,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 암소 발정 제어 장치 시작품
+	CASE "略称"
+		RESULTS = 発情제어試作
+	CASE "カテゴリ"
+		RESULTS:0 = 호루스
+		RESULTS:1 = 호루스타인
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_279555(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_279555(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드의 발동시의 효과 처리로서、このカードに카운터を１つ乗せる。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：発情した몬스터의 攻撃宣言時、이 카드의 카운터の数によって以下의 효과를 적용한다。
+PRINTL ●１の場合：発情에 의해 攻撃を中断する。
+PRINTL ●２の場合：発情에 의해 攻撃を中断しない。
+PRINTL 上記효과が適用された경우、このカードに카운터を１つ乗せる。
+PRINTL 카운터が３つ以上溜まった경우、카운터を１로 한다。
+
+
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_279555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,279555)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;攻撃モンスターが発情してれば処理
+	SIF GETVAR(@"%듀얼리스트%_MZ_発情:戦闘場所(듀얼리스트)") == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_279555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+
+IF 종류 == 攻撃時強制誘発
+	IF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") == 1
+		;必ず失敗
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘場所(듀얼리스트),"発情",200,上書きモード)
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",2,上書きモード)
+	
+		SETCOLOR C_PINK
+		CUSTOMDRAWLINE —
+		PRINTFORML 
+		PRINTFORML 암소発情제어장치が作動した！…
+		PRINTFORML (発情による攻撃失敗確率…１００％！)
+		PRINTFORML 
+		CUSTOMDRAWLINE —
+		PRINTFORMW 
+	ELSE
+		;必ず成功
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘場所(듀얼리스트),"発情",100,上書きモード)
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",1,上書きモード)
+		SETCOLOR C_PINK
+		CUSTOMDRAWLINE —
+		PRINTFORML 
+		PRINTFORML 암소発情제어장치が作動した！…
+		PRINTFORML (発情による攻撃失敗確率…０％！)
+		PRINTFORML 
+		CUSTOMDRAWLINE —
+	ENDIF
+	RESETCOLOR
+ENDIF

@@ -1,0 +1,152 @@
+﻿@CARDNAME_27155,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 명계의 황혼의 어둠－알레르트
+	CASE "略称"
+RESULTS = 명계 알레르트
+	CASE "カテゴリ"
+RESULTS:0 = 명계
+ENDSELECT
+
+
+@CARD_27155(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_27155(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①② 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,묘지起動)
+PRINTL ①: 이 카드가 묘지에 존재할 경우, 자신 필드의 몬스터 1장을 릴리스하고 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+PRINTL 그 후, 상대는 자신의 묘지에서 몬스터 1장을 골라 덱의 맨 위에 놓을 수 있다.
+CALL CARD_ABLE(2,특수소환時)
+PRINTL ②: 이 카드가 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 비늘야수족 몬스터를 포함한 자신의 제외 상태의 몬스터 2장을 묘지로 되돌린다.
+
+@CARDCAN_27155(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,27155)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,27155)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) < 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,27155,"묘지",1)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,27155)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件종족 = 비늘야수족
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_27155(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27155,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+효과条件名前 = 명계의 황혼의 어둠－알레르트
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과条件종류 = モン全般
+				효과条件任意 = 1
+				CALL CARD_CHOOSE_BASIC(対面者,"묘지",ゾーン,場所)
+				IF RESULT != 9999
+					CALL CARD_ADD_DECK_SPC(対面者,"묘지",RESULT)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27155,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件종족 = 비늘야수족
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲제외 = 1
+			효과条件종류 = モン全般
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,95 @@
+﻿@CARDNAME_73186,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 라스트 호프 넘버즈
+	CASE "略称"
+RESULTS = 최후의 희망
+	CASE "カテゴリ"
+RESULTS:0 = 넘버즈
+RESULTS:1 = 갤럭시아이즈
+RESULTS:2 = 갤럭시
+ENDSELECT
+
+
+@CARD_73186(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73186(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①: LP를 절반 지불하고, 자신 묘지의 몬스터 2장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터 2장을 효과를 무효로 하여 특수 소환한다.
+PRINTL 이 카드의 발동 후, 턴 종료시까지 자신은 'No.' 몬스터밖에 특수 소환할 수 없다.
+
+@CARDCAN_73186(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73186)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,73186)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 4
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73186(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 選択カード
+#DIM 選択レベル
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73186,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",(GETVAR(@"ライフ_%듀얼리스트%")  / 2))
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = モン全般
+		효과条件複数 = 2
+		효과추가종류 = 効追無効
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		CALL CARD_SS_RESTRICTION(듀얼리스트,"넘버즈")
+	ENDIF
+ENDIF

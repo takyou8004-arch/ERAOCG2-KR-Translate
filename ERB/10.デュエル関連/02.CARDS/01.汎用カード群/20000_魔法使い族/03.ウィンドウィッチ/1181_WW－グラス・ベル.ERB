@@ -1,0 +1,103 @@
+﻿@CARDNAME_1181,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = WW－글라스 벨
+	CASE "略称"
+RESULTS = 글라스 벨
+	CASE "カテゴリ"
+RESULTS:0 = 윈드 위치
+ENDSELECT
+
+
+@CARD_1181(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1181(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「WW－글라스 벨」의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 덱에서 「WW－글라스 벨」 이외의 마법사족 바람 속성 몬스터 1장을 패에 넣는다.
+
+@CARDCAN_1181(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1181)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,1181)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 마법사족
+	효과条件속성 = 바람속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1181(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 횟수制限
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1181,1)
+	IF RESULT == 0
+		;덱에서 サーチ
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종족 = 마법사족
+		효과条件속성 = 바람속성
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

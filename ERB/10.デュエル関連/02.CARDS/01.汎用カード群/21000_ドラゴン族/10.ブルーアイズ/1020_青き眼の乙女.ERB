@@ -1,0 +1,142 @@
+﻿@CARDNAME_1020,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 푸른 눈의 소녀
+	CASE "略称"
+RESULTS = 푸른 눈의 소녀
+	CASE "カテゴリ"
+RESULTS:0 = 푸른 눈의
+ENDSELECT
+
+
+@CARD_1020(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1020(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,효과後誘発,攻撃時誘発)
+PRINTL ①: 마법 카드가 발동했을 경우, 또는 이 카드가 공격 대상으로 선택되었을 때에 발동할 수 있다.
+PRINTL 자신의 패 / 덱 / 묘지에서 "푸른 눈의 백룡" 1장을 골라 특수 소환할 수 있다.
+PRINTL 공격 대상으로 선택되었을 경우, 그 공격을 무효로 하고, 이 카드의 표시 형식을 변경한다.
+
+@CARDSUMMON_AA_1020
+
+
+@CARDCAN_1020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1020)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,1020)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,21000,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 푸른 눈의 백룡
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,1020)
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 푸른 눈의 백룡
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC ダメージ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発 || 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1020,1)
+	IF RESULT == 0
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 푸른 눈의 백룡
+		효과条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF 종류 == 攻撃時誘発
+			CALL EVADE_ATTACK(듀얼리스트)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",2,1)
+		ENDIF
+	ENDIF
+ENDIF
+
+

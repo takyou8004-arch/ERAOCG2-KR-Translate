@@ -1,0 +1,164 @@
+﻿@CARDNAME_31350,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스크랩 골렘
+	CASE "略称"
+RESULTS = 스크랩 골렘
+	CASE "カテゴリ"
+RESULTS:0 = 스크랩
+ENDSELECT
+
+
+@CARD_31350(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 1400
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_31350(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 자신의 묘지의 레벨 4 이하의 "스크랩" 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터를 자신 또는 상대 필드에 특수 소환한다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ②: 카드가 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지의 이 카드와 "스크랩" 카드 1장을 고르고,
+PRINTL 1장을 패에 넣고, 다른 1장을 덱으로 되돌린다.
+
+@CARDCAN_31350(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31350)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5 && モンスター数(対面者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 스크랩
+	효과条件종류 = レベル持ち
+	CALL 효과条件レベル_ADV(4,"以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,31350)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 스크랩
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과破壊",2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31350(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31350,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 스크랩
+		효과条件종류 = レベル持ち
+		CALL 효과条件レベル_ADV(4,"以下")
+		IF モンスター数(듀얼리스트) >= 5
+			RESULT = 1
+		ELSEIF モンスター数(対面者) >= 5
+			RESULT = 0
+		ELSE
+			CALL YN_CHOICE(듀얼리스트,"●자신 필드","●상대 필드")
+		ENDIF
+		IF RESULT == 0
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ELSEIF RESULT == 1
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,,,1)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31350,1)
+	IF RESULT == 0
+		SIF 듀얼리스트 == "자신"
+PRINTL 이 카드를 패에 넣겠습니까?
+		CALL YN_CHOICE(듀얼리스트)
+		IF RESULT == はい
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,손패行き)
+			条件달성 = 1
+		ELSEIF RESULT == いいえ
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+			条件달성 = 2
+		ENDIF
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 스크랩
+		IF 条件달성 == 1
+			효과条件行先플래그 = 덱行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ELSEIF 条件달성 == 2
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+

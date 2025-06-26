@@ -1,0 +1,145 @@
+﻿@CARDNAME_56250,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 생아발론 드리아스
+	CASE "略称"
+RESULTS = 성천수의 유정
+	CASE "カテゴリ"
+RESULTS:0 = 생아발론
+ENDSELECT
+
+
+@CARD_56250(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_56250(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件종류 = レベル持ち
+素材条件종족 = 식물족
+CALLFORM 素材条件レベル_ADV(4, "以下")
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,56250) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_56250(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 이하의 식물족 몬스터 1장
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 자신의 묘지에 "성종의 지령"이 존재하고, 이 카드가 L 소환했을 경우에 발동할 수 있다.
+PRINTL 덱에서 "생아발론" 마법 카드 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 공격 회피를 가진다.
+CALLFORM CARD_ABLE(10,효과後誘発)
+PRINTL ③: 1턴에 1번, 자신이 전투 / 효과로 데미지를 받았을 경우에 발동할 수 있다.
+PRINTL 그 수치만큼 자신의 LP를 회복하고, EX덱에서 "생바인" L 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_56250(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,56250)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,56250)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件名前 = 태양의 씨앗, 장소의 수호정령
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 생아발론
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"被弾者")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_56250(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,56250,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 생아발론
+		효과条件종류 = 마법全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻避")
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,56250,10)
+	IF RESULT == 0
+		ダメージ量 = GETVAR(@"%듀얼리스트%_変動値")
+		CALL FULLRESET
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",ダメージ量)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 생아발론
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"攻撃표시")
+	ENDIF
+ENDIF

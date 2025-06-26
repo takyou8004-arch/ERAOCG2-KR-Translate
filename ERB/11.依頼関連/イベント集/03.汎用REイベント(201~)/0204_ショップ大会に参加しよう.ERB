@@ -1,0 +1,194 @@
+﻿@IRAI_EVENT_204(参照先)
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = (CP4)샵 대회에 참가하자(何度でも受付可)
+	CASE "이벤트種"
+		RETURN 이벤트_施設
+	CASE "依頼先"
+		RETURN 場所_カドショ
+	CASE "詳細"
+		PRINTL 今日はカードショップで大会が開かれる日だ。
+		PRINTL 腕を示して商品を狙おう！
+		PRINTL (1,000円の参加費が必要になります)
+		PRINTL
+		IF FLAG:게임모드 == 0
+			PRINTL 報酬：戦績に比例したカードパック
+		ELSEIF FLAG:게임모드 == 1
+			PRINTL 報酬：戦績に比例したDP
+		ENDIF
+			SETCOLOR C_YELLOW
+		PRINTL 注意！３連戦＋덱변경不可！
+			RESETCOLOR
+	CASE "条件"
+		SIF 依頼_全完了횟수() < 3
+			RETURN 0
+		RETURN 1
+	CASE "利用制限"
+		SIF 依頼플래그:204 != 0
+			RETURN 3
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_204(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 대상상대
+#DIM DYNAMIC 대상캐릭터1
+#DIM DYNAMIC 대상캐릭터2
+#DIM DYNAMIC 대상캐릭터3
+
+
+
+
+$INPUTLOOP1
+대상캐릭터1 = RAND:CHARANUM
+IF TALENT:대상캐릭터1:속성 < 1 && 대상캐릭터1 != 0
+ELSE
+	GOTO INPUTLOOP1
+ENDIF
+
+$INPUTLOOP2
+대상캐릭터2 = RAND:CHARANUM
+IF TALENT:대상캐릭터2:속성 < 1 && 대상캐릭터2 != 대상캐릭터1 && 대상캐릭터2 != 0
+ELSE
+	GOTO INPUTLOOP2
+ENDIF
+
+$INPUTLOOP3
+대상캐릭터3 = RAND:CHARANUM
+IF TALENT:대상캐릭터3:속성 >= 1
+ELSE
+	GOTO INPUTLOOP1
+ENDIF
+
+IF MONEY < 1000
+	PRINTFORMW 今は参加費の1,000円すらない。
+	PRINTFORMW 金が貯まったら出直そう。
+	RETURN 1
+ENDIF
+
+PRINTFORMW １回大会が始まると連戦になります
+PRINTFORMW ショップ大会の参加費1,000円を支払ってショップ大会に参加しますか？
+PRINTPLAINFORM 所持金:{MONEY}円
+PRINTL
+PRINTL [0] - 参加する
+PRINTL [1] - 考え直す
+BINPUT
+IF RESULT == 0
+	CALL MONEY_GET(-1000)
+	PRINTFORMW 参加費を支払って手続きを済ませた。
+	PRINTFORMW 早速大会開始だ。
+	PRINTFORMW 大会は最大３回の勝ち抜き制。
+	PRINTFORMW １回戦の상대は%NAME:대상캐릭터1%だ。
+	CALL SYOTAIMEN(대상캐릭터1)
+	PRINTFORMW 軽く挨拶して、すぐデュエルの準備に入った。
+	TARGET = 대상캐릭터1
+	CALL CHOICE_DUEL_TYPE
+	IF RESULT == 1
+		PRINTFORMW 勝った！
+		PRINTFORMW %CALLNAME:TARGET%는悔しそうながらも%CALLNAME:MASTER%に挨拶して去って行った。
+		CALL EVENT_FAVUP(대상캐릭터1,300)
+		ABL:(대상캐릭터1):친밀 += 1
+		SETCOLOR C_PINK
+		PRINTFORML 
+		PRINTFORML %NAME:대상캐릭터1%の호감도と친밀が上がった
+		PRINTFORML 
+		RESETCOLOR
+		PRINTFORMW 続いて２回戦。
+		PRINTFORMW 상대は%NAME:대상캐릭터2%だ。
+		CALL SYOTAIMEN(대상캐릭터2)
+		PRINTFORMW 軽く挨拶して、すぐデュエルの準備に入った。
+		TARGET = 대상캐릭터2
+		CALL CHOICE_DUEL_TYPE(,1)
+			IF RESULT == 1
+				PRINTFORMW 勝った！
+				PRINTFORMW %CALLNAME:TARGET%는悔しそうながらも%CALLNAME:MASTER%に挨拶して去って行った。
+				CALL EVENT_FAVUP(대상캐릭터2,300)
+				ABL:(대상캐릭터2):친밀 += 1
+				SETCOLOR C_PINK
+				PRINTFORML 
+				PRINTFORML %NAME:대상캐릭터2%の호감도と친밀が上がった
+				PRINTFORML 
+				RESETCOLOR
+				PRINTFORMW 次はいよいよ決勝戦。
+				PRINTFORMW 상대はなんと、カードの精霊の%NAME:대상캐릭터3%だ！
+				CALL SYOTAIMEN(대상캐릭터3)
+				PRINTFORMW どうやら人間に紛れ込んで参加したみたいだ。
+				PRINTFORMW とにかく挨拶して、デュエルを開始した。
+				TARGET = 대상캐릭터3
+				CALL CHOICE_DUEL_TYPE(,1)
+				IF RESULT == 1
+					PRINTFORMW 勝った！
+					PRINTFORMW これで優勝だ！
+					PRINTFORMW %CALLNAME:TARGET%는悔しそうながらも%CALLNAME:MASTER%に挨拶して去って行った。
+					PRINTFORMW 流石に人目が多いここではカードにできそうにないので그대로 見送った。
+					CALL EVENT_FAVUP(대상캐릭터3,300)
+					ABL:(대상캐릭터3):친밀 += 1
+					SETCOLOR C_PINK
+					PRINTFORML 
+					PRINTFORML %NAME:대상캐릭터3%の호감도と친밀が上がった
+					PRINTFORML 
+					RESETCOLOR
+					IF FLAG:게임모드 == 0
+						PRINTFORMW 優勝賞品としてマスターパックを１０パック貰った。
+						CALL CARD_PACK_SHORI(10)
+					ELSEIF FLAG:게임모드 == 1
+						PRINTFORMW 優勝賞品として10000DPを貰った。
+						FLAG:듀얼포인트 += 10000
+					ENDIF
+					PRINTFORML
+					PRINTFORMW これで本日のショップ大会は終了した。
+					TIME += 180
+					RETURN 2
+				ELSE
+					PRINTFORMW ここで敗退だ……。
+					IF FLAG:게임모드 == 0
+						PRINTFORMW 準優勝賞品としてマスターパックを４パック貰った。
+						CALL CARD_PACK_SHORI(4)
+					ELSEIF FLAG:게임모드 == 1
+						PRINTFORMW 準優勝賞品として4000DPを貰った。
+						FLAG:듀얼포인트 += 4000
+					ENDIF
+					PRINTFORML
+					PRINTFORMW これで本日のショップ大会は終了した。
+					TIME += 180
+					RETURN 2
+				ENDIF
+			ELSE
+				IF FLAG:게임모드 == 0
+					PRINTFORMW ここで敗退だ……。
+					PRINTFORMW 参加賞としてマスターパックを１パック貰った。
+					CALL CARD_PACK_SHORI(1)
+				ELSEIF FLAG:게임모드 == 1
+					PRINTFORMW 参加賞として1000DPを貰った。
+					FLAG:듀얼포인트 += 1000
+				ENDIF
+				PRINTFORML
+				PRINTFORMW これで本日のショップ大会は終了した。
+				TIME += 120
+				RETURN 2
+			ENDIF
+	ELSE
+		IF FLAG:게임모드 == 0
+			PRINTFORMW ここで敗退だ……。
+			PRINTFORMW 参加賞としてマスターパックを１パック貰った。
+			CALL CARD_PACK_SHORI(1)
+		ELSEIF FLAG:게임모드 == 1
+			PRINTFORMW 参加賞として1000DPを貰った。
+			FLAG:듀얼포인트 += 1000
+		ENDIF
+		PRINTFORML
+		PRINTFORMW これで本日のショップ大会は終了した。
+		TIME += 60
+		RETURN 2
+	ENDIF
+ELSEIF RESULT == 1
+	PRINTFORMW まだ準備ができていなかったので、一回出直す事にしました。
+	RETURN 1
+ENDIF

@@ -1,0 +1,123 @@
+﻿@CARDNAME_29701,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 불멸의 정령 퍼펙트 갤럭시
+	CASE "略称"
+RESULTS = P 갤럭시
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_29701(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 효과モン
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 빛속성
+
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2500
+	;牝性/雄性があるよ
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29701(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드의 ②의 효과는 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 완전 내성을 가진다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ②：이 카드를 패에서 버리고 발동할 수 있다.
+PRINTL 「불멸의 정령 퍼펙트 갤럭시」 이외의 천사족의 「커맨드」 몬스터 1장을 덱에서 패에 넣는다.
+
+
+@CARDCAN_29701(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29701)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 손패起動
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,29701)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 천사족
+	효과条件カテゴリ = 커맨드
+	효과条件固名前 = 불멸의 정령 퍼펙트 갤럭시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+		
+@CARDEFFECT_29701(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+ELSEIF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29701,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件종족 = 천사족
+			효과条件カテゴリ = 커맨드
+			효과条件固名前 = 불멸의 정령 퍼펙트 갤럭시
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

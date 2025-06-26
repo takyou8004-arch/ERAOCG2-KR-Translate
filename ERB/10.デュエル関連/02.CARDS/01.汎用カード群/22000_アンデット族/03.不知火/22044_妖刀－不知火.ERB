@@ -1,0 +1,196 @@
+﻿@CARDNAME_22044,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 요도-시라누이
+	CASE "略称"
+RESULTS = 요도-시라누이
+	CASE "カテゴリ"
+RESULTS:0 = 시라누이
+RESULTS:1 = 요도-시라누이
+ENDSELECT
+
+
+@CARD_22044(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 0
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_22044(종류)
+#DIM DYNAMIC 종류
+
+;PRINTL このカード名の①의 효과は１ターンに１번밖에 使用할 수 없다。
+CALLFORM CARD_ABLE(0,묘지起動 ,フリー誘発)
+PRINTL ①: 이 카드가 묘지에 존재할 경우, 자신 상대 턴에,
+PRINTL 튜너 이외의 자신 묘지의 언데드족 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터와 이 카드를 묘지에서 제외하고,
+PRINTL 그 2장의 레벨의 합계와 같은 레벨을 가진 언데드족 S 몬스터 1장을 EX덱에서 특수 소환한다.
+
+
+@CARDCAN_22044(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성,10
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,22044)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 묘지起動 || 종류 == フリー誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,0,"EX덱")
+	SIF RESULT == 1
+		RETURN 0
+	CALL YOTO_CHECK(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_22044(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 条件달성,20
+#DIM DYNAMIC 素材レベル
+#DIM DYNAMIC 싱크로レベル
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 묘지起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,22044)
+	IF RESULT == 0
+		;中身見てね By 本体開発者
+		CALL YOTO_CHECK(듀얼리스트,종류,ゾーン,場所,1)
+		;パスされた条件달성をRESULT経由で
+		FOR カウンタ,1,11
+			条件달성:カウンタ = RESULT:カウンタ
+		NEXT
+		IF 듀얼리스트 == "자신"
+PRINTL 몬스터의 레벨을 선택해 주세요
+			PRINTL
+			;연속処理はなるべくこの形で
+			FOR カウンタ,1,11
+				SIF 条件달성:カウンタ == 1
+					PRINTFORML レベル：[{カウンタ + 2}]
+			NEXT
+			BINPUT
+		ELSE
+			FOR カウンタ,1,11
+				SIF 条件달성:カウンタ == 1
+					RESULT = カウンタ + 2
+			NEXT
+		ENDIF
+		싱크로レベル = RESULT
+		素材レベル = 싱크로レベル - 2
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件튜너 = -1
+		효과条件종족 = 언데드족
+		효과条件レベル = 素材レベル
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+			효과範囲EX덱 = 1
+			효과条件종류 = 싱크로
+			효과条件종족 = 언데드족
+			효과条件レベル = 싱크로レベル
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+@YOTO_CHECK(듀얼리스트,종류,ゾーン,場所,モード選択)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성,20
+#DIM DYNAMIC モード選択
+VARSET RESULT
+FOR カウンタ,1,11
+	;レベル３～１２までの몬스터를 確認
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 싱크로
+	효과条件종족 = 언데드족
+	효과条件レベル = カウンタ + 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	;いないならこの処理は捨てる
+	SIF RESULT != 1
+		CONTINUE
+	;上記の条件から、자신의 묘지に相方となる튜너 이외의 몬스터를 検索
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件튜너 = -1
+	효과条件종족 = 언데드족
+	효과条件レベル = カウンタ
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		CONTINUE
+	;CARD_CANモードなら1つでも条件に当てはまるなら起動可能を返す
+	IF モード選択 == 0
+		RETURN 1
+	;효과処理（CARD_EFFECT）モードなら、条件달성:○○に1の플래그を立たす。この後EFFECT側の条件달성にパスする。
+	ELSEIF モード選択 == 1
+		条件달성:カウンタ = 1
+	ENDIF
+NEXT
+
+IF モード選択 == 1
+	VARSET RESULT
+	;RESULTに보존！EFFECT側の条件달성にパスする。
+	FOR カウンタ,1,11
+		RESULT:カウンタ = 条件달성:カウンタ
+	NEXT
+	RETURN 1
+ENDIF
+RETURN 0
+

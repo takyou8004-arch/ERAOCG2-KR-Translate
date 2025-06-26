@@ -1,0 +1,140 @@
+﻿@CARDNAME_29910,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 완벽 요정 사에포요 X
+	CASE "略称"
+RESULTS = 사에포요 X
+	CASE "カテゴリ"
+RESULTS:0 = 스노우 페어리
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_29910(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 1400
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250418
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_29910(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드 이외의 자신 필드의 몬스터 1장을 파괴하고, 이 카드는 「각성」한다.
+PRINTL 각성한 이 카드의 공격력은 400 상승한다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 이 카드가 각성 상태일 경우에 발동할 수 있다.
+PRINTL 자신의 손패 마법 & 함정 존에서 코스트 5 이하의 「스노우 페어리」 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_29910(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29910)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") >= 1
+	SIF 발동済_2(듀얼리스트,29910)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 스노우 페어리
+	CALLFORM 효과条件レベル_ADV(5,"以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29910(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") >= 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29910,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = 스노우 페어리
+		CALLFORM 효과条件レベル_ADV(5,"以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29910,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件行先플래그 = 破壊行き
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",400)
+		ENDIF
+	ENDIF
+ENDIF
+

@@ -1,0 +1,205 @@
+@CARDNAME_79745,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 괴한에 물든 경계의 날개－플레저 트랜스 마릿지폼－
+	CASE "略称"
+		RESULTS = 괴한색의경계날개
+	CASE "カテゴリ"
+		RESULTS:0 = 괴한수
+		RESULTS:1 = 괴한에 물든 경계의 날개
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+@CARD_79745(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250420
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_79745(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_79745(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL 이 카드명의  ①②의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+PRINTL ①：자신 필드에 레벨７ 이상의 "괴한수" 수컷 몬스터가 존재하는 경우에、
+PRINTL 상대 마법＆함정 존의 、"괴한 플랜트"인 "계한전희" 몬스터 카드 １장을 대상으로 하고 발동할 수 있다。
+PRINTL 그 카드 １장을 Ｘ소재로 하고、자신의 ＥＸ덱에서 "괴한수비 플레저리아" １장을 소환조건을 무시하고 자신 필드에 특수 소환한다。
+PRINTL 그 후、자신은 덱에서 １장 드로우 한다。
+; PRINTL 그 후、특수 소환한 カードに악성 카운터を「자신 필드의 레벨７ 이상의 "괴한수"雄性 몬스터의 수＋１」つ둔다。
+CALL CARD_ABLE(2,身代효과)
+PRINTL ②：자신 필드의 "괴한수" 몬스터가 전투 / 효과로 파괴되는 경우、대신에 묘지의 이 카드를 제외할 수 있다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79745(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79745)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,79745)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 괴한수
+	효과条件성별 = 雄性
+	CALLFORM 효과条件レベル_ADV(7, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 계한전희
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件名前 = 괴한수비 플레저리아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF 발동済_2(듀얼리스트,79745)
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"묘지")
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	TRYCALLFORM CARDNAME_{破壊대상ID}("カテゴリ")
+	SIF !MATCH(RESULTS,"괴한수") && GETVARS(@"%듀얼리스트%_MZ_追カテ:破壊대상場所") != "괴한수" && GETVARS(@"%듀얼리스트%_MZ_追カテ2:破壊대상場所") != "괴한수"
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"戦闘","효과")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79745(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 変身カードID
+#DIM DYNAMIC 修正値
+#DIM DYNAMIC 元괴한플랜트위치
+#DIMS DYNAMIC 괴한플랜트名前
+#DIMS DYNAMIC ヒロインネーム
+#DIMS DYNAMIC 元ヒロインネーム
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 変化元カードID
+#DIM DYNAMIC 수数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79745,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 괴한수
+		효과条件성별 = 雄性
+		효과条件CNT = 1
+		CALLFORM 효과条件レベル_ADV(7, "以上")
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		수数 = RESULT
+		CALL FULLRESET
+		효과範囲상대마함 = 1
+		효과条件カテゴリ = 계한전희
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			元괴한플랜트위치 = 選択カード（CS）
+			変身カードID = GETVAR(@"%対面者%_魔_戒悍変身元ID:選択カード（CS）")
+			CALL FULLRESET
+			효과추가종류:1 = 1000000 + 変身カードID
+			효과範囲EX덱 = 1
+			효과条件名前 = 괴한수비 플레저리아
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",選択カード（CS）,"攻撃표시")
+				ヒロインネーム = 플레저리아 
+				CALL CARD_EROTICS(変身カードID)
+				IF RESULT != -1
+					ヒロインネーム = %ヒロインネーム%%CALLNAME:RESULT%
+				ELSE
+					TRYCALLFORM CARDNAME_{変身カードID}("略称")
+					ヒロインネーム = %ヒロインネーム%%RESULTS%
+				ENDIF
+				CALL CARD_SET_RENAME(듀얼리스트,"필드",カード소환先,ヒロインネーム)
+				元ヒロインネーム = %GETVARS(@"%対面者%_魔_戒悍ネーム:{元괴한플랜트위치}")%
+				SETVAR @"%対面者%_魔_戒悍ネーム:{元괴한플랜트위치}", ""
+				SETVAR @"%対面者%_魔_戒悍変身元ID:{元괴한플랜트위치}", 0
+				SETVAR @"%듀얼리스트%_MZ_戒悍ネーム:{カード소환先}", ヒロインネーム
+				SETVAR @"%듀얼리스트%_MZ_戒悍変身元ID:{カード소환先}", 変身カードID
+				CALL CARD_SET_CATEGORY(듀얼리스트,"필드",カード소환先,"괴한수")
+				CALL CARD_SET_CATEGORY(듀얼리스트,"필드",カード소환先,"괴한플랜트",1)
+				; CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"個Ｃ",수数+1)
+				IF 수数 == 1
+					CALL KOJO_PLEASUREBEAST_MANAGER(変身カードID,"즉시타락",,元ヒロインネーム)
+				ELSE
+					CALL KOJO_PLEASUREBEAST_MANAGER(変身カードID,"즉시타락",,元ヒロインネーム,,,,수数)
+				ENDIF
+				IF RESULT == 2
+					CALL KOJO_PLEASUREBEAST_MANAGER(変身カードID,"悪堕ち",,ヒロインネーム,元ヒロインネーム,,,2)
+				ELSE
+					CALL KOJO_PLEASUREBEAST_MANAGER(変身カードID,"悪堕ち",,ヒロインネーム,元ヒロインネーム,,,1)
+				ENDIF
+				; PRINTFORMW 괴한수비 플레저리아『{カード소환先}』に카운터が{수数+1}つ置かれました。
+				CALL CARDDRAW_BASIC(듀얼리스트,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79745,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

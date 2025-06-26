@@ -1,0 +1,474 @@
+@CARDNAME_99551,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 증식하는 AnS
+	CASE "略称"
+		RESULTS = 증식하는 AnS
+	CASE "カテゴリ"
+		RESULTS:0 = 아누스피어
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+@CARD_99551(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99551(종류)
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC 듀얼리스트
+
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動 ,フリー誘発)
+PRINTL 이 카드는 １턴에 １번밖에 발동할 수 없다。
+PRINTL 필드에 암컷 몬스터가 존재하는 경우、이 카드는 패에서 발동할 수 있다。
+CALLFORM CARD_ABLE(0,소환強制誘発)
+PRINTL ①：이 카드가 앞면 표시로 존재하는 경우、이하의 효과를 적용한다。
+PRINTL ●상대가 몬스터를 특수 소환할때마다、상대의 패에 덱 밖에서 "확장하는 AnS"를 넣는다。
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ②：상대의 엔드 페이즈에 발동한다。
+PRINTL 이 카드가 앞면 표시인 경우、묘지로 보낸다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 대상カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99551)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,99551)
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF 마함数(듀얼리스트) >= 5
+			RETURN 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과条件성별 = 牝性
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		
+		SIF RESULT == 0
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 2
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	
+	RETURN 1
+ELSEIF 종류 == 소환強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 最終소환決者 == 듀얼리스트
+		RETURN 0
+	SIF !GROUPMATCH(最終소환타입,"특수","EX특수")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99551,1)
+	IF RESULT == 0
+		SETCOLOR C_PINK
+		CUSTOMDRAWLINE —
+		PRINTFORML 
+		PRINTFORML 필드에 아누스피어의 촉수들이 뿌려졌다…
+		PRINTFORML 
+		CUSTOMDRAWLINE —
+		RESETCOLOR
+		PRINTFORML 
+		IF ゾーン == "손패"
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 소환強制誘発
+	SETCOLOR C_PINK
+	CUSTOMDRAWLINE —
+	PRINTFORML 
+	PRINTFORML 【증식하는 AnS】
+	PRINTFORML 특수 소환할때마다 "확장하는 AnS"를 패에 넣는다。
+	PRINTFORML 
+	CUSTOMDRAWLINE —
+	PRINTFORML 
+	PRINTFORML 아누스피어의 촉수들은 특수 소환의 틈을 놓치지 않고、스르륵하고 움직인다…
+	CALL CARD_GENERATE_HAND(対面者,199551)
+	RESETCOLOR
+	PRINTFORML 
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+ENDIF
+
+
+@CARDNAME_199551,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 확장하는 AnS
+	CASE "略称"
+		RESULTS = 확장하는 AnS
+	CASE "カテゴリ"
+		RESULTS:0 = 아누스피어
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+@CARD_199551(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 装備마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_199551(종류)
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC 듀얼리스트
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 자신 필드의 공격력 ５０이상의 암컷 몬스터에게만 장착가능。
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①：장착 몬스터의 공격력은 ８００내리고、직접공격할 수 있다。
+PRINTL 장착 몬스터의 공격력이 ０인 경우、그 몬스터는 "묘상"으로 취급하며、효과는 무효된다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：장착 몬스터는 발정하여、공격 대상이 되지 않는다。
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ③：자신 / 상대 필드에 "미독의 바람" 존재하는 경우、자신 메인 페이즈에 발동할 수 있다。
+PRINTL 묘지의 이 카드를 덱으로 되돌리고、덱 밖에서 "마인드컨트롤－엉덩이 만지작"을 패에 넣는다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_199551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 대상カード
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,199551)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ELSEIF 종류 == 손패起動
+		SIF 마함数(듀얼리스트) >= 5
+			RETURN 0
+	ENDIF
+	
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件성별 = 牝性
+	효과条件以攻撃力 = 50
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件名前 = 미독의 바람
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+	
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%装備者%_戦闘カード") != 装備先
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_攻撃無効_保") != 1
+		RETURN 0
+	
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_199551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備者カードID
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 本数
+#DIM DYNAMIC 処理済みチェック
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,199551)
+	IF RESULT == 0
+		;패에서 발동 후、마법トラップ존에 カード이동
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件성별 = 牝性
+		효과条件以攻撃力 = 50
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+		装備先 = RESULT:2
+		装備者カードID = RESULT:1
+		
+		IF 装備者カードID != 9999
+		
+			CALL CARD_EROTICS(装備者カードID)
+			조교대상 = RESULT
+			
+			;エッチなことできる대상なら、そっちから名称を취득する
+			IF 조교대상 != -1
+				装備者 = %CALLNAME:조교대상%
+			ELSE
+				TRYCALLFORM CARDNAME_{装備者カードID},"略称"
+				装備者 = %RESULTS%
+			ENDIF
+			
+			;本数ﾁｪｯｸ、자신의 마법함정존의 装備先を調べカウントする
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%듀얼리스트%_魔_ID:カウンタ") != 199551
+					CONTINUE
+				
+				SIF GETVAR(@"%듀얼리스트%_魔_装:カウンタ") == 装備先
+					本数 += 1
+			NEXT
+			
+			;装備直後は情報が入っていないらしいので、0からスタ-ト
+			SELECTCASE 本数
+				CASE 0
+				PRINTFORMW %装備者%는 등뒤에서 덮쳐져、엉덩이구멍에 기생당해버렸다…
+				CASE 1
+				PRINTFORMW 괴로워하는 %装備者%에게 2개째의 촉수가 스르륵…하고 잠입한다。추가로 엉덩이구멍에 기생당해버렸다…
+				CASE 2
+				PRINTFORMW 숨이 끊어질것같은 %装備者%에게 3개째의 촉수가 팽팽…하게 잠입햇다。어찌 할 도리도 없이、엉덩이구멍에 기생당해버렸다…
+				CASE 3,4,5
+				PRINTFORMW 그저 떠는것밖에 못하는 %装備者%의 엉덩이구멍은、이미 무방비와 같이、촉수가 출입을 반복하고있다…
+			ENDSELECT
+			
+			IF 조교대상 != -1
+				CALL EROTIC_MOVE("애널解し",조교대상,-1,300*本数)
+				CALL CARD_EROTICS_END(조교대상)
+			ENDIF
+			
+			;装備の지속효과도 同様。それはそう
+			IF GETVAR(@"%듀얼리스트%_MZ_攻:{装備先}") <= 800
+				PRINTFORMW %装備者%의 다리에는 촉수가 들러붙어、엉덩이구멍에 주어지는 자극이 최대가 되도록 엎드리고있다…
+				PRINTFORMW %装備者%는 엉덩이구멍에서 주어지는 자극에 버티지 못한듯 하다…
+				SETCOLOR C_PINK
+				PRINTFORMW 「…읏❤…으～～읏❤❤❤」
+				RESETCOLOR
+				
+				IF 조교대상 != -1
+					CALL EROTIC_MOVE("절정光線",조교대상,-1,200*(本数+1))
+				ENDIF
+				CALL CARD_SET_CATEGORY(듀얼리스트,"필드",装備先,"묘상")
+			ENDIF
+			
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+	CALL CARD_GENERATE_HAND(듀얼리스트,79846)
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,-800)
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"発情",185)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"直攻")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"攻避")
+	
+	IF GETVAR(@"%듀얼리스트%_MZ_攻:{装備先}") <= 0
+		CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"無効")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"発情",200)
+		CALL CARD_SET_CATEGORY(듀얼리스트,"装備",場所,"묘상")
+	ENDIF
+ELSEIF 종류 == 攻撃後強制誘発
+	
+	装備者カードID = GETVAR(@"%듀얼리스트%_필드:装備先")
+	
+	IF 装備者カードID != 9999
+		CALL CARD_EROTICS(装備者カードID)
+		조교대상 = RESULT
+
+		;エッチなことできる대상なら、そっちから名称を취득する
+		IF 조교대상 != -1
+			装備者 = %CALLNAME:조교대상%
+		ELSE
+			TRYCALLFORM CARDNAME_{装備者カードID},"略称"
+			装備者 = %RESULTS%
+		ENDIF
+		
+		;本数ﾁｪｯｸ、자신의 마법함정존의 装備先を調べカウントする
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_魔_ID:カウンタ") != 199551
+				CONTINUE
+			
+			IF GETVAR(@"%듀얼리스트%_魔_装:カウンタ") == 装備先
+				本数 += 1
+				
+				;処理済みの装備마법があれば、処理を行わない
+				SIF GETVAR(@"%듀얼리스트%_魔_T1汎数:カウンタ") == 1
+					処理済みチェック = 1
+			ENDIF
+		NEXT
+		
+		IF 処理済みチェック != 1
+			IF GETVAR(@"%듀얼리스트%_MZ_不材:装備先") > 0 && GETVAR(@"%듀얼리스트%_MZ_攻:装備先") == 0
+				;既に攻撃力0の状態で攻撃に失敗し、素材불가の縛りが付いている場合
+				
+				PRINTFORMW %装備者%의 다리에는 촉수가 들러붙어있으며、이미 공격할수 있는 자세가 아니다。
+				PRINTFORMW 조금이라도 몸을 움직이려 하면、움직일수 없을때 까지 "교육"당하는듯 하다。
+				PRINTFORML
+				PRINTFORMW …%装備者%는 우수한 묘상으로서、숙주에게도 인기인듯 하다。 
+				PRINTFORMW "교육"의 성과도 있어서인지、%装備者%는 솔직하게 쾌락을 누리며、교성을 흘리고있다…
+				SETCOLOR C_PINK
+				PRINTFORMW 「…읏❤～읏❤」「……읏❤」「❤…으～읏❤❤」
+				RESETCOLOR
+
+			ELSEIF  本数 > 1
+				;2本 이상의 場合
+				PRINTFORMW …비틀비틀거리는 %装備者%의 발밑에는、엉덩이구멍에서 흘러 떨어진 촉수가 구르고있다。
+				PRINTFORML 공격하려고 자세를 다시잡으려하면、엉덩이구멍에 기생하는 {本数}개의 촉수가 한번에 꿈틀거리기 시작했다！
+				PRINTFORMW 아슬아슬하게 버티고있던 %装備者%는 자신도모르게 무릎을 꿇어버렸다…
+				PRINTFORMW 엉덩이를 찌르는듯한 자세가 된것으로 "입구"의 위치가 낮아져버려、발밑에 남아있던 촉수가 다시 "입구"를 목표로 잠입해왔다！
+				SETCOLOR C_PINK
+				PRINTFORMW 「…읏！？…읏❤…으～～～～읏❤❤❤」
+				RESETCOLOR
+				PRINTFORMW %装備者%는 비통한 절규를 올리지만、더욱 많은 촉수에게 기생당해버렸다…
+			ELSE
+				;1本の場合
+				PRINTFORMW 엉덩이구멍에 촉수가 넣어진 %装備者%는、엉덩이구멍에서 질척질척한 액체가 떨어지고있다…
+				PRINTFORMW 떨어진 액체는、이미 커다란 물웅덩이같다…공격하려고 발을 내딛으니、스르륵…하고 발이 미끄러져、엉덩방아를 찌어버렸다！
+				PRINTFORMW 충격에 놀란것인지、밖으로 튀어나오기 위해 촉수가 기세좋게 움직이기 시작했다！
+				SETCOLOR C_PINK
+				PRINTFORMW 「…읏！～～읏❤」
+				RESETCOLOR
+				PRINTFORMW 스르르르륵 하고 촉수가 기어나오며、자극당한 입구는 움찔움찔 떨고있다…
+				PRINTFORMW 기어나온 촉수는 이상이 없는것을 확인하고、자시 숙주의 장내로 되돌아갔다…
+				SETCOLOR C_PINK
+				PRINTFORMW 「…읏！？～～읏❤❤」
+				RESETCOLOR
+			ENDIF
+			;既に묘상の場合
+			;素材可能で공격력이 0なら素材불가にする
+			IF GETVAR(@"%듀얼리스트%_MZ_不材:装備先") == 0 && GETVAR(@"%듀얼리스트%_MZ_攻:装備先") == 0
+				PRINTFORML 
+				PRINTFORMW 두꺼운 촉수가 %装備者%의 몸을 묶어、다리를 연 자세로 고정해버렸다…
+				PRINTFORMW 이미 전혀 저항도 못하고、%装備者%는 묘상으로서 관리당하고있다…
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",装備先,"不材",2)
+			ENDIF
+			
+			IF 조교대상 != -1
+				CALL EROTIC_MOVE("애널解し",조교대상,-1,300*本数)
+				CALL EROTIC_MOVE("절정光線",조교대상,-1,200*本数)
+			ENDIF
+		ENDIF
+		
+		;処理済みとして、카운터を乗せる
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"T1汎数",1)
+	ENDIF
+ENDIF

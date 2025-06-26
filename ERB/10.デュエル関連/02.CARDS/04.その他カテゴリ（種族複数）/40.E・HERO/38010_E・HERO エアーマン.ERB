@@ -1,0 +1,117 @@
+﻿@CARDNAME_38010,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = E•HERO 에어맨
+	CASE "略称"
+RESULTS = 에어맨
+	CASE "カテゴリ"
+RESULTS:0 = HERO
+RESULTS:1 = E•HERO
+
+ENDSELECT
+
+
+@CARD_38010(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 300
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_38010(종류)
+#DIM DYNAMIC 종류
+
+CALL CARD_ABLE(0,소환時 ,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환에 성공했을 때, 이하의 효과 중 1개를 선택하여 발동할 수 있다.
+PRINTL ● 자신 필드의 「HERO」 몬스터의 수만큼, 상대 필드의 마법 / 함정 카드를 선택하여 파괴한다.
+PRINTL ● 덱에서 「HERO」 몬스터 1장을 패에 더한다.
+
+
+@CARDSUMMON_AA_38010
+
+
+@CARDCAN_38010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38010)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_38010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 条件合致数
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38010)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			PRINTL 
+			CALL YN_CHOICE(듀얼리스트,"●덱에서 「HERO」モンスター１体を손패に加える。","●このカード 이외의 자신 필드의 「HERO」몬스터의 数まで、상대 필드의 마법 / 함정카드를 選んで破壊する。")
+		ELSE
+			RESULT = はい
+		ENDIF
+		
+		IF RESULT == はい
+			CALL FULLRESET
+			효과条件カテゴリ = HERO
+			효과条件종류 = モン全般
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ELSEIF RESULT == いいえ
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ = HERO
+			효과条件CNT = 1
+			효과条件他所 = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			条件合致数 = RESULT
+			FOR カウンタ,0,条件合致数
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,"묘지")
+			NEXT
+		ENDIF
+	ENDIF
+ENDIF

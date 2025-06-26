@@ -1,0 +1,136 @@
+﻿@CARDNAME_20252,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = Em 데미지 저글러
+	CASE "略称"
+RESULTS = Em 저글러
+	CASE "カテゴリ"
+RESULTS:0 = 엔터메이지
+ENDSELECT
+
+
+@CARD_20252(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20252(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①：몬스터의 공격 선언시에 이 카드를 패에서 버리고 발동할 수 있다.
+PRINTL 그 전투에 의해 발생하는 자신에게 주는 전투 데미지는 0이 된다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②：자신이 효과에 의해 데미지를 받았을 경우, 이 카드를 패에서 버리고 발동할 수 있다.
+PRINTL 상대 필드에 존재하는 카드 1장을 선택하여 파괴한다.
+
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ③：묘지에서 이 카드를 제외하고 발동할 수 있다.
+PRINTL 덱에서 「Em 데미지 저글러」 이외의 「Em」 몬스터 1장을 패에 추가한다.
+
+@CARDCAN_20252(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20252)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"被弾種",3)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_3(듀얼리스트,20252)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件固名前 = Em 데미지 저글러
+	효과条件カテゴリ = 엔타메이지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_20252(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM サーチカード 
+
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20252)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ無効",3)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20252)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20252,3)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件固名前 = Em 데미지 저글러
+		효과条件カテゴリ = 엔타메이지
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+	ENDIF
+ENDIF

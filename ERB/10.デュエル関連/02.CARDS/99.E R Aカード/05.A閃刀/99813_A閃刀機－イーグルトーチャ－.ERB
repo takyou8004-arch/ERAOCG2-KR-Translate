@@ -1,0 +1,150 @@
+﻿@CARDNAME_99813,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = A섬도기－이글 토처
+	CASE "略称"
+		RESULTS = A섬기－TORTURE
+	CASE "カテゴリ"
+		RESULTS:0 = A섬도
+		RESULTS:1 = E.R.A
+		RESULTS:2 = 섬도
+ENDSELECT
+
+
+@CARD_99813(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99813(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 자신 필드에「A섬도희」 몬스터가 존재할 경우, 이 카드는 패에서도 발동할 수 있다。
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：상대 필드의 암컷 몬스터 1체에 이 카드를 장비한다.。
+PRINTL 이 카드를 장비한 몬스터는 전투에서 파괴되지 않고, 효과는 무효화되며, 표시 형태를 변경할 수 없고、
+PRINTL 특수 소환의 소재로 사용할 수 없으며, 공격 선언을 할 수 없다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99813(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99813)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 손패起動
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = A섬도희
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == リアクション효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99813(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과蓄積
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99813)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件성별 = 牝性
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+
+	ENDIF
+ELSEIF 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99813)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件성별 = 牝性
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"接可")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"戦無")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"表固")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"無効")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"不材")
+ELSEIF 종류 == リアクション효과
+	CALL CARD_EROTICS_FIELD(装備者,"필드",装備先)
+	IF RESULT != -1
+		조교대상 = RESULT
+		PRINTFORMW 아자레아의 조교 무기에 붙잡힌 %CALLNAME:조교대상%는, 몸 하나 꼼짝할 수 없을 정도로 강하게 구속되어버렸다。
+		PRINTFORMW 전신의 민감한 부위에 파고든 와이어가、 %CALLNAME:조교대상%의 암컷을 자극한다。
+		CALL EROTIC_MOVE("亀甲縛り",조교대상)
+	ENDIF
+ENDIF

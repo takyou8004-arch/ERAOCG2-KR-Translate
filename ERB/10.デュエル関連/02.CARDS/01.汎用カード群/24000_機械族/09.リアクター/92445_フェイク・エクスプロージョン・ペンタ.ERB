@@ -1,0 +1,143 @@
+﻿@CARDNAME_92445,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 페이크 익스플로전 펜타
+	CASE "略称"
+RESULTS = F E P
+	CASE "カテゴリ"
+RESULTS:0 = 리액터
+ENDSELECT
+
+
+@CARD_92445(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92445(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드는 룰 상 '리액터' 카드로 취급한다.
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번만 사용할 수 있다.
+CALL CARD_ABLE(0,攻撃時誘発)
+PRINTL ①: 상대 몬스터의 공격 선언시에 발동할 수 있다.
+PRINTL 자신의 패 / 덱 / 묘지에서 '리액터' 몬스터 1장을 특수 소환한다.
+PRINTL 그 후, 자신 필드의 모든 몬스터에게 일시 파괴 내성을 부여한다.
+CALL CARD_ABLE(1,묘지起動,フリー誘発)
+PRINTL ②: 묘지의 이 카드를 제외하고, 자신의 묘지의 기계족 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 패로 가져온다.
+
+
+@CARDCAN_92445(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92445)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 리액터
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+
+
+ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
+	SIF 발동済_2(듀얼리스트,92445)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 기계족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_92445(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC X素材数
+#DIM DYNAMIC リピート횟수
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択素材
+#DIMS DYNAMIC 選択素材名
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92445)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 리액터
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"一破",1)
+	ENDIF
+
+ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92445,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 기계족
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

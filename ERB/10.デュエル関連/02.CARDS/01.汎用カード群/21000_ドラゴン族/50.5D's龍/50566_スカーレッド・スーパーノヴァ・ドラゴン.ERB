@@ -1,0 +1,163 @@
+﻿@CARDNAME_50566,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스칼렛 슈퍼노바 드래곤
+	CASE "略称"
+RESULTS = 슈퍼노바
+	CASE "カテゴリ"
+RESULTS:0 = 레드 데몬
+ENDSELECT
+
+
+@CARD_50566(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+
+	CASE "성별"
+		RETURN 雄性
+
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50566(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 12
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件カテゴリ = 레드 데몬
+	素材条件종류 = 싱크로
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50566) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50566(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 "레드 데몬" S 몬스터 1체 이상
+PRINTL 이 카드는 S소환으로밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 공격력은 자신 묘지의 튜너 수× 500 올린다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 필드의 이 카드는 상대 효과로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(10,攻撃時誘発,발동誘発)
+PRINTL ③: 1턴에 1번, 상대 몬스터의 효과가 발동했을 때, 또는 상대 몬스터의 공격 선언 시에,
+PRINTL 필드의 이 카드를 엔드 페이즈까지 제외하고 발동할 수 있다.
+PRINTL 상대 필드의 카드를 전부 제외한다.
+
+@CARDCAN_50566(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50566)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般 
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動 
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50566(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50566)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"제외")
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50566)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"제외")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+ELSEIF 종류 == 攻守変動 
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件튜너 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 500
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+ENDIF

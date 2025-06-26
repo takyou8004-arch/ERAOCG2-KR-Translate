@@ -1,0 +1,97 @@
+﻿@CARDNAME_70300,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 차원의 균열
+	CASE "略称"
+RESULTS = 차원의 균열
+	CASE "カテゴリ"
+RESULTS:0 = 이차원
+ENDSELECT
+
+
+@CARD_70300(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_70300(종류)
+#DIM DYNAMIC 종류
+
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 마법 & 함정 존에 존재하는 한,
+PRINTL 서로의 필드에서 묘지로 보내지는 카드는 묘지로는 가지 않고 제외된다.
+PRINTL ②: 이 카드는 발동 후, 3턴째의 자신 엔드 페이즈에 파괴된다.
+
+@CARDCAN_70300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,70300)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_70300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70300)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"땅제외置換",3,2)
+ELSEIF 종류 == ターン終了時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",1)
+	IF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") >= 3
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

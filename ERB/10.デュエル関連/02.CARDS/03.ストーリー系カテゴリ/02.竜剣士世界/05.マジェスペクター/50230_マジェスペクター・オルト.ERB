@@ -1,0 +1,144 @@
+﻿@CARDNAME_50230,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마제스펙터 오르트
+	CASE "略称"
+RESULTS = MJ 오르트
+	CASE "カテゴリ"
+RESULTS:0 = 마제스펙터
+ENDSELECT
+
+
+@CARD_50230(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 링크
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1500
+	CASE "추가日"
+		RETURN 250604
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_50230(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 마제스펙터
+ELSE
+	PRINT
+ENDIF
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,50230) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_50230(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「마제스펙터」 몬스터를 포함하는 몬스터 2장
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 링크 소환했을 경우에 발동할 수 있다.
+PRINTL EX덱에서 「마제스펙터」 펜듈럼 몬스터를 2장까지 패에 넣는다.
+PRINTL 그 후, 덱에서 「마제스펙터」 펜듈럼 몬스터를 2장까지 EX덱에 앞면 표시로 추가할 수 있다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지는 「마제스펙터」 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+
+
+@CARDCAN_50230(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50230)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+    SIF 발동済_1(듀얼리스트,50230)  
+		RETURN 0
+    CALL FULLRESET
+    효과範囲덱 = 1
+효과条件カテゴリ = 마제스펙터
+	효과条件分割 = 펜듈럼
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+효과条件カテゴリ = 마제스펙터
+	효과条件分割 = 펜듈럼
+	효과条件종류 = EX以外全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+
+
+@CARDEFFECT_50230(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50230,1)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件カテゴリ = 마제스펙터
+		효과条件分割 = 펜듈럼
+		효과条件종류 = EX以外全般
+		효과条件複数 = 98
+		CALL CARD_ADD_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		IF RESULT == 1
+		    CALL FULLRESET
+효과条件カテゴリ = 마제스펙터
+		    효과条件分割 = 펜듈럼
+			효과条件複数 = 98
+		    효과条件行先플래그 = EX덱行き
+		    CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	CALL CARD_EX_RESTRICTION(듀얼리스트,"마제스펙터")
+	ENDIF
+ENDIF

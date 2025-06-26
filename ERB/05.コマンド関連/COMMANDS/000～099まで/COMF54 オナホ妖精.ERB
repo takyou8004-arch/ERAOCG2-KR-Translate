@@ -1,0 +1,122 @@
+﻿;-------------------------------------------------
+;오나홀 요정
+;도구사용コマンド、レベル2
+;-------------------------------------------------
+@COM54
+;着脱の処理
+
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+TCVAR:MASTER:사정쾌락강도 = 1500
+TCVAR:MASTER:사정대상캐릭터_1 = TARGET
+TCVAR:MASTER:사정부위플래그 = 1
+
+
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 50
+DOWNBASE:기력 += 100
+
+CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER, 500)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 50)
+SIF TFLAG:SELECTCOM분기
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 100)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 150)
+
+;고통
+LOCAL = 200 * PAIN_CHECK_V(TARGET) / 500
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+
+
+;애널、파과血、촉수の汚れ
+IF (STAIN:MASTER:0 & 8) || (STAIN:MASTER:0 & 32) || (STAIN:MASTER:0 & 64)
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 500)
+;정액汚れ
+ELSEIF STAIN:MASTER:0 & 4
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 250)
+ENDIF
+;정조観念
+IF !TALENT:연모
+	IF TALENT:정조 == 1
+		CALL SOURCE_CALC_불결(TARGET, MASTER, 500)
+	ELSEIF TALENT:정조 == 0
+		CALL SOURCE_CALC_불결(TARGET, MASTER, 250)
+	ENDIF
+ENDIF
+;처녀喪失
+CALL LOST_VIRGIN(TARGET, MASTER, 1)
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;사정に관계なく行われる処理はここから
+;질내に파과の血の汚れを付加
+SIF TALENT:처녀
+	STAIN:6 |= 64
+;奴隷の질내⇔조교者のＰの汚れが이동
+STAIN:MASTER:2 |= STAIN:3
+STAIN:MASTER:2 |= STAIN:6
+STAIN:3 |= STAIN:MASTER:2
+STAIN:6 |= STAIN:MASTER:2
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+EXP:TARGET:Ｖ성교경험 ++
+CFLAG:TARGET:엉덩이성장 ++
+SIF EXP:TARGET:포르치오경험 >= 50
+	EXP:TARGET:포르치오경험 ++
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 4
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 4
+ENDIF
+
+IF !ASSIPLAY
+	EXP:애정경험 += TALENT:연모 * 2
+	;처녀
+	SIF TALENT:처녀 && TALENT:연모
+		EXP:애정경험 += 10
+ENDIF
+RETURN 1
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE54
+;정상위実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(54)
+	RETURN RESULT
+;조교者がオトコ、半人半妖、후타나리の場合はある程度발기してないとダメ
+SIF (TALENT:MASTER:성별 & 2) && BASE:MASTER:발기 < 1000
+	RETURN 0
+;바이브/딜도/로터삽입중はダメ
+SIF TEQUIP:바이브 || TEQUIP:딜도 || TEQUIP:로터
+	RETURN 0
+;オトコだとダメ
+SIF !(TALENT:2 & 1)
+	RETURN 0
+
+;妖精以外はオナホにできず
+SIF TALENT:체형 != -3
+	RETURN 0
+;妖精同士ではオナホは無理
+SIF TALENT:MASTER:체형 == -3
+	RETURN 0
+SIF TALENT:MASTER:금단의지식
+	RETURN 0
+
+;조교者がオトコ、半人半妖、후타나리、もしくは페니스バンドがないとダメ
+SIF !(TALENT:MASTER:성별 & 2) && ITEM:PBAND == 0
+	RETURN 0
+
+;하반신착의
+SIF TEQUIP:0 & 4
+	RETURN 0
+RETURN 1

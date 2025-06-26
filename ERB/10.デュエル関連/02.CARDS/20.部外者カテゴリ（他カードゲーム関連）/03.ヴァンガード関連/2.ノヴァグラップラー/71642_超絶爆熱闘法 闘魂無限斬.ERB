@@ -1,0 +1,135 @@
+﻿@CARDNAME_71642,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초절폭렬투법 투혼무한참
+	CASE "略称"
+RESULTS = 투혼무한참
+	CASE "カテゴリ"
+RESULTS:0 = 노바 그래플러
+RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_71642(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 速攻마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_71642(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 각각 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①: LP를 절반 지불하고 발동할 수 있다.
+PRINTL 자신 필드의 모든 기계족 몬스터의 공격력은, 턴 종료시까지 배가 된다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 자신 메인 페이즈에 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 덱에서 「노바 그래플러」 몬스터 1장을 패에 넣는다.
+
+
+@CARDCAN_71642(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71642)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,71642)
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	IF 듀얼리스트 != "자신"
+		SIF バトルフェイズ != 1
+			RETURN 0
+	ENDIF
+	
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 기계족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,71642)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 노바 그래플러
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71642(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 소환カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC ドロー枚数
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71642,1)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",(GETVAR(@"ライフ_%듀얼리스트%")  / 2))
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+				CONTINUE
+			SIF GETVAR(@"%듀얼리스트%_MZ_種:{カウンタ}") != 기계족
+				CONTINUE
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"一攻",GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ"))
+		NEXT
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71642,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 노바 그래플러
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF

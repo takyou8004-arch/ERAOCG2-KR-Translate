@@ -1,0 +1,142 @@
+﻿@CARDNAME_55535,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 선사유산 크리스탈 에일리언
+	CASE "略称"
+RESULTS = C 에일리언
+	CASE "カテゴリ"
+RESULTS:0 = 오파츠
+ENDSELECT
+
+
+@CARD_55535(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 2100
+	CASE "守備力"
+		RETURN 1000
+	CASE "추가日"
+		RETURN 250613
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_55535(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 3
+지정素材カテゴリ = 오파츠
+;추가효과用
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,55535) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_55535(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 3 몬스터 × 2
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 이 카드가 「오파츠」 몬스터를 소재로 하여 엑시즈 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 덱에서 「RUM」 마법 카드 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ②: 자신의 「오파츠」 몬스터가 전투를 실행하는 공격 선언 시에, 이 카드의 엑시즈 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 이 턴, 그 몬스터는 전투 / 효과로 파괴되지 않으며, 그 전투로 발생하는 자신에게로의 전투 데미지는 대신 상대가 받는다.
+
+@CARDCAN_55535(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,55535)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,55535)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件カテゴリ = RUM
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF !MATCH(RESULTS,"오파츠")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_55535(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55535,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+효과条件カテゴリ = RUM
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55535,0,X消費1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘場所(듀얼리스트),"戦耐",1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘場所(듀얼리스트),"破耐",1)
+		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ反射",3)
+	ENDIF
+ENDIF

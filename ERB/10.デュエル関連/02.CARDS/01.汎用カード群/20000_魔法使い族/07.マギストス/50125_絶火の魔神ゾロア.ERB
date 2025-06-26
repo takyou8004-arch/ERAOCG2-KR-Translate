@@ -1,0 +1,180 @@
+﻿@CARDNAME_50125,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마기스토스 다이몬 조로아
+	CASE "略称"
+RESULTS = 마기스토스조로아
+	CASE "カテゴリ"
+RESULTS:0 = 마기스토스
+ENDSELECT
+
+
+@CARD_50125(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 마법사족 
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50125(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 마법사족 튜너 ＋ 튜너 이외의 몬스터 1체 이상
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 S 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL EX덱에서 "마기스토스" 몬스터 1장을 장착 마법으로 이 카드에 장착한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신의 마법 & 함정 존의 "마기스토스" 몬스터 카드와 같은 종류(융합 S X 링크)의 몬스터의 효과를 상대는 발동할 수 없다.
+CALLFORM CARD_ABLE(3,묘지起動)
+PRINTL ③: 자신 필드의 "마기스토스" 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드를 파괴하고, 이 카드를 묘지에서 특수 소환한다.
+
+
+@CARDSUMMON_50125(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件종족 = 마법사족
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50125) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50125(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50125)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_3(듀얼리스트,50125)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,50125,"묘지",1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 마기스토스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1	
+ENDIF
+
+@CARDEFFECT_50125(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 破壊カード
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50125)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 마기스토스
+		CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,場所,,50125)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_마함:{カウンタ}") == -1
+			CONTINUE
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_마함:カウンタ")}, "カテゴリ"	
+		SIF !MATCH(RESULTS, "마기스토스")
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_마함:カウンタ")}, "종류"
+		IF RESULT == 융합
+			CALL SET_PLAYER_INFO(듀얼리스트,"FUS효과無効",3,1)
+		ELSEIF RESULT == 싱크로
+			CALL SET_PLAYER_INFO(듀얼리스트,"SYN효과無効",3,1)
+		ELSEIF RESULT == 엑시즈
+			CALL SET_PLAYER_INFO(듀얼리스트,"XYZ효과無効",3,1)
+		ELSEIF RESULT == 링크
+			CALL SET_PLAYER_INFO(듀얼리스트,"LIN효과無効",3,1)
+		ENDIF
+	NEXT
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50125,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		SIF モンスター数(듀얼리스트) < 5
+			효과範囲마함 = 1
+		효과条件カテゴリ = 마기스토스
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)	
+		IF RESULT == 1
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+

@@ -1,0 +1,231 @@
+@CARDNAME_99655,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 웰컴 라뷰린스 홀
+	CASE "略称"
+		RESULTS = 웰컴 라뷰린스 홀
+	CASE "カテゴリ"
+		RESULTS:0 = 라뷰린스
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99655(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99655(종류)
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC 듀얼리스트
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①：이카드가 마법 / 함정 존에 앞면 표시로 존재하는 한 상대 필드의 무성 몬스터는 수컷 몬스터로 암컷 몬스터는 후타나리가 된다。
+CALL CARD_ABLE(2,마함起動,フリー誘発)
+PRINTL ②：상대 배틀 페이즈에 발동할 수 있다
+PRINTL 자신 필드의 암컷 몬스터를 마법 / 함정 존에 놓고 「고기구멍」으로 취급한다。
+CALL CARD_ABLE(3,攻撃時誘発)
+PRINTL ③：상대 몬스터 공격 선언 시 발동할 수 있다。
+PRINTL 자신의 마법 / 함정 존의 "고기구멍」１장을 묘지로 보내고, 그 수비력 만큼 공격 몬스터의 공격력을 감소 시킨다。
+PRINTL 그 후, 공격 몬스터의 공격력이 0이라면, 대상 몬스터를 파괴하고, 원래 공격력의 데미지 만큼 상대에게 준다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99655(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99655)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || (종류 == フリー誘発 && ゾーン == "마함")
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) == 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件カテゴリ = 고기구멍
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_99655(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 攻撃力
+#DIM DYNAMIC 攻撃モンスター
+#DIM DYNAMIC 攻撃モンスター_ID
+#DIMS DYNAMIC 攻撃モンスター名
+#DIM DYNAMIC 守備力
+#DIM DYNAMIC 守備モンスター
+#DIM DYNAMIC 守備モンスター_ID
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || (종류 == フリー誘発 && ゾーン == "마함")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99655)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件성별 = 牝性
+		효과추가カテ = 고기구멍
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시",99655)
+		選択カード_ID = RESULT:1
+		CALL CARD_EROTICS(選択カード_ID)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML
+			PRINTFORML
+			SETCOLOR C_PINK
+			PRINTFORML %NAME:RESULT%가 구속되어, 하반신이 노출된 상태이다…！
+			RESETCOLOR
+			PRINTFORML
+			CALL EROTIC_MOVE("拘束晒し",조교대상,-1,500)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%対面者%_MZ_性:カウンタ") == 0
+			CALL STATCHANGE_OTHER(対面者,"자신",カウンタ,"性",2)
+		SIF GETVAR(@"%対面者%_MZ_性:カウンタ") == 1
+			CALL STATCHANGE_OTHER(対面者,"자신",カウンタ,"性",3)
+	NEXT
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99655)
+	IF RESULT == 0
+		選択カード = 戦闘場所(듀얼리스트,1)
+		攻撃モンスター_ID = GETVAR(@"%対面者%_필드:選択カード")
+		TRYCALLFORM CARD_{攻撃モンスター_ID},"攻撃力"
+		攻撃力 = RESULT
+		CALL CARD_EROTICS(攻撃モンスター_ID)
+		攻撃モンスター = RESULT
+		IF 攻撃モンスター == -1
+			TRYCALLFORM CARDNAME_{攻撃モンスター_ID},"名前"
+			攻撃モンスター名 = %RESULTS%
+		ENDIF
+
+		CALL FULLRESET
+		효과条件カテゴリ = 고기구멍
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"마함",ゾーン,場所)
+		守備モンスター_ID = RESULT:1
+		TRYCALLFORM CARD_{守備モンスター_ID},"守備力"
+		守備力 = RESULT
+		CALL CARD_EROTICS(守備モンスター_ID)
+		守備モンスター = RESULT
+		IF 攻撃モンスター == -1 && 守備モンスター != -1
+			PRINTFORML
+			PRINTFORML
+			SETCOLOR C_PINK
+			PRINTFORML 공격하려 했던 %攻撃モンスター名%는 %NAME:守備モンスター%의 구멍에 초대되어 그대로 박아버렸다…！
+			RESETCOLOR
+			PRINTFORML
+			CALL EROTIC_MOVE("前穴凌辱",守備モンスター,攻撃モンスター,攻撃力)
+		ELSEIF 攻撃モンスター != -1 && 守備モンスター != -1
+			PRINTFORML
+			PRINTFORML
+			SETCOLOR C_PINK
+			PRINTFORML 공격하려 했던 %NAME:攻撃モンスター%은 %NAME:守備モンスター%의 구멍에 초대되어 강하게 박아넣었다…！
+			RESETCOLOR
+			PRINTFORML
+			CALL EROTIC_MOVE("前穴凌辱",守備モンスター,-1,攻撃力)
+		ENDIF
+
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"永攻DOWN",99655,守備力)
+		
+		CALL FULLRESET
+		IF (GETVAR(@"%対面者%_MZ_攻:選択カード") - 守備力) <= 0
+			IF 攻撃モンスター == -1 && 守備モンスター != -1
+				PRINTFORML
+				PRINTFORML
+				SETCOLOR C_PINK
+				PRINTFORML %NAME:守備モンスター%의 조이는 구멍으로 인해 %攻撃モンスター名%은 싸버리고 말았다…！
+				RESETCOLOR
+				PRINTFORML
+			ELSEIF 攻撃モンスター != -1 && 守備モンスター != -1
+				PRINTFORML
+				PRINTFORML
+				SETCOLOR C_PINK
+				PRINTFORML %NAME:守備モンスター%의 조이는 구멍으로 인해 %攻撃モンスター名%은 싸버리고 말았다…！
+				RESETCOLOR
+				PRINTFORML
+			ENDIF
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"묘지",99655)
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",攻撃力,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99655)
+	IF RESULT == 0
+	ENDIF
+ENDIF

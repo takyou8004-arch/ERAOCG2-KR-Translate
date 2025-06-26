@@ -1,0 +1,206 @@
+@CARDNAME_73925,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신가요란
+	CASE "略称"
+RESULTS = 신가요란
+	CASE "カテゴリ"
+RESULTS:0 = 오리진
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_73925(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73925(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①: 자신 필드에 「신가 토큰」(물속성 기계족 레벨 8 공격력 0/수비력 0) 1장을 수비 표시로 특수 소환한다.
+PRINTL 「신가 토큰」은 턴 종료 시에 소멸한다.
+PRINTL 이 턴 중, 상대는 자신 필드의 「엠페러 키리코」를 효과의 대상으로 할 수 없다.
+PRINTL 이 효과의 발동 후, 턴 종료 시까지 자신은 물속성 엑시즈 몬스터밖에 엑스트라 덱에서 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 자신 메인 페이즈에 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 자신의 묘지의 몬스터 3장을 덱으로 되돌리고, 1장 드로우한다.
+
+@CARDCAN_73925(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73925)
+SIF RESULT == 1
+	RETURN 0
+	
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,73925)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,173925,"")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,73925)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件他所 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 2
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 短紋章起動
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73925(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 소환カード
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73925,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_GENERATE(듀얼리스트,173925,"守備표시")
+		CALL FULLRESET
+		EX소환可能속성 = 물속성
+		EX소환可能종류 = 엑시즈
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+		CALL CARD_RESERV(듀얼리스트,73925,短紋章予約)
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73925,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件複数 = 3
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 短紋章起動
+	CALL FULLRESET
+효과条件名前 = 황제
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+ENDIF
+
+
+
+
+@CARDNAME_173925,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신가 토큰
+	CASE "略称"
+RESULTS = 신가 토큰
+	CASE "カテゴリ"
+RESULTS:0 = 오리진
+RESULTS:1 = 사이버
+ENDSELECT
+
+
+@CARD_173925(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+
+@CARDCAN_173925(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+IF 종류 == ターン終了時強制
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_173925(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == ターン終了時強制
+	CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+	PRINTFORMW 「신歌トークン」は消滅しました。
+ENDIF
+
+RETURN 0

@@ -1,0 +1,138 @@
+﻿@CARDNAME_1283,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 페어리테일－타리아
+	CASE "略称"
+RESULTS = FT-타리아
+	CASE "カテゴリ"
+RESULTS:0 = 페어리테일
+ENDSELECT
+
+
+@CARD_1283(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1850
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1283(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,リバース誘発)
+PRINTL ①: 이 카드가 뒷면 표시에서 앞면 표시가 되었을 경우에 발동할 수 있다.
+PRINTL 패에서 몬스터 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ②: 상대가 일반 마법 / 일반 함정 카드를 발동했을 때,
+PRINTL 이 카드 이외의 자신 필드의 몬스터 1장을 릴리스하고, 이 카드를 뒷면 수비 표시로 하여 발동할 수 있다.
+PRINTL 그 효과를 무효로 한다.
+
+
+
+@CARDSUMMON_AA_1283
+
+
+@CARDCAN_1283(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1283)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == リバース誘発
+	SIF 발동済_1(듀얼리스트,1283)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,1283)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류:0 = 通常마법
+	효과条件종류:1 = 通常함정
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_1283(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == リバース誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1283,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表変",0,1)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1283,2)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",3,1)
+		CALL FULLRESET
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")	
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ENDIF

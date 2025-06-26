@@ -1,0 +1,491 @@
+﻿;시간경과処理
+@CHARA_MOVEMENT(発生場所)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 行先위치
+#DIM DYNAMIC 行先確定
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 개시시간
+#DIMS DYNAMIC 発生場所
+
+FOR	캐릭터_ID,0,CHARANUM
+;	캐릭터_ID = 在宅캐릭터:カウンタ
+	IF 캐릭터_ID > 0 && CFLAG:캐릭터_ID:수면 && CFLAG:캐릭터_ID:현재위치 == CFLAG:MASTER:현재위치 && !TALENT:캐릭터_ID:연모 && FLAG:(300 + CFLAG:MASTER:현재위치)
+		IF CFLAG:캐릭터_ID:쇠약
+			PRINTFORML %CALLNAME:캐릭터_ID%는 피곤해서 잠들어 버렸다…
+		ELSE
+			PRINTFORML %CALLNAME:캐릭터_ID%에게 쫓겨났다……。
+		ENDIF
+		FOR 行先위치,0,8
+			SIF 行先위치 == 10
+				CONTINUE
+			;이동可能な部屋が見つかるとそこに이동
+			IF CAN_MOVE(CFLAG:MASTER:현재위치, 行先위치) & 1
+				CFLAG:MASTER:현재위치 = 行先위치
+				BREAK
+			ENDIF
+		NEXT
+		;우후후リセット
+		CVARSET CFLAG, 317
+		TARGET = 0
+	ENDIF
+	BASE:캐릭터_ID:무드 = BASE:캐릭터_ID:무드 - TIME_PROGRESS(TFLAG:시간경과) * 2 * (BASE:캐릭터_ID:무드 + 1000) / 1000
+	BASE:캐릭터_ID:무드 = MAX(0,BASE:캐릭터_ID:무드)
+	BASE:캐릭터_ID:이성 = BASE:캐릭터_ID:이성 + TIME_PROGRESS(TFLAG:시간경과) * (MAXBASE:캐릭터_ID:이성 +500) / ((BASE:캐릭터_ID:이성 + 500))
+	BASE:캐릭터_ID:이성 = MIN(MAXBASE:캐릭터_ID:이성,BASE:캐릭터_ID:이성)
+
+	BASE:캐릭터_ID:분노 = BASE:캐릭터_ID:분노 - TIME_PROGRESS(TFLAG:시간경과) * 5 / (CFLAG:캐릭터_ID:극대노 + 1)
+	SIF BASE:캐릭터_ID:분노 <= 0
+		CFLAG:캐릭터_ID:극대노 = 0
+	BASE:캐릭터_ID:분노 = MAX(0,BASE:캐릭터_ID:분노)
+
+	BASE:캐릭터_ID:술기운 = BASE:캐릭터_ID:술기운 - TIME_PROGRESS(TFLAG:시간경과) * 3
+	SIF BASE:캐릭터_ID:술기운 >= 1000
+		TCVAR:캐릭터_ID:만취 = 1
+	SIF BASE:캐릭터_ID:술기운 <= 500
+		TCVAR:캐릭터_ID:만취 = 0
+	BASE:캐릭터_ID:술기운 = MAX(0,BASE:캐릭터_ID:술기운)
+
+	SIF CFLAG:캐릭터_ID:기분나쁨
+		BASE:캐릭터_ID:분노 = MAXBASE:캐릭터_ID:분노
+	SIF !TCVAR:캐릭터_ID:갈것같음 && CFLAG:MASTER:우후후 == 0
+		BASE:캐릭터_ID:발기 = MAX(0,BASE:캐릭터_ID:발기 - TIME_PROGRESS(TFLAG:시간경과) * 10)
+
+	SIF CFLAG:MASTER:우후후 == 0
+		BASE:캐릭터_ID:만족 = MAX(0,BASE:캐릭터_ID:만족 - TIME_PROGRESS(TFLAG:시간경과) / 5)
+
+
+	;로터삽입
+	IF CFLAG:캐릭터_ID:로터삽입
+		CFLAG:캐릭터_ID:로터삽입 = MAX(CFLAG:캐릭터_ID:로터삽입 - TIME_PROGRESS(TFLAG:시간경과),0)
+		IF CFLAG:캐릭터_ID:로터삽입 == 0
+			PRINTFORMW %CALLNAME:캐릭터_ID%가 장착하고 있던 로터의 전지가 끊어졌다
+			EXP:캐릭터_ID:Ｖ경험 += 9
+		ENDIF
+	ENDIF
+
+	IF CFLAG:캐릭터_ID:로터A삽입
+		CFLAG:캐릭터_ID:로터A삽입 = MAX(CFLAG:캐릭터_ID:로터A삽입 - TIME_PROGRESS(TFLAG:시간경과),0)
+		IF CFLAG:캐릭터_ID:로터A삽입 == 0
+			PRINTFORMW %CALLNAME:캐릭터_ID%가 장착하고 있던 로터의 전지가 끊어졌다
+			EXP:캐릭터_ID:Ａ경험 += 9
+		ENDIF
+	ENDIF
+
+	BASE:캐릭터_ID:절정 = MAX(0, BASE:캐릭터_ID:절정 * (100 - TIME_PROGRESS(TFLAG:시간경과)) / 100)
+	BASE:캐릭터_ID:쾌감 = MAX(0, BASE:캐릭터_ID:쾌감 * (200 - TIME_PROGRESS(TFLAG:시간경과)) / 200)
+	IF CFLAG:캐릭터_ID:쇠약
+		BASE:캐릭터_ID:체력 = MIN(BASE:캐릭터_ID:체력 + 2 * TIME_PROGRESS(TFLAG:시간경과),MAXBASE:캐릭터_ID:체력)
+		BASE:캐릭터_ID:기력 = MIN(BASE:캐릭터_ID:기력 + 2 * TIME_PROGRESS(TFLAG:시간경과),MAXBASE:캐릭터_ID:기력)
+		CFLAG:캐릭터_ID:쇠약 = MAX(CFLAG:캐릭터_ID:쇠약 - TIME_PROGRESS(TFLAG:시간경과),0)
+	ENDIF
+
+	SIF TCVAR:캐릭터_ID:301 > 100
+		TCVAR:캐릭터_ID:302 = 1
+
+	TCVAR:캐릭터_ID:301 = MAX(TCVAR:캐릭터_ID:301 - TIME_PROGRESS(TFLAG:시간경과) , 0)
+	SIF TCVAR:캐릭터_ID:301 == 0
+		TCVAR:캐릭터_ID:302 = 0
+
+
+	行先위치 = CFLAG:캐릭터_ID:목욕
+	CFLAG:캐릭터_ID:목욕 += TIME_PROGRESS(TFLAG:시간경과)
+	IF BATHROOM(CFLAG:캐릭터_ID:현재위치)
+		SIF 캐릭터_ID == 0 && 行先위치
+			PRINTFORMW %CALLNAME:MASTER%는 목욕물에 잠겼다
+		CFLAG:캐릭터_ID:목욕 = 0
+	ENDIF
+
+	IF CFLAG:캐릭터_ID:목욕 == 0
+		RESET_STAIN 캐릭터_ID
+		STAIN:캐릭터_ID:4 = 0
+	ELSEIF CFLAG:캐릭터_ID:목욕 > 120 && !CFLAG:캐릭터_ID:우후후
+		STAIN:캐릭터_ID:4 |= 8
+	ENDIF	
+	IF 캐릭터_ID != 0
+		SIF オプション_동행制限解除 == 0 && CFLAG:캐릭터_ID:데이트중 != 1
+			CFLAG:캐릭터_ID:동행 = MAX(CFLAG:캐릭터_ID:동행 - TIME_PROGRESS(TFLAG:시간경과),0)
+	ENDIF	
+	SIF CFLAG:캐릭터_ID:동행
+		CFLAG:캐릭터_ID:현재위치 = CFLAG:MASTER:현재위치
+
+	SIF 캐릭터_ID == MASTER
+		CONTINUE
+
+	SIF CFLAG:캐릭터_ID:우후후
+		CONTINUE
+	SIF CFLAG:캐릭터_ID:동행
+		CONTINUE
+	;部屋이동
+;	SIF 캐릭터_ID == 387
+	
+	CALL CHARA_MOVEMENT_T(캐릭터_ID)
+	IF RESULT && 発生場所 != "이동"
+		;PRINTFORML 발생 장소:%発生場所%
+		;이동しないなら行先確定に0を代入
+		行先確定 = RESULT
+		; %CALLNAME:MASTER%が見えたら태도に応じて接近しやすく
+		SIF CAN_MOVE(CFLAG:캐릭터_ID:현재위치, CFLAG:MASTER:현재위치) == 3
+			RESULT:(CFLAG:MASTER:현재위치) += RESULT:(CFLAG:MASTER:현재위치) / 10 * CFLAG:캐릭터_ID:태도
+		
+		FOR 行先위치, 1, 20
+			IF RESULT:(行先確定) < RESULT:(行先위치)
+				行先確定 = 行先위치
+			ENDIF
+		NEXT
+		
+		SIF (CAN_MOVE(CFLAG:MASTER:현재위치, CFLAG:캐릭터_ID:현재위치) & 2 || CFLAG:캐릭터_ID:같은방) && !CFLAG:MASTER:수면
+			PRINTFORMW %CALLNAME:캐릭터_ID%는【%GETPLACENAME(CFLAG:캐릭터_ID:현재위치)%】에서【%GETPLACENAME(行先確定)%】로 이동했다
+
+		;이동処理
+		IF 行先確定
+			IF 追跡설정_ID == 캐릭터_ID
+				IF 行先確定 <= 自宅部屋最大値
+					PRINTFORMW %CALLNAME:MASTER%는【%GETPLACENAME(CFLAG:MASTER:현재위치)%】에서【%GETPLACENAME(行先確定)%】로 따라갔다。
+					CFLAG:MASTER:현재위치 = 行先確定
+				ELSE
+					VARSET 追跡설정_ID
+					PRINTFORMW %CALLNAME:MASTER%의 추적은 해제되었다。
+				ENDIF
+			ENDIF
+			CFLAG:캐릭터_ID:현재위치 = 行先確定
+		ENDIF
+	ENDIF
+	
+	;汚れを付ける
+	行先위치 = CFLAG:캐릭터_ID:수면 ? 0 # 1 + TALENT:캐릭터_ID:유치 - 2 * ABL:캐릭터_ID:청소기능
+	FLAG:(1000 + CFLAG:캐릭터_ID:현재위치) = MAX(FLAG:(1000 + CFLAG:캐릭터_ID:현재위치) + 行先위치 * TIME_PROGRESS(TFLAG:시간경과),0)
+	FLAG:(1000 + CFLAG:캐릭터_ID:현재위치) = MIN(FLAG:(1000 + CFLAG:캐릭터_ID:현재위치),6000)
+	
+	;성욕
+	SIF !CFLAG:캐릭터_ID:수면
+		BASE:캐릭터_ID:성욕 += (1 + ABL:캐릭터_ID:욕망) * TIME_PROGRESS(TFLAG:시간경과)
+NEXT
+
+
+;캐릭터_ID 이동させる캐릭터番号
+@CHARA_MOVEMENT_T(캐릭터_ID)
+#DIM DYNAMIC 部屋_ID
+#DIM DYNAMIC 캐릭터_ID
+
+SIF 캐릭터_ID == 0
+	RETURN 0
+;수면時間
+TRYCALLFORM CHARA_MOVEMENT_ACTIVETIME_TEST(캐릭터_ID)
+IF RESULT == 1
+	CALL CHARA_SLEEP(캐릭터_ID)
+	RETURN 0
+;活動時間、CFLAG:수면が立っていれば起床処理
+ELSE
+	CALL CHARA_AWAKE(캐릭터_ID)
+ENDIF
+
+;이동頻度処理
+TRYCCALLFORM CHARA_MOVEMENT_MOVERATE_TEST(캐릭터_ID)
+CATCH
+	RESULT = 90
+ENDCATCH
+
+SIF RAND:(TIME_PROGRESS(TFLAG:시간경과) + 1) <= RAND:RESULT
+	RETURN 0
+
+;オプション滞在率がONかつ、滞在率以下なら０
+SIF オプション_滞在率 && RAND:100 < オプション_滞在率
+	RETURN 0
+
+SIF CFLAG:캐릭터_ID:현재위치 >= 19
+	RETURN 0
+SIF CFLAG:캐릭터_ID:변기화 == 1
+	RETURN 0
+
+SIF 朝襲われ == 1
+	RETURN 0
+
+;ここから이동場所の결정
+VARSET RESULT
+FOR 部屋_ID,1,MAXROOM()
+	TRYCCALLFORM CHARA_MOVEMENT_TEST(部屋_ID,캐릭터_ID)
+	CATCH
+		SIF 部屋_ID == 9
+			RESULT = 0
+		SIF 部屋_ID != 9
+			RESULT = 100
+	ENDCATCH
+	;部屋番号部屋_IDの部屋が현재위치から이동可能ならばRESULT:部屋番号にRESULTを代入
+	RESULT:部屋_ID = RESULT * (CAN_MOVE(CFLAG:캐릭터_ID:현재위치, 部屋_ID) & 1)
+	SIF 部屋_ID == CFLAG:캐릭터_ID:현재위치
+		RESULT:部屋_ID = 0
+	;ランダマイズ
+	SIF RESULT:部屋_ID
+		RESULT:部屋_ID = RAND:(RESULT:部屋_ID) + 1
+NEXT
+RETURN 1
+
+
+
+
+;部屋の構造
+;ARG 이동元
+;ARG:1 이동先
+@CAN_MOVE(ARG, ARG:1)
+#FUNCTION
+;戻り値はビット관리 & 1で이동可能、 & 2で見通し可能
+;RETURNF 1 이동可能
+;RETURNF 2 이동불가だが見通せる
+;RETURNF 3 直通（이동可能＆見通せる）
+SELECTCASE ARG
+	;玄関
+	;2廊下と直通
+	CASE 1
+		SIF ARG:1 == 2
+			RETURNF 1
+	;廊下
+	;1玄関、3洗面所、5ダイニングと直通
+	CASE 2
+		SIF ARG:1 == 1
+			RETURNF 1
+		SIF ARG:1 == 3
+			RETURNF 1
+		SIF ARG:1 == 5
+			RETURNF 1
+	;洗面所
+	;2広間、5주방、9守衛小屋に이동可能、10庭と直通
+	CASE 3
+		SIF ARG:1 == 2
+			RETURNF 1
+		SIF ARG:1 == 4
+			RETURNF 3
+		SIF ARG:1 == 11
+			RETURNF 1
+	;浴室
+	;3洗面所に이동可能
+	CASE 4
+		SIF ARG:1 == 3
+			RETURNF 1
+	;ダイニング
+	;2廊下、6キッチン、7リビング、8寝室に이동可能
+	CASE 5
+		SIF ARG:1 == 2
+			RETURNF 1
+		SIF ARG:1 == 6
+			RETURNF 1
+		SIF ARG:1 == 7
+			RETURNF 1
+		SIF ARG:1 == 8
+			RETURNF 1
+	;キッチン
+	;5ダイニングに이동可能
+	CASE 6
+		SIF ARG:1 == 5
+			RETURNF 1
+	;リビング
+	;5ダイニング、8寝室、10ベランダに이동可能
+	CASE 7
+		SIF ARG:1 == 5
+			RETURNF 1
+		SIF ARG:1 == 8
+			RETURNF 1
+		SIF ARG:1 == 10
+			RETURNF 3
+		SIF ARG:1 == 12 && 子供部屋解放 == 1
+			RETURNF 3
+	;寝室
+	;7リビング、9クローゼットに이동可能
+	CASE 8
+		SIF ARG:1 == 7
+			RETURNF 1
+		SIF ARG:1 == 9
+			RETURNF 1
+	;クローゼット
+	;8寝室に이동可能&천년ドアで中継点へ
+	CASE 9
+		SIF ARG:1 == 8
+			RETURNF 1
+
+		IF ITEM:천년도어 >= 1
+			SIF ARG:1 == 場所_中継땅点
+				RETURNF 1
+		ENDIF
+	;ベランダ
+	;7リビングと直通
+	CASE 10
+		SIF ARG:1 == 7
+			RETURNF 3
+	;トイレ
+	;3洗面所に이동可能
+	CASE 11
+		SIF ARG:1 == 3
+			RETURNF 1
+	CASE 12
+		SIF ARG:1 == 7 && 子供部屋解放 == 1
+			RETURNF 1
+ENDSELECT
+
+@TIME_PROGRESS(ARG)
+#FUNCTION
+SIF TIME + DAY * 1440 < ARG
+	RETURNF 0
+RETURNF TIME + DAY * 1440 - ARG
+
+@CHARA_SLEEP, 캐릭터_ID
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択상황
+
+SIF 依頼_受領中 >= 1
+	RETURN 0
+;
+IF (CAN_MOVE(CFLAG:MASTER:현재위치, CFLAG:캐릭터_ID:현재위치) == 2 || CFLAG:MASTER:현재위치 == CFLAG:캐릭터_ID:현재위치) && !CFLAG:MASTER:수면
+	IF CFLAG:캐릭터_ID:현재위치 == CFLAG:캐릭터_ID:시작위치
+		PRINTFORMW %CALLNAME:캐릭터_ID%는\@CFLAG:캐릭터_ID:수면 ? 자고있다 # 잠들었다\@
+		IF CFLAG:캐릭터_ID:수면 == 1
+			選択상황 = 3
+		ELSE
+			選択상황 = 1
+		ENDIF
+	ELSE
+		;캐릭터が쇠약상태로、연모以上であり、현재위치と、寝る場所が同じであるとき。↑の条件で、もうその部屋にいるのに運ぶのはなしとなってる
+		IF CFLAG:캐릭터_ID:쇠약 && CFLAG:MASTER:현재위치 == CFLAG:캐릭터_ID:현재위치 && CFLAG:MASTER:시작위치 == CFLAG:캐릭터_ID:시작위치
+			SIF 追跡설정_ID == 캐릭터_ID
+				VARSET 追跡설정_ID
+			PRINTFORMW %CALLNAME:캐릭터_ID%을%GETPLACENAME(CFLAG:캐릭터_ID:현재위치)%에서%GETPLACENAME(CFLAG:캐릭터_ID:시작위치)%로 옮겼다
+		
+			IF TALENT:캐릭터_ID:연모 >= 1
+				選択상황 = 1
+			ELSE
+				選択상황 = 2
+			ENDIF
+		ELSE
+			IF CFLAG:캐릭터_ID:현재위치 <= 20
+				;CALL REMOVE_CHARACTER_TO_ROOM(캐릭터_ID)
+
+			ELSE
+				IF CFLAG:캐릭터_ID:시작위치 == 100
+					IF TALENT:캐릭터_ID:듀얼리스트
+						PRINTFORMW %CALLNAME:캐릭터_ID%는 %GETPLACENAME(CFLAG:캐릭터_ID:현재위치)%에서 자신의 집으로 돌아왔다。
+						CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 11, 6)
+					ELSE
+						PRINTFORMW %CALLNAME:캐릭터_ID%는 %GETPLACENAME(CFLAG:캐릭터_ID:현재위치)%에서 카드속으로 돌아왔다。
+						CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 11, 6)
+					ENDIF
+				ELSE
+					PRINTFORMW %CALLNAME:캐릭터_ID%는 %GETPLACENAME(CFLAG:캐릭터_ID:현재위치)%에서%GETPLACENAME(CFLAG:캐릭터_ID:시작위치)%로 돌아왔다。
+				ENDIF
+			ENDIF
+			選択상황 = 7
+		ENDIF
+	ENDIF
+	;おやすみ구상
+	SIF CFLAG:MASTER:현재위치 == CFLAG:캐릭터_ID:현재위치 
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 3, 選択상황)
+ENDIF
+
+;自室でねる
+CFLAG:캐릭터_ID:현재위치 = CFLAG:캐릭터_ID:시작위치
+IF 選択상황 == 3
+	CFLAG:MASTER:현재위치 = CFLAG:캐릭터_ID:시작위치
+ENDIF
+SIF CFLAG:캐릭터_ID:변기화 == 1
+	CFLAG:캐릭터_ID:현재위치 = 場所_トイレ
+CFLAG:캐릭터_ID:동행 = 0
+CFLAG:캐릭터_ID:데이트중 = 0
+CFLAG:캐릭터_ID:수면 = 1
+CALL RESET_SEXCON(캐릭터_ID)
+
+@CHARA_AWAKE, ARG
+IF CFLAG:ARG:수면 && CFLAG:ARG:현재위치 == CFLAG:MASTER:현재위치
+	SIF ARG > 0
+		PRINTFORMW %CALLNAME:ARG%가 눈을 떴다
+	CALL KOJO_MESSAGE_SEND("EVENT", ARG, 2, 0)
+ENDIF
+CFLAG:ARG:수면 = 0
+;施錠
+FLAG:(300 + CFLAG:ARG:현재위치) = 0
+
+
+
+
+
+
+
+;共通化
+@CHARA_MOVEMENT_ACTIVETIME_TEST(ARG)
+;현재위치がこちらの家にいる、데이트중、아르바이트は時間を超えてもOK
+SIF CFLAG:ARG:알바중 == 1
+	RETURN 0
+;0時～7の時間帯(or쇠약)は流石に寝てる
+SIF GROUPMATCH(TIME:2,8,1) || CFLAG:ARG:쇠약
+	RETURN 1
+RETURN 0
+
+
+
+;共通化
+@CHARA_MOVEMENT_GOHOME_TEST(ARG)
+;현재위치がこちらの家にいる、데이트중、아르바이트は時間を超えてもOK
+SIF CFLAG:ARG:알바중 == 1
+	RETURN 0
+
+;연모状態の子は데이트중やMASTER宅にいるときは、好きなだけいる（쇠약で帰る）
+SIF TALENT:ARG:연모 >= 1 && (CFLAG:ARG:데이트중 == 1 || CFLAG:ARG:현재위치 <= 自宅部屋最大値)
+	RETURN 0
+
+IF TALENT:ARG:연령 <= -1
+	;子供は18時～7の時間帯(or쇠약)には帰る
+	SIF GROUPMATCH(TIME:2,6,7,8,1)
+		RETURN 1
+ELSE
+	;それ以外は20時～7の時間帯(or쇠약)には帰る
+	SIF GROUPMATCH(TIME:2,7,8,1)
+		RETURN 1
+ENDIF
+RETURN 0
+
+
+
+
+@CHARA_MOVEMENT_MOVERATE_TEST(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+SIF CFLAG:캐릭터_ID:현재위치 <= 6
+	RETURN 5
+RETURN 30
+
+@CHARA_MOVEMENT_TEST(部屋_ID,캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 部屋_ID
+
+
+IF CFLAG:캐릭터_ID:목욕 > 300
+	SELECTCASE 部屋_ID
+		CASE 1
+			RETURN 0
+		CASE 2
+			IF CFLAG:캐릭터_ID:현재위치 == 3
+				RETURN 0
+			ELSE
+				RETURN 500
+			ENDIF
+		CASE 3
+			RETURN 500
+		CASE 4
+			RETURN 500
+		CASE 7
+			RETURN 500
+		CASEELSE
+			RETURN 50
+	ENDSELECT
+ELSE
+	SELECTCASE 部屋_ID
+		CASE 1
+			RETURN 0
+		CASE 9
+			RETURN 0
+		;목욕
+		CASE 4
+			RETURN 0
+		;まんべんなく이동する
+		CASEELSE
+			RETURN 100
+	ENDSELECT
+ENDIF
+
+

@@ -1,0 +1,149 @@
+﻿@CARDNAME_58601,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = GP－어니힐레이터
+	CASE "略称"
+RESULTS = GP－이레이저
+	CASE "カテゴリ"
+RESULTS:0 = 골드 프라이드
+ENDSELECT
+
+
+@CARD_58601(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2700
+	CASE "守備力"
+		RETURN 1700
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_58601(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,58601) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_58601(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①: 상대 턴에, 상대 필드의 EX 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL (자신의 LP가 상대보다 적을 경우, 이 효과의 대상을 2장으로 할 수 있다)
+PRINTL 그 몬스터를 파괴한다.
+
+CALL CARD_ABLE(0,ターン終了時強制)
+PRINTL ②: 이 카드의 ①의 효과를 발동한 턴의 엔드 페이즈에 강제로 발동한다.
+PRINTL 이 카드를 EX덱으로 되돌리고, 자신의 덱 / 묘지에서 「GP－어쌔시네이터」 1장을 특수 소환한다.
+
+@CARDCAN_58601(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58601)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,58601)
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	효과条件종류 = EXモン全般
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,58601) == 0
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_58601(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC リピート数
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58601,1)
+	IF RESULT == 0
+		IF GETVAR(@"ライフ_%듀얼리스트%") < GETVAR(@"ライフ_%対面者%") 
+			リピート数 = 2
+		ELSE
+			リピート数 = 1
+		ENDIF
+		CALL FULLRESET
+		효과条件종류 = EXモン全般
+		효과条件複数 = 100 - リピート数
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_DISPOSE(듀얼리스트,"필드",場所,덱行き)
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件名前 = GP－어쌔시네이터
+	CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+ENDIF

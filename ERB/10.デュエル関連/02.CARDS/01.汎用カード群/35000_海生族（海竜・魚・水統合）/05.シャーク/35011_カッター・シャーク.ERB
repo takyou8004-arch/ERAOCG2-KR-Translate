@@ -1,0 +1,166 @@
+﻿@CARDNAME_35011,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 커터 샤크
+	CASE "略称"
+RESULTS = 커터 상어
+	CASE "カテゴリ"
+RESULTS:0 = 샤크
+ENDSELECT
+
+@CARD_35011(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 4
+	CASE "Xレベル"
+		RESULT:1 = 5
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 500
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_35011(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①: 자신 필드의 물 속성 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터와는 카드명이 다르고, 레벨이 같은 바다생물족 몬스터 1장을 덱에서 수비 표시로 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터는, 이 턴 효과가 무효화된다.
+PRINTL 이 효과 발동 후, 턴 종료시까지 자신은 X 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드를 X 소환에 사용할 경우, 이 카드의 레벨을 3 또는 5로 취급할 수 있다.
+
+
+
+@CARDCAN_35011(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 存在カード星,100
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,35011)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,35011)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 물속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カウンタ")},"속성"
+		SIF !MATCH(RESULT,물속성)
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カウンタ")},"レベル"
+		IF MATCH(存在カード星,RESULT)
+			CONTINUE
+		ELSE
+			存在カード星:カウンタB = RESULT
+			カウンタB ++
+		ENDIF
+	NEXT
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件소환可 = 1
+	효과条件종족 = 바다생물족
+	FOR カウンタ,0,20
+		SIF 存在カード星:カウンタ == 0
+			CONTINUE
+		효과条件レベル:カウンタ = 存在カード星:カウンタ
+	NEXT
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_35011(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名
+#DIM DYNAMIC 選択カード星
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35011,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 물속성
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
+			選択カード名 = %RESULTS%
+			TRYCALLFORM CARD_{選択カード_ID},"レベル"
+			選択カード星 = RESULT
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件レベル = 選択カード星
+			효과条件固名前 = %選択カード名%
+			효과条件소환可 = 1
+			효과条件종족 = 바다생물족
+			효과추가종류:0 = 22
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				EX소환可能종류 = 엑시즈
+				CALL CARD_EX_RESTRICTION(듀얼리스트)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

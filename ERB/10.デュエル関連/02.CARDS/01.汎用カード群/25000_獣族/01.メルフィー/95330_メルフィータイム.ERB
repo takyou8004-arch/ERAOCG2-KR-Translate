@@ -1,0 +1,163 @@
+﻿@CARDNAME_95330,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 메르피타임
+	CASE "略称"
+RESULTS = 메르피타임
+	CASE "カテゴリ"
+RESULTS:0 = 메르피
+ENDSELECT
+
+
+@CARD_95330(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_95330(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動,フリー誘発)
+PRINTL ①: 자신 필드의 야수족 X 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 엑시즈 소재를 10장까지 제거하고, 이하의 효과를 각각 적용한다.
+PRINTL ● 제거한 수만큼 상대 필드의 카드를 골라 패로 되돌린다.
+PRINTL ● 자신 필드의 야수족 X 몬스터 1장의 공격력은 제거한 수× 500 올린다.
+
+@CARDCAN_95330(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,95330)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	;야수족Xがいる
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 야수족
+	효과条件종류 = 엑시즈
+	효과条件Ｘ素所持 = 999
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;상대 필드에 カード
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_95330(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC X素材数
+#DIM DYNAMIC 取り除く数
+#DIM DYNAMIC 攻撃力修正
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,95330)
+	IF RESULT == 0
+		;고블린ライダ-
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 야수족
+		효과条件종류 = 엑시즈
+		효과条件Ｘ素所持 = 999
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		SIF 選択カード == 9999
+			RETURN 1
+		X素材数 = GETVAR(@"%듀얼리스트%_MZ_Ｘ:選択カード") + 1
+		IF 듀얼리스트 == "자신"
+PRINTL 몇 장 제거합니까?
+			PRINT [1] 
+			SIF X素材数 >= 2
+				PRINT [2] 
+			SIF X素材数 >= 3
+				PRINT [3] 
+			SIF X素材数 >= 4
+				PRINT [4] 
+			SIF X素材数 >= 5
+				PRINT [5] 
+			SIF X素材数 >= 6
+				PRINT [6] 
+			SIF X素材数 >= 7
+				PRINT [7] 
+			SIF X素材数 >= 8
+				PRINT [8] 
+			SIF X素材数 >= 9
+				PRINT [9] 
+			SIF X素材数 >= 10
+				PRINT [10]
+			PRINTL
+			BINPUT
+		ELSE
+			RESULT = X素材数
+		ENDIF
+
+		取り除く数 = RESULT
+
+		CALL CARD_SELECT(듀얼리스트,選択カード)
+		選択カード = RESULT
+		CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード,"Ｘ",-取り除く数)
+
+		;バウンス
+		CALL FULLRESET
+		효과条件複数 = 100 - 取り除く数
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"손패")
+		;打点상승
+		攻撃力修正 = 取り除く数 * 500
+		CALL FULLRESET
+		효과条件종족 = 야수족
+		효과条件종류 = 엑시즈
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永攻",攻撃力修正)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,145 @@
+﻿@CARDNAME_81225,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 푸른 눈물의 소녀
+	CASE "略称"
+RESULTS = 푸른 눈물의 소녀
+	CASE "カテゴリ"
+RESULTS:0 = 푸른 눈의물
+ENDSELECT
+
+
+@CARD_81225(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_81225(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 어느 한쪽만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①: 자신 필드에 L 몬스터가 존재하고, 상대가 몬스터를 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 그 몬스터를 파괴하고, 그 원래 공격력의 절반 데미지를 상대에게 준다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 자신 또는 상대가 효과 데미지를 받았을 경우, 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 자신의 묘지에서 제외되어 있는 일반 마법 카드 1장을 자신 필드에 세트한다.
+PRINTL 이 턴, 이 효과로 세트한 카드와 동명 카드의 효과를 발동할 수 없다.
+
+
+
+@CARDCAN_81225(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,81225)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 효과後誘発 && ゾーン == "마함"
+	SIF 발동済_1(듀얼리스트,81225)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,81225)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 링크
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 0
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発 && ゾーン == "묘지"
+	SIF 발동済_1(듀얼리스트,81225)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,81225)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"被弾種",3,2)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件종류 = 通常마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_81225(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 효과先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発 && ゾーン == "마함"
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81225,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+		CALL FULLRESET
+		효과추가종류:0 = 2
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",효과先,"묘지")
+	ENDIF
+ELSEIF 종류 == 효과後誘発 && ゾーン == "묘지"
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81225,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件종류 = 通常마법
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			CALL CARD_EFFECT_PROHIB(듀얼리스트,選択カード_ID,0,1)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,163 @@
+﻿@CARDNAME_72860,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 인페르니티 건
+	CASE "略称"
+RESULTS = 만족 건
+	CASE "カテゴリ"
+RESULTS:0 = 인페르니티
+ENDSELECT
+
+
+@CARD_72860(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72860(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 손패를 2장까지 버리고, 버린 수만큼 덱에서 "인페르니티" 몬스터를 묘지로 보낸다.
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ②: 마법 & 함정 존의 앞면 표시의 이 카드를 묘지로 보내고,
+PRINTL 자신의 묘지의 "인페르니티" 몬스터를 2체까지 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 특수 소환한다.
+PRINTL 이 효과는 자신의 손패가 0장인 경우에 발동과 처리를 할 수 있다.
+
+
+@CARDCAN_72860(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성,2
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72860)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	SIF 발동済_1(듀얼리스트,72860)
+		条件달성:0 = 1
+	SIF 손패数(듀얼리스트) == 0
+		条件달성:0 = 1
+
+	SIF 손패数(듀얼리스트) != 0
+		条件달성:1 = 1
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 인페르니티
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		条件달성:1 = 1
+
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 인페르니티
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		条件달성:0 = 1
+
+	SIF 条件달성:0 == 1 && 条件달성:1 == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72860(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성,2
+#DIM DYNAMIC 효과횟수
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,72860)
+		条件달성:0 = 1
+	SIF 손패数(듀얼리스트) == 0
+		条件달성:0 = 1
+
+	SIF 손패数(듀얼리스트) != 0
+		条件달성:1 = 1
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 인페르니티
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		条件달성:1 = 1
+	
+	IF 条件달성:0 == 0
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72860,1)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과条件複数 = 98
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				효과횟수 = RESULT:2
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과条件カテゴリ = 인페르니티
+				효과条件종류 = モン全般
+				효과条件複数 = 100 - 효과횟수
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+
+	ELSEIF 条件달성:1 == 0
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72860)
+		IF RESULT == 0
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 인페르니티
+			효과条件任意 = 1
+			효과条件複数 = 98
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72860)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ENDIF

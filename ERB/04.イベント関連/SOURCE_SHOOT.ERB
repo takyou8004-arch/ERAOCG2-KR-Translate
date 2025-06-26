@@ -1,0 +1,401 @@
+﻿;사정쾌락計算
+;ARG 사정する人
+;사정쾌락강도を返す
+@SHOOT_CALC(ARG)
+#FUNCTION
+VARSET LOCAL
+FOR LOCAL,0,CHARANUM
+	IF TCVAR:ARG:사정쾌락강도 > 0 && TCVAR:ARG:사정대상캐릭터_1 == LOCAL
+		FOR LOCAL:1, 1, 31
+			IF TCVAR:ARG:사정부위플래그 == LOCAL:1
+				;사정플래그を立てる
+				TCVAR:ARG:1 = 1
+				LOCAL:10 += SHOOT_CALC1(ARG, LOCAL, LOCAL:1, TCVAR:ARG:사정쾌락강도)
+			ENDIF
+		NEXT
+	ENDIF
+NEXT
+RETURNF LOCAL:10
+
+@SHOOT_CALC1(ARG, ARG:1, ARG:2, ARG:3)
+#FUNCTION
+VARSET LOCAL
+;기교（共通）
+LOCAL = ABL:(ARG:1):기교
+LOCAL:1 = 10 + GET_REVISION(LOCAL, 5 , 5)
+
+;순종（共通）
+LOCAL = 0
+IF ARG:1 == MASTER
+	LOCAL = 3
+ELSE
+	LOCAL = ABL:(ARG:1):순종
+ENDIF
+LOCAL:2 = 10 + GET_REVISION(LOCAL, 3 , 5)
+
+;봉사정신(봉사系)
+LOCAL = 0
+IF TFLAG:봉사쾌락플래그 && ARG == MASTER
+	IF ARG:1 == MASTER
+		LOCAL= 3
+	ELSE
+		LOCAL = ABL:(ARG:1):봉사정신
+	ENDIF
+	LOCAL:3 = 10 + GET_REVISION(LOCAL, 10 , 5)
+ELSE
+	LOCAL:3 = 10
+ENDIF
+
+;욕망(성교系)
+LOCAL:4 = 10
+IF ARG:2 <= 2
+	LOCAL = 0
+	IF ARG:1 == MASTER
+		LOCAL = 3
+	ELSE
+		LOCAL = ABL:(ARG:1):욕망
+	ENDIF
+	LOCAL:4 = 10 + GET_REVISION(LOCAL, 5 , 3)
+ENDIF
+
+;윤활
+LOCAL:5 = 10
+IF ARG:2 <= 2 || ARG:2 == 6
+	IF PALAM:윤활 < PALAMLV:1
+		LOCAL:5 = 6
+	ELSEIF PALAM:윤활 < PALAMLV:2
+		LOCAL:5 = 8
+	ELSEIF PALAM:윤활 < PALAMLV:3
+		LOCAL:5 = 10
+	ELSEIF PALAM:윤활 < PALAMLV:4
+		LOCAL:5 = 12
+	ELSEIF PALAM:윤활 >= PALAMLV:4
+		LOCAL:5 = 14
+	ENDIF
+ENDIF
+
+;プレイヤーのＣ감각をみる
+LOCAL:6 = 10 + GET_REVISION(ABL:ARG:3, 50 , 5)
+
+;部位別処理
+LOCAL:7 = 10
+;연모
+SIF TALENT:(ARG:1):연모
+	LOCAL:7 += 2
+SELECTCASE ARG:2
+	;질
+	CASE 1
+		;처녀
+		SIF TALENT:(ARG:1):처녀
+			LOCAL:7 += 5
+		SIF TALENT:(ARG:1):음호
+			LOCAL:7 += 2
+	;애널
+	CASE 2
+		SIF !EXP:(ARG:1):Ａ성교경험
+			LOCAL:7 += 3
+		SIF TALENT:(ARG:1):엉덩이광
+			LOCAL:7 += 2
+	;수음
+	CASE 3
+		SIF TALENT:(ARG:1):솜씨좋은손가락
+			LOCAL:7 += 2
+	;펠라
+	CASE 4
+		SIF TALENT:(ARG:1):혀사용자
+			LOCAL:7 += 2
+		SIF TALENT:(ARG:1):고양이혀
+			LOCAL:7 -= 2
+	;파이즈리
+	CASE 5
+		LOCAL:7 += BUST_SIZE(ARG:1)
+	;스마타
+	CASE 6
+	;풋잡
+	CASE 7
+		SIF TALENT:(ARG:1):새드
+			LOCAL:7 += 2
+	;体表(거품춤)
+	CASE 8
+	;애널봉사
+	CASE 9
+		SIF TALENT:(ARG:1):혀사용자
+			LOCAL:7 += 2
+		SIF TALENT:(ARG:1):고양이혀
+			LOCAL:7 -= 2
+	;道具
+	CASE 10
+	;촉수
+	CASE 11
+ENDSELECT
+LOCAL:10 = ARG:3 * LOCAL:1 * LOCAL:2 * LOCAL:3 * LOCAL:4 * LOCAL:5 * LOCAL:6 * LOCAL:7 / 10000000
+LOCAL:10 = LOCAL:10 * (BASE:ARG:정력 + 200) / (MAXBASE:ARG:정력 + 200)
+LOCAL:10 = LOCAL:10 * (BASE:ARG:발기 + 500) / 1000
+RETURNF LOCAL:10
+
+
+
+;사정確定後の処理
+;ARG	사정する人
+@EVENT_SHOOT(ARG)
+#DIM DYNAMIC ベース사정A
+#DIM DYNAMIC ベース사정B
+
+VARSET LOCAL
+
+ベース사정A = 100 + BASE:ARG:정력
+TIMES ベース사정A , 0.01
+
+SIF BASE:ARG:정력 <= 0
+	BASE:ARG:정력 = 0
+
+SIF BASE:ARG:사정 <= 0
+	BASE:ARG:사정 = 0
+SIF MAXBASE:ARG:사정 <= 0
+	MAXBASE:ARG:사정 = 0
+
+;PRINTFORMW BASE:{ARG}:사정({BASE:ARG:사정})/MAXBASE:{ARG}:사정({MAXBASE:ARG:사정}) 
+;LOCAL = MIN(BASE:ARG:사정 + 1 / MAXBASE:ARG:사정 + 1, ベース사정A)
+ベース사정B = NOWEX:ARG:사정
+BASE:ARG:정력 = MAX(0,BASE:ARG:정력 - BASE:ARG:사정 * (BASE:ARG:정력 + 500 ) / ((MAXBASE:ARG:정력 + 500 ) * 100))
+STAIN:ARG:2 |= 4
+;이상경험、사정경험、정액경험
+SIF !EXP:ARG:사정경험 && TALENT:ARG:2 & 1
+	EXP:ARG:이상경험 ++
+;PRINTFORML 여기 다녀요！とーかる10:{LOCAL:10}
+IF EXP:ARG:사정경험 >= 100
+	DOWNBASE:ARG:체력 += 20 * ベース사정B
+	DOWNBASE:ARG:기력 += 20 * ベース사정B
+ELSE
+	DOWNBASE:ARG:체력 += 100 * ベース사정B
+	DOWNBASE:ARG:기력 += 100 * ベース사정B
+ENDIF
+EXP:ARG:사정경험 += ベース사정B
+EXP:ARG:정액경험 += ベース사정B - 1
+
+SETBIT TCVAR:ARG:150, 0
+
+;以下は사정のタイミングの時だけ使われる
+FOR LOCAL, 0,CHARANUM
+	;LOCAL 사정される人
+	IF TCVAR:ARG:사정쾌락강도 > 0 && TCVAR:ARG:사정대상캐릭터_1 == LOCAL
+		;질내
+		IF TCVAR:ARG:사정부위플래그 == 1
+			EXP:LOCAL:정액경험 += NOWEX:ARG:사정
+			CALL SOURCE_CALC_정액(LOCAL, ARG, NOWEX:ARG:사정 * 100)
+			STAIN:LOCAL:3 |= 4
+			STAIN:LOCAL:6 |= 4
+
+			TCVAR:LOCAL:질내사정플래그 = 2
+			TCVAR:LOCAL:질내사정대상 = ARG
+			CALL PREGNACY_CHECK(ARG, LOCAL)
+		ENDIF
+		;애널
+		IF TCVAR:ARG:사정부위플래그 == 2
+			EXP:LOCAL:정액경험 += NOWEX:ARG:사정
+			CALL SOURCE_CALC_정액(LOCAL, ARG, NOWEX:ARG:사정 * 100)
+			STAIN:LOCAL:4 |= 4
+			STAIN:LOCAL:7 |= 4
+			;中出し표시용
+			TCVAR:LOCAL:애널사정플래그 = 2
+			TCVAR:LOCAL:애널사정대상 = ARG
+		ENDIF
+		;수음
+		IF TCVAR:ARG:사정부위플래그 == 3
+			EXP:LOCAL:정액경험 += 1 + NOWEX:ARG:사정
+			CALL SOURCE_CALC_정액(LOCAL, ARG, 100 + NOWEX:ARG:사정 * 100)
+			STAIN:LOCAL:1 |= 4
+			SIF ABL:LOCAL:정액중독 > 2 && ABL:LOCAL:기교 > 2
+				EXP:LOCAL:정음경험 ++
+		ENDIF
+		;펠라
+		IF TCVAR:ARG:사정부위플래그 == 4
+			EXP:LOCAL:정액경험 += NOWEX:ARG:사정 * 3
+			CALL SOURCE_CALC_정액(LOCAL, ARG, 200 + NOWEX:ARG:사정 * 200)
+			STAIN:LOCAL:0 |= 4
+			;이라마치오
+			IF SELECTCOM == 140 && ARG == MASTER && LOCAL == TARGET
+				EXP:LOCAL:정음경험 += NOWEX:ARG:사정 * 3
+				CALL SOURCE_CALC_정액(LOCAL, ARG, NOWEX:ARG:사정 * 100)
+			ELSEIF  RAND:(MIN(60, EXP:LOCAL:정음경험 + 1)) > 10 + RAND:30
+				EXP:LOCAL:정음경험 += NOWEX:ARG:사정 * 3
+			ELSE
+				EXP:LOCAL:정음경험 += NOWEX:ARG:사정
+			ENDIF
+		ENDIF
+		;파이즈리
+		IF TCVAR:ARG:사정부위플래그 == 5
+			EXP:LOCAL:정액경험 += NOWEX:ARG:사정 * 3
+			CALL SOURCE_CALC_정액(LOCAL, ARG, 100 + NOWEX:ARG:사정 * 100)
+			STAIN:LOCAL:5 |= 4
+		ENDIF
+		;스마타
+		IF TCVAR:ARG:사정부위플래그 == 6
+			EXP:LOCAL:정액경험 += NOWEX:ARG:사정
+			CALL SOURCE_CALC_정액(LOCAL, ARG, NOWEX:ARG:사정 * 100)
+			STAIN:LOCAL:3 |= 4
+		ENDIF
+		;풋잡
+		IF TCVAR:ARG:사정부위플래그 == 7
+			EXP:LOCAL:정액경험 += NOWEX:ARG:사정
+			CALL SOURCE_CALC_정액(LOCAL, ARG, NOWEX:ARG:사정 * 100)
+		ENDIF
+		;体表
+		IF TCVAR:ARG:사정부위플래그 == 8
+			EXP:LOCAL:정액경험 += NOWEX:ARG:사정 * 2
+			CALL SOURCE_CALC_정액(LOCAL, ARG, NOWEX:ARG:사정 * 200)
+		ENDIF
+		;더블펠라
+		IF TCVAR:ARG:사정부위플래그 == 21
+			;一人目
+			EXP:(TCVAR:ARG:사정대상캐릭터_1):정액경험 += NOWEX:ARG:사정 * 3
+			CALL SOURCE_CALC_정액((TCVAR:ARG:사정대상캐릭터_1), ARG, 200 + NOWEX:ARG:사정 * 200)
+			STAIN:(TCVAR:ARG:사정대상캐릭터_1):0 |= 4
+			IF  RAND:(MIN(60, EXP:(TCVAR:ARG:사정대상캐릭터_1):정음경험 + 1)) > 10 + RAND:30
+				EXP:(TCVAR:ARG:사정대상캐릭터_1):정음경험 += NOWEX:ARG:사정 * 3
+			ELSE
+				EXP:(TCVAR:ARG:사정대상캐릭터_1):정음경험 += NOWEX:ARG:사정
+			ENDIF
+			;二人目
+			EXP:(TCVAR:ARG:사정대상캐릭터_2):정액경험 += NOWEX:ARG:사정 * 3
+			CALL SOURCE_CALC_정액((TCVAR:ARG:사정대상캐릭터_2), ARG, 200 + NOWEX:ARG:사정 * 200)
+			STAIN:(TCVAR:ARG:사정대상캐릭터_2):0 |= 4
+			IF  RAND:(MIN(60, EXP:(TCVAR:ARG:사정대상캐릭터_2):정음경험 + 1)) > 10 + RAND:30
+				EXP:(TCVAR:ARG:사정대상캐릭터_2):정음경험 += NOWEX:ARG:사정 * 3
+			ELSE
+				EXP:(TCVAR:ARG:사정대상캐릭터_2):정음경험 += NOWEX:ARG:사정
+			ENDIF
+		ENDIF
+		;더블스마타
+		IF TCVAR:ARG:사정부위플래그 == 22
+			;一人目
+			EXP:(TCVAR:ARG:사정대상캐릭터_1):정액경험 += NOWEX:ARG:사정
+			CALL SOURCE_CALC_정액((TCVAR:ARG:사정대상캐릭터_1), ARG, NOWEX:ARG:사정 * 100)
+			STAIN:(TCVAR:ARG:사정대상캐릭터_1):3 |= 4
+			;二人目
+			EXP:(TCVAR:ARG:사정대상캐릭터_2):정액경험 += NOWEX:ARG:사정
+			CALL SOURCE_CALC_정액((TCVAR:ARG:사정대상캐릭터_2), ARG, NOWEX:ARG:사정 * 100)
+			STAIN:(TCVAR:ARG:사정대상캐릭터_2):3 |= 4
+		ENDIF
+		;더블파이즈리
+		IF TCVAR:ARG:사정부위플래그 == 23
+			;一人目
+			EXP:(TCVAR:ARG:사정대상캐릭터_1):정액경험 += NOWEX:ARG:사정 * 3
+			CALL SOURCE_CALC_정액((TCVAR:ARG:사정대상캐릭터_1), ARG, 100 + NOWEX:ARG:사정 * 100)
+			STAIN:(TCVAR:ARG:사정대상캐릭터_1):5 |= 4
+			;二人目
+			EXP:(TCVAR:ARG:사정대상캐릭터_2):정액경험 += NOWEX:ARG:사정 * 3
+			CALL SOURCE_CALC_정액((TCVAR:ARG:사정대상캐릭터_2), ARG, 100 + NOWEX:ARG:사정 * 100)
+			STAIN:(TCVAR:ARG:사정대상캐릭터_2):5 |= 4
+		ENDIF
+		;상호삽입
+		IF TCVAR:ARG:사정부위플래그 == 24
+			;一人目
+			EXP:(TCVAR:ARG:사정대상캐릭터_1):정액경험 += NOWEX:ARG:사정
+			CALL SOURCE_CALC_정액((TCVAR:ARG:사정대상캐릭터_1), ARG, NOWEX:ARG:사정 * 100)
+			STAIN:(TCVAR:ARG:사정대상캐릭터_1):3 |= 4
+			STAIN:(TCVAR:ARG:사정대상캐릭터_1):6 |= 4
+			TCVAR:(TCVAR:ARG:사정대상캐릭터_1):질내사정플래그 = 2
+			TCVAR:(TCVAR:ARG:사정대상캐릭터_1):질내사정대상 = ARG
+			CALL PREGNACY_CHECK(ARG, (TCVAR:ARG:사정대상캐릭터_1))
+			;二人目
+			EXP:(TCVAR:ARG:사정대상캐릭터_2):정액경험 += NOWEX:ARG:사정
+			CALL SOURCE_CALC_정액((TCVAR:ARG:사정대상캐릭터_2), ARG, NOWEX:ARG:사정 * 100)
+			STAIN:(TCVAR:ARG:사정대상캐릭터_2):3 |= 4
+			STAIN:(TCVAR:ARG:사정대상캐릭터_2):6 |= 4
+			TCVAR:(TCVAR:ARG:사정대상캐릭터_2):질내사정플래그 = 2
+			TCVAR:(TCVAR:ARG:사정대상캐릭터_2):질내사정대상 = ARG
+			CALL PREGNACY_CHECK(ARG, (TCVAR:ARG:사정대상캐릭터_2))
+		ENDIF
+
+	ENDIF
+NEXT
+
+@SAMEN_SHOOT_FLAGSETTING
+;PLAYERが사정
+IF NOWEX:MASTER:사정
+	SIF TEQUIP:MASTER:콘돔
+		SETBIT TFLAG:1, 0
+	FOR LOCAL, 0,CHARANUM
+		;基本セット
+		FOR LOCAL:1, 1, 11
+			IF TCVAR:MASTER:사정쾌락강도 > 0 && TCVAR:MASTER:사정대상캐릭터_1 == LOCAL && TCVAR:MASTER:사정부위플래그 == (LOCAL:1)
+				SETBIT TFLAG:1, LOCAL:1
+				SETBIT TCVAR:LOCAL:50, LOCAL:1
+			ENDIF
+		NEXT
+	NEXT
+	;수음펠라
+	IF TFLAG:50 == 5
+		SETBIT TFLAG:1,20
+		SETBIT TCVAR:50,20
+	ENDIF
+	;파이즈리펠라
+	IF TFLAG:50 == 12 && NOWEX:MASTER:사정
+		SETBIT TFLAG:1,21
+		SETBIT TCVAR:50,21
+	ENDIF
+	;이라마치오
+	IF SELECTCOM == 140 && NOWEX:MASTER:사정
+		SETBIT TFLAG:1,23
+		SETBIT TCVAR:50,23
+	ENDIF
+	;子宮口責め
+	IF TFLAG:50 == 7 && NOWEX:MASTER:사정
+		SETBIT TFLAG:1,24
+		SETBIT TCVAR:50,24
+	ENDIF
+ENDIF
+
+
+;거품춤でTARGET사정
+IF TCVAR:MASTER:12 == 8 && NOWEX:TARGET:사정
+	SETBIT TFLAG:1,8
+	SETBIT TCVAR:50,8
+ENDIF
+;식스나인
+IF TFLAG:50 == 1 && NOWEX:TARGET:사정
+	SETBIT TFLAG:1,22
+	SETBIT TCVAR:50,22
+ENDIF
+
+
+;임신판정
+@PREGNACY_CHECK(사정元_캐릭터_ID,사정先_캐릭터_ID)
+#DIM DYNAMIC 사정元_캐릭터_ID
+#DIM DYNAMIC 사정先_캐릭터_ID
+#DIM DYNAMIC 사정量
+;사정元_캐릭터_ID 사정한캐릭터番号
+;사정先_캐릭터_ID 사정された캐릭터番号
+;NOWEX:사정元_캐릭터_ID:사정 사정量
+;既に임신している場合は除く
+
+;임신システム
+IF TALENT:사정元_캐릭터_ID:형태 != 0
+	사정量 = RAND:((TALENT:사정元_캐릭터_ID:형태) * 3) + (TALENT:사정元_캐릭터_ID:형태) / 2
+ELSE
+	사정量 = RAND:12 + 6
+ENDIF
+TCVAR:사정先_캐릭터_ID:질내사정횟수 += 사정量
+
+;ランダム抽選
+IF TALENT:사정先_캐릭터_ID:연모 == 0
+	LOCAL:1 = RAND:100
+ELSEIF TALENT:사정先_캐릭터_ID:연모 == 1
+	LOCAL:1 = RAND:50
+ELSEIF TALENT:사정先_캐릭터_ID:연모 == 2
+	LOCAL:1 = RAND:10
+ENDIF
+
+;사정された場合に9をヒットさせた場合にHITさせた캐릭터_IDをTCVARに格納
+	;PRINTFORML 테스트랜덤값{LOCAL:1}
+IF LOCAL:1 == 0 && TALENT:사정先_캐릭터_ID:임신가능 == 0 && TALENT:사정先_캐릭터_ID:임신 == 0 
+	;사정された캐릭터の子種をHITさせ、임신可能状態をセーブしてロックをつける
+	CFLAG:사정先_캐릭터_ID:HIT아기씨 = 사정元_캐릭터_ID
+	TALENT:사정先_캐릭터_ID:임신가능 = 1
+ENDIF
+
+;SIF CFLAG:(ARG:1):4 > 0
+	;RETURN 0
+
+

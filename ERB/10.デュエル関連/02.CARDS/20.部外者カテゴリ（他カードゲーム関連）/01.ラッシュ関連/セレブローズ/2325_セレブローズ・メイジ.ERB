@@ -1,0 +1,113 @@
+﻿@CARDNAME_2325,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 세레브로즈 마법사
+	CASE "略称"
+RESULTS = CR 마법사
+	CASE "カテゴリ"
+RESULTS:0 = 세레브로즈
+ENDSELECT
+
+
+@CARD_2325(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2325(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(10,소환時)
+PRINTL ①: 이 카드가 소환했을 경우,
+PRINTL 자신의 묘지에 「세레브로즈 마법사」 또는 장착 마법 카드가 있을 경우 발동할 수 있다.
+PRINTL 자신의 묘지의 「카리스 마장 데스 완드」 또는 「융합」 1장을 패에 넣는다.
+
+
+
+@CARDCAN_2325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2325)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件スーパー名前 = 세레브로즈 마법사
+	효과条件종류 = 装備마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前:0 = 카리스 마장 데스 완드
+	효과条件名前:1 = 융합
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戦闘カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2325,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前:0 = 카리스 마장 데스 완드
+		효과条件名前:1 = 융합
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ENDIF

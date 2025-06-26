@@ -1,0 +1,155 @@
+﻿@CARDNAME_73151,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스프라이트 스매셔즈
+	CASE "略称"
+RESULTS = SPR 스매시
+	CASE "カテゴリ"
+RESULTS:0 = 스프라이트
+ENDSELECT
+
+
+@CARD_73151(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73151(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①: 자신 손패, 묘지에서 이 카드명 이외의
+PRINTL 「스프리건즈」, 「세리온즈」, 「스프라이트」 카드 중 어느 한 장을 제외하고,
+PRINTL 이하의 효과 중에서 1개를 선택하여 발동할 수 있다.
+PRINTL  ● 덱에서 「스프리건즈」 몬스터 1장을 특수 소환한다.
+PRINTL  ● 자신 묘지에서 「세리온즈」 몬스터 1장을 선택하여 특수 소환한다.
+PRINTL  ● 자신 필드의 코스트 2의 몬스터 1장과 상대 필드의 카드 1장을 선택하여 제외한다.
+PRINTL (코스트 2는 레벨, 랭크, 링크 2의 카드를 의미한다)
+
+@CARDCAN_73151(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73151)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,73151)
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲손패 = 1
+	효과条件カテゴリ:0 = 세리온즈
+	효과条件カテゴリ:1 = 스프리건즈
+	효과条件カテゴリ:2 = 스프라이트
+	효과条件固名前 = 스프라이트 스매셔즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73151(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カード_ID
+#DIM DYNAMIC 選択肢표시
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択효과
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73151,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲손패 = 1
+		효과条件カテゴリ:0 = 세리온즈
+		효과条件カテゴリ:1 = 스프리건즈
+		효과条件カテゴリ:2 = 스프라이트
+		효과条件固名前 = 스프라이트 스매셔즈
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			カード_ID = RESULT:1
+			IF 듀얼리스트 == "자신"
+PRINTL [0] - ● 덱에서 「스프리건즈」 몬스터 1장을 특수 소환한다.
+PRINTL [1] - ● 자신 묘지에서 「세리온즈」 몬스터 1장을 선택하여 특수 소환한다.
+PRINTL [2] - ● 자신 필드의 코스트 2의 몬스터 1장과 상대 필드의 카드 1장을 선택하여 제외한다.
+PRINTL [100] - 효과를 사용하지 않는다.
+				BINPUT
+				選択효과 = RESULT
+			ELSEIF 듀얼리스트 == "상대"
+				TRYCALLFORM CARD_{カード_ID}, "カテゴリ"
+				IF RESULTS == "스프리건즈"
+					選択효과 = 2
+				ENDIF
+				IF RESULTS == "세리온즈"
+					選択효과 = 1
+				ENDIF
+				IF RESULTS == "스프라이트"
+					選択효과 = 0
+				ENDIF
+			ENDIF
+			IF 選択효과 == 0
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과条件カテゴリ = 스프리건즈
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ELSEIF 選択효과 == 1
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 세리온즈
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ELSEIF 選択효과 == 2
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과条件レベル = 2
+				효과条件行先플래그 = 제외行き
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+				IF RESULT == 1
+					CALL FULLRESET
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"제외")
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

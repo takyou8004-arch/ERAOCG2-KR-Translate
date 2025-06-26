@@ -1,0 +1,154 @@
+@CARDNAME_52006,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 키메라테크 램페이지 드래곤
+	CASE "略称"
+RESULTS = 키메라테크 램페
+	CASE "カテゴリ"
+RESULTS:0 = 키메라테크
+ENDSELECT
+
+
+@CARD_52006(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2100
+	CASE "守備力"
+		RETURN 1600
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_52006(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「사이버 드래곤」 몬스터 × 2장 이상
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 융합 소환했을 경우에 발동할 수 있다.
+PRINTL 이 카드의 융합 소재로 한 몬스터의 수까지 상대 필드의 마법 / 함정 카드를 파괴한다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 덱에서 기계족의 빛 속성 또는 어둠 속성 몬스터 2장을 묘지로 보낸다.
+PRINTL 이 턴의 배틀 페이즈 중, 이 카드는 통상의 공격에 더하여 2회까지 공격할 수 있다.
+
+
+@CARDSUMMON_52006(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件数自由 = 1
+素材条件素材数起動 = 1
+素材条件カテゴリ = 사이버 드래곤
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,52006) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_52006(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52006)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 기계족
+	효과条件속성:0 = 빛속성
+	효과条件속성:1 = 어둠속성
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52006(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52006)
+	IF RESULT == 0
+		素材数 = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+		CALL FULLRESET
+		효과条件複数 = 100 - 素材数
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52006,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종족 = 기계족
+		효과条件속성:0 = 빛속성
+		효과条件속성:1 = 어둠속성
+		효과条件複数 = 2
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",2)
+		ENDIF
+	ENDIF
+ENDIF

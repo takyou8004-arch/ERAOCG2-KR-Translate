@@ -1,0 +1,172 @@
+﻿@CARDNAME_51030,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 고스트릭 아케이드
+	CASE "略称"
+RESULTS = 고트 아케이드
+	CASE "カテゴリ"
+RESULTS:0 = 고스트릭
+ENDSELECT
+
+
+@CARD_51030(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_51030(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 3
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51030) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_51030(종류)
+#DIM DYNAMIC 종류
+PRINTL 레벨 3 몬스터 2장 또는 뒷면 표시의 「고스트릭」 몬스터 1장
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 공격 유도를 가진다.
+
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ②: 이 카드의 X 소재를 1개 제거하고, 상대 필드에 세트된 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+
+CALLFORM CARD_ABLE(0,X素材時효과 ,필드→묘지 ,손패→묘지 ,덱→묘지 ,破壊→묘지 ,戦闘→묘지)
+PRINTL ③: 이 카드가 묘지로 보내졌을 경우 또는 X 소재로 되었을 경우,
+PRINTL 이 카드명 이외의 자신의 묘지의 「고스트릭」 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 패에 넣는다.
+
+
+
+@CARDCAN_51030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51030)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,51030)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件표시 = 裏側표시
+	효과条件カテゴリ = 고스트릭
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 裏側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == X素材時효과 || 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51030)
+	IF RESULT == 0
+		CALL RESETCONDITION_MAT
+		必要素材数 = 1
+		素材条件スーパーカテゴリ = 고스트릭
+		素材条件スーパー표시 = 3
+		重ねてＸ = 1
+		TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51030,0,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 裏側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所, "묘지")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻誘")
+ELSEIF 종류 == X素材時효과 || 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51030)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件固名前 = 고스트릭 아케이드
+		효과条件カテゴリ = 고스트릭
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ENDIF

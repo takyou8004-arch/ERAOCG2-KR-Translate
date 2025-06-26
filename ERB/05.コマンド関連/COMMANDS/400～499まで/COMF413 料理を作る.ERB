@@ -1,0 +1,423 @@
+﻿;-------------------------------------------------
+;요리を作る
+;-------------------------------------------------
+@COM413
+
+;PRINTFORML 공사중입니다
+;RETURN 0
+CALL COOKING_MENU
+IF RESULT == 0
+	RETURN 0
+ELSE
+
+	RETURN 1
+ENDIF
+
+@COOKING_MENU
+#DIM DYNAMIC 調理器具
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ2
+#DIM DYNAMIC 使用食材数
+調理器具 = 1
+$INPUT_LOOP
+;PRINT_ITEM
+PRINTFORML 食材数：{ITEM:식재료}
+CUSTOMDRAWLINE —
+PRINTL [1] - 기구를 사용하지 않고 요리한다
+SIF ITEM:후라이팬
+	PRINTL [2] - 후라이팬을 사용해서 요리한다
+SIF ITEM:냄비
+	PRINTL [4] - 졸인다　　	
+;SIF ITEM:찜기
+;	PRINT 　[5] - 찐다　　
+;SIF ITEM:믹서기
+;	PRINT 　[6] - 믹서
+;SIF ITEM:오븐
+;	PRINT 　[7] - 오븐
+PRINTL
+CUSTOMDRAWLINE —
+PRINTL [1000] - 돌아간다
+;PRINTL [999] - 초보충
+BINPUT
+IF RESULT == 1000
+	RETURN 0
+ELSEIF INRANGE(RESULT,1,10)
+	調理器具 = RESULT
+	PRINTL 식재료사용 수：（많을수록 난이도 UP！）
+	PRINTFORML [1]　[2]　[3]　[4]　[5]
+	BINPUT
+	IF RESULT == 0
+		GOTO INPUT_LOOP
+	ELSEIF ITEM:식재료 < RESULT
+		PRINTFORML 식재료가 부족하다
+		GOTO INPUT_LOOP
+	ENDIF
+	使用食材数 = RESULT
+	CALL COOK_FOOD(調理器具,使用食材数)
+	RETURN RESULT
+ELSEIF RESULT == 999
+	ITEM:410 = 100
+ENDIF
+
+GOTO INPUT_LOOP
+
+
+
+@COOK_FOOD(調理器具,使用食材数)
+#DIM DYNAMIC 調理器具
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 食材選択,5
+#DIM DYNAMIC 成功率
+#DIM DYNAMIC 失敗率
+#DIM DYNAMIC 成功판정
+#DIM DYNAMIC 調理レベル
+#DIMS DYNAMIC 요리名
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 回復率_체력
+#DIM DYNAMIC 回復率_기력
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 在宅캐릭터確認
+#DIM DYNAMIC 使用食材数
+
+調理レベル = 使用食材数 * 2
+ITEM:식재료 -= 使用食材数
+
+PRINTFORMW 식당으로 이동합니다。
+CFLAG:MASTER:현재위치 = 場所_ダイニング
+
+SELECTCASE 調理器具
+	;素手
+	CASE 1
+		SELECTCASE RAND:11
+			CASE 10
+				요리名 = 자른 과일
+			CASE 9
+				요리名 = 회
+			CASE 8
+				요리名 = 초밥
+			CASE 7
+				요리名 = 주먹밥
+			CASE 6
+				요리名 = 초절임
+			CASE 5
+				요리名 = 오차즈케
+			CASE 4
+				요리名 = 과일샌드위치
+			CASE 3
+				요리名 = 샌드위치
+			CASE 2
+				요리名 = 치즈샌드위치
+			CASE 1
+				요리名 = 신선한 샐러드
+			CASEELSE
+				요리名 = 아이스크림
+		ENDSELECT
+	;炒める
+	CASE 2
+		SELECTCASE RAND:23
+			CASE 22
+				요리名 = 마파두부
+			CASE 21
+				요리名 = 구운 주먹밥
+			CASE 20
+				요리名 = 스테이크
+			CASE 19
+				요리名 = 카라아게
+			CASE 18
+				요리名 = 프라이드 치킨
+			CASE 17
+				요리名 = 드라이카레
+			CASE 16
+				요리名 = 리조또
+			CASE 15
+				요리名 = 볶음밥
+			CASE 14
+				요리名 = 오므라이스
+			CASE 13
+				요리名 = 계란말이
+			CASE 12
+				요리名 = 오믈렛
+			CASE 11
+				요리名 = 계란프라이
+			CASE 10
+				요리名 = 구운 오징어
+			CASE 9
+				요리名 = 생선 소금구이
+			CASE 8
+				요리名 = 생선 마리네구이
+			CASE 7
+				요리名 = 꽁치 소금구이
+			CASE 6
+				요리名 = 초절임과 밥
+			CASE 5
+				요리名 = 고로케
+			CASE 4
+				요리名 = 감자튀김
+			CASE 3
+				요리名 = 토스트
+			CASE 2
+				요리名 = 프렌치 토스트
+			CASE 1
+				요리名 = 핫케이크
+			CASEELSE
+				요리名 = 도넛
+		ENDSELECT
+	;煮る
+	CASE 4
+		SELECTCASE RAND:21
+			CASE 20
+				요리名 = 샤브샤브
+			CASE 19
+				요리名 = 유도후
+			CASE 18
+				요리名 = 라멘
+			CASE 17
+				요리名 = 포토푀
+			CASE 16
+				요리名 = 방어 무
+			CASE 15
+				요리名 = 졸인 햄버그
+			CASE 14
+				요리名 = 밀푀유
+			CASE 13
+				요리名 = 오뎅
+			CASE 12
+				요리名 = 치킨수프
+			CASE 11
+				요리名 = 김치라면
+			CASE 10
+				요리名 = 해산물찌개
+			CASE 9
+				요리名 = 모듬 찌개
+			CASE 8
+				요리名 = 비프 스튜
+			CASE 7
+				요리名 = 스튜
+			CASE 6
+				요리名 = 카레 우동
+			CASE 5
+				요리名 = 죽
+			CASE 4
+				요리名 = 야채조림
+			CASE 3
+				요리名 = 카레
+			CASE 2
+				요리名 = 우동
+			CASE 1
+				요리名 = 삶은 달걀
+			CASEELSE
+				요리名 = 따뜻한 우유
+		ENDSELECT
+ENDSELECT
+;調理레벨１（失敗40%）即席요리（おにぎり、サンドイッチ）
+;調理레벨１/요리기능０の場合：成功率 = 60% （경험なし）
+;調理레벨１/요리기능１の場合：成功率 = 90% （요리慣れ）
+;調理레벨１/요리기능２の場合：成功率 = 100%（一人暮らし）
+
+;調理레벨２（失敗80%）家庭요리（カレーやパスタなど）
+;調理레벨２/요리기능０の場合：成功率 = 20% （경험なし）
+;調理레벨２/요리기능１の場合：成功率 = 50% （요리慣れ）
+;調理레벨２/요리기능２の場合：成功率 = 80% （一人暮らし）
+;調理레벨２/요리기능３の場合：成功率 = 100%（家庭的）
+
+;調理레벨３（失敗120%）難しい요리（ローストや御寿司など）
+;調理레벨３/요리기능０の場合：成功率 = 0%  （경험なし）
+;調理레벨３/요리기능１の場合：成功率 = 10% （요리慣れ）
+;調理레벨３/요리기능２の場合：成功率 = 40% （一人暮らし）
+;調理레벨３/요리기능３の場合：成功率 = 70% （家庭的）
+;調理레벨３/요리기능４の場合：成功率 = 100%（プロ並み）
+
+;調理레벨４（失敗160%）高級요리（ふぐさしなどなど）
+;調理레벨４/요리기능０の場合：成功率 = 0% （경험なし）
+;調理레벨４/요리기능１の場合：成功率 = 0% （요리慣れ）
+;調理레벨４/요리기능２の場合：成功率 = 0% （一人暮らし）
+;調理레벨４/요리기능３の場合：成功率 = 30%（家庭的）
+;調理레벨４/요리기능４の場合：成功率 = 60%（プロ並み）
+;調理레벨４/요리기능５の場合：成功率 = 90%（免許持ち）
+
+;調理レベル５（失敗200%）究極のレシピ
+;調理레벨４/요리기능０の場合：成功率 = 0% （경험なし）
+;調理레벨４/요리기능１の場合：成功率 = 0% （요리慣れ）
+;調理레벨４/요리기능２の場合：成功率 = 0% （一人暮らし）
+;調理레벨４/요리기능３の場合：成功率 = 0% （家庭的）
+;調理레벨４/요리기능４の場合：成功率 = 30%（プロ並み）
+;調理레벨４/요리기능５の場合：成功率 = 60%（免許持ち）
+
+
+;
+成功率 = 100 - (20 * 調理レベル)  + ((ABL:MASTER:요리기능) * 30)
+失敗率 = 100 - 成功率
+
+IF 失敗率 >= 100
+	失敗率 = 100
+ELSEIF 失敗率 <= 0
+	失敗率 = 0
+ENDIF
+
+成功판정 = 1 + RAND:100 
+
+PRINT ・
+WAIT
+IF 成功판정 >= 20
+	CLEARLINE 1
+	PRINT ・・
+	WAIT
+ENDIF
+IF 成功판정 >= 40
+	CLEARLINE 1
+	PRINT ・・・
+	WAIT
+ENDIF
+IF 成功판정 >= 60
+	CLEARLINE 1
+	PRINT ・・・・
+	WAIT
+ENDIF
+IF 成功판정 >= 80
+	CLEARLINE 1
+	PRINT ・・・・！
+	WAIT
+ENDIF
+
+PRINTL
+;成功
+IF 成功판정 > 失敗率
+	PRINTFORMW 	%요리名%이 완성됐다！굉장히 맛있어보인다！
+	FOR カウンタ,1,CHARANUM
+		SIF CFLAG:カウンタ:현재위치 != 場所_キッチン
+			CONTINUE
+		PRINTFORM 요리を
+		IF ABL:カウンタ:요리기능 <= 2
+			PRINTFORML 보고있던 %CALLNAME:カウンタ%는 자랑스러워한다。
+			EXP:カウンタ:요리경험 += 調理レベル
+		ELSE
+			PRINTFORML 도와준 %CALLNAME:カウンタ%는 자랑스러워한다。
+			EXP:カウンタ:요리경험 ++
+		ENDIF
+	NEXT
+
+	IF ITEM:식재료
+		PRINTFORML 밥이 있습니다만 앉히시겠습니까？
+		PRINTL
+		PRINTL [0] - 예
+		PRINTL [1] - 아니오
+		BINPUT
+		IF RESULT == 0
+			PRINTFORML 밥을 앉혔습니다～
+			PRINTFORML 밥은 어디든지 어울리니까요。
+			IF 調理器具 == 2
+				PRINTFORML 맞다！요리와 같이……。		
+				PRINTFORML %요리名%덮밥이 완성되었다！
+				回復率_체력 += 150 + (MAXBASE:MASTER:체력 / 20)
+				回復率_기력 += 150 + (MAXBASE:MASTER:기력 / 20)
+
+			ENDIF
+			回復率_체력 += 100 + (MAXBASE:MASTER:체력 / 50)
+			回復率_기력 += 100 + (MAXBASE:MASTER:기력 / 50)
+			ITEM:식재료 --  
+		ENDIF
+	ENDIF
+
+	回復率_체력 += MAXBASE:MASTER:체력 / (11 - 調理レベル)
+	回復率_기력 += MAXBASE:MASTER:기력 / 3
+
+	FOR カウンタ,1,CHARANUM
+		SIF CFLAG:カウンタ:현재위치 > 20
+			CONTINUE
+		在宅캐릭터確認 = 1
+		BREAK
+	NEXT
+
+	IF 在宅캐릭터確認
+		PRINTFORML 집 모두를 밥먹으라고 부르시겠습니까？
+		PRINTFORML
+		PRINTFORML [0] - 예
+		PRINTFORML [1] - 아니오
+		PRINTFORML
+		BINPUT
+		IF RESULT == 0
+			PRINTFORML %CALLNAME:MASTER%는 모두를 식당으로 불렀습니다。
+			;FOR カウンタ,1,在宅カウンタ
+			FOR カウンタ,1,CHARANUM
+				SIF CFLAG:カウンタ:현재위치 > 自宅部屋最大値
+					CONTINUE
+				CFLAG:カウンタ:현재위치 = 場所_ダイニング
+				CALL RECOVER_PERMIL(カウンタ,回復率_체력,"체력",1)
+				CALL RECOVER_PERMIL(カウンタ,回復率_기력,"기력",1)
+				EXP:カウンタ:요리경험 ++
+				EXP:MASTER:요리경험 ++
+			NEXT
+		ENDIF
+	ENDIF
+	
+	CALL RECOVER_PERMIL(MASTER,回復率_체력,"체력",1)
+	CALL RECOVER_PERMIL(MASTER,回復率_기력,"기력",1)
+	EXP:MASTER:요리경험 += 調理レベル
+
+
+	TCVAR:MASTER:식사가능여부 = 1440 * DAY + TIME
+	TIME += 60
+	TFLAG:SELECTCOM분기 = 1
+	RETURN 1
+;失敗
+ELSEIF 成功판정 < 失敗率
+	PRINTFORMW 대실패했다……오늘은 이제 글렀다……。
+	PRINTFORMW 식재료를 쓸데없이 하지 말고、남기지 말고 먹죠……。
+	DOWNBASE:MASTER:기력 += 500
+	CALL RECOVER_PERMIL(MASTER,200,"체력")
+	EXP:MASTER:요리경험 ++
+
+	TCVAR:MASTER:식사가능여부 = 1440 * DAY + TIME
+	TIME += 60
+	TFLAG:SELECTCOM분기 = -1
+	RETURN 0
+ENDIF
+
+
+
+
+@CAN_COM413(ARG)
+#DIM DYNAMIC 時間外
+SKIPDISP ARG
+
+
+IF ITEM:식재료 <= 0
+	PRINTFORML 식재료가 없는것 같다、적당히 슈퍼에서 사자。
+	時間外 = 1
+ENDIF
+
+IF TIME_PROGRESS(TCVAR:MASTER:307) < 240
+	PRINTFORMW 배가 가득찼습니다。
+	時間外 = 1
+ENDIF
+SKIPDISP 0
+
+SIF 時間外
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;요리を作る
+@COM_ABLE413
+;청소実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(413)
+	RETURN RESULT
+;キッチン
+SIF CFLAG:MASTER:현재위치 >= 20
+	RETURN 0
+;식사をした플래그
+;SIF TIME_PROGRESS(TCVAR:식사가능여부) < 240
+;	RETURN 0
+;SIF TCVAR:MASTER:304
+;	RETURN 0
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

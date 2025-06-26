@@ -1,0 +1,95 @@
+﻿@CARDNAME_90201,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 그래비티 바인드－초중력의 그물－
+	CASE "略称"
+RESULTS = -초중력의 그물-
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_90201(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+@CARD_EXPLANATION_90201(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 필드 위의 코스트 4 이상의 몬스터는 공격할 수 없다.
+PRINTL (코스트 4는 레벨 랭크 링크 4의 카드를 지칭함)
+
+
+@CARDCAN_90201(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC EX条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,90201)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_90201(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 설정종족
+#DIM DYNAMIC 選択효과
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,90201)
+	IF RESULT == 0
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL 효과条件レベル_ADV(4, "以上")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦無")
+	CALL FULLRESET
+;	효과元カードID = 90201
+	CALL 효과条件レベル_ADV(4, "以上")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"戦無",0,90201)
+ENDIF

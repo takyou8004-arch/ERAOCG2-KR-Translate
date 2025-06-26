@@ -1,0 +1,980 @@
+@CARDNAME_79558,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 【지유】호루스타인─딜리셔스
+	CASE "略称"
+		RESULTS = 암소등록【지유】
+	CASE "カテゴリ"
+		RESULTS:0 = 호루스
+		RESULTS:1 = 호루스타인
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79558(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250325
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79558(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드는 １턴에 １번밖에 발동할 수 없다。
+PRINTL 이 카드의 ①의 효과는 듀얼 중 １번밖에 적용할 수 없으며、①의 효과로 선택한 카드는 "암소"의 등록정보로 지속마법이 된다。
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：패 / 덱에서 "호루스타인" 이외의 암컷 몬스터를 １장 선택하여、그 몬스터를 지속 마법카드 취급으로 자신의 마법＆함정 존에 앞면 표시로 둔다。
+PRINTL 그 후、덱밖에서 "【지유】호루스타인" １장을 패에 넣는다、
+PRINTL 자신의 덱 / 패 / 몬스터 존 / 묘지에 존재하는 모든 같은 이름의 카드를 "【지유】호루스타인"으로 재정의한다。
+PRINTL 이 효과의 처리 후、이하의 효과에서 선택한다。
+PRINTL ●패에서 "【지유】호루스타인」１장을 특수 소환한다。
+PRINTL ●덱에서 "호루스타인" 함정카드를 １장 골라 패에 넣는다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79558(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+;戦闘終了플래그を拾うため
+IF 종류 == 永攻紋章起動 && (자신_듀얼패배플래그 > 0 || 상대_듀얼패배플래그 > 0)
+	RETURN 1
+ENDIF
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79558)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_D1(듀얼리스트,79558) 
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,79558) 
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件성별 = 牝性
+	효과条件固カテゴリ = 호루스타인
+	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 永紋章起動
+	RETURN 1
+ELSEIF 종류 == 永攻紋章起動
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79558(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 参照カードID
+#DIM DYNAMIC 書換先カードID
+#DIM DYNAMIC 所有者
+#DIM DYNAMIC 参照場所
+#DIM DYNAMIC 암소대상
+#DIM DYNAMIC 암소所有
+#DIMS DYNAMIC 암소名称
+#DIMS DYNAMIC 암소略称
+#DIM DYNAMIC 암소속성
+#DIM DYNAMIC 암소レベル
+#DIM DYNAMIC 암소攻撃力
+#DIM DYNAMIC 암소守備力
+#DIM DYNAMIC 암소튜너
+#DIM DYNAMIC 암소乳サイズ
+#DIM DYNAMIC 암소ミルクml
+#DIM DYNAMIC 암소ミルク売却額
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC カテゴリ名称
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+書換先カードID = 179558
+カテゴリ名称 = 登録情報：호루스타인─지유
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79558,1)
+	IF RESULT == 0 && 마함数(듀얼리스트) < 5
+		
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과条件성별 = 牝性
+		효과条件固カテゴリ = 호루스타인
+		효과추가カテ = %カテゴリ名称%
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+		
+		選択カードID = RESULT:1
+		
+		IF RESULT != 0
+			;마함に置く(デュエル中１번)
+			CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79558,20)
+			
+			;호루스타인情報の취득(カードIDから各種情報を취득)
+			CALL HORUSTEIN_GET_DATA(듀얼리스트,-1,書換先カードID)
+			암소名称 = %RESULTS:0%
+			암소略称 = %RESULTS:1%
+			参照場所 = RESULT:0
+			암소대상 = RESULT:1
+			参照カードID = RESULT:99
+			CALL HORUSTEIN_GET_BUST(参照カードID)
+			암소乳サイズ = RESULT:2
+			
+			;耐性と발동無効の付与
+			CALL SET_FIELD_INFO(듀얼리스트,"마함",参照場所,"破耐",2)
+			CALL SET_FIELD_INFO(듀얼리스트,"마함",参照場所,"対耐",2)
+			CALL SET_FIELD_INFO(듀얼리스트,"마함",参照場所,"発無",2)
+			
+			; 카드의 書き換え
+			;필드의 카드
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(듀얼리스트,"필드",カウンタ,書換先カードID)
+			NEXT
+			
+			;패의 カード
+			FOR カウンタ,0,現손패(듀얼리스트)
+				SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(듀얼리스트,"손패",カウンタ,書換先カードID)
+			NEXT
+			
+			;덱のカード
+			FOR カウンタ,0,現山札数(듀얼리스트)
+				SIF GETVAR(@"%듀얼리스트%_덱:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(듀얼리스트,"덱",カウンタ,書換先カードID)
+			NEXT
+			
+			;묘지의 카드
+			FOR カウンタ,0,現묘지数(듀얼리스트)
+				SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") != 選択カードID
+					CONTINUE
+				CALL CARD_RECONSTRUCT(듀얼리스트,"묘지",カウンタ,書換先カードID)
+			NEXT
+			
+			PRINTFORMW 등록증에 이름이 새겨지니、어디선가 호루스의 수호자가 나타났다！
+			PRINTFORML %암소名称%는 저항할 새도없이 세명의 수호자에게 밀려져、몸에 관리태그가 찍혀버렸다…
+			PRINTFORML 
+			PRINTFORML 「…음머-！…음머어…？」
+			PRINTFORMW 
+			PRINTFORML %암소名称%는 놀란 목소리를 올렸지만、그 목소리는 암소의 울음소리로 바뀌어버렸다。
+			PRINTFORML 그 관리태그…찍힌 부분을 중심으로、몸이 뜨겁게 변해가는 감각이 덮쳐진다는듯 하다。
+			PRINTFORML 뜨겁게 달궈진 %암소名称%의 몸은 땀으로 흠뻑 젖은것같다…
+			PRINTFORMW %암소名称%를 무시하고、수호자는 그 튼튼한 손으로 가슴을 정중하게 암소에게 상응하는 "상품"으로 "조교"해간다…
+			SETCOLOR C_PINK
+			PRINTFORML 
+			PRINTFORML 「음머-…」「으、음머-…❤」
+			PRINTFORMW 
+			RESETCOLOR
+			PRINTFORML …조교가 끝난것 같다。
+			PRINTFORML 아까까지와 상태가 바뀌어、목소리를 낼때마다 열을 띤 암소의 울음소리로 바뀌어간다…
+			PRINTFORML 
+			IF 암소乳サイズ >= 0
+				;元々普乳 이상의 경우、1サイズアップ
+				
+				PRINTFORM %암소名称%의 가슴은
+				SETCOLOR C_PINK
+				PRINTFORM  [%GET_TALENTNAME(121,암소乳サイズ)%] 
+				RESETCOLOR
+				PRINTFORM 에서
+				SETCOLOR C_H_PINK
+				PRINTFORM  [%GET_TALENTNAME(121,암소乳サイズ+1)%] 
+				RESETCOLOR
+				PRINTFORML 가 되어버렸다…
+				PRINTFORMW
+				
+				;着替え
+				PRINTFORML %암소名称%는 밀어붙이던 수호자가 어느샌가 사라진것을 확인하니、
+				PRINTFORMW 흠뻑 젖은 몸에 붙은 옷을 훌렁、하고 벗어버렸다…
+			ELSE
+				;普乳未満の경우、巨乳にする
+				;一気に2サイズ以上올린다
+				
+				PRINTFORM %암소名称%의 가슴은
+				SETCOLOR C_PINK
+				PRINTFORM  [%GET_TALENTNAME(121,암소乳サイズ)%] 
+				RESETCOLOR
+				PRINTFORM 에서
+				SETCOLOR C_H_PINK
+				PRINTFORM  [%GET_TALENTNAME(121,1)%] 
+				RESETCOLOR
+				PRINTFORML 가 되어버렸다…
+				PRINTFORMW
+				
+				;着替え
+				PRINTFORML 수호자는 %암소名称%의 한번에 커진 가슴을 놓치는듯이 옷을 벗게해주었다…
+				PRINTFORMW %암소名称%는 몸의 중심이 바뀌어버린 영향인지、걷기힘든것같다…
+			ENDIF
+			
+			PRINTFORML 
+			PRINTFORML %암소名称%는 발밑에 준비되어있던 옷을 주워、그것이 당연하다는듯이 소모양 비키니로 갈아입기 시작했다…
+			
+			;服装の변경(牛柄ビキニと角)
+			IF 암소대상 != -1 
+				;악세사리&모자：つけ角 大(2枠目を변경)
+				EQUIP:암소대상:2 = 21
+				CFLAG:암소대상:(200 + 2) = 21
+				;신발、양말は触らない
+				;바지～이너までは全剥き
+				FOR カウンタ,6,13
+					EQUIP:암소대상:カウンタ = 0
+					CFLAG:암소대상:(200 + カウンタ) = 0
+				NEXT
+				;원피스：牛柄ビキニ
+				EQUIP:암소대상:15 = 33
+				CFLAG:암소대상:(200 + 15) = 33
+				
+				;조교
+				CALL EROTIC_MOVE("バスト조교",암소대상,-1,300)
+			ENDIF
+			
+			;書き換えた 카드를 패에 넣는다。
+			CALL CARD_GENERATE_HAND(듀얼리스트,書換先カードID)
+			
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 호루스타인
+			효과条件종류 = 함정全般
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			
+			IF RESULT == 1
+				;덱에 ある場合
+				CALL YN_CHOICE(듀얼리스트,"「호루스타인」함정 카드를 패에 넣는다","「" + 암소名称 + "」를 패에서 특수 소환한다")
+			ELSE
+				;덱에 존재하고ない경우、選択肢は표시しない
+				PRINTFORML
+				PRINTFORMW "호루스타인" 함정카드가 덱에 존재하지 않기 때문에、「%암소名称%」를 패에서 특수 소환한다…가 선택됩니다。
+				RESULT = 1
+			ENDIF
+			
+			IF RESULT == 0
+				;덱에서 "호루스타인」함정を패에 넣는다
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과条件カテゴリ = 호루스타인
+				효과条件종류 = 함정全般
+				CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			ELSE
+				;패에서 특수소환
+				CALL FULLRESET
+				;選択時に【〇乳】호루스타인…と표시されるとｷﾞｮｯっとするので、패에서 探して특수 소환한다
+				FOR カウンタ,0,現손패(듀얼리스트)
+					SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") != 書換先カードID
+						CONTINUE
+					CALL CARD_SP_SUMMON(듀얼리스트,"손패",カウンタ)
+					BREAK
+				NEXT
+				IF RESULT != 0
+					PRINTFORMW %암소名称%의 무의식적으로 빨고싶어지는 가슴은 촉촉해 요염해져있다…
+					CALL HORUSTEIN_RAND_COW_TXT(1,2)
+				ENDIF
+				
+			ENDIF
+			
+			PRINTFORML 
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과範囲손패 = 1
+			효과条件ID = 79555
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				;패 / 필드에 호루스타인ファ-ムが존재하는 場合
+				SETCOLOR C_PINK
+				PRINTFORML %암소名称%는 촉촉해 요염한 가슴을、아무말도 하지 않고 가슴을 이쪽으로 내어왔다…
+				PRINTFORML %암소名称%는 짜여질 준비가 되어있는것 같다…
+				PRINTFORMW 「…음머…엇❤ 음머어-…❤」
+				PRINTFORML 
+				RESETCOLOR
+			ENDIF
+			
+			PRINTFORML 
+			;永紋章の표시をスキップ
+			SKIPDISP 1
+			CALL CARD_RESERV(듀얼리스트,79558,永紋章予約)
+			CALL CARD_RESERV(듀얼리스트,79558,永攻紋章予約)
+			SKIPDISP 0
+			SETCOLOR C_YELLOW
+			PRINTFORML "【지유】호루스타인"은 필드에 존재하는 경우「%암소名称%」로 취급됩니다。
+			RESETCOLOR
+			PRINTFORMW
+			
+			IF 암소乳サイズ <= 0
+				;普乳以下なら巨乳にする
+				암소乳サイズ = 1 -(암소乳サイズ)
+			ELSE
+				;巨乳以上なら1サイズUpする
+				암소乳サイズ = 1
+			ENDIF
+			;지유は카운터を巨乳以上になるように調整してスタ-ト(乳サイズ：UP)
+			CALL SET_FIELD_INFO(듀얼리스트,"마함",参照場所,"個Ｃ",암소乳サイズ)
+			
+		ELSE
+			PRINTFORMW 마법＆함정 존에 카드를 두지 못했기 때문에、등록할수 없었습니다…
+		ENDIF
+		
+	ENDIF
+	
+	SKIPDISP 1
+	CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+	SKIPDISP 0
+	
+ELSEIF 종류 == 永紋章起動 || 종류 == 永攻紋章起動
+	;紋章を使用し、패 / 필드의 암소の情報を書き換え
+	CALL FULLRESET
+	CALL HORUSTEIN_GET_DATA(듀얼리스트,,179558)
+	암소名称 = %RESULTS:0%
+	암소略称 = %RESULTS:1%
+	参照場所 = RESULT:0
+	암소대상 = RESULT:1
+	암소所有 = RESULT:2
+	암소ミルクml = RESULT:4		;착유量(듀얼中総量)
+	参照カードID = RESULT:99
+	암소乳サイズ = GETVAR(@"%듀얼리스트%_魔_個Ｃ:参照場所")
+	
+	;参照先카드가 吹っ飛んでたら処理しない
+	IF 参照場所 != -1
+		
+		IF 듀얼리스트 == "자신"
+			所有者 = 1
+		ELSEIF 듀얼리스트 == "상대"
+			所有者 = 2
+		ENDIF
+		
+		;속성
+		TRYCALLFORM CARD_{参照カードID},"속성"
+		암소속성 = RESULT
+		
+		;레벨의 취득
+		TRYCALLFORM CARD_{参照カードID},"レベル"
+		암소レベル = RESULT
+		
+		;攻守
+		TRYCALLFORM CARD_{参照カードID},"攻撃力"
+		암소攻撃力 = RESULT
+		TRYCALLFORM CARD_{参照カードID},"守備力"
+		암소守備力 = RESULT
+
+		;지유の攻守は1500に近いほど高くなる
+		IF INRANGE (암소攻撃力, 0, 3000) 
+			ABS 암소攻撃力 - 1500
+			암소攻撃力 = 3000 - RESULT * 2
+		ELSE 
+			암소攻撃力 = 0
+		ENDIF
+
+		IF INRANGE (암소守備力, 0, 3000) 
+			ABS 암소守備力 - 1500
+			암소守備力 = 3000 - RESULT * 2
+		ELSE 
+			암소守備力 = 0
+		ENDIF
+
+		;튜너
+		TRYCALLFORM CARD_{参照カードID},"튜너"
+		암소튜너 = RESULT
+		
+		;패의  카드의 レベル변경(손패は설정分Lvが下がる)
+		IF 종류 == 永攻紋章起動
+			CALL FULLRESET
+			효과条件ID = 書換先カードID
+			CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"永星",12 - 암소レベル)
+		ENDIF
+		
+		;자신 필드의 카드で、所有者が자신
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ") != 書換先カードID
+				CONTINUE
+			SIF GETVAR(@"%듀얼리스트%_MZ_所有:カウンタ") != 所有者
+				CONTINUE
+
+			IF 종류 == 永紋章起動 
+				CALL CARD_SET_RENAME(듀얼리스트,"필드",カウンタ,암소略称)
+				CALL STATCHANGE_EFFECT(듀얼리스트,"자신",カウンタ,"変化元ID",参照カードID)
+			ELSEIF 종류 == 永攻紋章起動 
+				
+				CALL STATCHANGE_OTHER(듀얼리스트,"자신",カウンタ,"属",암소속성)
+				CALL STATCHANGE_EFFECT(듀얼리스트,"자신",カウンタ,"永星",암소レベル)
+				CALL STATCHANGE_BASIC(듀얼리스트,"자신",カウンタ,암소攻撃力,암소守備力)
+				CALL CARD_SET_CATEGORY(듀얼리스트,"필드",カウンタ,"E.R.A")
+				;カテゴリ2は未설정なら변경する
+				SIF GETVARS(@"%듀얼리스트%_MZ_追カテ2:カウンタ") == ""
+					CALL CARD_SET_CATEGORY(듀얼리스트,"필드",カウンタ,"호루스타인",1)
+				SIF 암소튜너 == 1
+					CALL STATCHANGE_EFFECT(듀얼리스트,"자신",カウンタ,"一Ｔ",2)
+				
+				;지속마법扱いの자신に乗ってる카운터의 수 만큼 乳を盛る
+				CALL STATCHANGE_OTHER(듀얼리스트,"자신",カウンタ,"가슴追",암소乳サイズ)
+			ENDIF
+		NEXT
+		
+		;상대 필드의 카드で、所有者が자신
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_MZ_ID:カウンタ") != 書換先カードID
+				CONTINUE
+			SIF GETVAR(@"%対面者%_MZ_所有:カウンタ") != 所有者
+				CONTINUE
+
+			IF 종류 == 永紋章起動 
+				CALL CARD_SET_RENAME(対面者,"필드",カウンタ,암소略称)
+				CALL STATCHANGE_EFFECT(対面者,"자신",カウンタ,"変化元ID",参照カードID)
+			ELSEIF 종류 == 永攻紋章起動 
+				
+				CALL STATCHANGE_OTHER(対面者,"자신",カウンタ,"属",암소속성)
+				CALL STATCHANGE_EFFECT(対面者,"자신",カウンタ,"永星",암소レベル)
+				CALL STATCHANGE_BASIC(対面者,"자신",カウンタ,암소攻撃力,암소守備力)
+				CALL CARD_SET_CATEGORY(対面者,"필드",カウンタ,"E.R.A")
+				;カテゴリ2は未설정なら변경する
+				SIF GETVARS(@"%対面者%_MZ_追カテ2:カウンタ") == ""
+					CALL CARD_SET_CATEGORY(対面者,"필드",カウンタ,"호루스타인",1)
+				
+				SIF 암소튜너 == 1
+					CALL STATCHANGE_EFFECT(対面者,"자신",カウンタ,"一Ｔ",2)
+				
+				CALL STATCHANGE_OTHER(対面者,"자신",カウンタ,"가슴追",암소乳サイズ)
+				
+			ENDIF
+		NEXT
+	ENDIF
+	IF (자신_듀얼패배플래그 > 0 || 상대_듀얼패배플래그 > 0) && 암소ミルクml > 0
+	
+		;基本は마함見るけど、자신 필드에 존재하는 경우、更に別의 효과で乳がデカくなってるかチェック
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ") != 書換先カードID
+				CONTINUE
+			SIF GETVAR(@"%듀얼리스트%_MZ_가슴追:カウンタ") > 암소乳サイズ
+				암소乳サイズ = GETVAR(@"%듀얼리스트%_MZ_가슴追:カウンタ")
+		NEXT
+		
+		CALL HORUSTEIN_GET_BUST(参照カードID,암소乳サイズ)
+		암소乳サイズ = RESULT:2
+		암소ミルク売却額 = 암소ミルクml *10
+		
+		CUSTOMDRAWLINE —
+		PRINTFORML
+		IF 암소乳サイズ >= 5
+			;規格外な
+			TIMES 암소ミルク売却額 , 0.15
+		
+			SETCOLOR C_H_PINK
+			PRINTFORM [%GET_TALENTNAME(121,암소乳サイズ)%] 
+			RESETCOLOR
+			PRINTFORML 의 젖은 판매가 어려운듯 하다…
+		ELSE
+			;지유は何もしなくてもたくさん搾れるので価格が抑えめ
+			TIMES 암소ミルク売却額 , 0.65
+			SETCOLOR C_PINK
+			PRINTFORML [%GET_TALENTNAME(121,암소乳サイズ)%] 
+		ENDIF
+		RESETCOLOR
+		
+		PRINTFORML %암소名称%에게서 뽑은{암소ミルクml}ml의 우유를{암소ミルク売却額}엔에 판매했다…
+		CALL MONEY_GET(암소ミルク売却額)
+
+		
+		SETCOLOR C_GRAY
+		TIMES 암소ミルク売却額 , 0.1875;元の金額の0.15倍
+		;なんか計算で出したけど、しょっぱい金額引かれてるとみみっちいので、適当にデカくすることにした
+		PRINTFORML 기재의 점검비로 {암소ミルク売却額*10}엔정도、금액이 빠져나갑니다…
+		PRINTFORML 
+		RESETCOLOR
+		CUSTOMDRAWLINE —
+		
+		;リセットも兼ねて、ミルクの情報を削除
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",参照場所,"T1汎数",0,上書きモード)
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",参照場所,"汎数",0,上書きモード)
+	ENDIF
+ENDIF
+
+
+;ここから암소のカード処理-----
+
+@CARDNAME_179558,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC カード名
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カードID
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+			RESULTS = 【지유】호루스타인
+	CASE "略称"
+			RESULTS = 【지유】암소
+	CASE "カテゴリ"
+		RESULTS:0 = 호루스
+		RESULTS:1 = 호루스타인
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_179558(参照先)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 参照先
+#DIMS DYNAMIC 参照先チェック
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カードID
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		;하피と同じ
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN デュアル
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_179558(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 통상몬스터로 취급하며、마법＆함정 존에 놓인 카드에 의해 스테이터스가 결정된다。
+PRINTL 자신 필드에 "호루스타인─밀크 팜"이 존재하는 경우、이하의 효과를 얻는다。
+PRINTL 
+PRINTL 이 카드의 ②의 효과는 １턴에 １번밖에 사용할 수 없다。
+PRINTL ①：메인 페이즈에 발동할 수 있다。이 카드의 젖을 계측한다。
+;CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ②：배틀 페이즈에 발동할 수 있다。이 카드의 젖을 뽑아 발정시킨다。
+PRINTL 그 후、이하의 효과를 적용한다。
+PRINTL ●이 턴、이 카드가 존재하는 한、상대는 이 카드밖에 공격 대상으로할 수 없다。
+PRINTL ●이 카드가 전투 / 효과로 파괴된 경우、자신의 묘지 / 제외 상태인 "호루스타인" 카드를 ２장까지 골라、패나 덱에 되돌릴 수 있다。
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ③：이 카드의 공격이 중단된 경우엔 발동할 수 있다。
+PRINTL 공격 대상의 몬스터를 "호루스타인" 카드로 취급해、그 몬스터의 컨트롤을 얻는다。
+
+@CARDCAN_179558(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 別途カードID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,179558)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF GETVARS(@"%듀얼리스트%_フィールド名") != "밀크 팜"
+		RETURN 0
+	IF メインフェイズ == 1
+		SIF ターンプレイヤー == "상대" ;ただ情報を표시するだけなので、NPCは使用しない(ターン1付けてないから多分連打するし…)
+			RETURN 0
+	ELSEIF バトルフェイズ == 1
+		SIF 발동済_1(듀얼리스트,179558) 
+			RETURN 0
+	ENDIF
+	
+	RETURN 1
+ELSEIF 종류 == 攻撃後強制誘発;本当は밀크 팜なきゃダメだけど、ただ致すだけだし良いか…
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_戦闘カード") != 場所
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_発情:場所") == 0
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_攻撃無効_保") != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF GETVARS(@"%듀얼리스트%_フィールド名") != "밀크 팜"
+		RETURN 0
+	;発情時に攻撃中断された場合
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_戦闘カード") != 場所
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_発情:場所") == 0
+		RETURN 0	
+	SIF GETVAR(@"%듀얼리스트%_攻撃無効") != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_SS_CHECK(듀얼리스트,0,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	
+	;배틀 페이즈에 乳を搾った
+	SIF !발동済_1(듀얼리스트,179558) 
+		RETURN 0
+	
+	;전투 / 효과破壊時의 효과를 使っていない
+	SIF 발동済_2(듀얼리스트,179558) 
+		RETURN 0
+	
+	;특수소환可否
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ  = 호루스타인
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	;守備표시の場合
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 1 
+		RETURN 0
+	;자신이 특수状態：ドリップ(99554)の場合
+	SIF GETVAR(@"%듀얼리스트%_MZ_특수状態:場所") != 99554
+		RETURN 0
+	
+	CALL FULLRESET
+	효과条件固カテゴリ = 호루스타인
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동")
+	SIF RESULT == 1
+		RETURN 1
+	
+	CALL FULLRESET
+	효과条件固カテゴリ = 호루스타인
+	CALL CARD_CHECK_FIN_DATA(対面者,"효과발동")
+	SIF RESULT == 1
+		RETURN 1
+	
+	RETURN 0
+ENDIF
+
+@CARDEFFECT_179558(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 参照カードID
+#DIM DYNAMIC 書換先カードID
+#DIM DYNAMIC 参照場所
+#DIM DYNAMIC 암소대상
+#DIMS DYNAMIC 암소名称
+#DIM DYNAMIC 攻撃대상
+#DIM DYNAMIC 攻撃대상カードID
+#DIMS DYNAMIC 상대名称
+#DIMS DYNAMIC 搾手名称
+#DIM DYNAMIC 搾手
+#DIM DYNAMIC 절정횟수
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC カテゴリ名称
+#DIM DYNAMIC 現乳サイズ
+#DIM DYNAMIC T1ミルクml
+#DIM DYNAMIC ミルクml
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+書換先カードID = 179558
+カテゴリ名称 = 登録情報：호루스타인─지유
+
+;호루스타인情報の취득
+CALL HORUSTEIN_GET_DATA(듀얼리스트,場所,179558)
+암소名称 = %RESULTS:0%
+参照場所 = RESULT:0
+암소대상 = RESULT:1
+T1ミルクml = RESULT:3	;착유量(1ターン中)
+ミルクml = RESULT:4		;착유量(듀얼中総量)
+参照カードID = RESULT:99
+
+;乳サイズ취득
+CALL HORUSTEIN_GET_BUST(参照カードID,GETVAR(@"%듀얼리스트%_MZ_가슴追:場所"))
+現乳サイズ = RESULT:2 
+
+;実行者によって文章の상대を切り替える
+IF 듀얼리스트 == "자신"
+	搾手名称 = %CALLNAME:MASTER%
+	搾手 = MASTER
+ELSE
+	;대상상대
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	IF RESULT != -1
+		搾手名称 = %CALLNAME:RESULT%
+	ELSE
+		搾手名称 = "대상者"
+	ENDIF
+	搾手 = RESULT
+ENDIF
+
+;공격 대상의 名前を취득
+IF 종류 == 攻撃後強制誘発 || 종류 == 효과後誘発
+	공격 대상 = 戦闘場所(対面者)
+	;名称の설정
+	IF 攻撃대상 == 99
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			상대名称 = %CALLNAME:RESULT%
+		ELSE
+			상대名称 = "대상상대"
+		ENDIF
+	ELSE
+		攻撃대상カードID = GETVAR(@"%対面者%_MZ_ID:공격 대상")
+		TRYCALLFORM CARDNAME_{攻撃대상カードID},"略称"
+		상대名称 = %RESULTS%
+	ENDIF
+ENDIF
+
+IF 종류 == 필드起動 && メインフェイズ == 1
+	;ステータス표시させるだけなので、無効にさせない
+	효과無効不能 = 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,書換先カードID)
+	IF RESULT == 0 && 参照カードID != -1
+		
+		PRINTFORML 
+		PRINTFORMW 호루스의 종자들이 %암소名称%를 둘러싸고있다…
+		
+		;名前から가슴のサイズの変動まで표시
+		CALL HORUSTEIN_PRINT_STATE(듀얼리스트,場所,179558, GETVAR(@"%듀얼리스트%_MZ_가슴追:場所"))
+		
+		
+	ENDIF
+ELSEIF 종류 == 필드起動 && バトルフェイズ == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,書換先カードID,1)
+	
+	IF RESULT == 0 && 参照カードID != -1
+		;가슴を搾る
+		IF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:場所") == 0
+			;1回目
+			PRINTFORML %搾手名称%는 %암소名称%의 젖에 손을 뻗으니、그 유륜이 변하지 않도록 손가락을 움직인다…
+			PRINTFORMW 살에서 젖으로 변화해가는 감촉을 즐기면서、서서히 그 중심부로 짜내는듯한 움직임으로 가슴을 의식시킨다。
+			PRINTFORM %암소名称%에게서
+			SETCOLOR C_PINK
+			PRINTFORM 「음머-…❤」
+			RESETCOLOR
+			PRINTFORML 하는 소리가 흐를때엔、%암소名称%의 젖은 우뚝솟아、그 끝부분은 뽑아줬으면 하는듯이 요염해보인다…
+			PRINTFORML %搾手名称%는 꾸욱하고 손가락으로 짜내니、%암소名称%는 기쁜듯이 하얀 액체를 흘렸다…
+			SETCOLOR C_PINK
+			PRINTFORMW 「음멋❤ 응앗❤ ―…❤」
+			RESETCOLOR
+			IF 암소대상 != -1
+				CALL EROTIC_MOVE("バスト조교",암소대상,搾手,300)
+			ENDIF
+			
+			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"発情",175)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"個Ｃ",1,上書きモード)
+		ELSE
+			;2回目
+			PRINTFORML %搾手名称%는 %암소名称%의 젖에 다시 손을 뻗으니、그 젖에 의해 하얀게 젖은 손가락을 움직인다…
+			PRINTFORML 이미 한번 짜냈는데도、손가락이 닿은것 만으로도 뾰족해진 끝부분은 뚝뚝 하몃 젖어버리고있다…
+			SETCOLOR C_PINK
+			PRINTFORML 「음머-…❤ 음머-…❤」
+			RESETCOLOR
+			PRINTFORMW 상냥하게 쓰다듬는듯한 자극으론 부족한것인지、%암소名称%는 %搾手名称%의 손에 가슴을 밀어붙이기 시작했다…
+			PRINTFORML 
+			PRINTFORML %搾手名称%는 기대를 배신하는것처럼 정중하게 상냥하게 만지니、끝부분을 착하고 튕기며、고양된 성감을 한번에 해방시켰다！
+			PRINTFORML %암소名称%의 젖은 갑작스러운 자극에 버티지 못하고、무너진 수도꼭지처럼 하얀 액체를 흘리고있다…
+			SETCOLOR C_PINK
+			PRINTFORMW 「…앗！？ 오오옷～～～❤❤」
+			RESETCOLOR
+			IF 암소대상 != -1
+				CALL EROTIC_MOVE("バスト조교",암소대상,搾手,300)
+			ENDIF
+			
+			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"発情",185)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"個Ｃ",0,上書きモード)
+		ENDIF
+		;ターゲット集中
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"攻誘",1)
+
+		;효과破壊の適用は발동済2で판정
+		
+		CALL HORUSTEIN_GET_MILK(듀얼리스트,参照カードID,GETVAR(@"%듀얼리스트%_MZ_가슴追:場所"))
+		
+		;発情
+		SETCOLOR C_PINK
+		PRINTFORML 
+		PRINTFORML %암소名称%는 젖을 짜낸 영향인지、심하게 발정하고있다…
+		PRINTFORML
+		RESETCOLOR
+
+		IF ターンプレイヤー != 듀얼리스트
+			;상대 턴에 발동한 場合
+			PRINTFORML %암소名称%는 젖을 짜여진 여운에 잠겨있다…
+
+			;암소鳴き声：2回、ねっとり鳴き
+			CALL HORUSTEIN_RAND_COW_TXT(2,2)
+		ENDIF
+		
+		PRINTFORMW
+	ENDIF
+
+ELSEIF 종류 == 攻撃後強制誘発
+	;発情時に攻撃が中断された場合
+	
+	;ひとりえっち(ここは一回触ってるので短めに。효과処理もあるしね)
+	PRINTFORML …발정한 %암소名称%는 %상대名称%에게 흔들흔들하며 가까이 가지만、시선을 발밑으로 향하니 도중에 다리를 멈춰버렸다。
+	PRINTFORML 후우후우 하며 거친 호흡을 하는 %암소名称%는、자신의 젖에서 눈을 떼지 못하고있다…
+	PRINTFORMW %암소名称%는 %搾手名称%에게 짜여진 기억을 기억해내는듯이、젖을 천천히 문지르기 시작했다…
+	
+	;암소の鳴き声を鳴らす
+	CALL HORUSTEIN_RAND_COW_TXT(1,2)
+	
+	IF 암소대상 != -1
+		CALL EROTIC_MOVE("バスト조교",암소대상,-1,500)
+	ENDIF
+	절정횟수 += RESULT:1
+	IF 절정횟수 > 0
+		PRINTFORML %암소名称%는 {절정횟수}번 절정한것같다。
+		PRINTFORMW 여운이 기분좋았던것인지、%암소名称%의 주변엔 작고 하얀 반점이 흩날리고있다…
+	ENDIF
+	
+	PRINTFORML 
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,書換先カードID)
+	
+	IF RESULT == 0
+		IF 攻撃대상 == 5 
+			;直接攻撃失敗時
+			;再び手を伸ばすと、상대 필드에 他に戦闘を行える 몬스터가 いない為か、タガが外れたように…
+			
+			PRINTFORMW %암소名称%는 상대 필드에 전투를 할 수 있는 몬스터가 없는것을 확인하고、더욱깊은 쾌락을 탐구해 손가락을 움직이기 시작했다…
+			절정횟수 += 2
+			SETCOLOR C_PINK
+			
+			;암소の鳴き声を鳴らす
+			CALL HORUSTEIN_RAND_COW_TXT(절정횟수,2)
+			
+			IF 암소대상 != -1
+				REPEAT 절정횟수
+					CALL EROTIC_MOVE("バスト조교",암소대상,-1,200)
+				REND
+			ENDIF
+			
+			RESETCOLOR
+			PRINTFORML 울음소리가 끝나니、%암소名称%는 "철퍽" 하는 소리를 내며 하얀 물웅덩이에 쓰러졌다…
+			PRINTFORMW 마음껏 기분 좋아진 %암소名称%는、만족한것같은 미소를 띄우고있다…
+			;절정後の암소鳴き声
+			CALL HORUSTEIN_RAND_COW_TXT(3,2)
+			PRINTFORMW 
+		ELSE
+			;モンスター攻撃時に失敗
+			PRINTFORML 발정한 %암소名称%는 %상대名称%에게 커다란 가슴을 밀어붙여、그대로 쓰러뜨렸다！
+			PRINTFORM %암소名称%는
+			SETCOLOR C_PINK
+			;지유
+			PRINTFORM 「음머어…❤」
+			RESETCOLOR
+			
+			PRINTFORML 하고 우니、가슴을 밀어붙인채로 자신의 젖을 짜기 시작했다…
+			PRINTFORMW 하얀 액체가 순식간에 상대를 뒤덮어、%상대名称%에게 농후한 냄새가 배어간다…
+			PRINTFORML 
+			PRINTFORMW %상대名称%는 모유에 의해 마킹되어、제정신을 잃어버렸다…
+			PRINTFORMW 비틀비틀거리며 이쪽으로 향해온 %상대名称%는、%암소名称%의 모유에 완전히 빠져버린것같다…탐하는듯이 %암소名称%의 젖을 맛보고있다…
+			
+			;NTR
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",攻撃대상,"強奪")
+			CALL CARD_SET_CATEGORY(듀얼리스트,"필드",コントロール先,"호루스타인")
+		ENDIF
+		
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,書換先カードID,2)
+	IF RESULT == 0
+		;묘지 / 제외のカード回収
+		REPEAT 2
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲제외 = 1
+			효과条件カテゴリ  = 호루스타인
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_SELECT(듀얼리스트,RESULT)
+				PRINTL 카드를 패에 넣으시겠습니까？
+				CALL YN_CHOICE(듀얼리스트)
+
+				IF RESULT == 0
+					CALL CARD_DISPOSE(듀얼리스트,参照先（CS）,選択カード（CS）,손패行き)
+				ELSEIF RESULT == 1
+					CALL CARD_DISPOSE(듀얼리스트,参照先（CS）,選択カード（CS）,덱行き)
+				ENDIF
+			ELSE
+				BREAK
+			ENDIF
+		REND
+	ENDIF
+ELSEIF 종류 == 효과後強制誘発
+	;ドリップ状態(守備표시時、호루스타인 이외의 카드가 발동する度に搾られる)
+	
+	SETCOLOR C_PINK
+	CUSTOMDRAWLINE —
+	PRINTFORML
+	PRINTFORML %암소名称%는 드립장치에 연결되어있다…
+	PRINTFORML 
+	CUSTOMDRAWLINE —
+	RESETCOLOR
+	
+	PRINTFORML
+	PRINTFORML %암소名称%의 가슴에 붙여진 장치가 희미하게 진동하여、흘러떨어진것이 밀크서버에 쌓여간다…
+	PRINTFORML
+	
+	;1回、ねっとり鳴き、短め鳴き
+	CALL HORUSTEIN_RAND_COW_TXT(1,2,10)
+	PRINTFORML 
+	
+	;착유する(通常よりも少量)
+	CALL HORUSTEIN_GET_MILK(듀얼리스트,参照カードID,GETVAR(@"%듀얼리스트%_MZ_가슴追:場所")-5)
+	PRINTFORML 
+	
+	;乳を吸ってLP回復
+	CALL LIFE_CHANGE(듀얼리스트,"増加","효과",100)
+ENDIF

@@ -1,0 +1,123 @@
+﻿;-------------------------------------------------
+;게임을 산다
+;-------------------------------------------------
+@COM461
+	;LOCALの대신에 소환リスト機能の下で표시캐릭터を지정
+	#DIM ゲーム_入力値
+	#DIM ゲーム_ループ用
+	#DIM CONST ゲーム_秘蔵品 = 5
+
+PRINTFORML 점원「어서오세요ー」
+PRINTFORML 점원「신작게임 입하했습니다！」
+PRINTL [0] - 게임을 본다
+PRINTL [100] - 돌아간다
+INPUT
+$INPUT_LOOP1
+IF RESULT == 0
+	$INPUT_LOOP
+	FOR ゲーム_ループ用, 1, ゲーム最大数
+		SIF FINDELEMENT(ゲーム_秘蔵品, ゲーム_ループ用) >= 0
+			CONTINUE
+		SIF ゲーム所持:ゲーム_ループ用 == 1
+			SETCOLOR C_GRAY
+		PRINTFORM [{ゲーム_ループ用,3}]
+		PRINTFORML － %ゲームタイトル:ゲーム_ループ用%
+		SIF ゲーム所持:ゲーム_ループ用 == 1
+			RESETCOLOR
+	NEXT
+	FOR ゲーム_ループ用, 1, ゲーム最大数
+		SIF FINDELEMENT(ゲーム_秘蔵品, ゲーム_ループ用) == -1
+			CONTINUE
+		SIF ゲーム所持:ゲーム_ループ用 == 1
+			CONTINUE
+		SETCOLOR C_BLACK
+		PRINTFORM [{ゲーム_ループ用,3}]
+		PRINTL － ？？？
+		RESETCOLOR
+	NEXT
+
+	PRINTL
+	CUSTOMDRAWLINE —
+	PRINTBUTTON "[확인종료]", 0
+
+ELSEIF RESULT == 100
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP1
+ENDIF
+
+INPUTS
+ゲーム_入力値 = TOINT(RESULTS)
+	IF ゲーム_入力値 == 0
+		PRINTFORML 점원「감사합니다ー」
+	ELSEIF !INRANGE(ゲーム_入力値, 1, ゲーム最大数 - 1)
+		GOTO INPUT_LOOP
+	ELSEIF FINDELEMENT(ゲーム_秘蔵品, ゲーム_入力値) >= 0
+		SELECTCASE ゲーム_入力値
+		CASE 5
+			IF ゲーム所持:5 == 1
+				GOTO INPUT_LOOP
+			ELSEIF MONEY < 30000
+				PRINTFORML 점원「돈이 부족하네요！」
+			ELSE
+				PRINTFORMW 점원「……아니 이건 30000하는 비공식 2차창작게임인 환상의 마법소녀 레이 시리즈…」
+				PRINTFORMW 「므흐흐…손님 잘 찾아내셨네요…」
+				ゲーム所持:5 = 1
+				CALL MONEY_GET(-30000)
+				PRINTFORMW 점원「구입 감사합니다ー！！」
+			ENDIF
+		CASEELSE
+			GOTO INPUT_LOOP
+		ENDSELECT
+	ELSEIF ゲーム所持:ゲーム_入力値 == 1
+		GOTO INPUT_LOOP
+	ELSEIF MONEY < 8800
+		PRINTFORML 점원「돈이 부족하네요！」
+	ELSE
+		PRINTFORML 점원「1개에 세금포함 8,800円입니다！」
+		ゲーム所持:ゲーム_入力値 = 1
+		CALL MONEY_GET(-8800)
+		PRINTFORMW 점원「구입 감사합니다ー！！」
+	ENDIF
+PRINTL ＊산 게임은 자기방의 【게임을 한다】커맨드에서 고를 수 있습니다
+TIME += 15
+RETURN 1
+
+
+
+
+@CAN_COM461(ARG)
+#DIM DYNAMIC 時間外
+SKIPDISP ARG
+
+IF TIME < 600
+	PRINTFORMW 아직 열지 않은것 같다、10시에 다시 오자
+	時間外 = 1
+ELSEIF TIME > 1260
+	PRINTFORMW 오늘은 이미 영업 종료한 것 같다、내일 다시 오자
+	時間外 = 1
+ENDIF
+SKIPDISP 0
+
+SIF 時間外
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;게임을 산다
+@COM_ABLE461
+;一括관리
+SIF GLOBAL_COMABLE(461)
+	RETURN RESULT
+SIF CFLAG:MASTER:현재위치 != 場所_繁華街
+	RETURN 0
+SIF TIME < 600
+	RETURN 0
+SIF TIME > 1200
+	RETURN 0
+;수면中
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

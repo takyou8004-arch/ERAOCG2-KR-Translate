@@ -1,0 +1,134 @@
+﻿@CARDNAME_57313,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 바하무트 샤크
+	CASE "略称"
+RESULTS = 바하무트 상어
+	CASE "カテゴリ"
+RESULTS:0 = 샤크
+ENDSELECT
+
+
+@CARD_57313(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 2100
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_57313(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+素材条件속성 = 물속성
+
+;추가효과用
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,57313) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_57313(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 물 속성 레벨 4 몬스터 2장
+CALL CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 이 카드의 X 소재를 1개 제거하고 발동할 수 있다.
+PRINTL EX덱에서 랭크 3 이하의 물 속성 X 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 이 카드는 공격할 수 없다.
+
+@CARDCAN_57313(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57313)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 엑시즈
+	효과条件속성 = 물속성
+	CALLFORM 효과条件レベル_ADV(3,"以下")
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_57313(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57313,10,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종류 = 엑시즈
+		효과条件속성 = 물속성
+		CALL 효과条件レベル_ADV(3, "以下")
+		효과条件特不無視 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無",1)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,177 @@
+﻿@CARDNAME_2176,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = M∀LICE＜Q＞RED RANSOM
+	CASE "略称"
+		RESULTS = RED RANSOM
+	CASE "カテゴリ"
+		RESULTS:0 = 멜리스
+ENDSELECT
+
+
+@CARD_2176(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 900
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_2176(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "M∀LICE" 몬스터를 포함하는 몬스터 2장 이상
+PRINTL 이 카드명의 ①③의 효과는 각각 1턴에 1번 밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：이 카드가 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 덱으로 부터 "M∀LICE" 마법 카드 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(2,攻守変動)
+PRINTL ②：자신 필드에 다른 몬스터가 존재하는 한,
+PRINTL 상대 필드의 효과 몬스터의 공격력과 수비력은 바뀐다.
+CALLFORM CARD_ABLE(3,제외時)
+PRINTL ③：이 카드가 제외 되었을 900 LP를 지불하고 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+PRINTL 그 후, 덱으로부터 사이버스 몬스터 1장을 제외할 수 있다.
+
+
+@CARDSUMMON_2176(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 3
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 멜리스
+ENDIF
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,2176) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDSUMMON_AA_2176
+
+
+@CARDCAN_2176(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2176)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,2176)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 멜리스
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 제외時
+	SIF 발동済_3(듀얼리스트,2176)
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 900
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,2176,"제외")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2176(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 元攻撃力
+#DIM DYNAMIC 元守備力
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2176,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 멜리스
+		효과条件종류 = 마법全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%対面者%_필드:{カウンタ}") == -1
+			CONTINUE
+		SIF GETVAR(@"%対面者%_필드:{カウンタ}") == -1
+			CONTINUE
+		元攻撃力 = GETVAR(@"%対面者%_MZ_攻:カウンタ")
+		元守備力 = GETVAR(@"%対面者%_MZ_守:カウンタ")
+		CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"攻",元守備力,上書きモード)
+		CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"守",元攻撃力,上書きモード)
+	NEXT
+ELSEIF 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,"제외",場所,2176,3)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",900)
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件名前 = M∀LICE＜Q＞RED RANSOM
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件行先플래그 = 제외行き
+		효과条件종족 = 사이버스족
+		효과条件任意 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

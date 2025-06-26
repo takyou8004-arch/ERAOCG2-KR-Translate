@@ -1,0 +1,123 @@
+﻿@CARDNAME_61052,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 히스테릭 사인
+	CASE "略称"
+		RESULTS = 히스테릭 S
+	CASE "カテゴリ"
+		RESULTS:0 = 해피
+ENDSELECT
+
+
+@CARD_61052(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61052(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  ①②의 효과는 １턴에 １번、어느 쪽이든 １개밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：이 카드의 발동시의 효과 처리로서、자신의 덱 / 묘지에서 "만화경－화려한 분신－" １장을 골라 패에 넣는다。
+CALLFORM CARD_ABLE(2,필드→묘지,손패→묘지 ,덱→묘지,破壊→묘지,戦闘→묘지)
+PRINTL ②：이 카드가 패 / 필드에서 묘지로 보내진 경우에 발동할 수 있다。
+PRINTL 이 턴의 엔드 페이즈에、덱에서 "해피" 카드를 ３장까지 패에 넣는다。
+
+
+@CARDCAN_61052(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61052)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,61052)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,61052)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+
+	RETURN 1
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_1(듀얼리스트,61052)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,61052)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 해피
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_61052(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 속성数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61052,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件名前 = 만화경－화려한 분신－
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61052,2)
+	IF RESULT == 0
+		CALL CARD_RESERV(듀얼리스트,61052)
+	ENDIF
+
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과条件カテゴリ = 해피
+	효과条件複数 = 97
+	효과条件任意 = 1
+	CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+ENDIF

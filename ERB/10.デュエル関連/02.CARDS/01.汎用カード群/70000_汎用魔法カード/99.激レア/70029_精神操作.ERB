@@ -1,0 +1,90 @@
+﻿@CARDNAME_70029,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 정신 조작
+	CASE "略称"
+RESULTS = 정신 조작
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_70029(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_70029(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①: 상대 필드의 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터의 컨트롤을 엔드 페이즈까지 얻는다.
+PRINTL 이 효과로 컨트롤을 얻은 몬스터는 공격 선언할 수 없고, 릴리스할 수 없다.
+SETCOLOR C_D_GRAY
+PRINTL 또한, 이 카드로 컨트롤을 얻은 몬스터는….
+RESETCOLOR
+PRINTL 
+
+@CARDCAN_70029(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,70029)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_70029(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70029)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과추가종류:0 = 5
+		효과추가종류:1 = 21
+		효과추가종류:2 = 6
+		효과추가종류:3 = 695
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+	ENDIF
+ENDIF

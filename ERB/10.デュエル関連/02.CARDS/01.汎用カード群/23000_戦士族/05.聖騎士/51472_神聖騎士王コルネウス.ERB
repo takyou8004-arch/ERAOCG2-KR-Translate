@@ -1,0 +1,167 @@
+@CARDNAME_51472,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신성기사왕 코르네우스
+	CASE "略称"
+RESULTS = 신성 코르네우스
+	CASE "カテゴリ"
+RESULTS:0 = 성기사
+ENDSELECT
+
+
+@CARD_51472(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_51472(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件レベル = 4
+素材条件カテゴリ = 성기사
+素材条件数自由 = 1
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51472) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_51472(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 "성기사" 몬스터 × 2장 이상
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 이 카드의 엑시즈 소재를 임의의 수만큼 제거하고,
+PRINTL 그 수만큼 상대 필드의 카드를 대상으로 하여 발동할 수 있다. 그 카드를 주인의 패로 되돌린다.
+CALLFORM CARD_ABLE(2,破壊→묘지 ,戦闘→묘지)
+PRINTL ②: 이 카드가 전투 효과로 파괴되어 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 엑스트라 덱에서 이 카드명 이외의 "성기사" 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과로 엑시즈 몬스터를 특수 소환했을 경우, 그 엑시즈 소재를 1개 늘린다.
+
+
+@CARDCAN_51472(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51472)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,51472)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_2(듀얼리스트,51472)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 성기사
+	효과条件固名前 = 신성기사왕 코르네우스
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51472(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 消費制限
+#DIM DYNAMIC X消費
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51472,1)
+	IF RESULT == 0
+		消費制限 = 1 + GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所")
+		PRINTFORML 取り除くX素材の数を入力してください(1～{消費制限})
+		SIF 듀얼리스트 == "자신"
+			INPUT 
+		X消費 = RESULT
+		SIF RESULT == 0
+			X消費 = 1
+		SIF RESULT > 消費制限
+			X消費 = 消費制限
+		PRINTFORML X소재를 {X消費}取り除きます。	
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",-X消費)
+
+		CALL FULLRESET
+		효과条件複数 = 100 - X消費
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"손패")
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51472,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 성기사
+		효과条件固名前 = 신성기사왕 코르네우스
+		효과추가종류 = 40000
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

@@ -1,0 +1,159 @@
+﻿@CARDNAME_38251,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 요정포 스포어
+	CASE "略称"
+RESULTS = 요정포 스포어
+	CASE "カテゴリ"
+RESULTS:0 = 페어리
+ENDSELECT
+
+
+@CARD_38251(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 400
+	CASE "守備力"
+		RETURN 800
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250322
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_38251(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드명은 룰 상 「페어리」 카드로서도 취급한다.
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,특수소환時)
+PRINTL ①: 이 카드가 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 이 카드의 레벨을 자신 필드의 몬스터의 수까지 올린다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 이 카드가 묘지에 존재하고, 자신 필드에 「앤션트 페어리 드래곤」
+PRINTL 또는 야수족 식물족 천사족의 빛 속성 몬스터가 존재할 경우에 발동할 수 있다. 이 카드를 특수 소환한다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 싱크로 몬스터밖에 엑스트라 덱에서 특수 소환할 수 없다.
+
+@CARDSUMMON_AA_38251
+
+
+@CARDCAN_38251(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38251)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 특수소환時
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,38251)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 빛속성
+	효과条件종족:0 = 야수족
+	효과条件종족:1 = 식물족
+	효과条件종족:2 = 천사족
+	효과条件スーパー名前 = エンシェント 페어리 드래곤
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_38251(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択レベル
+#DIM DYNAMIC 条件合致数
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38251,1)
+	IF RESULT == 0
+		;자신 필드의 モンスター数をカウントしてその数まで자신의 レベルを上げる選択肢を作る。
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = モン全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		条件合致数 = RESULT+1
+		;下のforル-プの終了条件の調整で+1加算
+		
+		;PRINTFORMW モンスター数：{条件合致数}
+		IF 듀얼리스트 == "자신"
+			CUSTOMDRAWLINE -
+PRINTL 몬스터의 레벨을 얼마나 올리겠습니까?
+			CUSTOMDRAWLINE -
+PRINTL [0] - 상승시키지 않는다.
+			FOR カウンタ,1,条件合致数
+				PRINTFORML [{カウンタ}] - {カウンタ}レベル상승させる。
+			NEXT
+			BINPUT
+			選択レベル = RESULT
+			IF 選択レベル != 0
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星",選択レベル)
+				PRINTFORMW 妖精胞スポ-アのレベルを{選択レベル}상승させました。
+			ELSE
+				PRINTFORMW レベルを상승させませんでした。
+			ENDIF
+		ELSE
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星",条件合致数-1)
+			PRINTFORMW 妖精胞スポ-アのレベルを{選択レベル}상승させました。
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38251,2)
+	IF RESULT == 0
+		;묘지から自己蘇生
+		CALL CARD_SP_SUMMON(듀얼리스트, "묘지", 場所)
+		
+		;EX소환縛り（싱크로）
+		EX소환可能종류 = 싱크로
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+		
+	ENDIF
+ENDIF
+
+

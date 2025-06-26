@@ -1,0 +1,153 @@
+﻿@CARDNAME_21254,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 용검사 다이너마이트 파워 로드
+	CASE "略称"
+RESULTS = 다이너마이트 P
+	CASE "カテゴリ"
+RESULTS:0 = 용검사
+RESULTS:1 = 다이너미스트
+ENDSELECT
+
+
+@CARD_21254(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 雄性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_21254(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 P(펜듈럼) 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 이 카드 이외의 자신 마법 & 함정 존의 "용검사" 또는 "다이너미스트" P(펜듈럼) 카드 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 카드를 특수 소환한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 카드명의 몬스터 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(2,필드→묘지)
+PRINTL ①: 이 카드가 릴리스되었을 경우에 발동할 수 있다.
+PRINTL 자신 EX(엑스트라) 덱에서 "용검사 다이너마이트 P" 이외의, EX(엑스트라) 몬스터 이외의 "용검사" 또는 "다이너미스트" P(펜듈럼) 몬스터 1장을 패에 넣는다.
+PRINTL EXモンスター 이외의 「룡검사」または「다이너미스트」Pモンスター１体を손패に加える。
+
+@CARDSUMMON_AA_21254
+
+
+@CARDCAN_21254(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21254)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,21254)
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件カテゴリ:0 = 룡검사
+	효과条件カテゴリ:1 = 다이너미스트
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드→묘지
+	SIF 발동済_2(듀얼리스트,21254)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件分割 = 펜듈럼
+	효과条件カテゴリ:0 = 룡검사
+	효과条件カテゴリ:1 = 다이너미스트
+	효과条件종류 = EX以外全般
+	효과条件固名前 = 용검사 다이너마이트 파워 로드
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_21254(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カード名前
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21254)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21254,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件分割 = 펜듈럼
+		효과条件カテゴリ:0 = 룡검사
+		효과条件カテゴリ:1 = 다이너미스트
+		효과条件他所 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21254,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件分割 = 펜듈럼
+		효과条件カテゴリ:0 = 룡검사
+		효과条件カテゴリ:1 = 다이너미스트
+		효과条件종류 = EX以外全般
+		효과条件固名前 = 용검사 다이너마이트 파워 로드
+		CALL CARD_ADD_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+	ENDIF
+ENDIF
+

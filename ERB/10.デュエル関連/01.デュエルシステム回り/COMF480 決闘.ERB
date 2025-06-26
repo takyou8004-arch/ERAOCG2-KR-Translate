@@ -1,0 +1,144 @@
+;-------------------------------------------------
+;デュエルを始める！
+;-------------------------------------------------
+@COM480
+;デュエル形式：0 = 通常, 1 = オンライン,
+#DIM DYNAMIC 듀얼_デュエル形式
+#DIM DYNAMIC デュエル結果
+#DIM DYNAMIC ターゲット보존,9999
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択モード
+#DIM DYNAMIC LTARGET,1000
+#DIM DYNAMIC LTARGETNUM
+#DIM DYNAMIC 事後カード化
+#DIM DYNAMIC 패배のロストバージン
+
+
+
+패배のロストバージン = 0
+
+VARSET 賭け内容		
+
+$INPUT_RETURN
+CUSTOMDRAWLINE —
+PRINTFORML 듀얼을 시작합니다。
+CUSTOMDRAWLINE —
+
+PRINTL 
+IF TARGET > 0
+	PRINTL 　　[0] - 듀얼개시！
+	PRINTL 
+	SIF CFLAG:TARGET:내기플래그 == 0
+		PRINTL 　　[3] - 내기 듀얼을 신청한다
+ENDIF
+PRINTL 
+IF CFLAG:MASTER:현재위치 == 8
+	PRINTL 　　[2] - 온라인 듀얼 개시(연습)
+	PRINTL 
+	PRINTL 　　[4] - 온라인 레이팅 매치
+	PRINTFORML 　　　　현재 온라인 레이트:{オンラインレート}
+ENDIF
+PRINTL 
+CUSTOMDRAWLINE —
+PRINTL 　[90] - 덱을 편집한다
+CUSTOMDRAWLINE —
+
+PRINT 　[99] - 듀얼 타입 설정
+SELECTCASE デュエル타입
+CASE 0
+	PRINTL [스탠다드 룰]
+CASE 1
+	PRINTL [스피드 룰:LP 4000]
+CASE 2
+	PRINTL [간이 듀얼：가위바위보]
+ENDSELECT
+PRINTL 
+IF CFLAG:MASTER:현재위치 == 8
+	PRINT 　[98] - 연습으로 선공 플래그
+	SELECTCASE 先攻플래그설정
+	CASE 0
+		PRINTL [랜덤]
+	CASE 1
+		PRINTL [후공]
+	CASE 2
+		PRINTL [선공]
+	ENDSELECT
+ENDIF
+PRINTL 
+;SIF デバッグシステム
+PRINTL [100] - 그만둔다
+
+BINPUT
+選択モード = RESULT
+IF INRANGE(選択モード,0,5)
+	IF GROUPMATCH(選択モード,0,3) && BASE:TARGET:기력 <= 300
+		PRINTFORMW %CALLNAME:TARGET%는 지쳐서 듀얼은 거절하는듯 하다。
+		GOTO INPUT_RETURN
+	ENDIF
+
+	CALL DUEL_STANDBY(選択モード)
+
+	デュエル結果 = RESULT
+	IF デュエル結果 == 0
+		TFLAG:SELECTCOM분기 = 0
+		RETURN 0
+	ENDIF
+ELSEIF RESULT == 90
+	CALL EDIT_DECK_EX
+	GOTO INPUT_RETURN
+ELSEIF RESULT == 98
+	PRINTL 선공의 설정
+	PRINTL [2] - 항상 선공
+	PRINTL [1] - 항상 후공
+	PRINTL [0] - 랜덤
+	BINPUT
+	先攻플래그설정 = RESULT
+	GOTO INPUT_RETURN
+ELSEIF RESULT == 99
+	PRINTL 듀얼타입의 설정
+	PRINTL [0] - OCG에 가까운 룰（LP8000스타트）
+	PRINTL [1] - 스피드 듀얼에 가까운 룰（LP4000스타트）
+	PRINTL [2] - 간이 룰（가위바위보 듀얼）
+	BINPUT
+	デュエル타입 = RESULT
+	GOTO INPUT_RETURN
+ELSEIF 選択モード == 100
+	TFLAG:SELECTCOM분기 = 0
+	RETURN 0
+ENDIF
+TFLAG:SELECTCOM분기 = デュエル結果
+TIME += 30
+SELECTCOM = 480
+TFLAG:SELECTCOM보존 = SELECTCOM
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+
+
+;듀얼！
+@COM_ABLE480
+;대화実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(480)
+	RETURN RESULT
+SIF CFLAG:MASTER:현재위치 == 8 && CFLAG:우후후 == 0
+	RETURN 1
+SIF !TARGET > 0
+	RETURN 0
+;수면中
+SIF CFLAG:수면
+	RETURN 0
+
+SIF BASE:TARGET:기력 <= 300
+	RETURN 0
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

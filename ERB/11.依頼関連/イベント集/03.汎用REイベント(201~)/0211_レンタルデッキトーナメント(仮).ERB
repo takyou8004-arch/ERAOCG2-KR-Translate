@@ -1,0 +1,516 @@
+@IRAI_EVENT_211(参照先)
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = 렌탈덱 토너먼트(Test)
+	CASE "이벤트種"
+		RETURN 이벤트_ＲＥ
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL テスト用
+		PRINTL 무작위로 提示される三종류の덱에서 ひとつ
+		PRINTL レンタル덱を選んでデュエルしよう
+		SETCOLOR C_YELLOW
+		PRINTL ３連戦＋덱持ち込み・변경불가！
+			RESETCOLOR
+		PRINTL 
+	CASE "条件"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_211(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 出場番号
+#DIM DYNAMIC 大会ランク; 0=初級、1=中級、2=上級、3=最上級
+#DIM DYNAMIC 勝利数
+#DIM DYNAMIC 勝敗枠
+#DIM DYNAMIC 破者枠
+
+PRINTFORMW 大会のランクを選んで下さい
+PRINTL
+PRINTL [0] - 初級
+PRINTL [1] - 中級
+PRINTL [2] - 上級
+PRINTL [3] - 最上級
+BINPUT
+大会ランク = RESULT
+PRINTFORML
+PRINTFORML
+PRINTFORMW トーナメントを開始します
+破者枠 = RAND:4 + 4
+CALL SET_RANDOM_TOURNAMENT(大会ランク)
+PRINTFORMW 대상表を構築します
+CALL SET_RANDOM_TOURNAMENT_HYOU(勝利数)
+PRINTFORMW 一回戦を開始します
+;一回戦듀얼
+CALL SET_NEXT_OPP_RANDOM_TOURNAMENT(勝利数)
+依頼_덱편집불가 = 1
+CALL CHOICE_DUEL_TYPE(211,1)
+IF RESULT != 1;負け	
+	RETURN 3
+ENDIF
+勝利数 ++ 
+大会대상結果:0 = 勝利数
+FOR カウンタ,1,4
+	勝敗枠 = カウンタ * 2
+	IF INRANGE(破者枠, 4,5) && カウンタ == 2
+		大会대상結果:破者枠 = 勝利数
+		CONTINUE
+	ELSEIF INRANGE(破者枠, 6,7) && カウンタ == 3
+		大会대상結果:破者枠 = 勝利数
+		CONTINUE
+	ENDIF
+	IF RAND:2
+		大会대상結果:勝敗枠 = 勝利数
+	ELSE
+		大会대상結果:(勝敗枠 + 1) = 勝利数
+	ENDIF
+NEXT
+;次の대상상대설정
+PRINTFORMW 一回戦の結果を표시します
+CALL SET_RANDOM_TOURNAMENT_HYOU(勝利数)
+PRINTFORMW 二回戦を開始します
+;二回戦듀얼
+CALL SET_NEXT_OPP_RANDOM_TOURNAMENT(勝利数)
+CALL CHOICE_DUEL_TYPE(211,1)
+IF RESULT != 1
+	;負け
+	RETURN 3
+ENDIF
+;勝ち
+PRINTFORML
+勝利数 ++
+大会대상結果:0 = 勝利数
+大会대상結果:破者枠 = 勝利数
+PRINTFORMW 二回戦の結果を표시します
+CALL SET_RANDOM_TOURNAMENT_HYOU(勝利数)
+PRINTFORMW 決勝戦を開始します
+;決勝戦듀얼
+CALL SET_NEXT_OPP_RANDOM_TOURNAMENT(勝利数)
+CALL CHOICE_DUEL_TYPE(211,1)
+IF RESULT != 1
+	;負け
+	RETURN 3
+ENDIF
+;勝ち
+勝利数 ++
+大会대상結果:0 = 勝利数
+PRINTFORMW 決勝戦の結果を표시します
+CALL SET_RANDOM_TOURNAMENT_HYOU(勝利数)
+
+;終了
+RETURN 2
+
+
+@IRAI_DECK_211(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+SIF 듀얼리스트 == "자신"
+	RETURN トーナメント자신덱
+SIF 듀얼리스트 == "상대"
+	RETURN トーナメント상대덱
+
+RETURN 0
+
+@SET_RANDOM_TOURNAMENT(大会ランク)
+#DIMS DYNAMIC 덱名
+#DIM DYNAMIC 大会ランク
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 덱候補,10
+#DIM 덱_ID
+#DIM 選択덱
+;대상表の作成
+;作成中に分かりやすく全部手打ちでやってるけど、FOR使った方がいいかも知れません
+;Aブロック
+;頭はプレイヤー固定
+대상枠:0 = MASTER
+;덱はどのタイミングで選ばせるか要相談
+;事前に덱を選ぶならその専用処理を用意する必要があるかも
+대상枠:0 = MASTER
+VARSET 大会대상結果, 0
+
+VARSET 대상枠, -1
+VARSET 대상상대덱, -1
+;大会ランクによって名アリの캐릭터登場タイミングを分散
+IF 大会ランク >= 3
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(1,대상枠,1)
+	대상枠:1 = RESULT
+	CALL ENEMYDECK_CHECK(RESULT)
+	대상상대덱:1 = RESULT
+	TRYCALLFORM DUELDECK_{대상상대덱:1}("存在確認")
+	IF RESULT != 1
+		CALL RANDOM_TOURNAMENT_OPP_ENTRY(1,대상枠,0)
+		대상상대덱:1 = RESULT
+	ENDIF
+ELSE
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(1,대상枠,0)
+	대상枠:1 = -1
+	대상상대덱:1 = RESULT
+ENDIF
+IF 大会ランク >= 3
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(2,대상枠,1)
+	대상枠:2 = RESULT
+	CALL ENEMYDECK_CHECK(RESULT)
+	대상상대덱:2 = RESULT
+	TRYCALLFORM DUELDECK_{대상상대덱:2}("存在確認")
+	IF RESULT != 1
+		CALL RANDOM_TOURNAMENT_OPP_ENTRY(2,대상枠,0)
+		대상상대덱:2 = RESULT
+	ENDIF
+ELSE
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(2,대상枠,0)
+	대상枠:2 = -1
+	대상상대덱:2 = RESULT
+ENDIF
+IF 大会ランク >= 2
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(3,대상枠,1)
+	대상枠:3 = RESULT
+	CALL ENEMYDECK_CHECK(RESULT)
+	대상상대덱:3 = RESULT
+	TRYCALLFORM DUELDECK_{대상상대덱:3}("存在確認")
+	IF RESULT != 1
+		CALL RANDOM_TOURNAMENT_OPP_ENTRY(3,대상枠,0)
+		대상상대덱:3 = RESULT
+	ENDIF
+ELSE
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(3,대상枠,0)
+	대상枠:3 = -1
+	대상상대덱:3 = RESULT
+ENDIF
+;Bブロック
+IF 大会ランク >= 2
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(4,대상枠,1)
+	대상枠:4 = RESULT
+	CALL ENEMYDECK_CHECK(RESULT)
+	대상상대덱:4 = RESULT
+	TRYCALLFORM DUELDECK_{대상상대덱:4}("存在確認")
+	IF RESULT != 1
+		CALL RANDOM_TOURNAMENT_OPP_ENTRY(4,대상枠,0)
+		대상상대덱:4 = RESULT
+	ENDIF
+ELSE
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(4,대상枠,0)
+	대상枠:4 = -1
+	대상상대덱:4 = RESULT
+ENDIF
+IF 大会ランク >= 1
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(5,대상枠,1)
+	대상枠:5 = RESULT
+	CALL ENEMYDECK_CHECK(RESULT)
+	대상상대덱:5 = RESULT
+	TRYCALLFORM DUELDECK_{대상상대덱:5}("存在確認")
+	IF RESULT != 1
+		CALL RANDOM_TOURNAMENT_OPP_ENTRY(5,대상枠,0)
+		대상상대덱:5 = RESULT
+	ENDIF
+ELSE
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(5,대상枠,0)
+	대상枠:5 = -1
+	대상상대덱:5 = RESULT
+ENDIF
+IF 大会ランク >= 2
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(6,대상枠,1)
+	대상枠:6 = RESULT
+	CALL ENEMYDECK_CHECK(RESULT)
+	대상상대덱:6 = RESULT
+	TRYCALLFORM DUELDECK_{대상상대덱:6}("存在確認")
+	IF RESULT != 1
+		CALL RANDOM_TOURNAMENT_OPP_ENTRY(6,대상枠,0)
+		대상상대덱:6 = RESULT
+	ENDIF
+ELSE
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(6,대상枠,0)
+	대상枠:6 = -1
+	대상상대덱:6 = RESULT
+ENDIF
+
+IF 大会ランク >= 1
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(7,대상枠,1)
+	대상枠:7 = RESULT
+	CALL ENEMYDECK_CHECK(RESULT)
+	대상상대덱:7 = RESULT
+	TRYCALLFORM DUELDECK_{대상상대덱:7}("存在確認")
+	IF RESULT != 1
+		CALL RANDOM_TOURNAMENT_OPP_ENTRY(7,대상枠,0)
+		대상상대덱:7 = RESULT
+	ENDIF
+ELSE
+	CALL RANDOM_TOURNAMENT_OPP_ENTRY(7,대상枠,0)
+	대상枠:7 = -1
+	대상상대덱:7 = RESULT
+ENDIF
+
+PRINTFORMW レンタルする덱を골라주세요
+PRINTFORML 
+;캐릭터덱の中から무작위로 三종류提示
+FOR カウンタ,0,3
+	$INPUT_LOOP3
+	RESULT = 0
+	덱候補:カウンタ = RAND:5000
+	;被り防止
+	IF カウンタ >= 1
+		SIF 덱候補:カウンタ == 덱候補:(カウンタ - 1)
+			GOTO INPUT_LOOP3
+			IF カウンタ >= 2
+				SIF 덱候補:カウンタ == 덱候補:(カウンタ - 2)
+					GOTO INPUT_LOOP3
+			ENDIF
+	ENDIF
+	TRYCALLFORM DUELDECK_{덱候補:カウンタ}("存在確認")
+	IF RESULT != 1
+		GOTO INPUT_LOOP3
+	ENDIF
+NEXT
+$DECK_CHOICE
+PRINTL
+FOR カウンタ,0,3
+	TRYCALLFORM DUELDECK_{덱候補:カウンタ}("存在確認")
+	IF RESULT == 1
+		덱名 = 【%RESULTS%】
+		PRINTFORM [{덱候補:カウンタ}] - %덱名%
+		PRINTL
+	ENDIF 
+NEXT
+BINPUT
+選択덱 = RESULT
+CALL CARD_DECK_CHECK(選択덱,3)
+IF RESULT == 0
+	トーナメント자신덱 = 選択덱
+	連戦덱 = 選択덱
+ELSEIF RESULT == 1
+	GOTO DECK_CHOICE
+ENDIF
+
+
+@RANDOM_TOURNAMENT_OPP_ENTRY(出場番号,대상상대,모브스위치)
+#DIM DYNAMIC 出場番号
+#DIM DYNAMIC 대상상대
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 캐릭터数
+#DIM DYNAMIC 상대덱
+#DIM DYNAMIC 모브스위치
+#DIM DYNAMIC 듀얼리스트캐릭터, 10000
+
+;모브じゃないなら캐릭터から選別
+IF 모브스위치 != 0
+	FOR 캐릭터_ID,1,CHARANUM
+		SIF TALENT:캐릭터_ID:듀얼리스트 != 1
+			CONTINUE
+		듀얼리스트캐릭터:캐릭터数 = 캐릭터_ID
+		캐릭터数 ++
+	NEXT
+	$INPUT_LOOP
+	대상상대 = RAND:캐릭터数
+	SIF MATCH(대상상대,대상枠)
+		GOTO INPUT_LOOP
+	RETURN 듀얼리스트캐릭터:대상상대
+;모브なら무작위로 덱選別
+ELSEIF 모브스위치 == 0
+	$INPUT_LOOP2
+	IF RAND:20
+		상대덱 = RAND:27 + 10000
+	ELSE
+		상대덱 = RAND:5000
+	ENDIF
+	TRYCALLFORM DUELDECK_{상대덱}("存在確認")
+	IF RESULT == 1
+		;PRINTFORML 대상상대덱:{出場番号+1} : {대상상대덱}
+		RETURN 상대덱
+	ELSE
+		GOTO INPUT_LOOP2
+	ENDIF
+ENDIF
+
+@SET_RANDOM_TOURNAMENT_HYOU(勝利数,敗者제외)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 勝利数
+#DIM DYNAMIC 敗者제외
+#DIMS DYNAMIC 설정표시
+#DIMS DYNAMIC 설정名前
+FOR カウンタ,0,8
+	IF 敗者제외 == 1
+		SIF 大会대상結果:カウンタ != 勝利数
+			CONTINUE
+	ENDIF
+	IF カウンタ == 0
+		PRINTFORM -「%NAME:MASTER%」-
+		PRINTL
+		IF 連戦덱 <= 50
+			IF 마이덱名:連戦덱 != ""
+				설정표시 = 【%마이덱名:連戦덱%】
+			ELSE
+				설정표시 = 【마이덱({連戦덱})】
+			ENDIF
+			SUBSTRING 설정표시, 0, 20
+		ELSE
+			TRYCALLFORM DUELDECK_{連戦덱}("存在確認")
+			SUBSTRING RESULTS, 0, 20
+		ENDIF
+		설정표시 = 【%RESULTS%】
+		PRINTFORM %설정표시,24%
+	ELSE
+		IF 勝利数 >= 1
+			SIF 大会대상結果:カウンタ != 勝利数
+				SETCOLOR C_GRAY
+		ENDIF
+		IF 대상枠:カウンタ == -1
+			PRINTFORM %"「名無し」",26,LEFT%
+		ELSE
+			설정名前 = -「 %CALLNAME:(대상枠:カウンタ)%」-
+			SUBSTRING 설정名前, 0, 26
+			PRINTFORM %설정名前,26,LEFT%
+		ENDIF
+		RESETCOLOR
+		SELECTCASE カウンタB
+		CASE 1, 5
+			IF カウンタB == 5
+				IF 勝利数 >= 1
+					SIF 大会대상結果:4 != 勝利数 && 大会대상結果:5 != 勝利数
+						SETCOLOR C_GRAY
+				ENDIF
+			ENDIF
+			PRINTFORM ├─┐
+			RESETCOLOR
+		CASE 3, 7
+			IF カウンタB == 3
+				IF 勝利数 >= 1
+					SIF 大会대상結果:2 != 勝利数 && 大会대상結果:3 != 勝利数
+						SETCOLOR C_GRAY
+				ENDIF
+			ELSEIF カウンタB == 7
+				IF 勝利数 >= 1
+					SIF 大会대상結果:6 != 勝利数 && 大会대상結果:7 != 勝利数
+						SETCOLOR C_GRAY
+				ENDIF
+			ENDIF
+			PRINTFORM ├─┘
+			RESETCOLOR
+		CASE 2
+			PRINTFORM %"",4,LEFT%├─┐		
+		CASE 6
+			IF 勝利数 >= 1
+				SIF 大会대상結果:4 != 勝利数 && 大会대상結果:5 != 勝利数 && 大会대상結果:6 != 勝利数 && 大会대상結果:7 != 勝利数
+					SETCOLOR C_GRAY
+			ENDIF
+			PRINTFORM %"",4,LEFT%├─┘
+			RESETCOLOR
+		ENDSELECT
+		SELECTCASE カウンタB
+		CASE 3, 5
+			IF カウンタB == 5
+				IF 勝利数 >= 1
+					SIF 大会대상結果:4 != 勝利数 && 大会대상結果:5 != 勝利数 && 大会대상結果:6 != 勝利数 && 大会대상結果:7 != 勝利数
+						SETCOLOR C_GRAY
+				ENDIF
+			ENDIF
+			PRINTFORM %"",2,LEFT%│
+		CASE 4
+			IF 勝利数 < 3
+				PRINTFORM %"",8,LEFT%├ 　ＶＩＣＴＯＲＹ
+			ELSE
+				PRINTFORM %"",8,LEFT%├ 👑ＶＩＣＴＯＲＹ👑
+			ENDIF
+		ENDSELECT
+
+
+		PRINTL
+		IF 勝利数 >= 1
+			SIF 大会대상結果:カウンタ != 勝利数
+				SETCOLOR C_GRAY
+		ENDIF
+		TRYCALLFORM DUELDECK_{대상상대덱:カウンタ}("存在確認")
+		SUBSTRING RESULTS, 0, 20
+		설정표시 = 【%RESULTS%】
+		PRINTFORM %설정표시,24%
+		RESETCOLOR
+	ENDIF
+
+	SELECTCASE カウンタB
+	CASE 0, 2, 4, 6, 8
+		IF 勝利数 >= 1
+			SIF 大会대상結果:カウンタ != 勝利数
+				SETCOLOR C_GRAY
+		ENDIF
+		PRINTFORM ─┐
+		RESETCOLOR
+	CASEELSE
+		IF 勝利数 >= 1
+			SIF 大会대상結果:カウンタ != 勝利数
+				SETCOLOR C_GRAY
+		ENDIF
+		PRINTFORM ─┘
+		RESETCOLOR
+	ENDSELECT
+	SELECTCASE カウンタB
+	CASE 1, 2, 5, 6
+		IF カウンタB == 2
+			IF 勝利数 >= 1
+				SIF 大会대상結果:2 != 勝利数 && 大会대상結果:3 != 勝利数
+					SETCOLOR C_GRAY
+			ENDIF
+		ELSEIF カウンタB == 5
+			IF 勝利数 >= 1
+				SIF 大会대상結果:4 != 勝利数 && 大会대상結果:5 != 勝利数
+					SETCOLOR C_GRAY
+			ENDIF
+		ELSEIF カウンタB == 6
+			IF 勝利数 >= 1
+				SIF 大会대상結果:6 != 勝利数 && 大会대상結果:7 != 勝利数
+					SETCOLOR C_GRAY
+			ENDIF
+		ENDIF
+		PRINTFORM %"",2,LEFT%│
+		RESETCOLOR
+	ENDSELECT
+	
+	;一番外側
+	SELECTCASE カウンタB
+	CASE 2, 5
+		IF カウンタB == 5
+			IF 勝利数 >= 1
+				SIF 大会대상結果:4 != 勝利数 && 大会대상結果:5 != 勝利数 && 大会대상結果:6 != 勝利数 && 大会대상結果:7 != 勝利数
+					SETCOLOR C_GRAY
+			ENDIF
+		ENDIF
+		PRINTFORM %"",2,LEFT%│
+	CASE 3, 4
+		IF カウンタB == 4
+			IF 勝利数 >= 1
+				SIF 大会대상結果:4 != 勝利数 && 大会대상結果:5 != 勝利数 && 大会대상結果:6 != 勝利数 && 大会대상結果:7 != 勝利数
+					SETCOLOR C_GRAY
+			ENDIF
+		ENDIF
+		PRINTFORM %"",6,LEFT%│
+	ENDSELECT
+	PRINTL
+	RESETCOLOR
+	カウンタB ++
+NEXT
+PRINTL
+CUSTOMDRAWLINE —
+WAIT
+
+@SET_NEXT_OPP_RANDOM_TOURNAMENT(勝利数)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 勝利数
+
+FOR カウンタ,1,8
+	SIF 大会대상結果:カウンタ != 勝利数
+		CONTINUE
+	TARGET = 대상枠:カウンタ
+	トーナメント상대덱 = 대상상대덱:カウンタ
+	IF TARGET > 0
+		SIF CFLAG:TARGET:면식 == 0
+			CALL SYOTAIMEN(TARGET)
+	ENDIF
+	RETURN 
+NEXT

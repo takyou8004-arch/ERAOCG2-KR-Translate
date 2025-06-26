@@ -1,0 +1,157 @@
+﻿@CARDNAME_73410,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 사이버넷 코덱
+	CASE "略称"
+RESULTS = 사이넷 코덱
+	CASE "カテゴリ"
+RESULTS:0 = 사이버넷
+ENDSELECT
+
+
+@CARD_73410(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73410(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드는 1턴에 1번밖에 발동할 수 없다.
+PRINTL ①: "사이버넷 코덱"은 자신 필드에 1장밖에 앞면 표시로 존재할 수 없다.
+PRINTL ②: "코드 토커" 몬스터가 EX덱에서 자신 필드에 특수 소환되었을 경우, 그 중 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 속성이 그 몬스터와 같아지는 사이버스족 몬스터 1장을 덱에서 패에 더한다.
+PRINTL 이 턴, 같은 속성의 몬스터를 이 효과로 패에 더할 수 없다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 사이버스족 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+
+
+@CARDCAN_73410(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73410)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,73410)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 코드 토커
+	효과条件속성:0 = 신속성
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),0) != 1
+		효과条件속성:1 = 빛속성
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),1) != 1
+		효과条件속성:2 = 어둠속성
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),2) != 1
+		효과条件속성:3 = 땅속성
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),3) != 1
+		효과条件속성:4 = 물속성
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),4) != 1
+		효과条件속성:5 = 화염속성
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),5) != 1
+		효과条件속성:6 = 바람속성
+
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 사이버스족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73410(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 속성セットビット
+#DIM DYNAMIC 속성セット
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73410,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73410)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 코드 토커
+		효과条件속성:0 = 신속성
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),0) != 1
+			효과条件속성:1 = 빛속성
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),1) != 1
+			효과条件속성:2 = 어둠속성
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),2) != 1
+			효과条件속성:3 = 땅속성
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),3) != 1
+			효과条件속성:4 = 물속성
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),4) != 1
+			효과条件속성:5 = 화염속성
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_魔_T1汎数:場所"),5) != 1
+			효과条件속성:6 = 바람속성
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARD_{選択カード_ID}, "속성"
+			속성セット = RESULT - 1
+			SETBIT 속성セットビット, 속성セット
+			CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"T1汎数",속성セットビット)
+
+			CALL FULLRESET
+			효과条件속성 = 속성セット + 1
+			효과条件종족 = 사이버스족
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+			EX소환可能종족 = 사이버스족
+			CALL CARD_EX_RESTRICTION(듀얼리스트)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,140 @@
+﻿@CARDNAME_71143,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 혼을 흡수하는 죽도
+	CASE "略称"
+RESULTS = 혼 흡수 죽도
+	CASE "カテゴリ"
+RESULTS:0 = 죽도
+ENDSELECT
+
+
+@CARD_71143(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "추가日"
+		RETURN 250530
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71143(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,攻撃後強制誘発)
+PRINTL ①: "죽도" 카드를 장착한 자신 몬스터가 전투로 상대에게 데미지를 주었을 경우,
+PRINTL 다음 상대의 드로우 페이즈를 스킵한다.
+CALLFORM CARD_ABLE(2,마함起動)
+PRINTL ②: 자신 필드에 "죽도" 장착 마법 카드가 존재하지 않을 경우에 발동할 수 있다.
+PRINTL 자신 묘지에서 "죽도" 장착 마법 카드 1장을 패에 넣는다.
+PRINTL 
+
+
+@CARDCAN_71143(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71143)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_2(듀얼리스트,71143)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") < 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+효과条件カテゴリ = 죽도
+	효과条件종류 = 装備마법
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件カテゴリ = 죽도
+	효과条件종류 = 装備마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ダメージ受者 == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+효과条件カテゴリ = 죽도
+	CALL CARD_EQUIP_CHECK(듀얼리스트,戦闘場所(듀얼리스트),"필드")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71143(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択肢
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71143,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件カテゴリ = 죽도
+		효과条件종류 = 装備마법
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71143)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ドロースキップ",1,1)
+	PRINTFORMW 竹光は不気味な音を立てて呻きだした……
+ENDIF

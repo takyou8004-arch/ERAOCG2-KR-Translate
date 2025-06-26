@@ -1,0 +1,93 @@
+﻿@CARDNAME_30830,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 리노세우스
+	CASE "略称"
+RESULTS = 리노세우스
+	CASE "カテゴリ"
+RESULTS:0 = 엘프 클래스
+ENDSELECT
+
+
+@CARD_30830(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 곤충족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 0
+	CASE "추가日"
+		RETURN 250324
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_30830(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,소환時強制,특수소환時強制)
+PRINTL ①: 이 카드가 소환 특수 소환되었을 경우 발동한다.
+PRINTL 이 몬스터의 공격력은 턴 종료 시까지, 이번 턴 중 자신이 발동한 효과의 수×500 증가한다.
+IF ターンプレイヤー == "자신"
+	PRINTFORML （현재의 ターンプレイヤーが발동した효과の数は{자신_발동数}回）
+ELSE
+	PRINTFORML （현재의 ターンプレイヤーが발동した효과の数は{상대_발동数}回）
+ENDIF
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 필드의 이 카드는 [직접 공격]을 가진다.
+
+@CARDCAN_30830(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,30830)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 소환時強制 || 종류 == 특수소환時強制
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_30830(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 발동数
+IF 종류 == 소환時強制 || 종류 == 특수소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4402)
+	IF RESULT == 0
+		PRINTFORML ﾁｷﾁｷﾁｷﾁｷﾁｷﾁｷﾁｷﾁｷ………
+		발동数 = GETVAR(@"%듀얼리스트%_발동数") - 1
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",발동数*500)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直攻")
+ENDIF

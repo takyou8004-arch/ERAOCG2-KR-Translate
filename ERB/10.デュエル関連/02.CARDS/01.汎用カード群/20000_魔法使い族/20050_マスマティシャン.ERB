@@ -1,0 +1,99 @@
+﻿@CARDNAME_20050,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 수학자
+	CASE "略称"
+RESULTS = 수학자
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+@CARD_20050(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20050(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환되었을 경우에 발동한다.
+PRINTL 덱에서 레벨 4 이하의 몬스터 1장을 묘지로 보낸다.
+CALLFORM CARD_ABLE(0,破壊→묘지,戦闘→묘지)
+PRINTL ②: 이 카드가 파괴되어 묘지로 보내졌을 때 발동할 수 있다.
+PRINTL 자신은 덱에서 1장 드로우한다.
+PRINTL 
+
+@CARDCAN_20050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20050)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	CALL 효과条件レベル_ADV(4, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	
+		CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20050)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20050)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ENDIF
+

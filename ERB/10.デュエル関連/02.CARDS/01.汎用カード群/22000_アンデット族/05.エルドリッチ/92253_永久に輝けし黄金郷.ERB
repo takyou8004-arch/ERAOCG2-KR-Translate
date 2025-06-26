@@ -1,0 +1,110 @@
+﻿@CARDNAME_92253,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 영구히 빛나던 황금향
+	CASE "略称"
+RESULTS = 영구의 황금향
+	CASE "カテゴリ"
+RESULTS:0 = 황금향
+ENDSELECT
+
+
+@CARD_92253(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92253(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,발동誘発)
+PRINTL ①: 자신 필드에 「엘드리치」 몬스터가 존재하고,
+PRINTL 상대의 몬스터 마법 / 함정 카드의 효과가 발동했을 때, 자신 필드의 언데드족 몬스터 1장을 릴리스하고 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 파괴한다.
+PRINTL 
+PRINTL 
+
+
+
+@CARDCAN_92253(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92253)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 발동誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,92253)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0	
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 엘드리치
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_92253(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92253,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종족 = 언데드족
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ENDIF

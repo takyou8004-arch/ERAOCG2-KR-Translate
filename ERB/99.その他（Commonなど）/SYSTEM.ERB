@@ -1,0 +1,532 @@
+﻿;-------------------------------------------------
+;ニューゲーム
+;-------------------------------------------------
+@EVENTFIRST
+#DIM 캐릭터_ID
+#DIM 能力値
+#DIM 女용사
+#DIM 選択_入力値
+#DIM 캐릭터選択数
+#DIM カウンタ
+#DIM カウンタB
+#DIM 選択덱
+#DIM DYNAMIC 選択カード_ID
+TARGET = 0
+ASSI = 0
+
+PBAND = 12
+
+CALL DEFAULT_OPTION
+
+
+
+;캐릭터生成【캐릭터を추가しやすくなるよう軽く改造】
+FOR 캐릭터_ID,1,9000
+	SIF !EXISTCSV(캐릭터_ID)
+		CONTINUE
+	ADDCHARA 캐릭터_ID
+	BASE:(CHARANUM - 1):분노 = 0
+	BASE:(CHARANUM - 1):무드 = 0
+NEXT
+
+
+
+
+;モード選択
+CUSTOMDRAWLINE —
+PRINTL ★★모드를 선택해주세요★★
+CUSTOMDRAWLINE —
+PRINTL 스토리 모드: 시나리오의 진행 정도에 따라 요소가 해방되는 시나리오
+PRINTL 프리 모드: 시나리오를 플레이하지 않아도 모든 요소가 해방되어 있는 상태의 모드.
+PRINTL 
+CUSTOMDRAWLINE —
+PRINTL [0] - 스토리 모드
+PRINTL [1] -  프리 모드
+BINPUT
+IF RESULT == 0
+	FLAG:게임모드 = 1
+ELSEIF RESULT == 1
+	FLAG:게임모드 = 0
+	CALL UPDATES(1)
+ENDIF
+CALL CUSTOM_CHARAMAKE(MASTER)
+SIF TALENT:MASTER:성별 & 2
+	MAXBASE:MASTER:5 = 1500
+
+
+SAVESTR:10 = /
+
+FOR 캐릭터_ID,0,CHARANUM
+	CALL SET_BODYSIZE(캐릭터_ID,0,2)
+	; ;バスト
+	; CALL SHOP_BUST_RESET(캐릭터_ID)
+	; ;ヒップ
+	; CALL SHOP_BUTT_RESET(캐릭터_ID)
+	;服装
+	CALL CLOTHES_SETTING(캐릭터_ID)
+	;시작위치
+	CFLAG:캐릭터_ID:현재위치 = CFLAG:캐릭터_ID:시작위치
+	;처녀情報
+	CFLAG:캐릭터_ID:처녀버린상대 = -1
+	;道程情報
+	CFLAG:캐릭터_ID:동정버린상대 = -1
+	;키스情報
+	CFLAG:캐릭터_ID:부친종 = -1
+	;키스情報
+	CFLAG:캐릭터_ID:모친종 = -1
+NEXT
+
+;용사ちゃん能力コピー
+FOR 캐릭터_ID,1,CHARANUM
+	SIF TALENT:캐릭터_ID:분신 == 1
+		女용사 = 캐릭터_ID
+NEXT
+FOR 能力値,0,190
+	TALENT:女용사:能力値 = TALENT:MASTER:能力値
+	SIF 能力値 == 2
+		TALENT:女용사:2 = 1
+	SIF 能力値 == 117
+		TALENT:女용사:117 = 0
+	SIF 能力値 == 116
+		TALENT:女용사:116 = 1
+	SIF 能力値 == 131
+		TALENT:女용사:131 = 0
+NEXT
+
+
+
+
+IF HAS_PENIS(MASTER)
+	$INPUT_LOOP_OPENIS
+	PRINTFORML %CALLNAME:MASTER%의 남성기 형태를 설정해주세요。
+	PRINTFORML 
+	PRINTL [1] 암컷쥬지（공격력100이하）
+	PRINTL [2] 미성숙　　（공격력500）
+	PRINTL [3] 작은자지　　（공격력1000）
+	PRINTL [4] 보통　　　（공격력1500）
+	PRINTL [5] 큰편　（공격력2000）
+	PRINTL [6] 두꺼움　（공격력2500）
+	PRINTL [7] 에엣……　（공격력3000）
+	PRINTL [8] 네놈에게 신을 보여주마
+
+
+	BINPUT
+
+	IF RESULT == 8
+		PRINTW ＞＜＞＜＞＜＞＜　ATK：４０００！！！！！　＞＜＞＜＞＜＞＜
+		PRINTW 모…몬스터……가 아니다……신인가！！！
+		PRINTW 블랙매지션걸이 무언가를 떠올리고 떨고있다……。
+		PRINTW 
+		PRINTW 개발자는 커다란것을 응원합니다。
+		PRINTW 크기의 디메리트？없어。
+		TALENT:MASTER:형태 = 8
+	ELSEIF RESULT == 7
+		PRINTW 대부분의 여자아이가 반사적으로 생명의 위기를 느낄정도의 크기네요。
+		PRINTW 분쇄！옥쇄！대갈채！！
+		PRINTW 굉장하다고ー！멋있다고ー！
+		PRINTW 
+		PRINTW 개발자는 커다란것을 응원합니다。
+		TALENT:MASTER:형태 = 7
+
+	ELSEIF RESULT == 6
+		PRINTW 꺼내면 여자아이가 자기도모르게 조용해지는 크기네요。
+		PRINTW 인간의 자지로서는　공격력
+		PRINTW 수비력 둘다　최고 클래스。
+		PRINTW 
+		TALENT:MASTER:형태 = 6
+
+	ELSEIF RESULT == 5
+		PRINTW 이런거 들어가…？라고 걱정하는 라인이네요。
+		PRINTW 디메리트가 없는 하급몬스터의 최하라인。
+		PRINTW 인스펙트보더같은걸 갖고있지 않은것같은 공……사이즈는 아니네요。
+		PRINTW 
+		TALENT:MASTER:형태 = 5
+
+	ELSEIF RESULT == 4
+		PRINTW 일단 여자아이가 아슬아슬 안심할수있는 라인이네요。
+		PRINTW 대부분의 여자아이도 이정도라면 쓰러뜨릴수 있어！라고 자신을 갖고 도전할수 있습니다。
+		PRINTW 얕본다면 아픈꼴을 볼수 있다는걸 알게해주죠。
+		PRINTW 
+		TALENT:MASTER:형태 = 4
+	ELSEIF RESULT == 3
+		PRINTW 풋……꼬추 여자아이에게 비웃음당하는 사람 용。
+		PRINTW 공격력１０００의 잡어꼬추를 공격표시로 세운다니……。
+		PRINTW 다만 의외로 이 스테이터스는 비교적 미묘한 카드인편이 많죠……。
+		PRINTW 
+		TALENT:MASTER:형태 = 3
+	ELSEIF RESULT == 2
+		PRINTFORMW 어린남자아이의 고추。여자아이가 좋아하는 고추입니다。
+		PRINTW 여기서부터 어떻게 성장해갈지、또는 놀라운 효과를 숨기고 있는지……。
+		PRINTW 또는 그대로 쓰다듬어져도 맛있는 위치！장래에 기대가 크네요。
+		PRINTW 
+		TALENT:MASTER:형태 = 2
+	ELSEIF RESULT == 1
+		PRINTW 자지 어디…？HAS_PENIS？
+		PRINTW 이런거 여자아이잖아요……。
+		PRINTW 레벨１/공수０/빛속성/사이킥족/튜너의 가능성이 있습니다。
+		PRINTW 
+		TALENT:MASTER:형태 = 1
+	ENDIF
+	PRINTFORMW 당신의 봉은%GET_TALENTNAME(250,TALENT:MASTER:형태)%이 되었습니다。
+ENDIF
+
+;처녀설정
+PRINTL ……전원 처녀로 설정한다？
+PRINTL [0]한다
+PRINTL [1]하지 않는다
+
+BINPUT
+IF RESULT == 0
+	FOR 캐릭터_ID,1,CHARANUM
+		SIF TALENT:캐릭터_ID:성별 == 2
+			CONTINUE
+		TALENT:캐릭터_ID:처녀 = 1
+	NEXT
+	FOR 캐릭터_ID,0,CHARANUM
+		TALENT:캐릭터_ID:키스미경험 = 1
+	NEXT
+	PRINTFORMW 전원 처녀로 설정했습니다！
+ELSEIF RESULT == 1
+	PRINTFORMW 처녀도 비처녀도 사랑합시다…
+ENDIF
+
+
+
+
+CALL HENSHU_RELOAD
+
+FOR カウンタ,0,30
+	FOR カウンタB,0,紙束最大値
+		마이덱:カウンタ:カウンタB = -1
+		マイEX덱:カウンタ:カウンタB = -1
+	NEXT
+NEXT
+
+
+$DECK_CHOICE
+CUSTOMDRAWLINE ―
+PRINTL 초기덱을 선택해주세요：
+CUSTOMDRAWLINE ―
+PRINTL [100] - 충혹마덱
+PRINTL [101] - 드래곤메이드
+PRINTL [102] - 이블트윈
+PRINTL [103] - 센츄리온
+PRINTL [104] - 엑소시스터
+PRINTL [105] - 바르모니카
+PRINTL [106] - Ｍ∀ＬＩＣＥ
+PRINTL [107] - 미캉코
+PRINTL 
+PRINTL [ 0 ] - 초기덱으로 시작한다。
+PRINTL [999] - 좋아하는 덱을 짠다。
+CUSTOMDRAWLINE ―
+BINPUT
+IF RESULT == 0
+	CUSTOMDRAWLINE ―
+	PRINTL 초기 덱（속성）을 선택해주세요：
+	CUSTOMDRAWLINE ―
+	PRINTL [1] - 빛속성　휘영시동
+	PRINTL [2] - 어둠속성　흑무시동
+	PRINTL [3] - 땅속성　철기시동
+	PRINTL [4] - 물속성　창해시동
+	PRINTL [5] - 화염속성　염검시동
+	PRINTL [6] - 바람속성　취풍시동
+	PRINTL 
+	CUSTOMDRAWLINE ―
+	PRINTFORML [9999] - 돌아간다
+
+	BINPUT
+	SIF RESULT == 9999
+		GOTO DECK_CHOICE
+ENDIF
+IF RESULT == 999
+	PRINTFORML 자신의 덱을 작성한 경우、게임 시작시에 DP를 받을수 없습니다만 괜찮겠습니까？
+	PRINTFORML （DP：덱 제작 화면에서 카드의 작성에 사용되는 포인트）
+	CALL YN_CHOICE_STR()
+	IF RESULT == 0
+		CALL GENERATE_ALL_CARDS(1)
+		CALL EDIT_DECK_EX(2)
+		
+
+		CALL GENERATE_ALL_CARDS(2)
+		CALL GET_HENSHUDECK(0)
+	ELSEIF RESULT == 1
+		GOTO DECK_CHOICE
+	ENDIF
+
+
+
+ELSE
+	SETCOLOR C_YELLOW
+	IF RESULT == 1
+		PRINTFORML 빛속성 초기 덱 【휘영시동】
+		PRINTFORML 【HERO비트】나【빛듀얼】이라 불리는 타입의 HERO덱.
+		PRINTFORML 《E•HERO 어나더・네오스》를 중심으로 풍부한 서포트 카드로 탄탄하게 어드밴티지를 챙기며 싸운다.
+	ELSEIF RESULT == 2
+		PRINTFORML 어둠속성 초기덱 【흑무시동】
+		PRINTFORML 묘지에 어둠속성이 3체 있으면 특수 소환할 수 있는 《다크 암드 드래곤》을 중심으로 한 덱.
+		PRINTFORML 《다크 암드 드래곤》의 효과로 대량 제거를 노리자.
+	ELSEIF RESULT == 3
+		PRINTFORML 땅속성 초기덱 【철기시동】
+		PRINTFORML 【가제트】와 【머시너즈】를 조합한 기계족 덱.
+		PRINTFORML 후속을 계속 불러오는 가제트와, 묘지에서 꺼낼 수 있는 대형 머시너즈로 끈질기게 싸울 수 있다.
+		PRINTFORML 기계족 몬스터가 파괴되면 묘지에서 부활하는 《머시너즈 카넬》을 미리 묘지에 준비해두자.
+	ELSEIF RESULT == 4
+		PRINTFORML 물속성 초기덱 【창해시동】
+		PRINTFORML 레벨 4의 물속성 몬스터로 구성된 덱.
+		PRINTFORML 레벨 4 몬스터 2장을 나란히 세워 랭크 4 엑시즈 몬스터를 엑시즈 소환하자.
+		PRINTFORML 해파리 선배인 《No.4 맹독자포 스텔스 크라켄》이 제거 능력과 재생 능력을 겸비해 매우 강력하다.
+	ELSEIF RESULT == 5
+		PRINTFORML 화염속성 초기덱 【화염검시동】
+		PRINTFORML 【화염의 검사】나【염성기사】 등을 조합해 장착 마법으로 몬스터를 강화해 싸우는 전사족 덱.
+		PRINTFORML 《철의 기사 기어 프리드》에서 불러낼 수 있는 《검성-네이킷 기어 프리드》가,
+		PRINTFORML 매턴 장착 마법을 준비하면서 제거까지 할 수 있어 강력하다.
+	ELSEIF RESULT == 6
+		PRINTFORML 바람속성 초기덱 【취풍시동】
+		PRINTFORML 곤충족 몬스터의 종족 덱.
+		PRINTFORML 매턴 성장하는 《얼티메이트 인섹트 Lv.X》를 유지하며 레벨업시키자.
+		PRINTFORML 《얼티메이트 인섹트 Lv.OVER》까지 성장하면 몬스터 상대 성능은 최강급.
+	ELSEIF RESULT == 100
+		PRINTFORML 【충혹마】덱
+		PRINTFORML 귀여운 여자아이를 미끼로 상대를 함정에 빠뜨려 포식하는 식물족·곤충족 몬스터 테마.
+		PRINTFORML 【함정속으로】나 【홀】이란 이름의 함정 카드를 구사해 싸운다.
+		PRINTFORML 충혹마 몬스터 1체로 소재로 소환할 수 있는 링크 몬스터 《세라의 충혹마》의 성능은
+		PRINTFORML 링크 몬스터 중에서도 최상급.
+	ELSEIF RESULT == 101
+		PRINTFORML 【드래곤메이드】덱
+		PRINTFORML 메이드 차림의 드래곤 소녀들이 융합하는 테마.
+		PRINTFORML 인간 형태로 어드밴티지를 챙기면서, 배틀 페이즈가 되면 대형 드래곤 형태로 변신한다.
+		PRINTFORML 융합 몬스터 《드래곤메이드 슈트랄》로 상대 효과를 무효로 만들면서,
+		PRINTFORML 제거 효과를 가진 《드래곤메이드 하스키》를 불러내자.
+	ELSEIF RESULT == 102
+		PRINTFORML 【이블트윈】덱
+		PRINTFORML 겉모습은 vtuber, 뒷모습은 괴도라는 키스킬과 리일라 두 명이 한 조인 덱.
+		PRINTFORML 1장 초동이 많고 안정감 있는 링크 테마.
+		PRINTFORML 링크 2 몬스터 《Evil★Twin 키스킬》과 《Evil★Twin 리일라》를
+		PRINTFORML 여러 번 소환해 드로우와 파괴를 할 수 있다.
+	ELSEIF RESULT == 103
+		PRINTFORML 【센츄리온】덱
+		PRINTFORML 열혈 로봇 애니메이션 느낌의 3인 1팀 소녀들의 싱크로 테마.
+		PRINTFORML 마법 & 함정 존에서 특수 소환하는 효과로 전개하며 싱크로   소환한다. 1장 초동도 많고 전개도 짧아 다루기 쉽다.
+		PRINTFORML 《기사황 아크실라》로 마법 & 함정 존의 카드를 지키면서,
+		PRINTFORML 《스탠드업·센츄리온!》으로 상대 턴 싱크로 소환을 노리자.
+	ELSEIF RESULT == 104
+		PRINTFORML 【엑소시스터】덱
+		PRINTFORML 두 명이 한 조로 싸우는 퇴마 소녀 테마.
+		PRINTFORML 묘지 활용에 반응해 변신하거나, 제외·제거로 묘지를 못 쓰게 만드는 묘지 메타 엑시즈 테마.
+		PRINTFORML 엑시즈 몬스터 2장으로 엑시즈 소환할 수 있는 《엑소시스터즈 마니피카》가 필살기.
+	ELSEIF RESULT == 105
+		PRINTFORML 【바르모니카】덱
+		PRINTFORML 천사와 악마의 속삭임을 모티브로 한 펜듈럼 테마.
+		PRINTFORML 마법 & 함정 존에 둔 몬스터에 카운터를 쌓는 등 다소 독특한 움직임을 한다.
+		PRINTFORML 카운터를 모으면 링크 소환할 수 있는 《바르모니카의 신이-제브페라》로
+		PRINTFORML 마법·함정 카드 효과를 여러 번 사용할 수 있다.
+		PRINTFORML 참고로 OCG와는 펜듈럼의 사양이 크게 다르니 주의.
+	ELSEIF RESULT == 106
+		PRINTFORML 【Ｍ∀ＬＩＣＥ(멜리스)】덱
+		PRINTFORML 이상한 나라의 앨리스를 모티브로 한 링크 테마.
+		PRINTFORML 제외되면 라이프를 지불하고 특수 소환할 수 있는 공통 효과를 가진다. 사이버스족이라 강력한 종족 서포트 카드를 사용할 수 있다.
+		PRINTFORML OCG에서는 2025년 2월 기준 환경 최상위 테마이고, 이 작품에서도 매우 강력하다.
+		PRINTFORML 《M∀LICE＜Q＞HEARTS OF CRYPTER》는 매턴 제외 제거를 하면서, 공격력 5000을 넘는 고화력도 낼 수 있다.
+	ELSEIF RESULT == 107
+		PRINTFORML 【미캉코】덱
+		PRINTFORML 신을 내리는 의식을 모티브로 한 의식 테마.
+		PRINTFORML 공격력 0 몬스터와 장착 마법으로 전투 데미지를 반사해서 승리하는 트리키한 테마.
+	ENDIF
+	RESETCOLOR
+
+	選択덱 = RESULT
+	CALL CARD_DECK_CHECK(選択덱 + 15000,3)
+
+	IF RESULT == 0
+		CALLFORM CARD_STRUC_GET(選択덱)
+		CALLFORM DUELDECK_{15000 + 選択덱}("編集")
+		CALLFORM MYDECK_SAVE(0)
+		;3万GET
+		FLAG:듀얼포인트 += 30000
+	ELSEIF RESULT == 1
+		GOTO DECK_CHOICE
+	ENDIF
+ENDIF
+
+
+
+
+
+;カード所持
+PRINTL 처음 시작할 때 몇 장의 카드를 소지한 상태로 시작하시겠습니까?
+PRINTL [0] 3장까지 선택해서 소지한다
+PRINTL [1] 20장을 랜덤으로 소지한다
+PRINTL [2] 모든 카드를 소지한 상태로 시작한다(듀얼리스트 포함)
+PRINTL [3] 0에서 시작한다
+BINPUT
+IF RESULT == 0
+	$INPUT_LOOP_LIST
+	CALL MONSTER_LIST(1)
+	VARSET カウンタB
+	CUSTOMDRAWLINE ―
+	PRINTFORML 선택한 카드：（初소환： %CALLNAME:初소환%）
+	FOR 캐릭터_ID,1,CHARANUM
+		IF CFLAG:캐릭터_ID:소유함 == 1
+			PRINTFORML 選択【{カウンタB}】- %NAME:캐릭터_ID%
+			カウンタB ++
+		ENDIF
+	NEXT
+	CUSTOMDRAWLINE ―
+	PRINTL 이 카드들로 시작하시겠습니까？
+	PRINTL [0] - 네
+	PRINTL [1] - 아니오
+	BINPUT
+	SIF RESULT == 1
+		GOTO INPUT_LOOP_LIST
+	FOR 캐릭터_ID,1,CHARANUM
+		IF CFLAG:캐릭터_ID:소유함 == 1
+			CALL CARD_GET_CHARA(캐릭터_ID,1)
+		ENDIF
+	NEXT
+ELSEIF RESULT == 1
+	FOR LOCAL,1,21
+		$LOOP_STARTCARDS
+		캐릭터_ID = RAND:CHARANUM
+		SIF TALENT:캐릭터_ID:듀얼리스트 >= 1
+			GOTO LOOP_STARTCARDS
+		SIF CFLAG:캐릭터_ID:소유함 == 1
+			GOTO LOOP_STARTCARDS
+		CALL CARD_GET_CHARA(캐릭터_ID,1)
+		PRINTL
+	NEXT
+ELSEIF RESULT == 2
+	FOR 캐릭터_ID,1,CHARANUM
+		CFLAG:캐릭터_ID:소유함 = 1
+		SIF TALENT:캐릭터_ID:듀얼리스트 >= 1
+			CFLAG:캐릭터_ID:전화번호 = 1
+		ITEM:(NO:캐릭터_ID) += 1
+	NEXT
+	SETCOLOR C_YELLOW
+	PRINTFORM 모든 카드와 연락처를 손에 넣었습니다！
+	RESETCOLOR
+	CALL GENERATE_ALL_CARDS
+	PRINTL
+ELSEIF RESULT == 3
+	PRINTFORMW 1부터 시작하죠！
+ENDIF
+
+
+
+CALL OPTION_OSUSUME
+;オプションコール
+CALL OPTION
+
+
+
+;기상시간
+CFLAG:MASTER:312 = 420
+CFLAG:MASTER:수면 = 1
+DAY = 1
+DAY:2 = 1
+DAY:3 = 1
+
+;お金
+MONEY = 30000
+
+
+
+CALL IRAI_RESET_DAILY
+
+
+CALL CARD_PACK_RELEASE(1)
+CALL CARD_PACK_RELEASE(2)
+CALL CARD_PACK_RELEASE(3)
+
+PRINTL 오프닝을 본다？
+PRINTL [0] 예
+PRINTL [1] 아니오
+
+
+$INPUT_LOOP_OP
+BINPUT
+
+IF RESULT == 0
+	IF 初소환 == 0
+		FOR 캐릭터_ID,1,CHARANUM
+			IF CFLAG:캐릭터_ID:소유함 == 1
+				初소환 = 캐릭터_ID
+				BREAK
+			ENDIF
+		NEXT
+	ENDIF
+	PRINTFORML 당신은 어디에나 있는 평범한 듀얼리스트,
+	SIF TALENT:MASTER:연령 <= 0
+		PRINTFORML 올해부터 부모 곁을 떠나 도시에서 혼자 살기 시작했습니다.
+	PRINTFORML 그럭저럭 평범하게 살아가던 당신은 어느 날, 약간의 자극을 찾아 최신 듀얼디스크 테스터에 지원하게 되었습니다.
+	PRINTFORMW 추첨에 당첨된 당신에게는 카이바 코퍼레이션에서 최신형 시제품 듀얼디스크가 배달되었습니다.
+	PRINTFORML 착용해보니 크기에 비해 가볍고, 팔에 딱 맞는 착용감, 역시 KC산답다고 할까요.
+	PRINTFORML 이 디스크에는 최신 기능으로, 듀얼 중이 아니어도 몬스터의 솔리드 비전을 만질 수 있는 기능이 탑재되어 있는 듯합니다.
+	PRINTFORML 디스크를 통해 몬스터와 접촉할 때마다 학습 데이터가 KC로 전송되고, 그만큼 보상이 지급됩니다.
+	PRINTFORML 바로 접촉 기능을 시험해보려고 디스크에 마음에 드는 카드를 세트했더니……
+	PRINTFORMW 갑자기 디스크에서 이상한 소리가 울리고, 디스크와 팔 전체에 전류가 흘렀다…….
+	PRINTFORML 
+	IF 初소환 == 0
+		PRINTFORML 갑작스런 상황에 놀라, 당신이 디스크를 떼어내려는 순간……눈앞에 몬스터가 실체화했습니다.
+		PRINTFORML 실체화된 몬스터 역시 왜 자신이 여기 있는지 모르는 듯 당신을 바라보고……
+		PRINTFORML 그 몬스터가 손을 뻗어 당신에게 닿았을 때……진짜 생명체 같은 따스함을 느꼈고,
+		PRINTFORMW 놀란 목소리를 내며 카드를 디스크에서 떼어내고 말았습니다.
+		PRINTFORML 
+		PRINTFORML 그러자 실체화되어 있던 몬스터의 모습은 사라지고, 당신의 뺨에는 닿았던 현실적인 감촉이 남았습니다…….
+		PRINTFORML 뭐였던 걸까? 하고 진정하며 숨을 고르는 사이, 당신은 만지고 있던 카드에서 목소리가 들려오는 것을 느낍니다.
+		PRINTFORMW 이게 꿈일까? 어디까지가 이 디스크의 기능일까?
+		PRINTFORML 
+	ELSE
+		PRINTFORML 갑작스런 상황에 놀라, 당신이 디스크를 떼어내려는 순간……눈앞에, %CALLNAME:初소환%가 실체화했습니다.
+		PRINTFORML 실체화된 %CALLNAME:初소환%도 왜 자신이 여기 있는지 모르는 듯 당신을 바라보고……
+		PRINTFORML 손을 뻗어 당신에게 닿았을 때……입체영상이 아닌, 진짜 생명체 같은 따스함을 느꼈고,
+		PRINTFORMW 놀란 목소리를 내며 카드를 디스크에서 떼어내고 말았습니다.
+		PRINTFORML 
+		PRINTFORML 그러자 실체화되어 있던 몬스터의 모습은 사라지고, 당신의 뺨에는 닿았던 현실적인 감촉이 남았습니다…….
+		PRINTFORML 뭐였던 걸까? 하고 진정하며 숨을 고르는 사이, 당신은 만지고 있던 카드에서 목소리가 들려오는 것을 느낍니다.
+		PRINTFORMW 이게 꿈일까? 어디까지가 이 디스크의 기능일까?
+		PRINTFORML 
+	ENDIF
+	PRINTFORML 솔리드 비전의 폭주? 카드의 실체화? 어쩌면 듀얼리스트 사이에 전설로 전해지는 카드의 정령?
+	PRINTFORMW 의문이 머릿속을 맴도는 가운데……당신은 단 한 가지를 깨달았다.
+	PRINTL
+	PRINTFORMW 이 디스크에는, 진짜 몬스터를 실체화할 수 있는 힘이 있다.
+	PRINTL
+	PRINTL
+	PRINTL
+ELSEIF RESULT == 1
+	PRINTL 개발자는 어떤 망상도 응원합니다…….
+ENDIF
+
+CALL ITEM_GET(501,1)
+
+
+
+BEGIN SHOP
+
+@EVENTLOAD
+CALL VERSION_UP
+
+
+@GAME_OVER
+VARSET RESULT
+
+CUSTOMDRAWLINE =
+PRINTL [0] - 다시 시도한다
+PRINTL [1] - 데이터를 불러와 이어한다
+PRINTL [2] - 게임을 종료한다
+PRINTL
+CUSTOMDRAWLINE =
+BINPUT
+SELECTCASE RESULT
+	CASE 0
+		BASE:MASTER:체력 = 1000
+
+		RETURN 0
+	CASE 1
+		CALL TITLE_LOADGAME
+		RESTART
+	CASE 2
+		PRINTW 수고하셨습니다. Emuera를 종료합니다.
+		PRINTW 건강과 수면에 유의하며 즐거운 듀얼!!
+ENDSELECT
+QUIT_AND_RESTART

@@ -1,0 +1,107 @@
+﻿@CARDNAME_71073,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 결속 UNITY
+	CASE "略称"
+		RESULTS = ＵＮＩＴＹ
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_71073(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "추가日"
+		RETURN 250514
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71073(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動 ,손패起動,フリー誘発)
+PRINTL ①：자신 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다。
+PRINTL 그 몬스터의 수비력은 턴 종료시까지、
+PRINTL 자신 필드의 모든 앞면 표시 몬스터의 수비력의 합만큼 증가 시킨다。
+
+@CARDCAN_71073(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71073)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71073(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 守備力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71073)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件표시 = 表側표시
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			守備力修正 = RESULT:4
+
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"一守",守備力修正)
+		ENDIF
+	ENDIF
+ENDIF

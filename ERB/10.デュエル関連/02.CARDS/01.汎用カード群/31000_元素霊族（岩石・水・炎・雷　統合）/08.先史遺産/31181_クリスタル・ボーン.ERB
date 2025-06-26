@@ -1,0 +1,138 @@
+﻿@CARDNAME_31181,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 선사유산 크리스탈 본
+	CASE "略称"
+RESULTS = 선사유산 본
+	CASE "カテゴリ"
+RESULTS:0 = 오파츠
+ENDSELECT
+
+
+@CARD_31181(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1300
+	CASE "守備力"
+		RETURN 400
+	CASE "추가日"
+		RETURN 250613
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_31181(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①② 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 자신 필드에 "오파츠" 몬스터 이외의 몬스터가 존재하지 않는 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(2,특수소환時)
+PRINTL ②: 이 카드가 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 패/묘지에서 "오파츠" 몬스터 1장을 특수 소환한다.
+PRINTL 그 후, 이 카드의 레벨을 그 몬스터와 같게 할 수 있다.
+
+@CARDCAN_31181(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31181)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,31181)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,31181,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件固カテゴリ = 오파츠
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,31181)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+효과条件カテゴリ = 오파츠
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31181(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カードレベル
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31181,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31181,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+효과条件カテゴリ = 오파츠
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			TRYCALLFORM CARD_{RESULT:1},"종류"
+			SIF RESULT == 엑시즈
+				RETURN 0
+			TRYCALLFORM CARD_{RESULT:1},"レベル"
+			SIF RESULT == GETVAR(@"%듀얼리스트%_MZ_星:場所")
+				RETURN 0
+			選択カードレベル = RESULT
+PRINTL 레벨을 변동시키겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+			SIF RESULT == はい
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星",選択カードレベル,1)
+		ENDIF
+	ENDIF
+ENDIF
+
+

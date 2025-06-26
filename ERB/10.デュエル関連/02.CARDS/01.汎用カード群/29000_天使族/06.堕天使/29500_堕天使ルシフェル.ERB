@@ -1,0 +1,169 @@
+﻿@CARDNAME_29500,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 타락천사 루시펠
+	CASE "略称"
+RESULTS = 루시펠
+	CASE "カテゴリ"
+RESULTS:0 = 타락천사
+ENDSELECT
+
+
+@CARD_29500(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 11
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_29500(종류)
+#DIM DYNAMIC 종류
+
+;PRINTL ―――――――【工事中】　各種효과は機能していません。―――――――
+PRINTL 이 카드는 특수 소환할 수 없다.
+CALL CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 상대 필드의 효과 몬스터의 수만큼, 패 / 덱에서 「타락천사」 몬스터를 특수 소환한다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②: 자신 필드에 다른 「타락천사」 몬스터가 존재할 경우, 이 카드는 대상 내성을 가진다.
+CALL CARD_ABLE(10,필드起動)
+PRINTL ③: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 필드의 「타락천사」 몬스터의 수만큼, 자신의 덱 맨 위에서 카드를 묘지로 보낸다.
+PRINTL 자신은 이 효과로 묘지로 보낸 「타락천사」 카드의 수× 500 LP 회복한다.
+
+@CARDCAN_29500(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29500)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件종류 = 효과全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲손패 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 타락천사
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	;条件付けはこっちに
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 타락천사
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29500(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC リピート횟수
+#DIM DYNAMIC 増加値
+
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29500)
+	IF RESULT == 0
+		;なるべく%対面者%を使わない方法で
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件종류 = 효과全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		リピート횟수 = RESULT
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲손패 = 1
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 타락천사
+		효과条件複数 = 100 - リピート횟수
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29500,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 타락천사
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		リピート횟수 = RESULT
+		REPEAT リピート횟수
+			VARSET RESULTS
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_덱:0")},"カテゴリ"
+			SIF RESULTS == "타락천사"
+				条件달성 ++ 
+			CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",0)
+		REND
+		増加値 = 条件달성 * 500
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",増加値)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")	
+ENDIF

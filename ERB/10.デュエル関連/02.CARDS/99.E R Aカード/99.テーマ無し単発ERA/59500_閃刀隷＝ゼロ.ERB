@@ -1,0 +1,209 @@
+﻿@CARDNAME_59500,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 섬도노예＝제로
+	CASE "略称"
+		RESULTS = 섬도노예＝제로
+	CASE "カテゴリ"
+		RESULTS:0 = 섬도희
+		RESULTS:1 = 섬도
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59500(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 0
+		;名前もゼロ、링크もセロ…ってしたかった…（仕様としてフィールドでは１になる）
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250521
+ENDSELECT
+
+
+RETURN 0
+
+
+@CARD_EXPLANATION_59500(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 암컷 몬스터를 포함한、빛 어둠속성의 암컷몬스터 ２장
+PRINTL 이 카드명의  ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+PRINTL 몬스터 존의 이 카드는 링크１로 취급한다。
+CALL CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：이 카드가 특수소환되었을 경우에 발동할 수 있다。
+PRINTL 자신의 덱 / 묘지에서 "E.R.A」함정카드 １장을 패에 넣는다。
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드가 몬스터 존에 존재하는 한、
+;PRINTL 이 카드는 링크０이 되며、특수소환의 소재가 되지 않으며、수비표시라면 공격표시가 된다。
+PRINTL 이 카드는 특수소환의 소재가 되지 않으며、수비표시라면 공격표시가 된다。
+PRINTL 상대는 이 카드 이외의 자신 필드의 카드를 공격 전투의 대상으로 선택할 수 없다。
+CALL CARD_ABLE(0,身代효과)
+PRINTL ③：몬스터 존의 이 카드가 전투 효과로 파괴될 경우、
+PRINTL 대신 자신과 상대는 1500LP회복할 수 있다。
+CALL TEXT_DECORATION("ROGUE")
+@CARDSUMMON_59500(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+
+;アロ-ヘッド確認！소환条件は、牝性モンスター(1)を含む、光(1) 어둠속성(2)の２장！サ-キットコンバイン！
+素材条件속성:0 = 마법사족 ;1
+素材条件속성:1 = 드래곤족 ;2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件성별 = 빛속성 ;1
+ENDIF
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,59500) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_59500(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59500)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,59500)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = E.R.A
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+;フレ-バ-用
+ELSEIF 종류 == ライフ変強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ダメージ受者 != 듀얼리스트
+		RETURN 0
+	SIF ダメージ増減 != "減少"
+		RETURN 0
+	SIF !GROUPMATCH(ダメージ종류,"戦闘", "효과")
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_攻:場所") != 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_59500(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 無効カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59500,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = E.R.A
+		효과条件종류 = 함정全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	;CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"星",0,上書きモード)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"攻誘")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"不材")
+	CALL FULLRESET
+	효과条件他所 = 1
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") != 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"表",1)
+ELSEIF 종류 == ライフ変強制誘発
+	PRINTFORML 
+	PRINTFORMW ゼロは無저항に상대 몬스터의 攻撃を受けた！
+	CALL EROTIC_MOVE("なぶり殺し",NO_TO_CHARANUM(2000),-1,ダメージ受値)
+	CALL EROTIC_MOVE("なぶり殺し",NO_TO_CHARANUM(2001),-1,ダメージ受値)
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59500,0)
+	IF RESULT == 0
+		PRINTFORML 
+		PRINTFORMW ゼロは파괴되는 所も無理矢理耐えさせられた
+		CALL EROTIC_MOVE("なぶり殺し",NO_TO_CHARANUM(2000),-1,500)
+		CALL EROTIC_MOVE("なぶり殺し",NO_TO_CHARANUM(2001),-1,500)
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",1500)
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",1500,1)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+

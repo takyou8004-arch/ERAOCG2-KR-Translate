@@ -1,0 +1,161 @@
+﻿@CARDNAME_64810,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 오등분의 궤적
+	CASE "略称"
+RESULTS = 오등분의 궤적
+	CASE "カテゴリ"
+RESULTS:2 = 오등분의 신부
+RESULTS:0 = 신부
+ENDSELECT
+
+
+@CARD_64810(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_64810(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(1,마함起動, 손패起動,フリー誘発)
+PRINTL ①: 「나카노 이치카」「나카노 니노」「나카노 미쿠」「나카노 요츠바」「나카노 이츠키」 각각의 효과가 발동한 턴에 발동할 수 있다.
+PRINTL 자신 필드의 카드를 모두 패로 되돌리고, 「오등분의 신부」를 EX덱에서 특수 소환한다.
+PRINTL 그 후, 상대 필드의 몬스터를 모두 패로 되돌리고, 그 원래 공격력의 합계만큼의 데미지를 상대에게 준다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 묘지의 이 카드를 덱으로 되돌리고 발동할 수 있다.
+PRINTL 자신 묘지에 존재하는 천사족 몬스터를 5장까지 덱으로 되돌린다.
+PRINTL 이렇게 되돌린 몬스터 1장당, 800 LP 회복한다
+
+@CARDCAN_64810(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,64810)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0		
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,64810)
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,4810) == 0 && 발동済_2(듀얼리스트,4810) == 0 
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,4811) == 0 && 발동済_2(듀얼리스트,4811) == 0 
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,4812) == 0 && 발동済_2(듀얼리스트,4812) == 0 
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,4813) == 0 && 발동済_2(듀얼리스트,4813) == 0 
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,4814) == 0 && 발동済_2(듀얼리스트,4814) == 0 
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+효과条件名前 = 5등분의 신부
+	효과条件소환可 = 2
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,64810)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 천사족
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_64810(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 回復量
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,64810)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		FOR カウンタ,0,5
+			CALL CARD_DISPOSE(듀얼리스트,"필드",カウンタ,손패行き)
+		NEXT
+
+		CALL FULLRESET
+효과条件名前 = 5등분의 신부
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EX_SUMMON(듀얼리스트, "EX덱", 選択カード)
+		ENDIF
+
+		CALL FULLRESET
+		효과추가종류 = 4
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"손패")
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,64810,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = モン全般
+		효과条件複数 = 95
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		回復量 = RESULT:2 * 800
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",回復量)
+	ENDIF
+ENDIF

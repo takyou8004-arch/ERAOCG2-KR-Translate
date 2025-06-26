@@ -1,0 +1,110 @@
+﻿@CARDNAME_79686,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 트리트 푸셔어
+	CASE "略称"
+		RESULTS = 과자판매원
+	CASE "カテゴリ"
+		RESULTS:0 = 트립 트리트
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79686(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79686(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①의 효과는 １턴에 １장밖에 발동할 수 없다。
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：덱에서「슈가러쉬」속공마법 일반함정카드를 １장 패에 넣는다。
+PRINTL 그 후、상대의 ＬＰ가 ２００００이상일 경우、덱 / 묘지에서「트립 트리트 파라다이스」를 １장 패에 넣는다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79686(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 回復量
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79686)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79686)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 슈가러쉬
+	효과条件종류:0 = 通常함정
+	효과条件종류:1 = 速攻마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79686(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 回復量
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79686,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 슈가러쉬
+		효과条件종류:0 = 通常함정
+		효과条件종류:1 = 速攻마법
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		IF GETVAR(@"ライフ_%対面者%") >= 20000
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과範囲묘지 = 1
+			효과条件名前 = 트립 트리트 파라다이스
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

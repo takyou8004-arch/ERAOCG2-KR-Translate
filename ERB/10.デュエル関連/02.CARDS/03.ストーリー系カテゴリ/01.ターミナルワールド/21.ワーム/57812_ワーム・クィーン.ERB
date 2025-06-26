@@ -1,0 +1,449 @@
+﻿@CARDNAME_57812,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 웜 퀸
+	CASE "略称"
+RESULTS = 웜 퀸
+	CASE "カテゴリ"
+RESULTS:0 = 웜
+ENDSELECT
+
+
+@CARD_57812(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2700
+	CASE "守備力"
+		RETURN 1100
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_57812(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「웜」 몬스터 2장
+CALLFORM CARD_ABLE(1,EX덱起動)
+PRINTL 「웜 퀸」은 1턴에 1번,
+PRINTL 서로의 필드 / 묘지의 상기 카드를 융합 소재로 제외함으로써, 엑스트라 덱에서 융합 소환할 수 있다.
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ①: 자신 필드의 「웜」 몬스터 1장을 릴리스하고 발동할 수 있다.
+PRINTL 덱에서 「웜」 카드를 2장까지 자신 필드에 세트한다.
+CALLFORM CARD_ABLE(3,필드→묘지,덱→묘지)
+PRINTL ②: 이 카드가 파괴 이외의 방법으로 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 묘지의 이 카드를 특수 소환한다.
+CALLFORM CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ③: 상대 턴에 1번,
+PRINTL 자신 필드의 「웜」 몬스터(뒷면 표시도 포함하여) 1장과 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 대상으로 한 몬스터가 뒷면 수비 표시라면 공격 표시로 하고, 앞면 표시라면 뒷면 수비 표시로 한다.
+CALLFORM CARD_ABLE(0,ターン終了時)
+PRINTL ④: 자신 엔드 페이즈에 발동할 수 있다.
+PRINTL 상대의 묘지에 「웜 제트릭스」 「웜 어글리」 「웜 이로킨」을 1장씩 생성한다.
+
+
+@CARDSUMMON_57812(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件カテゴリ = 웜
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,57812) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_57812(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 素材数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57812)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,57812)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,57812)
+	SIF RESULT == 1
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲묘지 = 1
+	素材範囲상대필드 = 1
+	素材範囲상대묘지 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件名前 = 웜 퀸
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	IF ターンプレイヤー == 듀얼리스트
+		SIF 종류 == フリー誘発
+			RETURN 0
+		SIF 발동済_2(듀얼리스트,57812)
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+		RETURN 1
+
+	ELSEIF ターンプレイヤー != 듀얼리스트
+		SIF 효과발동済(듀얼리스트,場所,ゾーン)
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		RETURN 1
+	ENDIF
+	RETURN 0
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 덱→묘지
+	SIF 발동済_3(듀얼리스트,57812)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,57812,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_57812(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57812,1)
+	IF RESULT == 0
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲묘지 = 1
+		素材範囲상대필드 = 1
+		素材範囲상대묘지 = 1
+		TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{場所}")}(듀얼리스트,場所)
+		CALL FUSSUMMON(듀얼리스트, 場所, 제외行き)
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	IF ターンプレイヤー == 듀얼리스트
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57812,2)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ = 웜
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				REPEAT 2
+					CALL FULLRESET
+					효과範囲덱 = 1
+					효과条件カテゴリ = 웜
+					IF モンスター数(듀얼리스트) >= 5
+						효과条件종류 = 마함全般
+					ELSEIF 마함数(듀얼리스트) >= 5
+						효과条件종류 = モン全般
+					ENDIF
+					효과条件任意 = 1
+					CALL CARD_CHOOSE_BASIC(듀얼리스트,"덱",ゾーン,場所)
+					SIF RESULT == 9999
+						BREAK
+					選択カード = RESULT
+					TRYCALLFORM CARD_{RESULT:99},"종류"
+					IF RESULT < 10
+						CALL FULLRESET
+						CALL CARD_SP_SUMMON(듀얼리스트,"덱",選択カード,"裏側守備표시")
+					ELSE
+						CALL CARD_DISPOSE(듀얼리스트,"덱",選択カード,마함行き,1)
+					ENDIF
+
+					SIF モンスター数(듀얼리스트) >= 5 && 마함数(듀얼리스트) >= 5
+						BREAK
+				REND
+			ENDIF
+		ENDIF
+
+	ELSEIF ターンプレイヤー != 듀얼리스트
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57812,10)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과条件カテゴリ = 웜
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			IF RESULT != 9999
+				選択カード = RESULT
+				IF GETVAR(@"%듀얼리스트%_MZ_表:選択カード") == 3
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"表",1,1)
+				ELSE
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"表",3,1)
+				ENDIF
+				CALL FULLRESET
+				효과条件표시 = 表側표시
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"표시변경")
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 덱→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57812,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前 = 웜 퀸
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57812)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_GENERATE_GY(対面者,157812)
+		CALL CARD_GENERATE_GY(対面者,257812)
+		CALL CARD_GENERATE_GY(対面者,357812)
+	ENDIF
+ENDIF
+
+
+;>----------------------------------------
+
+@CARDNAME_157812,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 웜 제트릭스
+	CASE "略称"
+RESULTS = 웜 제트릭스
+	CASE "カテゴリ"
+RESULTS:0 = 웜
+ENDSELECT
+
+
+@CARD_157812(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 0
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_157812(종류)
+#DIM DYNAMIC 종류
+
+;（作りたく）ないです
+
+
+@CARDCAN_157812(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+RETURN 0
+
+
+;>----------------------------------------
+
+
+@CARDNAME_257812,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 웜 어글리
+	CASE "略称"
+RESULTS = 웜 어글리
+	CASE "カテゴリ"
+RESULTS:0 = 웜
+ENDSELECT
+
+
+@CARD_257812(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 100
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_257812(종류)
+#DIM DYNAMIC 종류
+
+;（作りたく）ないです
+
+
+@CARDCAN_257812(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+RETURN 0
+
+
+;>----------------------------------------
+
+
+@CARDNAME_357812,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 웜 이로킨
+	CASE "略称"
+RESULTS = 웜 이로킨
+	CASE "カテゴリ"
+RESULTS:0 = 웜
+ENDSELECT
+
+
+@CARD_357812(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1200
+	CASE "トークン"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_357812(종류)
+#DIM DYNAMIC 종류
+
+;（作りたく）ないです
+
+
+@CARDCAN_357812(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+RETURN 0

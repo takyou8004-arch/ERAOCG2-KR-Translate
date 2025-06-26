@@ -1,0 +1,203 @@
+﻿@CARDNAME_91750,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 이터널 페이버릿
+	CASE "略称"
+RESULTS = 이터널 F
+	CASE "カテゴリ"
+RESULTS:0 = 유벨
+RESULTS:1 = 페이버릿
+ENDSELECT
+
+
+@CARD_91750(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91750(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(10,마함起動)
+PRINTL ①: 1턴에 1번, 이하의 효과에서 1개를 선택하여 발동할 수 있다.
+PRINTL (이 카드명의 이하의 효과는 각각 1턴에 1번밖에 선택할 수 없다.)
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ●자신의 묘지에서 제외되어 있는, 레벨 10 이상의 "유벨" 몬스터 1장을 특수 소환한다.
+PRINTL 그 특수 소환 성공시에 서로 마법 / 함정/몬스터의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(2,마함起動)
+PRINTL ●자신 필드에 "유벨"이 존재할 경우, 패 1장을 버리고,
+PRINTL 마법 & 함정 존의 앞면 표시인 이 카드를 묘지로 보내 발동할 수 있다.
+PRINTL 자신 / 상대 필드의 몬스터를 융합 소재로 하여, 융합 몬스터 1장을 융합 소환한다.
+PRINTL 그 때, 첫 번째 융합 소재는 "유벨"이어야 한다.
+
+@CARDCAN_91750(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91750)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,91750) && 발동済_2(듀얼리스트,91750)
+		RETURN 0
+	IF 발동済_1(듀얼리스트,91750) == 0
+		CALL CARD_SS_CHECK(듀얼리스트,1075,"")
+		SIF RESULT != 1
+			条件달성++
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 유벨
+		CALLFORM 효과条件レベル_ADV(10,"以上")
+		효과条件소환可 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,91750)
+		SIF RESULT == 1
+			条件달성++
+	ENDIF
+	IF 발동済_2(듀얼리스트,91750) == 0
+		SIF 손패数(듀얼리스트) == 0
+			RETURN 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+효과条件名前 = 유벨
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,91750)
+		IF RESULT == 1
+			CALL RESETAREA_MAT
+			素材範囲필드 = 1
+			素材範囲상대필드 = 1
+			CALL FULLRESET
+			효과範囲EX덱 = 1
+			효과条件종류 = 융합
+			효과条件소환可 = 1
+			強制必要素材名前 = 유벨
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件달성++
+		ENDIF
+	ENDIF
+	IF 条件달성 != 0
+		RETURN 1
+	ELSE
+		RETURN 0
+	ENDIF
+ELSEIF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_91750(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성A
+#DIM DYNAMIC 条件달성B
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91750,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 유벨
+		CALLFORM 효과条件レベル_ADV(10,"以上")
+		효과条件소환可 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,91750)
+		SIF RESULT == 1
+			条件달성A ++
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲상대필드 = 1
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종류 = 융합
+		효과条件소환可 = 1
+		強制必要素材名前 = 유벨
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성B ++
+		IF 발동済_1(듀얼리스트,91750) == 0 && 발동済_2(듀얼리스트,91750) == 0 && 손패数(듀얼리스트) > 0 && 条件달성A != 0 && 条件달성B != 0
+			CALL YN_CHOICE(듀얼리스트,"●묘지から「유벨」몬스터를 특수소환する。","●俺（のモンスター）とお前（のモンスター）で超융합！")
+		ELSEIF 발동済_1(듀얼리스트,91750) == 1 || 条件달성A == 0
+			RESULT = 1
+		ELSEIF 발동済_2(듀얼리스트,91750) == 1 || 条件달성B == 0
+			RESULT = 0
+		ELSE
+			PRINTW 발동できる효과がありません
+			RETURN
+		ENDIF
+		IF RESULT == 0
+			;CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91750,1)
+			CALL CARD_EFFECT_USE(듀얼리스트,91750,1)
+			CALL SET_PLAYER_INFO(듀얼리스트,"특수阻害中止",3,2)
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲제외 = 1
+			효과条件カテゴリ = 유벨
+			CALLFORM 효과条件レベル_ADV(10,"以上")
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ELSEIF RESULT == 1
+			;CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91750,2)
+			CALL CARD_EFFECT_USE(듀얼리스트,91750,2)
+			CALL FULLRESET
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL RESETAREA_MAT
+				素材範囲필드 = 1
+				素材範囲상대필드 = 1
+				CALL FULLRESET
+				효과条件종류 = 융합
+				효과条件소환可 = 1
+				強制必要素材名前 = 유벨
+				CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+				選択カード = RESULT
+				IF 選択カード != 9999
+					TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+					CALL FUSSUMMON(듀얼리스트, 選択カード)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91750)
+	IF RESULT == 0
+	ENDIF
+ENDIF

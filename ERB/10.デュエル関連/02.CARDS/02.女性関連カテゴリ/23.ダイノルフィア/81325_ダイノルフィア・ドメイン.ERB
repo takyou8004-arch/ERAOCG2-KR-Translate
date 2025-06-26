@@ -1,0 +1,141 @@
+﻿@CARDNAME_81325,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 다이놀피어 도메인
+	CASE "略称"
+RESULTS = 다이노 도메인
+	CASE "カテゴリ"
+RESULTS:0 = 다이놀피어
+ENDSELECT
+
+
+@CARD_81325(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+@CARD_EXPLANATION_81325(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,마함起動 ,フリー誘発)
+PRINTL ①: 자신 상대의 메인 페이즈에, LP를 절반 지불하고 발동할 수 있다.
+PRINTL 자신의 패 덱 필드에서, "다이놀피어" 융합 몬스터 카드에 의해 정해진 융합 소재 몬스터를 묘지로 보내고,
+PRINTL 그 융합 몬스터 1장을 EX덱에서 융합 소환한다.
+CALL CARD_ABLE(2,묘지起動 ,フリー誘発)
+PRINTL ②: 자신의 LP가 2000 이하일 경우, 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 이 턴, 자신이 받는 효과 데미지는 0이 된다.
+PRINTL 
+
+@CARDCAN_81325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC EX条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,81325)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,81325)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲덱 = 1	
+	素材範囲필드 = 1
+	素材範囲손패 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	효과条件カテゴリ = 다이놀피어
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	SIF 발동済_2(듀얼리스트,81325)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") > 2000
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_효과ダメージ無効") == 1
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_81325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 묘지送カード,10
+#DIM DYNAMIC 손패묘지送カード,10
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択済カード
+#DIM DYNAMIC EX条件달성
+;융합소환
+
+
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81325,1)
+	IF RESULT == 0	
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		SIF GETVAR(@"%듀얼리스트%_ぺギア") <= 0
+			CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",(GETVAR(@"ライフ_%듀얼리스트%")  / 2))
+
+		CALL RESETAREA_MAT
+		素材範囲손패 = 1
+		素材範囲덱 = 1	
+		素材範囲필드 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件カテゴリ = 다이놀피어
+		효과条件소환可 = 1	
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		;戻る
+		IF 選択カード != 9999
+			;융합효과-------------------------------------------
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL FUSSUMMON(듀얼리스트, 選択カード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81325,2)
+	IF RESULT == 0	
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL SET_PLAYER_INFO(듀얼리스트,"효과ダメージ無効",1)
+	ENDIF
+ENDIF

@@ -1,0 +1,247 @@
+﻿@CARDNAME_79884,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 긴급 기획 마법 발동할 때마다 강제 전라 스쿼트! ~이머전시 프로젝트 매지컬 엑서사이즈~
+	CASE "略称"
+RESULTS = 마법 유발 헬스
+	CASE "カテゴリ"
+RESULTS:0 = 당신
+		RESULTS:1 = E.R.A
+		;RESULTS:2 = アライブツイン
+		;アライブツインとは関係ないです！！！！
+		;でもそれはそれとして違法サイトで筋トレ動画をうｐします！！！！
+		RESULTS:3 = MC
+	CASE "生産不可"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250607
+ENDSELECT
+
+
+@CARD_79884(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_79884(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ①③의 효과는 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①: 이 카드의 발동 시의 효과 처리로서,
+PRINTL 덱에서 "E.R.A" 일반 마법 카드 1장을 패에 넣을 수 있다.
+CALLFORM CARD_ABLE(0,발동強制誘発)
+PRINTL ①: 이 카드가 마법 & 함정 존에 존재하는 한, 자신 또는 상대가 일반 마법 카드를 발동할 때마다 발동한다.
+PRINTFORM 상대 플레이어는
+SETCOLOR C_PINK 
+PRINTFORM 전라로 스쿼트
+RESETCOLOR
+PRINTFORML 를 행한다。
+CALL CARD_ABLE(2,ターン終了時)
+PRINTL ③: 자신의 엔드 페이즈에, 자신의 마법 & 함정 존의 앞면 표시의 "E.R.A" 몬스터 카드 1장을 묘지로 보내고 발동할 수 있다.
+PRINTL 덱에서 "E.R.A" 카드 1장을 패에 넣을 수 있다.
+
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_AA_79884
+
+
+@CARDCAN_79884(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79884)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 通常마법
+	CALL CARD_CHECK_START_DATA_2(듀얼리스트,2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79884)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	SIF 발동済_2(듀얼리스트,79884)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件종류 = モン全般
+효과条件カテゴリ = E.R.A
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_79884(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 딜도설치
+#DIM DYNAMIC 実行強度
+#DIM DYNAMIC 実行前체력
+#DIM DYNAMIC 実行後체력
+#DIM DYNAMIC 実行前기력
+#DIM DYNAMIC 実行後기력
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동強制誘発
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	IF RESULT != -1
+		조교대상 = RESULT
+		IF オプション_체력기력상승 == 1
+			実行前체력 = MAXBASE:조교대상:체력
+			実行前기력 = MAXBASE:조교대상:기력
+		ENDIF
+		実行強度 = (MAXBASE:조교대상:체력) / 2000
+		IF 実行強度 < 1
+			実行強度 = 1
+		ELSE
+			実行強度 = 実行強度 * 100
+		ENDIF
+		CALL FULLRESET
+		효과範囲마함 = 1
+효과条件名前 = 악몽의 조교실
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		딜도설치 = RESULT
+		SETCOLOR C_PINK 
+		PRINTFORML 
+		PRINTFORMW 일반마법카드가 발동 된 것으로、%NAME:조교대상%는 스쿼트를 해야만하게되었다……
+		PRINTFORML 카드 효과에 따라、%NAME:조교대상%는 옷을 벗고、양손을 머리 뒤로 꼬고 다리를 어깨너비로 벌리니、
+		SIF 딜도설치 >= 1
+			PRINTFORM 조교실에 설치된 딜도를 축으로
+		IF  TALENT:조교대상:성별 != 2
+			SIF TALENT:조교대상:성별 == 3
+				PRINTFORM 후타나리 페이스와
+			IF BUST_SIZE(조교대상) <= -1
+				PRINTFORM 그 작은 가슴을 부들부들 떨면서
+			ELSEIF BUST_SIZE(조교대상) == 1
+				PRINTFORM 그 커다란 가슴을 천박하게 떨면서
+			ELSEIF BUST_SIZE(조교대상) == 2
+				PRINTFORM 그 폭유를 %TEXTR("보잉♥보잉♥/뽀잉♥뽀잉♥")%하며 천박하게 흔들면서
+			ELSEIF BUST_SIZE(조교대상) == 3
+				PRINTFORM 그 소와같은 폭유를 %TEXTR("보잉♥보잉♥/뽀잉♥뽀잉♥")%하며 천박하게 흔들면서
+			ELSEIF BUST_SIZE(조교대상) >= 4
+				PRINTFORM 그 규격외인 크기의 폭유를 %TEXTR("보이잉♥보이잉♥/부왕♥부왕♥")%하며 쫒기는듯이 흔들면서
+			ENDIF
+		ELSE
+			PRINTFORM 페니스를 흔들면서
+		ENDIF
+
+
+		PRINTFORML 스쿼트를 시작했다……
+		RESETCOLOR
+		IF 딜도설치 >= 1
+			CALL EROTIC_MOVE("ＡＤ스쿼트",조교대상,MASTER,実行強度)
+		ELSE
+			CALL EROTIC_MOVE("스쿼트",조교대상,MASTER,実行強度)
+		ENDIF
+
+		CALL FULLRESET
+		효과範囲마함 = 1
+효과条件名前 = AliVe♡Twin 채널
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT >= 1
+			SIF 딜도설치 >= 1
+				実行強度 = 実行強度 * 3
+			SETCOLOR C_RED 
+			PRINTFORMW 
+			PRINTFORMW ●AliVe♡Twin
+			SETCOLOR C_PINK 
+			PRINTFORML 
+			PRINTFORMW %NAME:조교대상%는 라이브 카메라에 아까까지의 치태가 촬영되고있었다……
+			PRINTFORM 『 긴급기획！%NAME:조교대상%의 마법발동할 때 마다 강제 전라 스쿼트！』가 AliVe♡Twin 채널에서 공개되었다！
+			PRINTFORMW 
+			RESETCOLOR
+			CALL MONEY_GET(実行強度)
+			PRINTFORML 
+		ENDIF
+			PRINTFORML 
+			PRINTFORMW %NAME:조교대상%는 강제적으로 행해진 스쿼트에 의해、데미지를 입었다。
+			実行強度 = 実行強度 / 10
+			SIF 実行強度 < 200
+				実行強度 = 200
+			SIF 実行強度 > 2000
+				実行強度 = 2000
+			CALL LIFE_CHANGE(対面者,"減少","효과",実行強度)
+			IF オプション_체력기력상승 == 1
+				実行後체력 = MAXBASE:조교대상:체력
+				実行後기력 = MAXBASE:조교대상:기력
+				PRINTFORML %NAME:조교대상%의 체력UP！！：【{実行前체력}】→【{実行後체력}】
+				PRINTFORML %NAME:조교대상%의 기력UP！！：【{実行前기력}】→【{実行後기력}】
+			ENDIF
+	ELSE
+		PRINTFORMW 일반마법이 발동되었지만、상대는 스쿼트의 대상외 였다。
+		PRINTFORMW 상대는 패널티데미지만 입었다。
+		CALL LIFE_CHANGE(対面者,"減少","효과",200)
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79884,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+
+		CALL FULLRESET
+효과条件カテゴリ = E.R.A
+		효과条件종류 = 通常마법
+		효과条件任意 = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79884,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件종류 = モン全般
+효과条件カテゴリ = E.R.A
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+        IF RESULT == 1
+			CALL FULLRESET
+효과条件カテゴリ = E.R.A
+			효과条件任意 = 1
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

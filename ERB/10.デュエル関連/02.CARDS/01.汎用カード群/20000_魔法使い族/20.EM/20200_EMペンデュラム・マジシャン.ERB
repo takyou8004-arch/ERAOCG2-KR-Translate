@@ -1,0 +1,184 @@
+﻿@CARDNAME_20200,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = EM펜듈럼 마술사
+	CASE "略称"
+RESULTS = EM펜마
+	CASE "カテゴリ"
+RESULTS:0 = 엔터메이트
+RESULTS:1 = 펜듈럼
+
+ENDSELECT
+
+
+@CARD_20200(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 雄性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_20200(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 ①②의 P효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신의 메인 페이즈에 발동할 수 있다.
+PRINTL 패 / EX덱에서 EX 몬스터 이외의 「EM」「마술사」「오드아이즈」 몬스터 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 자신 필드에 「EM」 몬스터가 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 자신 필드의 모든 「EM」 몬스터의 공격력은 턴 종료시까지 1000 올린다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(3,특수소환時)
+PRINTL ①: 이 카드가 특수 소환했을 경우, 자신 필드의 카드를 2장까지 대상으로 하고 발동할 수 있다.
+PRINTL 그 카드를 파괴하고, 파괴한 수만큼 덱에서 「EM펜듈럼 마술사」 이외의 「EM」 몬스터를 패에 넣는다(동명 카드는 1장까지).
+
+@CARDSUMMON_AA_20200
+
+
+@CARDCAN_20200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20200)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,20200)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ:0 = 엔터메이트
+	효과条件カテゴリ:1 = 마술사
+	효과条件カテゴリ:2 = 오드아이즈
+	효과条件종류 = EX以外全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,20200)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 엔터메이트
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_3(듀얼리스트,20200)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択횟수
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20200)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20200,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ:0 = 엔터메이트
+		효과条件カテゴリ:1 = 마술사
+		효과条件カテゴリ:2 = 오드아이즈
+		효과条件종류 = EX以外全般
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20200,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 엔터메이트
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"一攻",1000)
+	ENDIF
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20200,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件行先플래그 = 破壊行き
+		효과条件複数 = 98
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			選択횟수 = RESULT:2
+			CALL FULLRESET
+			효과条件固名前 = EM펜듈럼 마술사
+			효과条件カテゴリ = 엔터메이트
+			효과条件複数 = 選択횟수
+			효과条件固名前選択 = 1
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

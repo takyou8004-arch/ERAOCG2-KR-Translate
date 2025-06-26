@@ -1,0 +1,161 @@
+﻿@CARDNAME_24842,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 쌍용 보스카츠 투 & 카츠에몽 무
+	CASE "略称"
+RESULTS = 쌍용 보스에몽
+	CASE "カテゴリ"
+RESULTS:0 = 햄카츠단
+		RESULTS:1 = 혁명군
+		RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_24842(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RESULT:1 = 바람속성
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24842(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드의 ①②의 효과는 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 자신 / 상대 턴에, 「쌍용 보스카츠 투 & 카츠에몽 무」 이외의
+PRINTL 「혁명군」 또는 「햄카츠단」 몬스터가 존재할 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(2,소환時 ,특수소환時)
+PRINTL ②: 이 카드가 소환 / 특수 소환에 성공했을 경우 500 LP를 지불하고 발동할 수 있다.
+PRINTL 자신 필드에 존재하는 이 카드 이외의 「혁명군」 또는 「햄카츠단」 몬스터 1장을 패로 되돌리고,
+PRINTL 이 카드의 공격력 이하의 공격력을 가진 상대 필드의 몬스터 1장을 파괴한다.
+PRINTL 그 후, 자신 필드에 존재하는 몬스터 1장을 패로 되돌릴 수 있다.
+
+@CARDCAN_24842(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24842)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,24842)
+		RETURN 0
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24842,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ:0 = 혁명군
+	효과条件カテゴリ:1 = 햄카츠단
+효과条件固名前 = 쌍용 보스카츠 투 & 카츠에몽 무
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,24842)
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 500
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ:0 = 혁명군
+	효과条件カテゴリ:1 = 햄카츠단
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24842(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 戦闘カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24842,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24842,2)
+	IF RESULT == 0
+		;LPを1000支払う
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",500)
+		
+		;혁명군か햄카츠단を손패に戻す
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ:0 = 혁명군
+		효과条件カテゴリ:1 = 햄카츠단
+효과条件固名前 = 쌍용 보스카츠 투 & 카츠에몽 무
+		효과条件行先플래그 = 손패行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+
+		;攻撃力以下を破壊
+		CALL FULLRESET
+		효과条件攻撃力 = GETVAR(@"%듀얼리스트%_MZ_攻:場所")
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+		
+		;카드를 손패に戻す
+		SIF 듀얼리스트 == "자신"
+PRINTL 자신 필드의 몬스터를 패로 되돌리시겠습니까?
+		CALL YN_CHOICE(듀얼리스트)
+		IF RESULT == はい && 듀얼리스트 == "자신"
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件行先플래그 = 손패行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

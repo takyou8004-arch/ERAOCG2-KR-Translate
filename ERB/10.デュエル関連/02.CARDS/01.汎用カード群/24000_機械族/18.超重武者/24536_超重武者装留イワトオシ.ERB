@@ -1,0 +1,161 @@
+﻿@CARDNAME_24536,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초중무사 장비 이와토오시
+	CASE "略称"
+RESULTS = 이와토오시
+	CASE "カテゴリ"
+RESULTS:0 = 초중무사
+RESULTS:1 = 초중무사 장비
+ENDSELECT
+
+
+@CARD_24536(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 효과モン
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24536(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ③의 효과는, 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動,필드起動)
+PRINTL ①: 자신 메인 페이즈에 자신 필드의 「초중무사」 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 자신의 패 / 필드에서 이 몬스터를 장착 카드 취급하여 그 자신의 몬스터에 장착한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드를 장착한 몬스터가 수비 표시 몬스터를 공격했을 경우,
+PRINTL 그 수비력을 공격력이 초과한 만큼만 상대에게 전투 데미지를 준다.
+CALLFORM CARD_ABLE(1,필드→묘지)
+PRINTL ③: 이 카드가 필드에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 덱에서 「초중무사 장비 이와토오시」 이외의 「초중무사」 몬스터 1장을 패에 추가한다.
+
+
+@CARDCAN_24536(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24536)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 필드起動 
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 초중무사
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦破壊→묘지
+    SIF 발동済_1(듀얼리스트,24536)
+		RETURN 0
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 초중무사
+	효과条件종류 = モン全般
+	효과条件固名前 = 초중무사 장비 이와토오시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+			RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_24536(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動 || 종류 == 필드起動 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24536)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 초중무사
+		효과条件他所 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"貫通")
+
+ELSEIF 종류 == 戦破壊→묘지
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24536,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+	    효과条件カテゴリ = 초중무사
+		효과条件종류 = モン全般
+	    효과条件固名前 = 초중무사 장비 이와토오시
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+

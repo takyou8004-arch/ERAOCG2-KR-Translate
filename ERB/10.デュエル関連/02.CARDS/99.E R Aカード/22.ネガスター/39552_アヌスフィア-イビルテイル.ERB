@@ -1,0 +1,319 @@
+﻿@CARDNAME_39552,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 아누스피어─이블 테일
+	CASE "略称"
+		RESULTS = AnS─악마의 꼬리
+	CASE "カテゴリ"
+		RESULTS:0 = 아누스피어
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39552(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1000
+	CASE "튜너"
+		RETURN 1
+	CASE "分割"
+		RETURN 유니온
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39552(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ④의 효과는 １턴에 １번밖에 사용할 수 없다。
+PRINTL ①："아누스피어─이블 테일"은 필드 위에 １장밖에 앞면 표시로 존재할 수 없다。
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ②：패 / 묘지의 이 카드는 장착 카드로서 자신 필드의 암컷 몬스터１장에게 장착할 수 있다。
+PRINTL 장착가능한 몬스터가 존재하지 않을 경우、자신의 덱에서 사이킥족 암컷 몬스터１장을 특수 소환하고、그 몬스터에게 장착할 수 있다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드를 장착한 몬스터의 효과는 무효화된다。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ④：자신 메인 페이즈에 발동할 수 있다。
+PRINTL 장착산태인 이 카드를 특수 소환하고、장착 되어있던 몬스터의 공격력을 ０으로 한다。
+PRINTL 그 후、자신 묘지의 "아누스피어" 카드를 １장 골라、패에 넣을 수 있다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39552(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39552)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF RESULT == 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件名前 = 아누스피어─이블 테일
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	
+	IF RESULT == 0
+		효과範囲필드 = 0
+		효과範囲덱 = 1
+		효과条件종족 = 사이킥족
+		효과条件소환可 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	ENDIF
+	
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,39552)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39552,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39552(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備先カード名
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39552)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲묘지 = 0
+		효과条件성별 = 牝性
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	
+		IF RESULT != 0
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			選択カード = RESULT
+			選択カードID = RESULT:99
+		ELSE
+			;蘇生+装備は一緒にしたかったけど、難しそうなので別々に選択させる
+			효과範囲필드 = 0
+			효과範囲덱 = 1
+			효과条件종족 = 사이킥족
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+			
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件성별 = 牝性
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			選択カード = RESULT
+			選択カードID = RESULT:99
+		ENDIF
+		IF 選択カード != 9999
+			
+			; 카드를 装備
+			IF 종류 == 손패起動
+				CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,"손패",場所)
+			ELSE
+				CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,"묘지",場所)
+			ENDIF
+			
+			TRYCALLFORM CARDNAME_{選択カードID},"略称"
+			装備先カード名 = %RESULTS%
+			
+			SELECTCASE 選択カードID
+			CASE 1815,41815,59555
+				;"가스타의 무녀 윈다":
+				PRINTFORML 악마의 꼬리는 %装備先カード名%의 엉덩이구멍에 난폭하게 잠입했다！
+				PRINTFORML 긴 스트로크로 찌르는듯한 움직임으로、
+				PRINTFORMW %装備先カード名%의 엉덩이구멍 안쪽으로 안쪽으로 침입해간다…
+				PRINTFORMW 「우와아、길어어❤ 어디까지 들어오는걸까…❤」
+				
+			CASE 1816,41816,59556
+				;"가스타의 정적 캄":
+				PRINTFORML 악마의 꼬리는 %装備先カード名%의 엉덩이구멍에 난폭하게 잠입했다！
+				PRINTFORML 긴 스트로크로 찌르는듯한 움직임으로、
+				PRINTFORMW %装備先カード名%의 엉덩이구멍 안쪽으로 안쪽으로 침입해간다…
+				PRINTFORMW 「우읏❤ 그、그런 깊숙한곳까지…❤」
+				
+			CASE 1817,41817,59557
+				;"가스타의 질풍 리즈":
+				PRINTFORML 악마의 꼬리는 %装備先カード名%의 엉덩이구멍에 난폭하게 잠입했다！
+				PRINTFORML 긴 스트로크로 찌르는듯한 움직임으로、
+				PRINTFORMW %装備先カード名%의 엉덩이구멍 안쪽으로 안쪽으로 침입해간다…
+				PRINTFORMW 「응기잇…❤깊어엇…❤」
+			
+			CASE 1818,41818,59554,59558
+				;가스타의 신예 피리카
+				PRINTFORML 악마의 꼬리는 %装備先カード名%의 엉덩이구멍에 난폭하게 잠입했다！
+				PRINTFORML %装備先カード名%의 엉덩이구멍은 익숙한듯한 허리자세로 그것을 받아들이니
+				PRINTFORMW 엉덩이구멍을 구부려、쓰다듬는듯한 봉사를 개시한다…
+				PRINTFORMW 「응응…❤ 후앗…❤ 아앗…❤」
+				
+			CASEELSE
+				PRINTFORML %装備先カード名%의 엉덩이구멍에 불규칙적인 오돌토돌한 꼬리가 잠입했다！
+				PRINTFORMW 자신의 의지와는 관계없이 엉덩이구멍에 쾌락이 각인되어간다…
+	
+			ENDSELECT
+			
+			CALL CARD_EROTICS(選択カードID)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL EROTIC_MOVE("애널解し",조교대상,-1,300)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39552,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:装備先")},"略称"
+		装備先カード名 = %RESULTS%
+		
+		SELECTCASE GETVAR(@"%듀얼리스트%_필드:装備先")
+			CASE 1815,41815,59555
+				;"가스타의 무녀 윈다":
+				PRINTFORML 악마의 꼬리는 %装備先カード名%의 엉덩이구멍을 유린하고、삽입된 만큼을 한번에 뽑아냈다！
+				PRINTFORMW 넓어진 엉덩이구멍은 움찔움찔 떨고있다…
+				PRINTFORMW %装備先カード名%는 배를 문지르며、어디까지 들어온것인지를 확인하고있다…
+				PRINTFORMW 「여기까지…인가？굉장한곳까지 들어왔었구나…❤」
+				
+			CASE 1816,41816,59556
+				;"가스타의 정적 캄":
+				PRINTFORML 악마의 꼬리는 %装備先カード名%의 엉덩이구멍을 유린하고、삽입된 만큼을 한번에 뽑아냈다！
+				PRINTFORMW 넓어진 엉덩이구멍은 움찔움찔 떨고있다…
+				PRINTFORMW %装備先カード名%는 구부정한 자세로、숨도 헐떡이고있다…
+				PRINTFORMW 「의식…날아갈것 같아…피카리쨩、굉장한거…넣고있구나…❤」
+				
+			CASE 1817,41817,59557
+				;"가스타의 질풍 리즈":
+				PRINTFORML 악마의 꼬리는 %装備先カード名%의 엉덩이구멍을 유린하고、삽입된 만큼을 한번에 뽑아냈다！
+				PRINTFORMW 넓어진 엉덩이구멍은 움찔움찔 떨고있다…
+				PRINTFORMW %装備先カード名%는 구부정한 자세로、찌부러진 개구리처럼 되어있다…
+				PRINTFORMW 「흐극…❤ 아읏…❤ 옷…❤」
+			
+			CASE 1818,41818,59554,59558
+				;가스타의 신예 피리카
+				PRINTFORML 악마의 꼬리는 %装備先カード名%의 엉덩이구멍 안쪽까지 관능하고、한번에 빠져나왔다！
+				PRINTFORML 넓어진 엉덩이구멍은 아쉬운듯이 떨리고있다…
+				PRINTFORMW 「으응…❤ 벌써 뽑아버리는건가요…❤ 」
+				PRINTFORMW 피카리는 아직 만족하지 않은 엉덩이구멍을 양손으로 벌려보여、이쪽에 기대의 눈빛을 보내고있다…
+				PRINTFORMW 「한번 더…❤ 부탁드립니다…❤ 」
+				
+			CASEELSE
+				PRINTFORML %装備先カード名%의 엉덩이구멍에서、삽입된 만큼을 한번에 뽑아다！
+				PRINTFORMW 강한 자극에 버티지 못하고、%装備先カード名%는 숨도 헐떡이고있다…
+				PRINTFORMW 쩍 벌어진 엉덩이구멍에서、힘이 빠져나가는걸 느낀다…
+	
+		ENDSELECT
+		
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",装備先)
+		IF RESULT != -1
+			조교대상 = RESULT
+			CALL EROTIC_MOVE("애널解し",조교대상,-1,300)
+		ENDIF
+		
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",装備先,"永攻",-100000)
+		
+		CALL CARD_SP_SUMMON(듀얼리스트,"마함",場所,"守備표시")
+		
+		;"아누스피어" 카드를 패에 넣는다
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 아누스피어
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		
+		IF RESULT != 0
+			IF 装備先カード名 == "피리카"
+				PRINTFORML 피카리는 패에 넣어진 카드에 눈을 돌리니
+				PRINTFORMW 이쪽에 음란한 미소를 보여왔다…
+				PRINTFORMW 「좀 더…❤ 많이 놀자…❤」
+			ENDIF
+		ENDIF
+		
+	ENDIF
+ELSEIF 종류 == 지속효과
+	;CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,-100000,-100000)
+	;CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"無効")
+ENDIF

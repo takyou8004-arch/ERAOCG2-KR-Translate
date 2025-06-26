@@ -1,0 +1,142 @@
+﻿@CARDNAME_81866,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 크리스트론 클러스터
+	CASE "略称"
+RESULTS = CS 클러스터
+	CASE "カテゴリ"
+RESULTS:0 = 크리스트론
+ENDSELECT
+
+
+@CARD_81866(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_81866(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 한 번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 자신 필드의 「크리스트론」 카드는 자신을 대상으로 하지 않는 상대의 효과를 받지 않는다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ②: 필드의 앞면 표시 카드 1장을 대상으로 하여 발동할 수 있다
+PRINTL (자신 필드에 「크리스트론」 싱크로 몬스터가 존재할 경우, 이 효과의 대상을 2장으로 할 수 있다).
+PRINTL 「크리스트론 클러스터」 이외의 자신의 묘지 / 제외 상태인 「크리스트론」 카드 1장을 덱으로 되돌리고, 대상의 카드를 파괴한다.
+
+@CARDCAN_81866(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,81866)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,81866)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 크리스트론
+	효과条件固名前 = 크리스트론 클러스터
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件표시 = 10
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_81866(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC リピート횟수
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81866,1)
+	IF RESULT == 0
+		リピート횟수 = 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 크리스트론
+		효과条件종류 = 싱크로
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			リピート횟수 = 2
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 크리스트론
+		효과条件固名前 = 크리스트론 클러스터
+		효과条件行先플래그 = 덱行き
+		효과条件任意 = 1
+		효과条件限界値 = 10
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件표시 = 10
+			효과条件任意 = 1
+			효과条件複数 = 100 - リピート횟수
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81866)
+	IF RESULT == 0
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 크리스트론
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"無差耐")
+ENDIF

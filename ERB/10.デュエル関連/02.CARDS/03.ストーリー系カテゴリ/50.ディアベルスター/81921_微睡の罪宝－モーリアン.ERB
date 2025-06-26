@@ -1,0 +1,127 @@
+﻿@CARDNAME_81921,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 선잠의 죄보－모리안
+	CASE "略称"
+RESULTS = 죄보 모리안
+	CASE "カテゴリ"
+RESULTS:0 = 죄보
+ENDSELECT
+
+
+@CARD_81921(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_81921(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 어느 한 가지만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①: 상대 필드의 특수 소환된 앞면 표시 몬스터 1장을 뒷면 수비 표시로 한다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 이 카드가 묘지에 존재하고, 자신 필드에 레벨 5 이상의 미확인족 몬스터가 존재하는 경우에 발동할 수 있다.
+PRINTL 자신의 묘지의 「선잠의 죄보－모리안」 1장을 자신 필드에 세트한다.
+PRINTL 이 효과로 세트한 이 카드는 필드를 벗어난 경우에 제외된다.
+
+
+@CARDCAN_81921(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,81921)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,81921)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,81921)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件召種 = 召種全특수
+	효과条件除去種 = 표시변경
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,81921)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,81921)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,81921)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 미확인족
+	CALL 효과条件レベル_ADV(5,"以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,81921)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_81921(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81921,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件召種 = 召種全특수
+		효과추가종류:0 = -1
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"표시변경")
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81921,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前 = 선잠의 죄보－모리안
+		효과추가종류:0 = 500
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF

@@ -1,0 +1,160 @@
+﻿@CARDNAME_4529,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 서유법사 현장삼장
+	CASE "略称"
+RESULTS = 삼장쨩
+	CASE "カテゴリ"
+RESULTS:0 = 영령
+RESULTS:1 = 캐스터
+RESULTS:2 = FATE
+ENDSELECT
+
+
+@CARD_4529(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4529(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,효과소환)
+PRINTL ①：자신 필드의 몬스터가 1체 이하일 경우, 이 카드는 릴리스 없이 소환할 수 있다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②：자신 필드에 다른 몬스터가 존재할 경우, 이 카드의 원래 공격력은 배가 된다.
+CALLFORM CARD_ABLE(0,지속효과,常在無効,攻守変動)
+PRINTL ③：이 카드가 몬스터 존에 존재하는 한,
+PRINTL 서로 메인 페이즈 1에서는 몬스터를 특수 소환할 수 없으며,
+PRINTL 필드의 다른 특수 소환된 몬스터는 효과가 무효화되며, 원래 공격력이 절반이 된다
+CALLFORM CARD_ABLE(0,常在無効)
+PRINTL ④：특수 소환한 이 카드의 다른 효과는 무효화된다.
+
+@CARDCAN_4529(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4529)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과소환
+	SIF モンスター数(듀얼리스트) > 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과条件召種 = 召種全특수
+		효과条件他所 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF メインフェイズ２ == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 常在無効
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4529(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과소환
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 0
+		CALL FULLRESET
+		CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,1400)
+	ENDIF
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_MZ_召種:{カウンタ}") == 召種通常
+			CONTINUE
+		CALL STATCHANGE_BASIC(듀얼리스트,"自身",カウンタ,GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ")/2)
+	NEXT
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%対面者%_필드:{カウンタ}") == -1
+			CONTINUE
+		SIF GETVAR(@"%対面者%_MZ_召種:{カウンタ}") == 召種通常
+			CONTINUE
+		CALL STATCHANGE_BASIC(対面者,"自身",カウンタ,GETVAR(@"%対面者%_MZ_攻:カウンタ")/2)
+	NEXT
+ELSEIF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"SS阻害状態",3,2)
+ELSEIF 종류 == 常在無効
+	IF GETVAR(@"%듀얼리스트%_MZ_召種:場所") == 召種通常
+		CALL FULLRESET
+		효과条件召種 = 召種全특수
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"無効",0,4529)
+		CALL FULLRESET
+		효과条件召種 = 召種全특수
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効",0,4529)
+	ELSE
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"無効",0,4529)
+	ENDIF
+ENDIF

@@ -1,0 +1,167 @@
+﻿@CARDNAME_50558,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 슈팅 퀘이사 드래곤
+	CASE "略称"
+RESULTS = S 퀘이사
+	CASE "カテゴリ"
+RESULTS:0 = 스타더스트
+ENDSELECT
+
+
+@CARD_50558(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+	CASE "성별"
+		RETURN 牝性
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50558(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 12
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件종류 = 싱크로
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件종류 = 싱크로
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50558) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50558(종류)
+#DIM DYNAMIC 종류
+
+PRINTL S 몬스터의 튜너 ＋ 튜너 이외의 S 몬스터 1장 이상
+PRINTL 이 카드는 S 소환으로밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는, 묘지의 드래곤족 싱크로 몬스터의 수까지 1번의 배틀 페이즈 중에 추가 공격할 수 있다.
+
+CALLFORM CARD_ABLE(10,발동誘発)
+PRINTL ②: 1턴에 1번, 상대가 마법 / 함정 / 몬스터의 효과를 발동했을 때에 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 파괴한다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ③: 이 카드가 필드에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL EX덱에서 「슈팅 스타 드래곤」 1장을 특수 소환한다.
+
+@CARDCAN_50558(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50558)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+효과条件名前 = 슈팅 스타 드래곤
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50558(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 攻撃횟수
+
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 싱크로
+	효과条件종족 = 드래곤족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃횟수 = RESULT
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",攻撃횟수)
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50558,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+		RETURN 1
+	ENDIF
+	RETURN 0
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50558)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+효과条件名前 = 슈팅 스타 드래곤
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

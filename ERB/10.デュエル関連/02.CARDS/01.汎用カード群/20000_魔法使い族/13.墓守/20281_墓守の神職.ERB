@@ -1,0 +1,203 @@
+﻿@CARDNAME_20281,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 묘지기의 신직
+	CASE "略称"
+RESULTS = 묘지기의 신직
+	CASE "カテゴリ"
+RESULTS:0 = 묘지기
+ENDSELECT
+
+
+@CARD_20281(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250409
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20281(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時,リバース誘発)
+PRINTL ①: 이 카드가 일반 소환 / 특수 소환되었을 경우 또는 리버스했을 경우에 발동할 수 있다.
+PRINTL 자신 묘지에서 레벨 4 이하의 "묘지기" 몬스터 1장을 앞면 공격 표시 또는 뒷면 수비 표시로 특수 소환한다.
+PRINTL "왕가의 잠드는 계곡 - 네크로밸리"가 자신 필드에 존재할 경우, 대신에 패 / 덱에서 특수 소환한다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 "묘지기" 몬스터밖에 엑스트라 덱에서 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(2,F素材時효과)
+PRINTL ②: 이 카드가 융합 소재로서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 자신 덱 위에서 카드 3장을 넘긴다. 그 중에서 "묘지기" 카드 또는 "네크로밸리" 카드 1장을 패에 넣을 수 있다.
+PRINTL 남은 카드는 덱으로 되돌린다.
+
+;신職というと神社みたいな印象だが、エジプト신話に基づく宗教における신職という感じなのだろう。タ-バンの男性。
+;네크로벨리と相性が悪い묘지蘇生효과だが、네크로벨리が貼ってあるときは손패 덱에서 のリクル-トにすることで解決。
+;女の子ではないが、見た目がどことなく「シャ-ディ-」を思わせるので、意外と使える性能のモンスターに格上げしている。
+;想定初動とは別だし소환権を使うことは同じだが、네크로벨리＋신職で영술사リクル-トでも初動になる。
+;巫女とは制約효과が少し異なっており、こちらのほうがより縛りが強くかかる。
+
+
+@CARDCAN_20281(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20281)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == リバース誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,20281)
+		RETURN 0
+	;フィールドに네크로벨리が存在するかどうかで確認範囲を変える。
+	CALL FULLRESET
+	효과範囲마함 = 1
+효과条件名前 = 왕가의 골짜기-네크로밸리
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		;네크로벨리が존재하지 않는 경우=묘지から蘇生する효과のチェック
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 묘지기
+		CALL 효과条件レベル_ADV(4, "以下")
+		효과条件소환可 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		;네크로벨리が存在する場合=손패 덱에서 특수소환する효과のチェック
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과条件カテゴリ = 묘지기
+		CALL 효과条件レベル_ADV(4, "以下")
+		효과条件소환可 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == F素材時효과
+	SIF 발동済_2(듀얼리스트,20281)
+		RETURN 0
+	SIF 現山札数(듀얼리스트) < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_20281(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択結果
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == リバース誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20281,1)
+	IF RESULT == 0
+		;フィールドに네크로벨리が存在するかどうかで処理を変える。
+		;발동時と효과処理時で네크로벨리の有無が変わってたら효과範囲も変わるのは仕様とする。
+		CALL FULLRESET
+		효과範囲마함 = 1
+효과条件名前 = 왕가의 골짜기-네크로밸리
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT != 1
+			;네크로벨리が존재하지 않는 경우=묘지から蘇生する
+			
+			IF 듀얼리스트 == "자신"
+PRINTL 특수 소환할 몬스터의 표시 형식을 선택해 주세요.
+				CALL YN_CHOICE(듀얼리스트, "●表側攻撃표시で특수소환する。", "●裏側守備표시で특수소환する。")
+				選択結果 = RESULT
+			ELSE
+				;CPUは表側攻撃표시で蘇生
+				選択結果 = はい
+			ENDIF
+			
+			IF 選択結果 == はい
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 묘지기
+				CALL 효과条件レベル_ADV(4, "以下")
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트, ゾーン, 場所, "表側攻撃표시")
+			ELSE
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 묘지기
+				CALL 효과条件レベル_ADV(4, "以下")
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트, ゾーン, 場所, "裏側守備표시")
+			ENDIF
+		ELSE
+			;네크로벨리が存在する場合=손패 덱에서 특수소환する
+			
+			IF 듀얼리스트 == "자신"
+PRINTL 특수 소환할 몬스터의 표시 형식을 선택해 주세요.
+				CALL YN_CHOICE(듀얼리스트, "●表側攻撃표시で특수소환する。", "●裏側守備표시で특수소환する。")
+				選択結果 = RESULT
+			ELSE
+				;CPUは表側攻撃표시で특수소환
+				選択結果 = はい
+			ENDIF
+			
+			IF 選択結果 == はい
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과範囲덱 = 1
+				효과条件カテゴリ = 묘지기
+				CALL 효과条件レベル_ADV(4, "以下")
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트, ゾーン, 場所, "表側攻撃표시")
+			ELSE
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과範囲덱 = 1
+				효과条件カテゴリ = 묘지기
+				CALL 효과条件レベル_ADV(4, "以下")
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트, ゾーン, 場所, "裏側守備표시")
+			ENDIF
+		ENDIF
+		CALL CARD_EX_RESTRICTION(듀얼리스트,"묘지기")
+	ENDIF
+ELSEIF 종류 == F素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20281,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ:0 = 묘지기
+		효과条件カテゴリ:1 = 네크로벨리
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,3)
+	ENDIF
+ENDIF

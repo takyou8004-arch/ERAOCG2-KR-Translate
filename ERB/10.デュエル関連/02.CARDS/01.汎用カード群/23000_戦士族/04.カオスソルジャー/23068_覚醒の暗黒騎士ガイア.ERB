@@ -1,0 +1,141 @@
+﻿@CARDNAME_23068,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 각성의 암흑기사 가이아
+	CASE "略称"
+RESULTS = 각성가이아
+	CASE "カテゴリ"
+RESULTS:0 = 기사가이아
+ENDSELECT
+
+
+@CARD_23068(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 2100
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23068(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,효과소환)
+PRINTL ①: 상대 필드의 몬스터 수가 자신 필드의 몬스터보다 많을 경우,
+PRINTL 이 카드는 릴리스 없이 소환할 수 있다.
+CALLFORM CARD_ABLE(2,필드→묘지)
+PRINTL ②: 이 카드가 릴리스되었을 경우에 발동할 수 있다.
+PRINTL 자신의 패 / 묘지에서 「카오스 솔저」 몬스터 1장을 선택하여 특수 소환한다.
+CALLFORM CARD_ABLE(0,발동誘発)
+PRINTL ③: 이 카드가 묘지에 존재하고, 자신이 「카오스」 의식 마법을 발동했을 때에 발동할 수 있다.
+PRINTL 이 카드를 수비 표시로 특수 소환한다. 이 효과로 특수 소환한 이 카드는,
+PRINTL 공격력 / 수비력이 0이 되고, 효과가 무효화되어, 필드에서 벗어났을 경우 또는 턴 종료 시에 제외된다.
+
+@CARDCAN_23068(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23068)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과소환
+	SIF モンスター数(듀얼리스트) >= モンスター数(対面者)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드→묘지
+	SIF 발동済_2(듀얼리스트,23068)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 카오스 솔저
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 카오스
+	CALL CARD_CHECK_START_DATA(듀얼리스트)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 의식마법
+	CALL CARD_CHECK_START_DATA(듀얼리스트)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23068(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 효과使用불가,10
+#DIM DYNAMIC 条件달성,5
+#DIM DYNAMIC 효과先
+
+IF 종류 == 효과소환
+	RETURN 1
+ELSEIF 종류 == 필드→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23068,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 카오스 솔저
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23068)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류:0 = 190
+		효과추가종류:1 = 効追無効
+		효과추가종류:3 = 効追除処
+		효과추가종류:2 = 効追終除
+		CALL CARD_SP_SUMMON(듀얼리스트,"묘지",場所)
+	ENDIF
+ENDIF

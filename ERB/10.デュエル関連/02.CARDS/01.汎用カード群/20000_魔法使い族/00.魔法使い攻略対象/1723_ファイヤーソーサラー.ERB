@@ -1,0 +1,96 @@
+﻿@CARDNAME_1723,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 파이어-소서러-
+	CASE "略称"
+RESULTS = 파이어-S
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1723(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1723(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,특수소환時強制)
+PRINTL ①: 이 카드가 특수소환에 성공했을 경우에 발동한다.
+PRINTL 이하의 효과를 각각 적용한다.
+PRINTL ●자신의 손패를 2장 선택하고, 게임에서 제외한다.
+PRINTL ●상대 라이프에 800 포인트 데미지를 준다.
+PRINTL 
+
+@CARDCAN_1723(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1723)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 특수소환時強制
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1723(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択レベル
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 특수소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1723)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件複数 = 2
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)	
+
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",800,1)
+	ENDIF
+ENDIF

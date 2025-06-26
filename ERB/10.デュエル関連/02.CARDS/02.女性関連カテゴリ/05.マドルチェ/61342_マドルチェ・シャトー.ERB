@@ -1,0 +1,115 @@
+﻿@CARDNAME_61342,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마돌체 샤토
+	CASE "略称"
+RESULTS = 마돌 샤토
+	CASE "カテゴリ"
+RESULTS:0 = 마돌체
+ENDSELECT
+
+
+@CARD_61342(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61342(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 "마돌 샤토"가 된다.
+CALLFORM CARD_ABLE(0,마함起動 ,손패起動)
+PRINTL ①: 이 카드의 발동 시에, 자신 묘지에 "마돌체" 명의 몬스터가 존재할 경우,
+PRINTL 그 몬스터를 전부 덱으로 되돌린다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드가 필드에 존재하는 한,
+PRINTL 필드 위의 "마돌체" 몬스터의 공격력 / 수비력은 500 포인트 상승한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: "마돌체" 명의 몬스터의 효과에 의해,
+PRINTL 자신 묘지의 카드가 자신 덱으로 되돌아갈 경우, 덱으로 되돌리지 않고 패에 넣는다.
+
+
+@CARDCAN_61342(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61342)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_61342(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61342)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		FOR カウンタ, 98, -1, -1
+			IF GETVAR(@"%듀얼리스트%_묘지:{カウンタ}") == -1
+				CONTINUE
+			ENDIF
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_묘지:{カウンタ}")}, "カテゴリ"
+			IF !MATCH(RESULTS, "마돌체")
+				CONTINUE
+			ENDIF
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:{カウンタ}")}, "종류"
+			IF RESULT > 10
+				CONTINUE
+			ENDIF		
+			CALL CARD_DISPOSE(듀얼리스트,"묘지",カウンタ,2)
+		NEXT
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ = 마돌체
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,500,500)
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,500,500,61342)
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "マドル シャト-")
+ENDIF
+

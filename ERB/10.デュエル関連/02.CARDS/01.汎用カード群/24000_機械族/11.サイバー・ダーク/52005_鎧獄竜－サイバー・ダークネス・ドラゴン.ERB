@@ -1,0 +1,301 @@
+﻿@CARDNAME_52005,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 갑옥룡－사이버 다크니스 드래곤
+	CASE "略称"
+RESULTS = 갑옥룡CDnD
+	CASE "カテゴリ"
+RESULTS:0 = 사이버
+RESULTS:1 = 사이버 다크
+ENDSELECT
+
+
+@CARD_52005(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 2000
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_52005(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「사이버 다크」 몬스터 ×５
+PRINTL 이 카드는 융합 소환으로밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①：1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 자신 / 상대의 묘지에서 몬스터 1장을, 그 공격력만큼 올리는 장착 카드로서, 이 카드에 장착한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：빛 속성 레벨 10 이상의 몬스터를 장착한 이 카드는, 상대 카드의 효과를 받지 않는다.
+PRINTL ③：이 카드는, 이 카드의 장착 카드 수만큼 1번의 배틀 페이즈 중에 공격할 수 있다.
+CALLFORM CARD_ABLE(0,발동誘発)
+PRINTL ④：상대가 마법 / 함정, 몬스터의 효과를 발동했을 때에 발동할 수 있다.
+PRINTL 자신의 마법 & 함정 존의 앞면 표시의 몬스터 카드 1장을 묘지로 보냄으로써, 그 발동을 무효로 하고 파괴한다.
+
+
+
+@CARDSUMMON_52005(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件カテゴリ = 사이버 다크
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,52005) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_52005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52005)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲상대묘지 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 종류 == リアクション효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 종류 == リアクション효과 && オプション_主従 == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件표시 = 10
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_52005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備数
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52005,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과条件종류 = モン全般
+		CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,場所,(1)+(4),52005)
+	ENDIF
+ELSEIF 종류 == 지속효과
+
+	CALL FULLRESET
+	효과条件CNT = 1
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	IF RESULT > 1
+		装備数 = RESULT
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",装備数 - 1)
+	ENDIF
+
+	CALL FULLRESET
+	효과条件속성 = 빛속성
+	CALLFORM 효과条件レベル_ADV(10, "以上")
+	효과条件CNT = 1
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	IF RESULT >= 1
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+	ENDIF
+
+
+	CALL FULLRESET
+효과条件名前 = 사이버
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	IF RESULT >= 1
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"変化元ID",152005)
+	ELSE
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"変化元ID",-1)
+	ENDIF
+
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52005)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件표시 = 10
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == リアクション효과
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_마함:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_魔_装:カウンタ") != 場所
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_魔_リ数:カウンタ") >= 10
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_마함:カウンタ")},"성별"
+		SIF RESULT != 牝性
+			CONTINUE
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"마함",カウンタ)
+
+		조교대상 = RESULT
+		IF RESULT != -1
+			PRINTFORML 
+			PRINTFORMW 囚われてしまった %CALLNAME:조교대상%는パ-ツ扱いされて力を吸い取られている。
+			CALL EROTIC_MOVE("拘束晒し",조교대상,-1,150)
+			CALL SET_FIELD_INFO(듀얼리스트,"마함",カウンタ,"リ数",1,0,1)
+		ENDIF
+	NEXT
+ENDIF
+
+
+
+@CARDNAME_152005,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 갑황룡－사이버 다크 엔드 드래곤
+	CASE "略称"
+RESULTS = 갑황룡DarkEnd
+	CASE "カテゴリ"
+RESULTS:0 = 사이버
+RESULTS:1 = 사이버 다크
+ENDSELECT
+
+
+@CARD_EXPLANATION_152005(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「사이버 다크」 몬스터 ×５
+PRINTL 이 카드는 융합 소환으로밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①：1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 자신 / 상대의 묘지에서 몬스터 1장을, 그 공격력만큼 올리는 장착 카드로서, 이 카드에 장착한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：빛 속성 레벨 10 이상의 몬스터를 장착한 이 카드는, 상대 카드의 효과를 받지 않는다.
+PRINTL ③：이 카드는, 이 카드의 장착 카드 수만큼 1번의 배틀 페이즈 중에 공격할 수 있다.
+CALLFORM CARD_ABLE(0,발동誘発)
+PRINTL ④：상대가 마법 / 함정, 몬스터의 효과를 발동했을 때에 발동할 수 있다.
+PRINTL 자신의 마법 & 함정 존의 앞면 표시의 몬스터 카드 1장을 묘지로 보냄으로써, 그 발동을 무효로 하고 파괴한다.
+
+
+@CARD_152005(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 2000
+	CASE "특수불가"
+		RETURN 1
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+
+

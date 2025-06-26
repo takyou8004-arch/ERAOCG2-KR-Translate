@@ -1,0 +1,136 @@
+﻿@CARDNAME_51537,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 황금의 치유사 이졸데
+	CASE "略称"
+RESULTS = 금발 이졸데
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_51537(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_51537(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件名前 = 성기사 트리스탄
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,51537) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_51537(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「성기사 트리스탄」 1체
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 L 소환했을 경우에 발동할 수 있다. 자신 묘지의 「성기사」 몬스터 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ②: 자신 엔드 페이즈에 발동한다.
+PRINTL 자신 필드에 「성기사 트리스탄」이 존재할 경우, 자신은 800 LP 회복한다.
+PRINTL 존재하지 않을 경우, 이 카드를 묘지로 보낸다.
+
+@CARDCAN_51537(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51537)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,51537)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 성기사
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_51537(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID 
+#DIMS DYNAMIC 選択カード名前 
+#DIM DYNAMIC 装備마법数
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51537,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 성기사
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == ターン終了時強制
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件名前 = 성기사 트리스탄
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",800)
+	ELSE
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

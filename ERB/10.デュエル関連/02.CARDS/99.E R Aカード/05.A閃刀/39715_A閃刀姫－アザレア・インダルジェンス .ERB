@@ -1,0 +1,198 @@
+﻿@CARDNAME_39715,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = A섬도희－아자레아 인덜전스
+	CASE "略称"
+		RESULTS = A섬희-아자레아I
+	CASE "カテゴリ"
+		RESULTS:0 = A섬도희
+		RESULTS:1 = A섬도
+		RESULTS:2 = E.R.A
+		RESULTS:3 = 섬도
+		RESULTS:4 = 섬도희
+ENDSELECT
+
+
+@CARD_39715(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 2003
+ENDSELECT
+
+
+RETURN 0
+
+
+@CARD_EXPLANATION_39715(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL A섬도 몬스터 1체 이상
+PRINTL 이 카드명의  ①의 효과는 각각 1턴에 1번밖에 사용할 수 없다
+CALL CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：이 카드가 특수 소환에 성공한 경우, 상대 필드의 암컷 몬스터 1장을 대상으로 발동할 수 있다。
+PRINTL 대상 카드를 이 카드에 장비한다。
+CALL CARD_ABLE(2,攻撃時強制誘発)
+PRINTL ②：카드를 장비한 이 카드가 암컷 몬스터와 전투할 때 발동한다。
+PRINTL 전투하는 상대의 암컷 몬스터의 공격력이 1500 감소하고, 효과를 무효화하며 전투로 파괴되지 않는다。
+CALL CARD_ABLE(3,지속효과)
+PRINTL ③：이 카드는 전투로 파괴되지 않는다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_39715(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 3
+
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = A섬도
+ENDIF
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,39715) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_39715(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39715)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,39715)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件성별 = 牝性
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARD_{戦闘カードID(듀얼리스트,1)}("성별")
+	SIF RESULT != 牝性
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT == 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+
+ENDIF
+
+@CARDEFFECT_39715(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 無効カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39715,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件성별 = 牝性
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"選択")
+		IF RESULT == 1
+			選択カード = RESULT:1
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = RESULT
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,場所,"상대필드",選択カード)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL FULLRESET
+	無効カード = 戦闘場所(듀얼리스트,1)
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",無効カード,"戦耐",2,1,1)
+	CALL FULLRESET
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",無効カード,"지속無効")
+	CALL FULLRESET
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",無効カード,"永攻DOWN",1500)
+
+	CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",無効カード,1)
+	IF RESULT != -1
+		조교대상 = RESULT
+		PRINTFORMW 동료를 방패로 삼아진 %CALLNAME:조교대상%는 허수아비가 되어, 가슴과 사타구니를 집요하게 괴롭혀지고 있다。
+		CALL EROTIC_MOVE("なぶり殺し",조교대상,NO_TO_CHARANUM(2003),100)
+
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"戦耐")
+ENDIF
+
+

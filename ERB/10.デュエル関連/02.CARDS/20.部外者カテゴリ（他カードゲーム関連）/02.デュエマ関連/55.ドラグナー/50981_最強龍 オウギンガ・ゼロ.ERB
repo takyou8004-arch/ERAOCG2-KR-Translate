@@ -1,0 +1,130 @@
+﻿@CARDNAME_50981,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 최강룡 오우긴가 제로
+	CASE "略称"
+RESULTS = 오우긴가 제로
+
+	CASE "武装名"
+RESULTS = 무적검 프로토 기가하트
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:1 = 드래그하트
+RESULTS:2 = 웨폰
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_50981(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "コスト"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 2500
+	CASE "分割"
+		RETURN 효과なし
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50981(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+RETURN 0
+
+@CARD_EXPLANATION_50981(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 『초차원』에 의해 강림.
+PRINTL (이 카드는 카드의 효과로만 EX덱에서 필드에 특수 소환하거나 마함 존에 놓을 수 있다)
+CALL TEXT_DECORATION("D_HEART_W")
+PRINTL 웨폰 측 《무적검 프로토 기가하트》 코스트: 2
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ①: 장착 몬스터가 필드를 벗어날 경우,
+PRINTL 대신 이 카드를 몬스터로 필드에 특수 소환한다.
+CALL TEXT_DECORATION("D_HEART_2")
+PRINTL 
+PRINTL 
+
+
+@CARDCAN_50981(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50981)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+
+IF 종류 == 身代효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 装備先
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,50981,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50981(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 装備先
+
+IF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50981)
+	IF RESULT == 0
+		PRINTFORMW 担い手の危機に、드래그하트웨폰が변형をはじめた！！
+		PRINTFORML 『最強龍 オウギンガ ゼロ　龍　解　！！』
+		CALL RESETCONDITION
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

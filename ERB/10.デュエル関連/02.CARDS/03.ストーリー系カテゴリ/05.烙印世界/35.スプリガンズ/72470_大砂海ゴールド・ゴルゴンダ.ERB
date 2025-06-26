@@ -1,0 +1,188 @@
+﻿@CARDNAME_72470,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 대사해 골드 고르곤다
+	CASE "略称"
+RESULTS = G 고르곤다
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_72470(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72470(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「대사해 골드 고르곤다」가 된다.
+PRINTL 이 카드명의 ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①：필드의 「스프리건즈」X 몬스터의 공격력은 1000 올린다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ②：자신 필드에 「스프리건즈」X 몬스터가 존재하지 않을 경우,
+PRINTL 패에서 「스프리건즈」 카드 1장을 버리고 발동할 수 있다.
+PRINTL EX덱에서 「스프리건즈」X 몬스터 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ③：자신 필드의 X 몬스터가 효과로 필드를 벗어났을 경우,
+PRINTL 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 이 턴, 그 몬스터는 공격할 수 없다.
+PRINTL 
+
+@CARDCAN_72470(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72470)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,72470)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 스프리건즈
+	효과条件종류 = 엑시즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	;存在する場合は불가
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 스프리건즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 스프리건즈
+	효과条件종류 = 엑시즈
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,72470)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	
+	CALL FULLRESET
+	효과条件종류 = 엑시즈
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"필드離れ")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_72470(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件チェック
+#DIM DYNAMIC 条件달성,5
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;EX덱에서 直出し
+;参考：마법族の里、フラワリング エトワ-ル、해피 チャネラ-
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72470,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 스프리건즈
+		효과条件종류 = 엑시즈
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		;존재하지 않는 경우続行
+		IF RESULT != 1
+			CALL FULLRESET
+			효과条件カテゴリ = 스프리건즈
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲EX덱 = 1
+				효과条件カテゴリ = 스프리건즈
+				효과条件종류 = 엑시즈
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF	
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72470)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72470,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"戦無効")
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ = 스프리건즈
+	효과条件종류 = 엑시즈
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,1000)
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "대사해 골드 고르곤다")
+
+ENDIF
+
+
+

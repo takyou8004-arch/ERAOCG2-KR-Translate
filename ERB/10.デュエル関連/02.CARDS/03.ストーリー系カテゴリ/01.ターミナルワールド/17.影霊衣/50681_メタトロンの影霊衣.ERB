@@ -1,0 +1,194 @@
+﻿@CARDNAME_50681,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 메타트론의 네크로즈
+	CASE "略称"
+RESULTS = 영령의 메타트론
+	CASE "カテゴリ"
+RESULTS:0 = 네크로즈
+RESULTS:1 = 에밀리아
+ENDSELECT
+
+
+@CARD_50681(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 의식
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 牝性
+	CASE "특수制限"
+		RETURN 1
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_50681(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 9
+CALLFORM 素材条件レベル_ADV(9,"以外")
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,50681) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50681(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 P 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신의 「네크로즈」 카드가 앞면으로 제외되었을 경우, 필드의 마법 / 함정 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드를 제외한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 「네크로즈」 의식 마법 카드에 의해 강림
+PRINTL 이 카드는 레벨 9 이외의 몬스터만을 사용하여 의식 소환으로밖에 특수 소환할 수 없다.
+PRINTL 이 카드명의 ①의 몬스터 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ①: 자신 또는 상대의 메인 페이즈에, 상대 필드의 앞면 표시 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 이 카드를 엔드 페이즈까지 제외하고, 대상 몬스터를 제외한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신의 「네크로즈」 몬스터가 전투로 파괴한 몬스터는, 묘지로 보내지지 않고 제외된다.
+
+
+@CARDCAN_50681(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50681)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,50681)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 네크로즈
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과除送")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	SIF 듀얼리스트 == "자신"
+		효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 제외
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_2(듀얼리스트,50681)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_50681(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 破壊カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50681)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50681,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両마함単体",場所,"제외")
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50681,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"제외")
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 네크로즈
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦除")
+ENDIF

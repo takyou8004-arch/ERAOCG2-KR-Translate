@@ -1,0 +1,216 @@
+﻿@CARDNAME_40004,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 사신 드레드루트
+	CASE "略称"
+		RESULTS = 드레드루트
+	CASE "カテゴリ"
+		RESULTS:0 = 삼사신
+ENDSELECT
+
+
+@CARD_40004(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 환신야수족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+	CASE "소환불가"
+		RETURN 1
+	CASE "특수불가"
+		RETURN 1
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_40004(종류)
+#DIM DYNAMIC 종류
+
+;SETCOLOR C_RED
+PRINTL
+PRINTL 공포로 필드를 지배한다。
+PRINTL
+RESETCOLOR
+
+@CARDCAN_40004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과先
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,40004)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과소환
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動 || 종류 == 사신変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_40004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 守備力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과소환
+	CALL FULLRESET
+	효과条件複数 = 3
+	CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲묘지 = 1
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲제외 = 1
+	효과条件名前 = 사신 드레드루트
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1 
+		CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"モ耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"魔耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"함정耐")
+	ENDIF
+	IF GETVAR(@"ライフ_%対面者%") > 4000
+		SETVAR @"ライフ_%対面者%", 4000
+	ENDIF
+ELSEIF 종류 == 사신変動
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		SIF カウンタ == 場所
+			CONTINUE
+		攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ") / 2
+		守備力修正 = GETVAR(@"%듀얼리스트%_MZ_守:カウンタ") / 2
+		CALL STATCHANGE_BASIC(듀얼리스트,"자신",カウンタ,-攻撃力修正,-守備力修正)
+	NEXT
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+			CONTINUE
+		攻撃力修正 = GETVAR(@"%対面者%_MZ_攻:カウンタ") / 2
+		守備力修正 = GETVAR(@"%対面者%_MZ_守:カウンタ") / 2
+		CALL STATCHANGE_BASIC(対面者,"자신",カウンタ,-攻撃力修正,-守備力修正)
+	NEXT
+ENDIF
+
+
+@CARDSUMMON_AA_40004
+;ALIGNMENT CENTER
+	PRINTFORML
+;SETCOLOR C_GRAY
+;	PRINTFORML 공포로 세계를 지배하라！
+;RESETCOLOR
+	PRINTFORML
+;ALIGNMENT LEFT
+;WAIT
+CALLFORM CHARA_CUTIN("THE GOD OF FEAR","사　신　드　레　드　루　트　",,,,,1)
+WAIT
+
+
+;텍스트確認用
+@CARDNAME_140004,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 사신 드레드루트
+	CASE "略称"
+		RESULTS = 드레드루트
+	CASE "カテゴリ"
+		RESULTS:0 = 삼사신
+ENDSELECT
+
+
+@CARD_140004(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 환신야수족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+	CASE "소환불가"
+		RETURN 1
+	CASE "특수불가"
+		RETURN 1
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_140004(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 특수소환 할 수 없다。
+PRINTL ①：이 카드를 통상 소환할 경우, 3장을 릴리스하고 일반 소환해야 한다.
+PRINTL ②：'사신 드레드루트'가 필드·패·덱·묘지에 이 카드만 있을 경우 이 카드는 완전 내성을 얻는다.
+PRINTL ③：이 카드가 필드에 존재하는 한,
+PRINTL 필드의 다른 몬스터의 공격력 / 수비력은 절반이 되고, 상대 라이프의 최대치는 4000이 된다.
+

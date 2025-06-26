@@ -1,0 +1,140 @@
+﻿@CARDNAME_71350,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 오세괴＝카라리움
+	CASE "略称"
+RESULTS = 카라리움
+	CASE "カテゴリ"
+RESULTS:0 = 비서스-스타프로스트
+ENDSELECT
+
+
+@CARD_71350(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71350(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「카라리움」이 된다.
+PRINTL 이 카드명의 ①③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：이 카드의 발동 시의 효과 처리로서,
+PRINTL 덱에서 「마나둠」 몬스터 또는 「비서스-스타프로스트」 1장을 패에 추가할 수 있다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②：자신 필드의 빛 속성 몬스터의 공격력은,
+PRINTL 자신의 필드 / 묘지의 튜너의 수×100 올라간다.
+CALLFORM CARD_ABLE(3,효과後誘発)
+PRINTL ③：자신의 튜너가 전투 / 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지/제외 상태에서 튜너 1장을 특수 소환한다.
+
+
+@CARDCAN_71350(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71350)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,71350)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_3(듀얼리스트,71350)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과条件튜너 = 1
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71350(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71350,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과条件スーパー名前 = 비서스-스타프로스트
+		효과条件カテゴリ = 마나둠
+		효과条件종류 = モン全般
+		효과条件任意 = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	효과条件튜너 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		攻撃力修正 = 攻撃力修正 * 100
+	IF 攻撃力修正 != 0
+		CALL FULLRESET
+		효과条件속성 = 빛속성
+		CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻撃力修正)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "カラリウム")
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71350,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件튜너 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

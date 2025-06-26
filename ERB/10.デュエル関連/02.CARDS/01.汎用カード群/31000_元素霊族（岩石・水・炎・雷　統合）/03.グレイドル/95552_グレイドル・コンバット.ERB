@@ -1,0 +1,108 @@
+@CARDNAME_95552,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 그레이돌 컴배트
+	CASE "略称"
+		RESULTS = 그레이돌 컴배트
+	CASE "カテゴリ"
+		RESULTS:0 = 그레이돌
+ENDSELECT
+
+
+@CARD_95552(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_95552(종류)
+#DIM DYNAMIC 종류
+
+;대상になった時に발동する텍스트も효과를 書き換える텍스트も見つからなかったので最強카운터함정가 되어버렸다……
+CALLFORM CARD_ABLE(0,발동誘発)
+PRINTL ①：자신 필드에 "그레이돌" 몬스터가 존재하고, 상대가 마법 / 함정 / 몬스터의 효과를 발동했을 때에 발동할 수 있다。
+PRINTL 그 발동을 무효로 하고 파괴한다。
+PRINTL 그 후 자신 필드의 "그레이돌」 몬스터 1장으 선택해 파괴한다。
+PRINTL
+
+@CARDCAN_95552(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,95552)
+SIF RESULT == 1
+	RETURN 0
+
+
+;万能카운터
+IF 종류 == 발동誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 그레이돌
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_95552(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,95552)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과範囲필드 = 1
+		효과条件カテゴリ = 그레이돌
+		효과条件종류 = モン全般
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		RETURN 1
+	ENDIF
+ENDIF

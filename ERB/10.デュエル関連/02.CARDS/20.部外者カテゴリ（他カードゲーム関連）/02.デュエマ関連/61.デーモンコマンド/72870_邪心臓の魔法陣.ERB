@@ -1,0 +1,135 @@
+@CARDNAME_72870,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 사심장의 마법진
+	CASE "略称"
+RESULTS = 사심장
+	CASE "カテゴリ"
+RESULTS:0 = 사신
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_72870(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72870(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장만 발동할 수 있으며, 그 ②의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①: 이 카드의 발동 시의 효과 처리로서,
+PRINTL 덱에서 「사신」지속마법 카드 1장을 묘지로 보낼 수 있다.
+CALLFORM CARD_ABLE(2,지속효과)
+PRINTL ②: 자신 상대 턴에 자신 필드에 「사신」지속마법 카드가 5종류 이상 존재할 경우에 발동할 수 있다.
+PRINTL 필드의 마법 / 함정 카드를 모두 파괴하고, EX덱에서 「악마 세계 왈드바롬」 1장을 특수 소환한다.
+
+@CARDCAN_72870(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72870)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,72870)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,54466,"EX덱")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+효과条件カテゴリ = 사신
+	효과条件종류 = 지속마법
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+
+;
+;지속마법설치処理
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72870)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;とりあえずチェックだけ
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件カテゴリ = 사신
+	효과条件종류 = 지속마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72870(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72870,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両마함全体",場所,"묘지")
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+효과条件名前 = 악마 세계 왈드바롬
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72870,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+효과条件カテゴリ = 사신
+		효과条件종류 = 지속마법
+		효과条件任意 = 1
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF
+

@@ -1,0 +1,149 @@
+﻿@CARDNAME_52540,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 공아단의 대의 폴고
+	CASE "略称"
+RESULTS = 대의 폴고
+	CASE "カテゴリ"
+RESULTS:0 = 공아단
+ENDSELECT
+
+
+@CARD_52540(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52540(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 3
+;反素材条件カテゴリ = 없음
+素材条件R종족起動 = 1
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,52540) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_52540(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 종족이 다른 몬스터 2체 이상
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 L 소환했을 경우에 발동할 수 있다.
+PRINTL 덱에서 「공아단」 몬스터 1장을 수비 표시로 특수 소환한다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 상대의 카드가 전투 / 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 자신은 덱에서 1장 드로우한다.
+PRINTL 자신 필드의 「공아단」 몬스터가 3종류 이상일 경우, 또한 자신은 덱에서 2장 드로우한다.
+
+@CARDCAN_52540(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 발동불가,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52540)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,52540)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 공아단
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,52540)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般",1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52540(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52540,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 공아단
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52540,2)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 공아단
+		효과条件固名前起動 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT >= 3
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+	ENDIF
+ENDIF
+
+

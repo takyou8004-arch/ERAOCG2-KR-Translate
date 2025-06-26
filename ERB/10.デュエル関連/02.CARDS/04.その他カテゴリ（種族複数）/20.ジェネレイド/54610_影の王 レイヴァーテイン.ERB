@@ -1,0 +1,205 @@
+﻿@CARDNAME_54610,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 그림자의 왕 레이바테인
+	CASE "略称"
+RESULTS = 레이바테인
+	CASE "カテゴリ"
+RESULTS:0 = 제네레이드
+ENDSELECT
+
+
+@CARD_54610(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_54610(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件数自由 = 1
+素材条件レベル = 9
+;추가효과用
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,54610) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_54610(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 9 몬스터 2장 이상
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL ①: "그림자의 왕 레이바테인"은 자신 필드에 1장밖에 앞면 표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 상대 필드의 몬스터의 공격력 수비력은 1000 다운한다.
+CALLFORM CARD_ABLE(1,필드起動 ,フリー誘発)
+PRINTL ③: 자신 / 상대 턴에, 엑시즈 소환한 이 카드를 릴리스하고 발동할 수 있다.
+PRINTL 이 카드의 엑시즈 소재의 수만큼 상대 필드의 카드를 덱으로 되돌리고,
+PRINTL "영원한 왕 오름간드"는 강림한다.
+PRINTL 
+PRINTL "영원한 왕 오름간드"
+PRINTL 야수족 땅 별 9 공 0 / 수 0
+PRINTL ①: 이 카드의 원래 공격력 수비력은 "제네레이드" 몬스터 × 1000이 된다.
+PRINTL ②: 필드의 "영원한 왕 오름간드"는 파괴 내성을 가진다.
+
+@CARDCAN_54610(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54610)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,54610)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種") != 召種EX덱
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_54610(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 除去횟수
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54610,1)
+	IF RESULT == 0
+		除去횟수 = GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") + 1
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		SIF 除去횟수 >= 10
+			除去횟수 = 10
+		CALL FULLRESET
+		효과条件複数 = 100 - 除去횟수
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"덱")
+
+		CALL FULLRESET
+		CALL CARD_GENERATE(듀얼리스트,54611)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,-1000,0,54610)
+ENDIF
+
+
+@CARDNAME_154610,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 영원한 왕 오름간드
+	CASE "略称"
+RESULTS = 영원한 왕의 흔적
+	CASE "カテゴリ"
+RESULTS:0 = 제네레이드
+ENDSELECT
+
+
+@CARD_154610(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+@CARD_EXPLANATION_154610(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 
+
+@CARDCAN_154610(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+
+RETURN 0
+
+

@@ -1,0 +1,107 @@
+﻿@CARDNAME_35111,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 해황의 룡기대
+	CASE "略称"
+RESULTS = 해황의 룡기대
+	CASE "カテゴリ"
+RESULTS:0 = 해황
+ENDSELECT
+
+
+@CARD_35111(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_35111(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한, 자신의 레벨 3 이하의 바다생물족 몬스터는 직접 공격할 수 있다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②: 이 카드가 물속성 몬스터의 효과로 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 덱에서 「해황의 룡기대」 이외의 바다생물족 몬스터 1장을 패에 추가한다.
+
+@CARDCAN_35111(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,35111)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+효과条件名前 = 해황의 용기대
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"물효과墓送")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 바다생물족
+	효과条件固名前 = 해황의 룡기대
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_35111(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 지속효과
+	CALL FULLRESET	
+	효과条件종족 = 바다생물족
+	CALLFORM 효과条件レベル_ADV(3, "以下")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"直攻")
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35111,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종족 = 바다생물족
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

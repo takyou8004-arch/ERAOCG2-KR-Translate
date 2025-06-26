@@ -1,0 +1,292 @@
+;[ライセンス]パブリックドメイン
+;本ファイルに係る著作権を放棄する。
+;本ファイルに係る著作人格権は行使しない。
+;2015/11/01 MinorShift(Emuera作者)
+
+;独自のBEGINシステムの例（Emuera  ver 1.821以降대상）
+;既存スクリプトのうち、「BEGIN HOGE」を「BEGINWORD = HOGE」「RETURN」で置き換えてください。
+;またLOADGAMEの대신에 CALL LOADGAME_EX、SAVEGAMEの대신에 CALL SAVEGAME_EXを実行してください。
+
+;DOTRAIN及びCALLTRAIN命令は使用할 수 없습니다。
+;NEXTCOMは無視されます。
+;また、ITEMやMONEYなどの変数が使用禁止되어있는 とエラーになります。
+
+;使用している命令の詳細については下記のEmueraWikiを参照してください。
+;http://osdn.jp/projects/emuera/wiki/FrontPage
+
+
+
+;@SYSTEM_TITLEが定義되어있는 と、標準のタイトル画面の대신에 SYSTEM_TITLEが呼ばれる。
+@SYSTEM_TITLE
+#DIMS VERSIONNAME
+#DIMS 画像コード
+;このタイミングでグローバル変数を読んでおけば取りこぼしが無くなる。
+;GLOBALはRESETDATAやLOADDATAによって初期化・上書きされない。
+;必要に応じてコメントアウトを解除すること。
+;LOADGLOBAL
+$TITLE_SELECT
+;バージョン表記をVERSIONNAMEに作成。
+;1001なら1.001、1100なら1.10と표시される
+VERSIONNAME = {GAMEBASE_VERSION / 1000}.%TOSTR(GAMEBASE_VERSION % 1000 / 10,"00")%
+SIF GAMEBASE_VERSION % 10 != 0
+	VERSIONNAME += TOSTR(GAMEBASE_VERSION % 10)
+
+
+
+;タイトル표시。
+CUSTOMDRAWLINE —
+
+ALIGNMENT CENTER
+
+CALLFORM FADEIN(8,GAMEBASE_TITLE,VERSIONNAME,GAMEBASE_AUTHOR,GAMEBASE_YEAR,,GAMEBASE_INFO)
+IF LOCAL == 1
+	PRINTFORML %GAMEBASE_TITLE%
+	PRINTFORML %VERSIONNAME%
+	PRINTFORML %GAMEBASE_AUTHOR%
+	PRINTFORML (%GAMEBASE_YEAR%)
+
+	PRINTFORML 
+	;CALL TEST_TOOLTIP
+	PRINTFORML 
+
+	PRINTL 
+	PRINTFORML %GAMEBASE_INFO%
+ENDIF
+ALIGNMENT LEFT
+CUSTOMDRAWLINE —
+
+
+;選択肢표시
+
+PRINTL
+PRINTFORM %"",15,LEFT%
+PRINTS "[0] " + GETCONFIGS("システムメニュー0");
+PRINTFORM %"",30,LEFT%
+PRINTS "[1] " + GETCONFIGS("システムメニュー1");
+PRINTFORM %"",30,LEFT%
+PRINTL [2] CSV에디터를 기동한다
+PRINTL
+CUSTOMDRAWLINE —
+
+
+
+$TITLE_INPUT
+INPUT
+IF RESULT == 0
+	PRINTFORML 처음부터 게임을 시작하시겠습니까？
+	PRINTFORML 
+	PRINTFORML [0] - 예
+	PRINTFORML [1] - 아니오
+	BINPUT
+	SIF RESULT == 1
+		GOTO TITLE_SELECT
+
+	RESETDATA
+	ADDDEFCHARA
+	BEGIN FIRST
+;	CALL EVENTFIRST
+	GOTO TITLE_SELECT
+ELSEIF RESULT == 1
+;	LOADGAME
+	CALL TITLE_LOADGAME
+	GOTO TITLE_SELECT
+
+	;LOADGAME_EXでLOADを行わずに戻ってきた경우、もう一度選択しなおす。
+ELSEIF RESULT == 2
+	CALL CSV_EDITOR
+	RESTART
+ELSE
+	REUSELASTLINE 無効な値です
+	GOTO TITLE_SELECT
+ENDIF
+
+
+
+
+
+;=================================================
+;ツールチップを埋め込み
+;部屋番号に対応した手書きメモの内容
+;情報交換・雑談で취득した情報をツールチップに埋め込みます
+;部屋番号にマウスオーバーで情報が見られるように
+
+; ARG 현재의 표시行
+;=================================================
+@TEST_TOOLTIP(ARG)
+	
+	; ツールチップのディレイは短めに설정
+	TOOLTIP_SETDELAY 75
+
+	; ツールチップ用メッセージを読み込んでおく
+	CALL PRINT_TEST_TOOLTIP_MESSAGE(1)
+	
+	HTML_PRINT @"%RESULTS%"
+
+;=================================================
+;ツールチップ用のメッセージを作成
+; ARG 部屋番号
+;=================================================
+@PRINT_TEST_TOOLTIP_MESSAGE(ARG)
+#DIMS CUSTOM_TEXT
+#DIMS TOOLTIP_MESSAGE, 5
+
+	VARSET CUSTOM_TEXT
+	
+	CUSTOM_TEXT = "テスト"
+	TOOLTIP_MESSAGE:1 = "testだよ"
+	CUSTOM_TEXT = %CUSTOM_TEXT%<nonbutton title='%TOOLTIP_MESSAGE:(1)%'>%CUSTOM_TEXT%</nonbutton>
+
+	RESULTS = %CUSTOM_TEXT%
+
+
+;=================================================
+;ロード画面
+;
+;=================================================
+@TITLE_LOADGAME
+#DIM DYNAMIC 選択ロード
+#DIM DYNAMIC 설정モード
+LOADGLOBAL
+$INPUT_LOOP
+CUSTOMDRAWLINE —
+PRINTL 불러오기 화면
+CUSTOMDRAWLINE —
+CALL SAVEDATA_LIST(설정モード)
+CUSTOMDRAWLINE —
+CHKDATA 99
+IF !RESULT
+	PRINTFORML [{99,3}] %RESULTS%
+ELSE
+	PRINTFORML [{99,3}] ----
+ENDIF
+
+CUSTOMDRAWLINE —
+SIF 설정モード == 0
+	SETCOLOR C_GREEN
+PRINT [101] - 통상저장 영역
+RESETCOLOR
+PRINTFORM %"",20%
+SIF 설정モード == 50
+	SETCOLOR C_GREEN
+PRINTL [102] - 자동저장 영역
+RESETCOLOR
+
+CUSTOMDRAWLINE —
+PRINTL [100] - 돌아간다
+
+
+BINPUT
+選択ロード = RESULT
+SELECTCASE 選択ロード
+	CASE 100
+		REDRAW 1
+		RETURN 0
+	CASE 101
+		설정モード = 0
+	CASE 102
+		설정モード = 50
+	CASEELSE
+		CHKDATA 選択ロード
+		IF RESULT
+			CLEARLINE 1
+			REUSELASTLINE 無効な値です
+			GOTO INPUT_LOOP
+		ENDIF
+		LOADDATA 選択ロード
+ENDSELECT
+CLEARLINE 1
+GOTO INPUT_LOOP
+
+@SAVEDATA_LIST(설정モード)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 설정モード
+
+FOR カウンタ,0 + 설정モード,20 + 설정モード
+
+
+	CHKDATA カウンタ
+	IF !RESULT
+		SIF カウンタ == GLOBAL:3
+			SETCOLOR C_AQUA
+		PRINTFORML [{カウンタ,3}] %RESULTS%
+	ELSE
+		SETCOLOR C_GRAY		
+		PRINTFORML [{カウンタ,3}] ----
+	ENDIF
+	RESETCOLOR
+NEXT
+
+
+@TITLE_SAVEGAME
+#DIM DYNAMIC 選択セーブ
+#DIMS DYNAMIC セーブ情報
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 所持カード数
+LOADGLOBAL
+$INPUT_LOOP
+CUSTOMDRAWLINE —
+PRINTL 저장화면
+CUSTOMDRAWLINE —
+
+CALL SAVEDATA_LIST
+CUSTOMDRAWLINE —
+
+PRINTL [100] - 돌아간다
+BINPUT
+選択セーブ = RESULT
+SELECTCASE 選択セーブ
+	CASE 100
+		REDRAW 1
+		RETURN 0
+	CASEELSE
+		CHKDATA 選択セーブ
+		IF !RESULT
+			PRINTL 이미 데이터가 존재합니다。덮어쓰기합니까？
+			PRINTL [0] - 예
+			PRINTL [1] - 아니오
+			BINPUT
+			IF RESULT == 1
+				REDRAW 1
+				RETURN 0
+			ENDIF
+		ENDIF
+		GLOBAL:3 = 選択セーブ
+		FOR カウンタ,1000,100000
+			SIF ITEM:カウンタ >= 1
+				所持カード数 ++ 
+		NEXT
+		GETTIME
+		セーブ情報 = %RESULTS%　{DAY,3}일째(%GET_DAY()%)　 %CALLNAME:MASTER% 소지 카드 종류:{所持カード数}
+		SAVEDATA 選択セーブ, セーブ情報
+		SAVEGLOBAL
+ENDSELECT
+
+
+
+@SYSTEM_AUTOSAVE
+#DIM DYNAMIC 選択セーブ
+#DIMS DYNAMIC セーブ情報
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 所持カード数
+LOADGLOBAL
+
+FOR カウンタ,1000,100000
+	SIF ITEM:カウンタ >= 1
+		所持カード数 ++ 
+NEXT
+GETTIME
+セーブ情報 = %RESULTS%　{DAY,3}일째(%GET_DAY()%)　 %CALLNAME:MASTER% 소지 카드 종류:{所持カード数}
+SAVEDATA 99, セーブ情報
+
+VARSET 所持カード数
+FOR カウンタ,1000,100000
+	SIF ITEM:カウンタ >= 1
+		所持カード数 ++ 
+NEXT
+GETTIME
+セーブ情報 = %RESULTS%　{DAY,3}일째(%GET_DAY()%)　 %CALLNAME:MASTER% 소지 카드 종류:{所持カード数}
+SAVEDATA 50 + GLOBAL:2, セーブ情報
+GLOBAL:2 ++
+SIF GLOBAL:2 == 20
+	GLOBAL:2 = 0
+SAVEGLOBAL

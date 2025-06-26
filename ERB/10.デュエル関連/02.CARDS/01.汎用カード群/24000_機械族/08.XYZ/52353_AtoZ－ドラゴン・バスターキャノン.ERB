@@ -1,0 +1,213 @@
+﻿@CARDNAME_52353,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = AtoZ－드래곤 버스터 캐논
+	CASE "略称"
+RESULTS = AtoZ-D B C
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_52353(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_52353(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「ABC－드래곤 버스터」＋「XYZ－하이퍼 드래곤 캐논」
+PRINTL 이 카드는 자신의 필드의 상기 카드를 제외했을 경우에만 EX덱에서 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(1,발동誘発)
+PRINTL ①: 상대가 몬스터의 효과 마법 / 함정 카드를 발동했을 때에 발동할 수 있다.
+PRINTL 손패를 1장 버리고, 그 발동을 무효로 하고 파괴한다.
+CALLFORM CARD_ABLE(0,필드起動,묘지起動,フリー誘発)
+PRINTL ②: 자신 상대 턴에, 필드 / 묘지의 이 카드를 덱으로 되돌리고 발동할 수 있다.
+PRINTL 자신의 제외 상태인 「ABC－드래곤 버스터」 「XYZ－하이퍼 드래곤 캐논」을 1체씩 특수 소환한다.
+
+
+@CARDSUMMON_52353(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+素材条件名前:0 = ABC－드래곤 버스터
+素材条件名前:1 = XYZ－하이퍼 드래곤 캐논
+
+RETURN 0
+
+@CARDCAN_52353(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 使用済み
+#DIM DYNAMIC 효과使用불가,3
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52353)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,52353)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件ID = 52350
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件ID = 52351
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 손패数(듀얼리스트) == 0
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == 묘지起動 || 종류 == フリー誘発
+	SIF !GROUPMATCH(ゾーン,"필드","묘지")
+		RETURN 0
+
+	SIF 듀얼리스트 == "상대" && ゾーン != "묘지"
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 4
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件ID = 52350
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件ID = 52351
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52353(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 제외カードA
+#DIM DYNAMIC 제외カードB
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52353)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件行先플래그 = 제외行き
+		효과条件ID:0 = 52350
+		효과条件ID:1 = 52351
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			제외カードA = RESULT:1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과条件行先플래그 = 제외行き
+			IF 제외カードA == 52350
+				효과条件ID:0 = 52351
+			ELSEIF 제외カードA == 52351
+				효과条件ID:1 = 52350
+			ENDIF
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트,"EX덱",場所)	
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52353,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == 묘지起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52353)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,EX덱行き)
+
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件ID = 52350
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		SIF モンスター数(듀얼리스트) >= 5
+			RETURN 0
+
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件ID = 52351
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

@@ -1,0 +1,139 @@
+﻿@CARDNAME_31188,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 선사유산 솔 모노리스
+	CASE "略称"
+RESULTS = 솔 모노리스
+	CASE "カテゴリ"
+RESULTS:0 = 오파츠
+ENDSELECT
+
+
+@CARD_31188(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 600
+	CASE "守備力"
+		RETURN 600
+	CASE "추가日"
+		RETURN 250613
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_31188(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,身代효과)
+PRINTL ①: 자신의 제외 상태인 「오파츠」 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 덱으로 되돌리고, 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 자신 필드의 「오파츠」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 선택한 몬스터의 레벨은 6이 된다.
+
+@CARDCAN_31188(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31188)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,31188)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,31188,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+효과条件カテゴリ = 오파츠
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件カテゴリ = 오파츠
+	효과条件종류 = レベル持ち
+	효과条件표시 = 表側표시
+	CALLFORM 효과条件レベル_ADV(6,"以外")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31188(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31188,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲제외 = 1
+효과条件カテゴリ = 오파츠
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31188,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+효과条件カテゴリ = 오파츠
+		효과条件종류 = レベル持ち
+		효과条件표시 = 表側표시
+		CALLFORM 효과条件レベル_ADV(6,"以外")
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		SIF RESULT != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",RESULT,"永星",6,1)
+	ENDIF
+ENDIF
+
+

@@ -1,0 +1,284 @@
+﻿
+
+;情報更新────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@CARD_LOADUP;연속的な更新
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC 캐릭터番号
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 설정場所
+#DIM DYNAMIC 성별판정
+#DIM DYNAMIC 実성별판정
+#DIM DYNAMIC カード_ID
+#DIM DYNAMIC リセット횟수
+
+$INPUT_LOOP
+
+듀얼리스트 = %ターンプレイヤー%
+CALL RESET_PROHIB
+
+CALLFORM RESET_CONT_NEGATE
+CALLFORM CONTINUOUS_NEGATE
+
+CALLFORM RESET_CONT_STATUS
+CALLFORM RESET_CONT_EFFECT
+CALLFORM CONTINUOUS_EFFECT
+
+CALLFORM ENSLAVE_RELEASE
+CALLFORM RESET_CONT_ATK
+CALLFORM CONTINUOUS_ATK_EFFECT
+
+CALLFORM CONTINUOUS_EFFECT
+
+듀얼리스트 = %ターンプレイヤー%
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+FOR カウンタ,0,5
+	SIF 자신_MZ_攻:カウンタ <= 0
+		자신_MZ_攻:カウンタ = 0
+	SIF 자신_MZ_守:カウンタ <= 0
+		자신_MZ_守:カウンタ = 0
+	SIF 자신_MZ_星:カウンタ <= 1
+		자신_MZ_星:カウンタ = 1
+NEXT
+FOR カウンタ,0,5
+	SIF 상대_MZ_攻:カウンタ <= 0
+		상대_MZ_攻:カウンタ = 0
+	SIF 상대_MZ_守:カウンタ <= 0
+		상대_MZ_守:カウンタ = 0
+	SIF 상대_MZ_星:カウンタ <= 1
+		상대_MZ_星:カウンタ = 1
+NEXT
+
+
+FOR カウンタ,0,CHARANUM
+	CFLAG:カウンタ:막대구현화 = 0
+	CFLAG:カウンタ:질구현화 = 0
+	CFLAG:カウンタ:추가가슴사이즈 = 0
+	CFLAG:カウンタ:최면상태 = 0
+NEXT
+
+듀얼리스트 = %ターンプレイヤー%
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+$INPUT_LOOP5
+FOR カウンタ,0,5
+	;캐릭터クター番号持ちの캐릭터かを판정する	 
+	カード_ID = GETVAR(@"%듀얼리스트%_필드:カウンタ")
+	캐릭터番号 = NO_TO_CHARANUM(カード_ID)
+	IF 캐릭터番号 >= 1
+		성별판정 = GETVAR(@"%듀얼리스트%_MZ_一性:カウンタ")
+		実성별판정 = TALENT:캐릭터番号:성별
+		;ふたなりで元女ならとりあえず竿の구현化
+		IF 実성별판정 == 1 || 実성별판정 == 3
+			SIF 성별판정 == 3
+				CFLAG:캐릭터番号:막대구현화 = 1
+			SIF 성별판정 == 2
+				CFLAG:カウンタ:추가가슴사이즈 = GETVAR(@"%듀얼리스트%_MZ_가슴追:カウンタ")
+		;男が女体化しているのなら질どうぞ
+		ELSEIF 実성별판정 == 2
+			SIF 성별판정 != 2
+				CFLAG:캐릭터番号:질구현화 = 1
+		ENDIF
+	ENDIF
+NEXT
+
+IF 듀얼리스트 == ターンプレイヤー
+	듀얼리스트 = %対面者%
+	GOTO INPUT_LOOP5
+ENDIF
+
+
+FOR カウンタ,0,紙束最大値
+	TRYCALLFORM CARDCAN_{자신_손패:カウンタ}("자신",エクゾ起動,"손패",カウンタ)
+NEXT
+FOR カウンタ,0,紙束最大値
+	TRYCALLFORM CARDCAN_{상대_손패:カウンタ}("상대",エクゾ起動,"손패",カウンタ)
+NEXT
+
+IF リセット횟수 == 0
+	リセット횟수 ++
+	GOTO INPUT_LOOP
+ENDIF
+
+
+
+@CONTINUOUS_EFFECT
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+듀얼리스트 = %ターンプレイヤー%
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+$INPUT_LOOP
+
+CALLFORM CARD_EMBLEM_ACT(듀얼리스트, "短紋章")
+CALLFORM CARD_EMBLEM_ACT(듀얼리스트, "永紋章")
+FOR カウンタ,0,5
+	VARSET RESULT
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}(듀얼리스트,지속효과,"필드",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}(듀얼리스트,지속효과,"필드",カウンタ)
+NEXT
+FOR カウンタ,0,5
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_마함:カウンタ")}(듀얼리스트,지속효과,"마함",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_마함:カウンタ")}(듀얼리스트,지속효과,"마함",カウンタ)
+NEXT
+FOR カウンタ,0,紙束最大値
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_손패:カウンタ")}(듀얼리스트,지속효과,"손패",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_손패:カウンタ")}(듀얼리스트,지속효과,"손패",カウンタ)
+NEXT
+FOR カウンタ,0,紙束最大値
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}(듀얼리스트,지속효과,"묘지",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}(듀얼리스트,지속효과,"묘지",カウンタ)
+NEXT
+FOR カウンタ,0,紙束最大値
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_제외:カウンタ")}(듀얼리스트,지속효과,"제외",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_제외:カウンタ")}(듀얼리스트,지속효과,"제외",カウンタ)
+NEXT
+
+
+FOR カウンタ,1,4
+	VARSET RESULT
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}(듀얼리스트,맥시멈条件,"필드",カウンタ)
+	IF RESULT == 1
+		SETVAR @"%듀얼리스트%_MZ_MAX成立:カウンタ", 3
+		IF カウンタ == 2
+			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",カウンタ,"魔耐")
+			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",カウンタ,"함정耐")
+			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",カウンタ,"モ耐")
+		ENDIF
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}(듀얼리스트,맥시멈条件,"필드",カウンタ)
+	ENDIF
+NEXT
+
+
+IF 듀얼리스트 == ターンプレイヤー
+	듀얼리스트 = %対面者%
+	GOTO INPUT_LOOP
+ENDIF
+
+@CONTINUOUS_ATK_EFFECT
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃修正
+#DIM DYNAMIC 守備修正
+#DIMS DYNAMIC 非ターンプレイヤー
+
+듀얼리스트 = %ターンプレイヤー%
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+非ターンプレイヤー = %対面者% 
+$INPUT_LOOP
+
+
+CALLFORM CARD_EMBLEM_ACT(듀얼리스트, "攻紋章")
+CALLFORM CARD_EMBLEM_ACT(듀얼리스트, "永攻紋章")
+FOR カウンタ,0,5
+	VARSET RESULT
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}(듀얼리스트,攻守変動,"필드",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}(듀얼리스트,攻守変動,"필드",カウンタ)
+NEXT
+FOR カウンタ,0,5
+
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_마함:カウンタ")}(듀얼리스트,攻守変動,"마함",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_마함:カウンタ")}(듀얼리스트,攻守変動,"마함",カウンタ)
+
+	IF GETBIT(GETVAR(@"%듀얼리스트%_魔_武種:カウンタ"),0) == 1
+		VARSET 攻撃修正
+		VARSET 守備修正
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_마함:カウンタ")},"攻撃力"
+		攻撃修正 = RESULT
+		IF GETBIT(GETVAR(@"%듀얼리스트%_魔_武種:カウンタ"),1) == 1
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_마함:カウンタ")},"守備力"
+			守備修正 = RESULT
+		ENDIF
+		CALL STATCHANGE_BASIC(듀얼리스트,"装備",カウンタ,攻撃修正,守備修正)
+	ENDIF
+NEXT
+
+FOR カウンタ,0,紙束最大値
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_손패:カウンタ")}(듀얼리스트,攻守変動,"손패",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_손패:カウンタ")}(듀얼리스트,攻守変動,"손패",カウンタ)
+NEXT
+FOR カウンタ,0,紙束最大値
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}(듀얼리스트,攻守変動,"묘지",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}(듀얼리스트,攻守変動,"묘지",カウンタ)
+NEXT
+FOR カウンタ,0,紙束最大値
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_제외:カウンタ")}(듀얼리스트,攻守変動,"제외",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_제외:カウンタ")}(듀얼리스트,攻守変動,"제외",カウンタ)
+NEXT
+
+IF 듀얼리스트 == ターンプレイヤー
+	듀얼리스트 = %対面者%
+	GOTO INPUT_LOOP
+ENDIF
+
+;新しく사신変動を추가
+FOR カウンタ,0,5
+	VARSET RESULT
+	TRYCALLFORM CARDCAN_{GETVAR(@"%非ターンプレイヤー%_필드:カウンタ")}(非ターンプレイヤー,사신変動,"필드",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%非ターンプレイヤー%_필드:カウンタ")}(非ターンプレイヤー,사신変動,"필드",カウンタ)
+NEXT
+FOR カウンタ,0,5
+	VARSET RESULT
+	TRYCALLFORM CARDCAN_{GETVAR(@"%ターンプレイヤー%_필드:カウンタ")}(ターンプレイヤー,사신変動,"필드",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%ターンプレイヤー%_필드:カウンタ")}(ターンプレイヤー,사신変動,"필드",カウンタ)
+NEXT
+
+
+
+@CONTINUOUS_NEGATE
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+듀얼리스트 = %ターンプレイヤー%
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+$INPUT_LOOP
+
+FOR カウンタ,0,5
+	VARSET RESULT
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}(듀얼리스트,常在無効,"필드",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}(듀얼리스트,常在無効,"필드",カウンタ)
+NEXT
+FOR カウンタ,0,5
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_마함:カウンタ")}(듀얼리스트,常在無効,"마함",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_마함:カウンタ")}(듀얼리스트,常在無効,"마함",カウンタ)
+NEXT
+FOR カウンタ,0,紙束最大値
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}(듀얼리스트,常在無効,"묘지",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}(듀얼리스트,常在無効,"묘지",カウンタ)
+NEXT
+FOR カウンタ,0,紙束最大値
+	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_제외:カウンタ")}(듀얼리스트,常在無効,"제외",カウンタ)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_제외:カウンタ")}(듀얼리스트,常在無効,"제외",カウンタ)
+NEXT
+
+IF 듀얼리스트 == ターンプレイヤー
+	듀얼리스트 = %対面者%
+	GOTO INPUT_LOOP
+ENDIF

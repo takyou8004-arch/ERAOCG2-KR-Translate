@@ -1,0 +1,141 @@
+﻿@CARDNAME_29331,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 묘와 안개의 춘화정
+	CASE "略称"
+RESULTS = 묘와 안개
+	CASE "カテゴリ"
+RESULTS:0 = 춘화정
+ENDSELECT
+
+
+@CARD_29331(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 400
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+	CASE "レア度"
+		RETURN SPR
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29331(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 이 카드와, 몬스터 1장 또는 "춘화정" 카드 1장을 패에서 버리고 발동할 수 있다.
+PRINTL 덱에서 "묘와 안개의 춘화정" 이외의 천사족 땅 속성 몬스터 1장을 패에 넣는다.
+PRINTL 그 후, 자신의 묘지에서 땅 속성 몬스터 1장을 특수 소환할 수 있다.
+PRINTL 이 턴, 자신은 땅 속성 이외의 몬스터의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL "춘화정" 몬스터 이외의 필드의 몬스터의 공격력은 600 내린다.
+
+
+@CARDCAN_29331(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29331)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,29331)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件スーパーカテゴリ = 춘화정
+	효과条件종류 = モン全般
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件固名前 = 묘와 안개의 춘화정
+	효과条件종족 = 천사족
+	효과条件속성 = 땅속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29331(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29331,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件スーパーカテゴリ = 춘화정
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件固名前 = 묘와 안개의 춘화정
+			효과条件종족 = 천사족
+			효과条件속성 = 땅속성
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			
+			IF モンスター数(듀얼리스트) < 5
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件속성 = 땅속성
+				효과条件任意 = 1
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+		CALL SET_PLAYER_INFO(듀얼리스트,"속성효과無効",땅속성)
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件固カテゴリ = 춘화정
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,-600)
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,-600,0,29331)
+ENDIF

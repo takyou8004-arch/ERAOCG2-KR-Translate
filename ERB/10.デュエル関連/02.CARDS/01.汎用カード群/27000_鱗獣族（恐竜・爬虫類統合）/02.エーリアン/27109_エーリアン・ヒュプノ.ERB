@@ -1,0 +1,153 @@
+﻿@CARDNAME_27109,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 에일리언 힙노
+	CASE "略称"
+RESULTS = A 힙노
+	CASE "カテゴリ"
+RESULTS:0 = 에일리언
+ENDSELECT
+
+
+@CARD_27109(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 700
+	CASE "성별"
+		RETURN 雄性
+	CASE "分割"
+		RETURN デュアル
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_27109(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 일반 몬스터이다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 이 카드가 앞면 표시로 존재하는 한 자신 메인 페이즈에 1번만 「각성」할 수 있다.
+PRINTL 「각성」은 1턴에 1번만 실행할 수 있다.
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ②: 이 카드가 각성 상태인 경우에 발동할 수 있다.
+PRINTL 상대 필드의 악성 카운터가 놓인 몬스터 1장을 선택하여 컨트롤을 얻는다.
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ③: 이 카드가 각성 상태인 경우, 자신 엔드 페이즈에 발동한다.
+PRINTL 원래의 주인이 상대인 자신 필드의 몬스터의 악성 카운터를 1개 제거한다.
+PRINTL 이 효과로 놓여있는 악성 카운터가 0이 된 경우, 그 몬스터는 파괴된다.
+
+@CARDSUMMON_AA_27109
+
+
+@CARDCAN_27109(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,27109)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+	SIF 발동済_1(듀얼리스트,覚醒발동)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") >= 1
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件悪Ｃ所持 = 999
+	효과条件除去種 = 強奪
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_27109(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,覚醒발동,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+	ENDIF
+ELSEIF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") >= 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27109)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류:0 = 2
+		효과추가종류:1 = 695
+		효과条件悪Ｃ所持 = 999
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		TRYCALLFORM CARDNAME_{RESULT:1},"略称"
+		PRINTL
+		PRINTFORMW %RESULTS%는心땅いい音波の下へと歩いて行った……
+	ENDIF
+
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27109)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") <= 0
+				CONTINUE
+			SIF GETVAR(@"%듀얼리스트%_MZ_所有:カウンタ") != 2
+				CONTINUE
+			SIF GETVAR(@"%듀얼리스트%_MZ_悪Ｃ:カウンタ") == 0
+				CONTINUE
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"悪Ｃ",-1)
+			SIF GETVAR(@"%듀얼리스트%_MZ_悪Ｃ:カウンタ") == 0
+				CALL CARD_DISPOSE(듀얼리스트,"필드",カウンタ,破壊行き)
+		NEXT
+	ENDIF
+ENDIF
+

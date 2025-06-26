@@ -1,0 +1,142 @@
+﻿@CARDNAME_1392,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아로마-지-마조람
+	CASE "略称"
+RESULTS = AM-마조람
+	CASE "カテゴリ"
+RESULTS:0 = 아로마
+ENDSELECT
+
+
+@CARD_1392(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1392(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①: 자신의 식물족 몬스터가 전투로 파괴되었을 때 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다. 그 후, 자신은 500LP 회복한다.
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ②: 자신의 LP가 상대보다 많고, 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 자신의 식물족 몬스터의 전투로 발생하는 자신에게의 전투 데미지는 0이 된다.
+CALLFORM CARD_ABLE(3,효과後誘発)
+PRINTL ③: 자신의 LP가 회복했을 경우, 상대의 묘지의 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 제외한다.
+PRINTL 
+
+@CARDCAN_1392(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1392)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	IF ゾーン == "손패"
+		SIF 발동済_1(듀얼리스트,1392)
+			RETURN 0
+		CALL CARD_SS_CHECK(듀얼리스트,1392,"손패")
+		SIF RESULT == 1
+			RETURN 0
+		CALL FULLRESET
+		효과条件종족 = 식물족
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"戦闘破壊")
+		SIF RESULT != 1
+			RETURN 0
+		RETURN 1
+	ELSEIF ゾーン == "필드"
+		SIF 발동済_3(듀얼리스트,1392)
+			RETURN 0
+		SIF GETVAR(@"%듀얼리스트%_回復者") != 1
+			RETURN 0
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	TRYCALLFORM CARD_{戦闘カードID(듀얼리스트)}, "종족"
+	SIF RESULT != 식물족
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= GETVAR(@"ライフ_%対面者%") 
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1392(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	IF ゾーン == "손패"	
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1392,1)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",500)
+		ENDIF
+	ELSEIF ゾーン == "필드"
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1392,3)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲상대묘지 = 1
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)	
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ無効",3)
+ENDIF
+

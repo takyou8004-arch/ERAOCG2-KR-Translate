@@ -1,0 +1,865 @@
+;-------------------------------------------------
+;モンスター소환
+;-------------------------------------------------
+@COM450
+;LOCALの대신에 소환リスト機能の下で표시캐릭터を지정
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 소환_ページ送り
+#DIM DYNAMIC リスト_カウンタ
+#DIM DYNAMIC リストスタート
+#DIM DYNAMIC 캐릭터選択数
+
+$INPUT_LOOP
+
+CUSTOMDRAWLINE —
+PRINTL 『솔리드비전 전개・・・』
+PRINTL 『몬스터 입체영상 관람모드・・・ERROR！！ERROR！！』 
+PRINTL 『＜＜＜테스트：몬스터의 현현모드 강제기동 개시＞＞＞』
+CUSTOMDRAWLINE —
+PRINTL 『패에서 몬스터를 소환해주세요：』
+PRINTL 
+
+PRINTL [ 3 ] - 마음에 드는 몬스터를 소환。
+PRINTL
+IF 소환_最終소환 > 0
+	PRINT [ 2 ] - 마지막으로 선택한 몬스터를 소환/귀환。
+	PRINTFORML （마지막으로 소환한 몬스터：%NAME:소환_最終소환%）
+
+ELSE
+	SETCOLOR C_GRAY
+	PRINTL 「 2 」 - 마지막으로 선택한 몬스터를 소환/귀환。
+	RESETCOLOR
+ENDIF
+PRINTL
+IF TARGET >= 1
+	PRINTL [ 1 ] - 눈 앞의 몬스터를 귀환시킨다。
+ELSE
+	SETCOLOR C_GRAY
+	PRINTL 「 1 」 - 눈 앞의 몬스터를 귀환시킨다。
+	RESETCOLOR
+ENDIF
+PRINTL
+PRINTL [ 5 ] - 듀얼리스트를 호출한다。
+PRINTL
+PRINTL [ 0 ] - 컬렉션에서 몬스터를   소환한다。
+CUSTOMDRAWLINE —
+PRINTL 
+PRINTL [100] - 돌아간다
+BINPUT
+
+
+IF RESULT == 0
+	CALL MONSTER_LIST
+	RETURN 0
+ELSEIF RESULT == 1
+	CALL SUMMON_SHORI(TARGET)
+	RETURN 0
+ELSEIF RESULT == 2
+	CALL SUMMON_SHORI(소환_最終소환)
+	RETURN 0
+ELSEIF RESULT == 3
+	CALL MONSTER_FAV_SUMMON
+	RETURN 0
+ELSEIF RESULT == 5
+	CALL MONSTER_LIST(10)
+	RETURN 0
+
+ELSEIF RESULT == 100
+	PRINTFORML 턴 엔드！
+	RETURN 0
+ENDIF
+GOTO INPUT_LOOP
+
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;소환
+@COM_ABLE450
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(450)
+	RETURN RESULT
+SIF CFLAG:MASTER:현재위치 >= 自宅部屋最大値 && CFLAG:MASTER:현재위치 != 場所_휴식室 && CFLAG:MASTER:현재위치 != 場所_学校内
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1
+
+
+@MONSTER_LIST(使用場所)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 改行カウンタ
+#DIM DYNAMIC リストスタート
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC リスト_現체력
+#DIM DYNAMIC 使用場所
+#DIM CONST リスト표시 = 20
+#DIM DYNAMIC 캐릭터選択数
+#DIM DYNAMIC 모유回復量
+#DIM DYNAMIC 모유価格
+#DIM DYNAMIC 待機_체력
+#DIM DYNAMIC 待機_기력
+#DIM DYNAMIC ソート種
+#DIM DYNAMIC L_캐릭터_ID
+#DIM DYNAMIC 調整池 = 2
+;使用場所(1):最初の캐릭터クター3体選択画面
+;使用場所(2):カードの구입
+;使用場所(3):캐릭터クター改造
+;使用場所(5):캐릭터クター確認メニュー
+;使用場所(6):연인を침대に이동
+;使用場所(7):封印のカード
+;使用場所(8):덱確認場面
+;使用場所(9):裏SHOP
+;使用場所(10):대상상대探し/電話をかける
+;使用場所(11):소원빌기
+;使用場所(12):집을 방문한다
+;使用場所(13):소원빌기（知らない人と）
+;使用場所(14):マッチングアプリ
+;使用場所(15):캐릭터とお別れ
+;使用場所(16):CSV作成
+;使用場所(17):リセット
+;使用場所(18):妊婦開放
+;使用場所(19):裏SHOPの未所持対応VER;Anonym추가
+;使用場所(20):ミルク貯蔵の確認
+;使用場所(30):汎用구상설정관리
+;使用場所(31):구상デバッグの관리
+
+
+
+CALL MONSTERLIST_RESET
+SIF 使用場所 == 0
+	VARSET 필터_所持, 1
+
+;필터_所持 = 1
+$INPUT_LOOP_RESETLIST
+
+SIF 使用場所 == 1 || 使用場所 == 10 || 使用場所 == 11 || 使用場所 == 12
+	VARSET 필터_所持
+
+
+SIF 使用場所 == 3 || 使用場所 == 9 || 使用場所 == 4
+	VARSET 필터_所持,1
+IF 아이템플래그 == 71
+	필터_素質:2 = 1
+ELSEIF 아이템플래그 == 72
+	필터_素質:2 = 4
+ELSEIF 아이템플래그 == 77
+	필터_素質:2 = 5
+ENDIF
+SIF 아이템플래그 == 82
+	VARSET 필터_연모,1
+
+SIF 使用場所 == 15
+	VARSET 필터_消去可,1
+
+SIF 使用場所 == 6 || 使用場所 == 7
+	VARSET 필터_연모,1
+
+SIF 使用場所 == 8
+	VARSET 필터_덱所持,1
+
+
+SIF 使用場所 == 18
+	VARSET 필터_임신可,1
+
+SIF 使用場所 == 20
+	VARSET 필터_저장모유량,1
+
+
+SIF 使用場所 == 2
+	VARSET 필터_特価品,1
+
+SIF 使用場所 == 31
+	VARSET 필터_구상 ,1
+
+IF GROUPMATCH(使用場所,5,6,7,8,15,16,17,18,19,20,30)
+	VARSET 필터_듀얼리스트
+ELSEIF 使用場所 == 10 || 使用場所 == 11 || 使用場所 == 12
+	VARSET 필터_듀얼리스트,2
+	VARSET 필터_전화번호,1
+ELSEIF 使用場所 == 13 || 使用場所 == 14
+	VARSET 필터_듀얼리스트,2
+ELSE
+	VARSET 필터_듀얼리스트,1
+ENDIF
+
+
+$INPUT_LOOP2
+CALL MONSTERLIST_SORT(ソート種)
+
+$INPUT_LOOP
+VARSET 改行カウンタ
+VARSET カウンタB
+
+
+PRINT ―【캐릭터 리스트】—————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+
+PRINTPLAIN 　　　　　[이름검색]
+SUBSTRING 필터_名前, 0, 28
+PRINTBUTTON @"【%RESULTS,28,LEFT%】", 9985
+SIF 필터_名前 != ""
+	SETCOLOR C_GREEN
+PRINTBUTTON @"[x]",9986
+PRINTFORM %"",37,LEFT%
+RESETCOLOR
+SELECTCASE 使用場所
+	CASE 1, 3, 6, 9, 10, 11 ,12
+		PRINT
+	CASE 8
+		PRINTFORM %"",20%
+		IF 필터_仲良し == 0
+			SETCOLOR C_WHITE
+			PRINTBUTTON "모든캐릭터표시중　　 【□】", 9980
+		ELSEIF 필터_仲良し == 1
+			SETCOLOR C_AQUA
+			PRINTBUTTON "덱리스트 공개중 만【■】　　", 9980
+		ENDIF
+		RESETCOLOR
+	CASEELSE
+		PRINTFORM %"",20%
+		IF 필터_所持 == 0
+			SETCOLOR C_WHITE
+			PRINTBUTTON "미소지캐릭터를 표시중【□】", 9990
+		ELSEIF 필터_所持 == 1
+			SETCOLOR C_AQUA
+			PRINTBUTTON "미소지캐릭터를 표시한다【■】　　", 9990
+		ENDIF
+		RESETCOLOR
+ENDSELECT
+PRINTL 
+
+;ALIGNMENT CENTER
+PRINTL 　　　　　┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━┓ 
+VARSET 改行カウンタ, -1
+FOR カウンタ,リストスタート,(リストスタート + リスト표시)
+	REPEAT 2
+		L_캐릭터_ID = 소환_リスト:(リストスタート + カウンタB)
+		IF カウンタB % 2
+			PRINTPLAIN ┃　
+		ELSE
+			PRINTPLAIN 　　　　　┃　
+		ENDIF
+		IF 소환_リスト:(リストスタート + カウンタB) != 0
+			SELECTCASE 使用場所
+				CASE 1, 9
+					TRYCALLFORM M_KOJO_K{NO:L_캐릭터_ID}
+					SIF RESULT == 1
+						SETCOLOR C_AQUA
+					SIF CFLAG:L_캐릭터_ID:소유함 == 1
+						SETCOLOR C_L_GREEN
+				CASE 2
+					SIF CFLAG:L_캐릭터_ID:소유함 == 1
+						SETCOLOR C_GRAY
+				CASE 8
+					SIF CFLAG:L_캐릭터_ID:호감도 <= 1000
+						SETCOLOR C_GRAY
+
+					CALL ENEMYDECK_CHECK(L_캐릭터_ID)
+					SIF RESULT == 0
+						SETCOLOR C_GRAY
+					PRINT 
+				CASE 17
+					RESETCOLOR
+				CASEELSE
+					VARSET RESULT
+					TRYCALLFORM M_KOJO_K{NO:L_캐릭터_ID}
+					SIF RESULT == 1
+						SETCOLOR C_AQUA
+					SIF MATCH(お気に入り,L_캐릭터_ID)
+						SETCOLOR C_GOLD
+
+					SIF CFLAG:L_캐릭터_ID:현재위치 <= 20
+						SETCOLOR C_L_GREEN
+					SIF CFLAG:L_캐릭터_ID:소유함 != 1 && CFLAG:L_캐릭터_ID:전화번호 != 1 
+						SETCOLOR C_GRAY
+
+			ENDSELECT
+			PRINTFORM [{(リストスタート + カウンタB),3}] = %CALLNAME:L_캐릭터_ID,24,LEFT%
+			RESETCOLOR
+			CALL LIST_VARIABLE(使用場所,(リストスタート + カウンタB))
+		ELSE
+			PRINTFORM %"",30,LEFT%
+			CALL LIST_VARIABLE(使用場所,(リストスタート + カウンタB))
+		ENDIF
+		カウンタB ++
+	REND
+	PRINTPLAIN ┃
+	IF (カウンタ - リストスタート) == 2 + 調整池
+		PRINT －
+	ELSEIF (カウンタ - リストスタート) == 3 + 調整池
+		SIF リストスタート == 0
+			SETCOLOR C_GRAY
+		PRINTBUTTON "△", 7776
+		RESETCOLOR
+	ELSEIF (カウンタ - リストスタート) == 4 + 調整池
+		SIF リストスタート == 0
+			SETCOLOR C_GRAY
+		PRINTBUTTON "△", 7775
+		RESETCOLOR
+	ELSEIF (カウンタ - リストスタート) == 8 + 調整池
+		PRINT －
+
+
+	ELSEIF (カウンタ - リストスタート) == 12 + 調整池
+		SIF リストスタート >= リスト最大値 - (リスト표시 * 2)
+			SETCOLOR C_GRAY
+		PRINTBUTTON "▽",7778
+		RESETCOLOR
+	ELSEIF (カウンタ - リストスタート) == 13 + 調整池
+		SIF リストスタート >= リスト最大値 - (リスト표시 * 2)
+			SETCOLOR C_GRAY
+		PRINTBUTTON "▽", 7777
+		RESETCOLOR
+	ELSEIF (カウンタ - リストスタート) == 14 + 調整池
+		PRINT －
+	ELSE
+		PRINT 　
+	ENDIF
+	PRINTPLAIN ┃
+	PRINTL
+NEXT
+PRINTL 　　　　　┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━┛
+ALIGNMENT LEFT
+IF 使用場所 == 3 || 使用場所 == 5 || 使用場所 == 18
+	PRINTFORM 　　　　　【[ -1] = %CALLNAME:MASTER,20,LEFT%】
+ELSE
+	PRINTFORM 　　　　　%"",25,LEFT%
+ENDIF
+PRINTPLAINFORM %"",40%
+SETCOLOR C_GOLD
+PRINTPLAIN 금색：즐겨찾기　　
+SETCOLOR C_AQUA
+PRINTPLAIN 파랑：개인구상있음　　
+SETCOLOR C_GREEN
+PRINTL 녹색：재택중
+RESETCOLOR
+
+PRINT ―【퀵 필터】—————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+IF 필터_素質:131 == 1
+	SETCOLOR C_GREEN
+	PRINTBUTTON "【 몬스터 】", 9982
+ELSEIF 필터_素質:131 == 0
+	SETCOLOR C_AQUA
+	PRINTBUTTON "【모든캐릭터】", 9982
+ELSE
+	PRINTBUTTON "【듀얼리스트】", 9982
+ENDIF
+RESETCOLOR
+
+SIF 필터_구상 >= 1
+	SETCOLOR C_AQUA
+PRINTBUTTON "【개인구상소지】", 9984
+RESETCOLOR
+SIF 필터_画像 >= 1
+	SETCOLOR C_AQUA
+IF 필터_画像 == 2
+	PRINTBUTTON "【　화상없음　】", 9981
+ELSE
+	PRINTBUTTON "【　화상있음　】", 9981
+ENDIF
+RESETCOLOR
+
+SIF 필터_お気に入り >= 1
+	SETCOLOR C_AQUA
+PRINTBUTTON "【 즐겨찾기 】", 9983
+RESETCOLOR
+
+
+PRINTL
+PRINT ―【필터】—————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+SIF 필터_속성 >= 1
+	SETCOLOR C_GREEN
+PRINTBUTTON "【　　속성　　】", 9987
+RESETCOLOR
+SIF 필터_종족 >= 1
+	SETCOLOR C_GREEN
+PRINTBUTTON "【　　종족　　】", 9988
+RESETCOLOR
+PRINTFORM 
+PRINTBUTTON "【 소질／각인 】", 9989
+PRINTBUTTON "【　　필터리셋　　】", 9986
+
+
+PRINTL 
+
+CUSTOMDRAWLINE —
+
+IF 使用場所 == 8
+	PRINTBUTTON "[　마이덱　]", 6666
+	PRINT 　　
+	PRINTBUTTON "[　　렌탈덱　　]", 6667
+	PRINT 　　
+
+	PRINTBUTTON "[　 스트럭쳐 　]", 6668
+	PRINT 　　
+
+
+	SETCOLOR C_GREEN
+	PRINTBUTTON "[ 대전상대 덱 ]", 6669
+	RESETCOLOR
+	PRINTL
+	CUSTOMDRAWLINE ―
+ENDIF
+
+
+PRINTL 
+PRINT [1000] - 확정
+PRINT 　　　　　　　　　　
+PRINT [2000] - 리스트 업데이트
+
+
+BINPUT
+IF RESULT == 1000
+	RETURN -1
+ELSEIF RESULT == 2000
+	CALL UPDATE_CHARA
+	GOTO INPUT_LOOP_RESETLIST
+
+
+
+
+
+ELSEIF RESULT == 7776
+	リストスタート -= (リスト표시 * 2)
+	SIF リストスタート <= 0
+		リストスタート = 0
+
+ELSEIF RESULT == 7775
+	リストスタート -= リスト표시
+	SIF リストスタート <= 0
+		リストスタート = 0
+
+
+ELSEIF RESULT == 7778
+	IF リストスタート > リスト最大値 - リスト표시
+		PRINT
+	ELSE
+		リストスタート += リスト표시
+	ENDIF
+
+
+ELSEIF RESULT == 7777
+	IF リストスタート > リスト最大値 - (リスト표시 * 2)
+		PRINT
+	ELSE
+		リストスタート += (リスト표시 * 2)
+	ENDIF
+ELSEIF RESULT == 9980
+	필터_仲良し ^= 1
+	リストスタート = 0
+	GOTO INPUT_LOOP_RESETLIST
+
+ELSEIF RESULT == 9981
+	IF 필터_画像 >= 2
+		필터_画像 = 0
+	ELSE
+		필터_画像 ++
+	ENDIF
+	リストスタート = 0
+	GOTO INPUT_LOOP_RESETLIST
+
+ELSEIF RESULT == 9986
+	CALL MONSTERLIST_RESET	
+	リストスタート = 0
+	GOTO INPUT_LOOP_RESETLIST
+
+ELSEIF RESULT == 9987
+	CALL SUMMON_FILTER_ATTRIBUTE
+	リストスタート = 0
+	GOTO INPUT_LOOP_RESETLIST
+ELSEIF RESULT == 9988
+	CALL SUMMON_FILTER_TYPE
+	リストスタート = 0
+	GOTO INPUT_LOOP_RESETLIST
+
+
+ELSEIF RESULT == 9989
+	CALL SUMMON_FILTER
+	リストスタート = 0
+	GOTO INPUT_LOOP_RESETLIST
+
+ELSEIF RESULT == 9982
+
+	IF 필터_素質:131 == -100
+		필터_素質:131 = 1
+	ELSEIF 필터_素質:131 == 1
+		필터_素質:131 = 0
+	ELSE
+		필터_素質:131 = -100
+	ENDIF
+	リストスタート = 0
+	GOTO INPUT_LOOP_RESETLIST
+
+ELSEIF RESULT == 9983
+	필터_お気に入り ^= 1
+	リストスタート = 0
+	GOTO INPUT_LOOP_RESETLIST
+
+ELSEIF RESULT == 9984
+	필터_구상 ^= 1
+	リストスタート = 0
+	GOTO INPUT_LOOP_RESETLIST
+
+ELSEIF RESULT == 9985
+	CALL SUMMON_FILTER_NAME
+	リストスタート = 0
+	GOTO INPUT_LOOP_RESETLIST
+
+ELSEIF RESULT == 9990
+	IF 使用場所 == 2
+		필터_所持 ^= 2
+	ELSE
+		필터_所持 ^= 1
+	ENDIF
+	リストスタート = 0
+	GOTO INPUT_LOOP_RESETLIST
+
+ELSEIF INRANGE(RESULT, 6666, 6670)
+	RETURN RESULT
+ELSE
+	IF RESULT == -1
+		캐릭터_ID = 0
+	ELSE
+		캐릭터_ID = 소환_リスト:RESULT
+	ENDIF
+	CALL LIST_SHORI(使用場所,캐릭터_ID)
+
+	IF 使用場所 == 9 || 使用場所 == 19
+		RETURN 캐릭터_ID
+	ELSEIF 使用場所 == 8
+		IF CFLAG:캐릭터_ID:호감도 < 1000 && デバッグシステム == 0
+			PRINTFORML 이 캐릭터란은 덱의 구성이 공개되어있지 않습니다。
+			PRINTFORMW （호감도1000이상 필요）
+			GOTO INPUT_LOOP
+		ELSE
+			CALL ENEMYDECK_CHECK(캐릭터_ID)
+			CALL CARD_DECK_CHECK(RESULT ,2)
+			SIF RESULT == 1
+				GOTO INPUT_LOOP
+		ENDIF
+		RETURN 캐릭터_ID
+	ELSEIF 使用場所 == 4 || 使用場所 == 31
+		RETURN 캐릭터_ID
+
+	ELSEIF 使用場所 == 0 || 使用場所 == 17
+		SIF RESULT
+			RETURN 1
+		GOTO INPUT_LOOP2
+	ELSEIF 使用場所 == 15
+		GOTO INPUT_LOOP_RESETLIST
+	ENDIF
+
+	SIF RESULT
+		RETURN 1
+ENDIF
+GOTO INPUT_LOOP
+
+
+
+
+@MONSTER_FAV_SUMMON
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 설정あり
+
+PRINTL
+CUSTOMDRAWLINE —
+PRINTL 즐겨찾기 카드 소환
+CUSTOMDRAWLINE —
+PRINTFORML ＊즐겨찾기는【능력표시】커맨드로 설정 가능합니다。
+PRINTL
+FOR カウンタ,1,6
+	IF お気に入り:カウンタ > 0
+		PRINTFORM 즐겨찾기{カウンタ}:%NAME:(お気に入り:カウンタ),25,LEFT%
+		PRINTL
+		SIF CFLAG:(お気に入り:カウンタ):현재위치 != CFLAG:MASTER:현재위치
+			PRINTBUTTON "[특수소환！！]", (9990 + カウンタ)
+		SIF CFLAG:(お気に入り:カウンタ):현재위치 == CFLAG:MASTER:현재위치
+			PRINTBUTTON "[강제탈출장치！발동！]", (9990  + カウンタ)
+		설정あり ++
+	ELSE
+		SETCOLOR C_GRAY
+		PRINTFORM 즐겨찾기{カウンタ} :설정되어있지 않습니다
+		RESETCOLOR
+		PRINTL
+	ENDIF
+	PRINTL
+NEXT
+
+PRINTL
+IF 설정あり != 0
+		PRINTBUTTON "[펜듈럼 소환！]", 8889
+ENDIF
+
+
+
+PRINTL
+PRINTBUTTON "[확인종료]", 8888
+BINPUT
+
+
+IF RESULT == 8888
+	PRINTFORML 돌아갑니다。
+ELSEIF RESULT == 8889
+	FOR カウンタ,1,6
+		SIF お気に入り:カウンタ == 0
+			CONTINUE
+		CALL SUMMON_SHORI((お気に入り:カウンタ))
+	NEXT
+ELSEIF RESULT >= 9990
+	RESULT -= 9990
+	CALL SUMMON_SHORI((お気に入り:RESULT))
+
+
+ENDIF
+
+@CHECK_SUMMON_CAN
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 소환_現在値
+
+FOR 캐릭터_ID,1,CHARANUM
+	SIF CFLAG:캐릭터_ID:시작위치 == CFLAG:MASTER:시작위치
+		소환_現在値	++
+NEXT
+
+IF 소환_現在値 >= 最大소환値
+	RETURN 1
+ENDIF
+RETURN 0
+
+@SUMMON_SHORI(캐릭터_ID,強制執行)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 소환_現在値
+#DIM DYNAMIC 소환リスト_캐릭터
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC バイト開始
+#DIM DYNAMIC バイト終了
+#DIM DYNAMIC 強制執行
+
+SIF 캐릭터_ID == MASTER
+	RETURN 0
+
+IF CFLAG:캐릭터_ID:소유함 != 1 && CFLAG:캐릭터_ID:전화번호 != 1 && 強制執行 == 0
+	PRINTFORMW %NAME:캐릭터_ID%과의 커넥션을 갖고있지 않습니다。
+	RETURN 0
+ENDIF
+
+FOR 소환リスト_캐릭터,1,CHARANUM
+	SIF CFLAG:소환リスト_캐릭터:현재위치 != 0 && CFLAG:소환リスト_캐릭터:현재위치 <= 20
+		소환_現在値	++
+NEXT
+
+
+
+;【目の前にいる場合は戻す】
+IF CFLAG:캐릭터_ID:현재위치 == CFLAG:MASTER:현재위치
+	;CALL REMOVE_CHARACTER_TO_ROOM캐릭터_ID
+	IF CFLAG:MASTER:현재위치 <= 20
+		IF TALENT:캐릭터_ID:듀얼리스트 >= 1
+			PRINTFORML %NAME:캐릭터_ID%과 오늘은 헤어졌습니다。
+		ELSE
+			PRINTFORML 돌아와！！%NAME:캐릭터_ID%！！
+		ENDIF
+		CFLAG:캐릭터_ID:현재위치 = 100
+
+	ELSEIF CFLAG:MASTER:현재위치 >= 50
+		PRINTFORML %NAME:캐릭터_ID%씨에게 돌아갔습니다。
+		CFLAG:캐릭터_ID:현재위치 = 100
+	ENDIF
+
+;現在値が소환最大限界値で있는 경우、モンスターは소환出来ません。
+;ただし상대가 こちらの目の前にいる場合は대상となったモンスターは戻す。
+;また、캐릭터クターが0以外にいる場合は目の前までワープさせる
+ELSEIF 소환_現在値 >= 最大소환値 && CFLAG:캐릭터_ID:현재위치 == 場所_VOID && CFLAG:MASTER:현재위치 <= 20
+	PRINTFORML 방에 소환할수 있는 최대치가 되었기에 소환 할 수 없습니다。
+;【마스터の前に居ないモンスターはすぐさま소환/転移】
+ELSEIF CFLAG:캐릭터_ID:현재위치 != CFLAG:MASTER:현재위치
+
+;―――呼び出し失敗な状態――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+	IF CFLAG:캐릭터_ID:알바중 >= 1 && CFLAG:캐릭터_ID:현재위치 > 20
+		PRINTFORMW %CALLNAME:캐릭터_ID%에겐 지금은 바쁘니까 무리라며 거절당했습니다。
+		RETURN 0
+	ELSEIF CFLAG:캐릭터_ID:수면 == 1
+		PRINTFORMW %CALLNAME:캐릭터_ID%는 대답해주지 않는다……자고있는듯 하다。
+		RETURN 0
+	ELSE
+		CALL CHARA_MOVEMENT_GOHOME_TEST(캐릭터_ID)
+		IF TALENT:캐릭터_ID:연모 != 1 && RESULT == 1
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 이 시간의 호출엔 대응하지 못하는것 같다……。
+			RETURN 0
+		ENDIF
+	ENDIF
+;―――実際の소환処理――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+	IF CFLAG:MASTER:현재위치 <= 20
+		IF CFLAG:캐릭터_ID:현재위치 <= 20
+			PRINTFORML %NAME:캐릭터_ID%를%GETPLACENAME(CFLAG:MASTER:현재위치)%로 불렀다。
+		ELSEIF TALENT:캐릭터_ID:듀얼리스트 >= 1
+			PRINTFORML %NAME:캐릭터_ID%는 집까지 와주는것을 승낙했다。
+		ELSE
+			IF MAXBASE:캐릭터_ID:체력 <= 500
+				PRINTFORML 이 몬스터는 아무래도 이쪽 세계의 공기에 적응하지 못하는것 같아서、
+				PRINTFORML 소환해도 바로 돌아갈것 같습니다만、체력을 증강시켜 드릴까요？				
+				PRINTL 
+				PRINTL [0] - 예
+				PRINTL [1] - 아니오
+				BINPUT
+				SIF RESULT == 1
+					RETURN 0
+
+				MAXBASE:캐릭터_ID:체력 += 1000
+				BASE:캐릭터_ID:체력 += 1000
+
+			ENDIF
+			PRINTFORML 나타나라！！！
+			PRINTFORML %NAME:캐릭터_ID%를 공격표시로 소환！！
+			IF CFLAG:캐릭터_ID:면식 == 0
+				CALL SYOTAIMEN(캐릭터_ID,1)
+			ENDIF
+		ENDIF
+	ELSEIF CFLAG:MASTER:현재위치 >= 50
+		PRINTFORML %NAME:캐릭터_ID%에게 대전을 부탁했다。
+	ENDIF
+	CFLAG:캐릭터_ID:현재위치 = CFLAG:MASTER:현재위치
+	TFLAG:104 = 캐릭터_ID
+	SIF TALENT:캐릭터_ID:듀얼리스트 != 1
+		소환_最終소환 = 캐릭터_ID
+
+	FOR カウンタ,0,10
+		SIF 소환이력:カウンタ == 캐릭터_ID
+			소환이력:カウンタ = 0
+	NEXT
+	ARRAYSHIFT 소환이력, 1 , -1 
+	소환이력:0 = 캐릭터_ID	
+ENDIF
+
+
+
+
+
+
+
+@LIST_VARIABLE(使用場所,リスト_ID)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 改行カウンタ
+#DIM DYNAMIC リストスタート
+#DIM DYNAMIC リスト_ID
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC リスト_現체력
+#DIM DYNAMIC 使用場所
+#DIMS DYNAMIC リスト표시
+#DIMS DYNAMIC 덱名
+
+IF 소환_リスト:リスト_ID == 0
+	PRINTFORM %リスト표시,32,RIGHT%
+	RETURN
+ENDIF
+
+캐릭터_ID = 소환_リスト:リスト_ID
+
+
+SELECTCASE 使用場所
+	CASE 1
+		PRINTFORM 【체력】
+		CALL PRINT_COLORBAR, BASE:캐릭터_ID:체력, MAXBASE:캐릭터_ID:체력, 5, UNICODE(0x2585), UNICODE(0x2585),  BARCOLORSET("赤"), RESULT:1
+		PRINTFORM  ({BASE:캐릭터_ID:체력,5}/{MAXBASE:캐릭터_ID:체력,5})
+	CASE 2, 4
+		IF CFLAG:캐릭터_ID :소유함 == 0 || 使用場所 == 4
+			CALL CHARA_KACHI(캐릭터_ID,100)
+			リスト표시 = 가격：{(RESULT),10}円
+		ELSEIF CFLAG:캐릭터_ID :소유함 == 1
+			SETCOLOR C_GRAY
+			リスト표시 =（구입함）
+		ENDIF
+		PRINTFORM %リスト표시,30,RIGHT%
+		RESETCOLOR
+	CASE 6
+		PRINTFORM 현재 침상 ：
+		IF CFLAG:캐릭터_ID:시작위치 == 100
+			IF TALENT:캐릭터_ID:듀얼리스트 == 0
+				PRINTFORM [%"카드 안",16,left%]
+			ELSEIF TALENT:캐릭터_ID:듀얼리스트 >= 1
+				PRINTFORM [%"본인의 방",16,left%]
+			ENDIF
+
+		ELSEIF CFLAG:캐릭터_ID:시작위치 != 100
+				PRINTFORM [%GETPLACENAME(CFLAG:캐릭터_ID:시작위치),16,left%]
+		ENDIF
+	CASE 7
+		SETCOLOR C_PINK
+		IF CFLAG:캐릭터_ID:카드화됨 != 1
+			PRINTFORM %"[연모❤]",28,RIGHT% 
+		ELSEIF CFLAG:캐릭터_ID:카드화됨 == 1
+			PRINTFORM %"[카드화됨❤]",28,RIGHT% 
+		ENDIF
+		RESETCOLOR
+
+
+	CASE 8
+		CALL ENEMYDECK_CHECK(캐릭터_ID)
+		덱名 = 【%RESULTS:1%】
+		IF CFLAG:캐릭터_ID:호감도 <= 1000 && デバッグシステム == 0
+			SETCOLOR C_GRAY
+			덱名 = 【？？？？？】
+		ENDIF
+		PRINTFORM %덱名,30,LEFT%
+		RESETCOLOR
+
+	CASE 20
+		PRINTFORM 저장 우유량：
+		PRINTFORM {CFLAG:캐릭터_ID:저장모유량,14}ml
+		
+	CASE 10,11,12
+		IF CFLAG:캐릭터_ID:전화번호 == 1
+			PRINTFORM 【체력】
+			CALL PRINT_COLORBAR, BASE:캐릭터_ID:체력, MAXBASE:캐릭터_ID:체력, 5, UNICODE(0x2585), UNICODE(0x2585),  BARCOLORSET("赤"), RESULT:1
+			PRINTFORM  ({BASE:캐릭터_ID:체력,5}/{MAXBASE:캐릭터_ID:체력,5})
+		ELSEIF CFLAG:캐릭터_ID :소유함 == 0
+			SETCOLOR C_GRAY
+			IF CFLAG:캐릭터_ID :아르바이트 >= 1
+				リスト표시 = （아르바이트중）
+			ELSE				
+				リスト표시 = （전화번호 미소지）
+			ENDIF
+			PRINTFORM %リスト표시,30,RIGHT%
+			RESETCOLOR
+		ENDIF
+	CASE 17
+		PRINTFORM %"",30,RIGHT%
+	
+	CASE 30
+		VARSET RESULTS
+		TRYCALLFORM M_HNYO_K{TALENT:캐릭터_ID:구상성격}()
+		SIF RESULTS == ""
+			RESULTS = 없음
+		PRINTFORM 【%RESULTS,18,LEFT%】
+		PRINTFORM 신음：
+		IF CFLAG:캐릭터_ID:자동신음 == 0
+			PRINTFORM 무
+		ELSE
+			PRINTFORM 유
+		ENDIF
+	CASEELSE
+		
+		IF CFLAG:캐릭터_ID:소유함 == 1 || CFLAG:캐릭터_ID:전화번호 == 1 
+			PRINTFORM 【체력】
+			CALL PRINT_COLORBAR, BASE:캐릭터_ID:체력, MAXBASE:캐릭터_ID:체력, 6, UNICODE(0x2585), UNICODE(0x2585),  BARCOLORSET("赤"), RESULT:1
+			PRINTFORM  ({BASE:캐릭터_ID:체력,5}/{MAXBASE:캐릭터_ID:체력,5})
+		ELSE
+			SETCOLOR C_GRAY
+			IF CFLAG:캐릭터_ID :아르바이트 >= 1
+				リスト표시 = (아르바이트 중)
+			ELSE
+				IF TALENT:캐릭터_ID:듀얼리스트 >= 1
+					リスト표시 = (전화번호 미소지)
+				ELSE
+					リスト표시 = (카드 미소지)
+				ENDIF
+			ENDIF
+			PRINTFORM %リスト표시,30,RIGHT%
+			RESETCOLOR
+		ENDIF
+ENDSELECT

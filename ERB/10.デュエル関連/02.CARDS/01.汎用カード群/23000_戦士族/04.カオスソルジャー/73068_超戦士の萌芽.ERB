@@ -1,0 +1,171 @@
+﻿@CARDNAME_73068,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초전사의 맹아
+	CASE "略称"
+RESULTS = 초전사의 맹아
+	CASE "カテゴリ"
+RESULTS:0 = 카오스
+RESULTS:1 = 의식마법
+ENDSELECT
+
+
+@CARD_73068(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73068(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「카오스 솔저」 의식 몬스터의 강림에 필요.
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①: 패에서 레벨 7 이하의 빛 어둠 속성 몬스터 1장을 상대에게 보여주고 발동할 수 있다.
+PRINTL 그 몬스터와의 레벨 합계가 8이 되도록, 덱에서
+PRINTL 그 몬스터와 속성이 다른 빛 어둠 속성 몬스터 1장을 패에 더한다.
+PRINTL 그 후, 그 2장을 릴리스하고 패 / 묘지에서 「카오스 솔저」 의식 몬스터 1장을 의식 소환한다.
+
+@CARDCAN_73068(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 条件レベル
+#DIM DYNAMIC 条件속성
+#DIM DYNAMIC 대상レベル
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73068)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,73068)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = 의식
+	효과条件カテゴリ = 카오스 솔저
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;参考先：ラティス
+	FOR カウンタ,0,紙束最大値
+		SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") == -1
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_손패:カウンタ")},"속성"
+		IF RESULT == 빛속성
+			条件속성 = 어둠속성
+		ELSEIF RESULT == 어둠속성
+			条件속성 = 빛속성
+		ELSE
+			CONTINUE
+		ENDIF
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_손패:カウンタ")},"レベル"
+		대상レベル = RESULT - GETVAR(@"%듀얼리스트%_手_一星:カウンタ")
+		SIF 대상レベル > 7
+			CONTINUE
+		条件レベル = 8 - 대상レベル
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件속성 = 条件속성
+		효과条件レベル = 条件レベル
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성++
+	NEXT
+	SIF 条件달성 == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73068(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 条件レベル
+#DIM DYNAMIC 条件속성
+#DIMS DYNAMIC 選択カード名_A
+#DIMS DYNAMIC 選択カード名_B
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73068)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件속성:0 = 빛속성
+		효과条件속성:1 = 어둠속성
+		CALLFORM 효과条件レベル_ADV(7, "以下")
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARDNAME_{選択カード_ID}, "名前"
+			選択カード名_A = %RESULTS%
+			TRYCALLFORM CARD_{選択カード_ID},"속성"
+			IF RESULT == 빛속성
+				条件속성 = 어둠속성
+			ELSEIF RESULT == 어둠속성
+				条件속성 = 빛속성
+			ENDIF
+			TRYCALLFORM CARD_{選択カード_ID},"レベル"
+			条件レベル = 8 - (RESULT - GETVAR(@"%듀얼리스트%_手_一星:選択カード"))
+			CALL FULLRESET
+			효과条件속성 = 条件속성
+			효과条件レベル = 条件レベル
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				選択カード_ID = RESULT:1
+				TRYCALLFORM CARDNAME_{選択カード_ID}, "名前"
+				選択カード名_B = %RESULTS%
+				CALL RESETAREA_MAT
+				素材範囲손패 = 1
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과範囲묘지 = 1
+				효과条件종류 = 의식
+				효과条件カテゴリ = 카오스 솔저
+				효과条件소환可 = 1
+				CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+				CALL CARD_SELECT(듀얼리스트,RESULT)
+				選択カード = RESULT
+				IF 選択カード != 9999
+					CALL RESETAREA_MAT
+					TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_%参照先（CS）%:{選択カード}")}(듀얼리스트,選択カード)
+					素材範囲손패 = 1
+					素材条件名前:0 = %選択カード名_A%
+					素材条件名前:1 = %選択カード名_B%
+					TRYCALLFORM RITSUMMON(듀얼리스트, 選択カード,参照先（CS）)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

@@ -1,0 +1,228 @@
+﻿@CARDNAME_72221,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 리볼부트 섹터
+	CASE "略称"
+RESULTS = 리볼부트 섹터
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_72221(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72221(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「리볼부트 섹터」가 된다.
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 필드의 「바렐」 몬스터의 공격력 / 수비력은 300 올린다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ②: 이하의 효과에서 1개를 선택하여 발동할 수 있다.
+PRINTL ● 패에서 「바렐」 몬스터를 2체까지 수비 표시로 특수 소환한다(동명 카드는 1장까지).
+PRINTL ● 상대 필드의 몬스터의 수가 자신 필드의 몬스터보다 많을 경우,
+PRINTL 그 차이의 수까지 자신 묘지에서 「바렐」 몬스터를 수비 표시로 특수 소환한다(동명 카드는 1장까지).
+
+@CARDCAN_72221(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72221)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,72221)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 바렐
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 1
+	
+	SIF モンスター数(듀얼리스트) >= モンスター数(対面者)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 바렐
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72221(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名前,5
+#DIM DYNAMIC 条件달성,2
+#DIM DYNAMIC SS可能횟수
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72221,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 바렐
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성:0 ++
+		SIF モンスター数(듀얼리스트) < モンスター数(対面者)
+			条件달성:1 ++
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 바렐
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성:1 ++
+		IF 条件달성:0 == 1 && 条件달성:1 == 2
+			IF 듀얼리스트 == "자신"
+				CALL YN_CHOICE(듀얼리스트,"●패에서 특수소환する","●묘지から특수소환する")
+			ELSE
+				RESULT = 1
+			ENDIF
+		ELSEIF 条件달성:0 == 1
+			RESULT = 0
+		ELSEIF 条件달성:1 == 2
+			RESULT = 1
+		ENDIF
+
+		IF RESULT == 0
+			CALL FULLRESET
+			효과条件カテゴリ = 바렐
+			효과条件종류 = モン全般
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				TRYCALLFORM CARDNAME_{RESULT:99},"名前"
+				選択カード名前 = %RESULTS%
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트,"손패",選択カード)
+				
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과条件カテゴリ = 바렐
+				효과条件固名前 = %選択カード名前%
+				효과条件任意 = 1
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,場所)
+			ENDIF
+		ELSEIF RESULT == 1
+			カウンタ = 0
+			SS可能횟수 = モンスター数(対面者) - モンスター数(듀얼리스트)
+			REPEAT SS可能횟수
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 바렐
+				효과条件종류 = モン全般
+				SIF カウンタ >= 1
+					효과条件固名前:0 = %選択カード名前:0%
+				SIF カウンタ >= 2
+					효과条件固名前:1 = %選択カード名前:1%
+				SIF カウンタ >= 3
+					효과条件固名前:2 = %選択カード名前:2%
+				SIF カウンタ >= 4
+					효과条件固名前:3 = %選択カード名前:3%
+				효과条件任意 = 1
+				CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+				選択カード = RESULT
+				IF 選択カード != 9999
+					TRYCALLFORM CARDNAME_{RESULT:99},"名前"
+					SIF カウンタ == 0
+						選択カード名前 = %RESULTS:0%
+					SIF カウンタ == 1
+						選択カード名前 = %RESULTS:1%
+					SIF カウンタ == 2
+						選択カード名前 = %RESULTS:2%
+					SIF カウンタ == 3
+						選択カード名前 = %RESULTS:3%
+					CALL FULLRESET
+					CALL CARD_SP_SUMMON(듀얼리스트,"묘지",選択カード)
+					カウンタ ++
+				ELSEIF 選択カード == 9999
+					BREAK
+				ENDIF
+			REND
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72221)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ = 바렐
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,300,300)
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,300,300)
+
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트,"리볼부트 섹터")
+ENDIF

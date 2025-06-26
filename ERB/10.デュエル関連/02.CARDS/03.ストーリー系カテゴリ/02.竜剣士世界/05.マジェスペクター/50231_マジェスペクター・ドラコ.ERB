@@ -1,0 +1,211 @@
+﻿@CARDNAME_50231,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마제스펙터 드라코
+	CASE "略称"
+RESULTS = MJ 드라코
+	CASE "カテゴリ"
+RESULTS:0 = 마제스펙터
+ENDSELECT
+
+
+@CARD_50231(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 엑시즈
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 2000
+	;牝性/雄性があるよ
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "連動ID"
+		RETURN 1860
+	CASE "추가日"
+		RETURN 250604
+ENDSELECT
+RETURN 0
+
+
+@CARDSUMMON_50231(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,50231) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_50231(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 P 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 의 마법 / 함정 존에 「마제스펙터」 P 몬스터 또는 「룡검사」 P 몬스터가 존재할 경우에 발동할 수 있다.
+PRINTL 덱에서 「마제스펙터」 카드 1장을 패에 추가한다.
+PRINTL 그 후, 의 마법 / 함정 존의 펜듈럼 몬스터 1장을 파괴할 수 있다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 레벨 4 몬스터 x 2
+PRINTL 이 카드명의 ①의 몬스터 효과는 1턴에 2번까지 사용할 수 있다.
+CALLFORM CARD_ABLE(15,효과後誘発)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 상태에서 몬스터가 릴리스되었을 경우,
+PRINTL 이 카드의 엑시즈 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 덱에서 레벨 6 이하의 마법사족 / 바람 속성 몬스터 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②: 이 카드가 몬스터 존에서 엑스트라 덱에 추가되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 의 마법 / 함정 존에 놓는다.
+
+
+@CARDCAN_50231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50231)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,50231)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件カテゴリ:0 = 마제스펙터
+	효과条件カテゴリ:1 = 룡검사
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件カテゴリ = 마제스펙터
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,50231) && 발동済_3(듀얼리스트,50231)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"リリース",2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件속성 = 바람속성
+	효과条件종족 = 마법사족
+	효과条件소환可 = 1
+	CALL 효과条件レベル_ADV(6, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+
+ELSEIF 종류 == 戦破壊→묘지
+    SIF !GROUPMATCH(ゾーン,"필드")
+		RETURN 0
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊","リリース")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_50231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50231,1)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件カテゴリ = 마제스펙터
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲마함 = 1
+		    효과条件分割 = 펜듈럼
+		    효과条件行先플래그 = 破壊行き
+		    효과条件任意 = 1
+		    CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50231,15,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件속성 = 바람속성
+	    효과条件종족 = 마법사족
+		CALL 효과条件レベル_ADV(6, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50231)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+효과条件名前 = 마제스펙터 드라코
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+	ENDIF
+ENDIF

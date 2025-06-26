@@ -1,0 +1,109 @@
+﻿@CARDNAME_1604,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 블리자드 프린세스
+	CASE "略称"
+RESULTS = 블리자드 P
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1604(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2100
+	CASE "C불가"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1604(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드 효과 발동에 대해, 상대는 카드 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 자신 또는 상대 턴에 발동할 수 있다.
+PRINTL 자신 필드의 마법사족 몬스터 2장을 묘지로 보내고, 이 카드를 소환한다.
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ②: 이 카드가 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 이 턴에, 상대는 마법 / 함정 카드를 발동할 수 없다.
+
+@CARDCAN_1604(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1604)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 마법사족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1604(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC コピー先
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1604)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종족 = 마법사족
+		효과条件複数 = 2
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL CARD_SUMMON_SHORI(듀얼리스트,場所,"攻撃표시",1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1604)
+	IF RESULT == 0
+		CALL SET_PLAYER_INFO(듀얼리스트,"마함無効",1,1)
+	ENDIF
+ENDIF
+

@@ -1,0 +1,136 @@
+﻿@CARDNAME_41001,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 화이트 매지션 걸
+	CASE "略称"
+		RESULTS = Ｗ Ｍ Ｇ
+	CASE "カテゴリ"
+		RESULTS:0 = 블랙 매지션 걸
+		RESULTS:1 = 매지션 걸
+		RESULTS:2 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_41001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 1700
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 1000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_41001(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 마법사족 튜너＋튜너 이외의 마법사족 몬스터 １장 이상 
+PRINTL 이 카드명의 ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 S소환했을 경우에 발동할 수 있다。
+PRINTL 자신 묘지의 마법 카드를 １장 패에 넣는다。
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②：이 카드의 공격력은、자신 묘지의 마법사족 몬스터의 수×４００ 올린다。
+
+
+@CARDSUMMON_41001(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 9
+
+;1体目の条件
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件종족 = 마법사족
+ELSEIF EX参照 >= 10
+	素材条件튜너 = 0
+	素材条件종족 = 마법사족
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,41001) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_41001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,41001)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,41001)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_41001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+
+
+IF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 마법사족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 400
+	CALL STATCHANGE_BASIC(듀얼리스트,"자신",場所,攻撃力修正)
+
+ELSEIF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41001,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 마법全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ENDIF
+

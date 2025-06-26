@@ -1,0 +1,140 @@
+﻿@CARDNAME_93430,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 샐러맨그레이트 로어
+	CASE "略称"
+RESULTS = 전생 포효-
+	CASE "カテゴリ"
+RESULTS:0 = 샐러맨그레이트
+ENDSELECT
+
+
+@CARD_93430(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93430(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 어느 하나밖에 사용할 수 없다.
+CALL CARD_ABLE(1,발동誘発)
+PRINTL ①: 자신 필드에 「샐러맨그레이트」L 몬스터가 존재하고, 몬스터의 효과 / 마법 / 함정 카드가 발동했을 때에 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 파괴한다.
+
+CALL CARD_ABLE(2,효과後誘発)
+PRINTL ②: 이 카드가 묘지에 존재하는 상태에서,
+PRINTL 각성 상태인 「샐러맨그레이트」L 몬스터가 자신 필드에 존재하고,
+PRINTL 「샐러맨그레이트」L 몬스터가 L 소환되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 자신 필드에 세트한다.
+PRINTL 이 효과로 세트한 이 카드는 필드에서 벗어났을 경우에 제외된다.
+
+@CARDCAN_93430(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,93430)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,93430)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,93430)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 링크
+	효과条件カテゴリ = 샐러맨그레이트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,93430)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,93430)
+		RETURN 0
+
+	SIF !GROUPMATCH(ゾーン,"묘지")
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 샐러맨그레이트
+	효과条件종류 = 링크
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX특수소환")
+	SIF RESULT != 1
+		RETURN 0
+
+
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 샐러맨그레이트
+	효과条件条件達生 = 888
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_93430(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+
+#DIM DYNAMIC 설정禁止
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93430,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"破壊")
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93430,2)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件名前 = 샐러맨그레이트 로어
+		효과추가종류 = 500
+		CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF
+

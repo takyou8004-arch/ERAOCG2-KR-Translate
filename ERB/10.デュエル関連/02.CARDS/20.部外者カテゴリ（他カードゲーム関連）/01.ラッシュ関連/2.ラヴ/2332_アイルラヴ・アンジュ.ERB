@@ -1,0 +1,132 @@
+﻿@CARDNAME_2332,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아이 러브 안주
+	CASE "略称"
+RESULTS = I'LL 안주
+	CASE "カテゴリ"
+RESULTS:0 = 러브
+ENDSELECT
+
+
+@CARD_2332(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2332(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 자신 필드의 몬스터 (공격력 0) 1장을 릴리스하고 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드의 공격력은 2200 상승하고, 그 공격은 관통한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 자신 필드의 원래 공격력이 0인 앞면 표시 몬스터는,
+PRINTL 몬스터 내성과 마법 내성을 얻는다.
+
+
+@CARDCAN_2332(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2332)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,2332,"손패",1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件攻撃力 = 0
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2332(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2332,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件攻撃力 = 0
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,2200)
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"貫通")
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_MZ_表:カウンタ") == 3
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カウンタ")},"攻撃力"
+		SIF RESULT > 0
+			CONTINUE
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",カウンタ,"モ耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",カウンタ,"魔耐")
+	NEXT
+ENDIF
+

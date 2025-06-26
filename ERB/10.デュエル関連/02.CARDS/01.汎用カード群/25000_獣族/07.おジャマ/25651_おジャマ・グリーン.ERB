@@ -1,0 +1,112 @@
+﻿@CARDNAME_25651,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 오자마 그린
+	CASE "略称"
+RESULTS = 오자마 GR
+	CASE "カテゴリ"
+RESULTS:0 = 오자마
+ENDSELECT
+
+
+@CARD_25651(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 1000
+	CASE "추가日"
+		RETURN 250322
+ENDSELECT
+
+
+@CARD_EXPLANATION_25651(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 온갖 수단을 써서 방해를 한다고 알려진 오자마 트리오의 일원.
+PRINTL 셋이 모이면 무언가 일어난다고 한다.
+
+@CARDCAN_25651(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 대상あり
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25651)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_D1(듀얼리스트,25650)
+		RETURN 0
+	SIF 발동済_D1(듀얼리스트,25651)
+		RETURN 0
+	SIF 발동済_D1(듀얼리스트,25652)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件名前 = 방해꾼 옐로
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件名前 = 방해꾼 블랙
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25651(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25651,20)
+	IF RESULT == 0
+		PRINTL
+		SETCOLOR C_YELLOW
+PRINTL 　　오자마 델타 허리케인!!
+		RESETCOLOR
+		PRINTW
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"묘지")
+	ENDIF
+ENDIF

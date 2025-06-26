@@ -1,0 +1,95 @@
+﻿@CARDNAME_71111,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 멍멍이！？
+	CASE "略称"
+		RESULTS = 멍멍이！？
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_71111(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71111(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,마함起動 ,손패起動)
+PRINTL ①：자신 필드에 코스트 1 몬스터가 존재할 경우에 ２０００LP 지불하여 발동할 수 있다。
+PRINTL 덱에서 레벨 1 몬스터 1장을 패로 가져온다。
+PRINTL （코스트 1은 레벨 / 랭크 / 링크 1 카드를 지칭한다）
+
+@CARDCAN_71111(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71111)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件レベル = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 2000 
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件レベル = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_71111(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71111)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",2000)
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件レベル = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF

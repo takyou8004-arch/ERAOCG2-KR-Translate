@@ -1,0 +1,120 @@
+@CARDNAME_4905,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 공모 사라토가
+	CASE "略称"
+RESULTS = 사라토가
+	CASE "カテゴリ"
+RESULTS:0 = 벽람항로
+RESULTS:1 = 유니온(AL)
+ENDSELECT
+
+@CARD_4905(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 800
+	CASE "특수制限"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250503
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_4905(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 토큰 이외의 「유니온(AL)」 몬스터 1장
+PRINTL 자신은 「공모 사라토가」를 1턴에 1번밖에 특수 소환할 수 없다.
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 L 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 자신 필드에 「유니온 함재기」 토큰을 특수 소환한다.
+PRINTL 이 효과의 발동 후, 자신은 턴 종료시까지 「유니온(AL)」 몬스터밖에 특수 소환할 수 없다.
+
+@CARDCAN_4905(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4905)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,4905)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,164881)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDSUMMON_4905(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件종류 = トークン以外
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 유니온(AL)
+ENDIF
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,4905) 
+	RETURN RESULT
+ENDIF
+
+@CARDEFFECT_4905(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4905,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_GENERATE(듀얼리스트,164881)
+		CALL CARD_SS_RESTRICTION(듀얼리스트,"유니온(AL)")
+	ENDIF
+ENDIF

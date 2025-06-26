@@ -1,0 +1,126 @@
+﻿@CARDNAME_20511,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 얼터가이스트 멜루섹
+	CASE "略称"
+RESULTS = 오그 멜루섹
+	CASE "カテゴリ"
+RESULTS:0 = 얼터가이스트
+ENDSELECT
+
+
+@CARD_20511(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 300
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20511(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 직접 공격할 수 있다.
+CALLFORM CARD_ABLE(0,ライフ変強制誘発)
+PRINTL ②: 이 카드가 상대에게 전투 데미지를 주었을 때, 상대 필드의 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 묘지로 보낸다.
+CALLFORM CARD_ABLE(3,戦破壊→묘지)
+PRINTL ③: 이 카드가 필드에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 덱에서 「얼터가이스트 멜루섹」 이외의 「얼터가이스트」 몬스터 1장을 패에 더한다.
+
+
+@CARDCAN_20511(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20511)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ライフ変強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ダメージ受者 == 듀얼리스트
+		RETURN 0
+	SIF !GROUPMATCH(ダメージ종류,"戦闘", "直接戦闘")
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = リリース
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,20511)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件固名前 = 얼터가이스트 멜루섹
+	효과条件カテゴリ = 얼터가이스트
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20511(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直攻")
+ELSEIF 종류 == ライフ変強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20511)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"リリース")
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20511,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件固名前 = 얼터가이스트 멜루섹
+		효과条件カテゴリ = 얼터가이스트
+		효과条件종류 = モン全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF

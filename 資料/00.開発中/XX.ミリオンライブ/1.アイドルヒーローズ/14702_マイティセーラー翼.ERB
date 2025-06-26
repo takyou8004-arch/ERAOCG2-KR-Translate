@@ -1,0 +1,152 @@
+@CARDNAME_14702,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = I・HERO マイティセーラー 翼
+	CASE "略称"
+		RESULTS = Mセーラー翼
+	CASE "カテゴリ"
+		RESULTS:0 = HERO
+		RESULTS:1 = I・HERO
+		RESULTS:2 = THE IDOLM@STER
+		; RESULTS:4 = MILLION LIVE!
+		; RESULTS:5 = 伊吹翼
+		RESULTS:4 = 伊吹翼
+ENDSELECT
+
+@CARD_14702(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_14702(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：자신メインフェイズに자신 필드에 モンスターが존재하지 않는 경우に발동할 수 있다。
+PRINTL 패의 このカード명 이외의 「I・HERO」몬스터 １体を상대에게 보여주고 、패의 この카드를 특수  소환한다。
+CALL CARD_ABLE(2,효과後誘発)
+PRINTL ②：자신 필드에 "I・HERO」モンスターが소환 / 특수 소환된 場合に발동할 수 있다。
+PRINTL 패의 この카드를 버리고、덱에서 「HERO」마법 / 함정 카드 １장을 패에 加える。
+
+@CARDCAN_14702(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,14702)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,14702)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = I・HERO
+	효과条件종류 = モン全般
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,14702,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,14702)
+		RETURN 0
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = I・HERO
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = I・HERO
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_14702(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,14702,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = I・HERO
+		효과条件종류 = モン全般
+		효과条件他所 = 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,14702,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = I・HERO
+		효과条件종류 = 마함全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

@@ -1,0 +1,216 @@
+﻿@CARDNAME_79586,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 대기술「화려한 R.U.M쇼♪」
+	CASE "略称"
+		RESULTS = 대기술 R.U.M
+	CASE "カテゴリ"
+		RESULTS:0 = 기술
+		RESULTS:1 = RUM
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+@CARD_79586(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "추가日"
+		RETURN 250415
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79586(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ①②의 효과는 １턴에 １번、어느쪽이든 １개밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신 필드의 레벨 / 랭크가 ６또는 ７인 마법사족 / 어둠속성 몬스터 １장을 대상으로 하고 발동할 수 있다。
+PRINTL 선택한 몬스터가 Ｘ몬스터 라면、선택한 몬스터보다 랭크가 １개 이상 높은 "기술"Ｘ몬스터를、
+PRINTL Ｘ몬스터 이외 라면、선택한 몬스터의 레벨과 같은 랭크의 "기술"Ｘ몬스터를、
+PRINTL 선택한 자신의 몬스터 위에 겹쳐서 엑시즈 소환 취급으로 ＥＸ덱에서 특수 소환한다。
+PRINTL 그 후、그 몬스터의 Ｘ소재를 묘지의 "기술" 몬스터의 종류의 수 만큼 늘린다。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신 메인 페이즈에 묘지의 이 카드를 제외하고 발동할 수 있다。자신 묘지의 
+PRINTL "기술"몬스터를 ５장까지 고르고 덱 / ＥＸ덱으로 되돌린다。그 후、자신은 １장 드로우한다。
+CALL TEXT_DECORATION("ROGUE")
+
+;엑시즈テ-マらしさのためにランクアップマジックを추가。
+;基本的に重ねてXしていく動きをするが、ランク９はこれを使わないとテ-マ内で出せない設計
+;１장 で十分だが初動で上振れたら이 카드もサーチして構えておきたい。
+;ランク９になると、フリーチェーンで덱バウンスをターン１なしで飛ばせるピュアリィ的な動きをするし、
+;フィニッシャ-としての役割も担っているので、이 카드는 １장 は덱에 入れておきたい타입ではある。
+
+
+@CARDCAN_79586(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79586)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,79586)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79586)
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,0)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 마법사족
+	효과条件속성 = 어둠속성
+	효과条件종류 = 링크以外
+	효과条件レベル:0 = 6
+	효과条件レベル:1 = 7
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,79586)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79586)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 기술
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79586(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 설정レベル
+#DIM DYNAMIC X素材合計
+
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;ランクアップマジックの参考：ＲＵＭ－ドラゴニュ-ト クレスト
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79586,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;通常마법汎用処理
+		CALL FULLRESET
+		효과条件종족 = 마법사족
+		효과条件속성 = 어둠속성
+		효과条件종류 = 링크以外
+		효과条件レベル:0 = 6
+		효과条件レベル:1 = 7
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			;추가X素材カウント
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 기술
+			효과条件종류 = モン全般
+			효과条件固名前起動 = 1
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			X素材合計 = RESULT + GETVAR(@"%듀얼리스트%_MZ_Ｘ:選択カード") + 2
+			
+			;PRINTFORMW Ｘ素材数　：　{X素材合計}
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:選択カード")}, "종류"
+			IF RESULT == 엑시즈
+				설정レベル = GETVAR(@"%듀얼리스트%_MZ_星:選択カード") + 1
+				CALL FULLRESET
+				CALL 효과条件レベル_ADV(설정レベル, "以上")
+				효과条件カテゴリ = 기술
+				효과条件종류 = 엑시즈
+				CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+				選択カードB = RESULT
+				;돌아간다
+				IF 選択カードB != 9999
+					TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カードB}")}(듀얼리스트,選択カードB)
+					代替素材数 = 1
+					重ねてＸ = 1
+					素材条件固定 = 選択カード
+					효과추가종류 = 40000 + X素材合計
+					TRYCALLFORM XYZSUMMON(듀얼리스트,選択カードB)
+					;CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カードB,"Ｘ",X素材合計)
+				ENDIF
+			ELSE
+				설정レベル = GETVAR(@"%듀얼리스트%_MZ_星:選択カード")
+				CALL FULLRESET
+				효과条件レベル = 설정レベル
+				효과条件カテゴリ = 기술
+				효과条件종류 = 엑시즈
+				CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+				選択カードB = RESULT
+				;돌아간다
+				IF 選択カードB != 9999
+					TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カードB}")}(듀얼리스트,選択カードB)
+					代替素材数 = 1
+					重ねてＸ = 1
+					素材条件固定 = 選択カード
+					효과추가종류 = 40000 + X素材合計
+					TRYCALLFORM XYZSUMMON(듀얼리스트,選択カードB)
+					;CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カードB,"Ｘ",X素材合計)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79586,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 기술
+		효과条件종류 = モン全般
+		효과条件複数 = 95
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ENDIF

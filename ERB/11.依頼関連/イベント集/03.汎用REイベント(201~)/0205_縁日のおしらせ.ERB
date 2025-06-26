@@ -1,0 +1,1622 @@
+﻿@IRAI_EVENT_205(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP5)연일의 공지(반복수주 가능)
+	CASE "이벤트種"
+		RETURN 이벤트_ＲＥ
+	CASE "依頼先"
+		RETURN 場所_公園
+	CASE "詳細"
+		PRINTL １０の倍数の日は１８時頃から公園で縁日があるようだ。
+		PRINTL たまには面倒なことを忘れて楽しむのもいいかもしれない。
+		PRINTL 
+		PRINTL （데이트상대は現땅で소환・呼び出します）
+		PRINTL （家にいる연인は呼び出せないので、あらかじめカードの中か実家に戻しておいてください）
+	CASE "条件"
+		SIF DAY % 10 != 0
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_205(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC ボッチ플래그
+#DIM DYNAMIC NTR플래그
+#DIM DYNAMIC 経過時間
+#DIM DYNAMIC クジを引いた횟수
+#DIM DYNAMIC 식사횟수
+#DIM DYNAMIC 残弾数
+#DIM DYNAMIC 射的得点
+#DIM DYNAMIC 興奮度
+#DIM DYNAMIC モンスター討伐数
+#DIM DYNAMIC カード投げクリア횟수
+#DIM DYNAMIC 호감도修正
+
+;18時より前は早すぎる、21時より後は女が帰ってしまう。
+IF TIME < KANTAN_TIME(18,00)
+	PRINTFORML 屋台もほとんど並んでいないし、人も少ない。早く来過ぎたようだ。
+	PRINTFORMW １８時くらいになったらまた来よう。
+	RETURN 1
+ELSEIF TIME > KANTAN_TIME(21,00)
+	PRINTFORML 人は少なく、いくつかの屋台は撤収を始めている。
+	PRINTFORMW 遅すぎたようだ・・・
+	RETURN 1
+ENDIF
+
+カード投げクリア횟수 = 0
+PRINTFORML 公園には屋台が立ち並んでおり、来るのが早かったのか人もまばらだ。
+PRINTFORMW 本格的に賑わうまでには時間がかかりそうだし、誰か呼んでもいいかもしれない。
+PRINTL 
+PRINTL [0] - 몬스터를 소환する
+PRINTL [1] - 電話をかける
+PRINTL [2] - 誰も呼ばない
+BINPUT
+PRINTFORML
+IF RESULT == 0
+	PRINTFORMW 人目が無い所まで行き、デュエルディスクを起動した。
+	;この辺でモンスター소환
+	CALL MONSTER_LIST
+	PRINTFORMW （이벤트を進める場合は [2] - 誰も呼ばない を골라주세요）
+	RETURN 1
+ELSEIF RESULT == 1
+	PRINTFORMW 知り合いの女の子を呼ぶことにした。
+	;この辺で電話をかける
+	CALL MONSTER_LIST(10)
+	PRINTFORMW （이벤트を進める場合は [2] - 誰も呼ばない を골라주세요）
+	RETURN 1
+ELSEIF RESULT == 2
+	PRINTFORMW 呼ばなくてもいいだろう。
+ENDIF
+IF TARGET >= 1
+	PRINTL
+	PRINTFORMW %CALLNAME:TARGET%と縁日を回る？
+	PRINTL
+	PRINTL [0] - 回る
+	PRINTL [1] - 回らない
+	BINPUT
+	PRINTL
+	IF RESULT == 0
+		PRINTFORMW %CALLNAME:TARGET%と一緒に縁日を回ることにした。
+	ELSEIF RESULT == 1
+		PRINTFORMW %CALLNAME:TARGET%に別행동を提案した・・・
+		PRINTFORMW ・・・
+		PRINTFORMW ・・・・・・
+		IF TALENT:TARGET:연모 >= 1
+			SELECTCASE RAND:10
+				CASE 0
+					IF TALENT:TARGET:듀얼리스트 >= 1
+						PRINTFORMW %CALLNAME:TARGET%と別행동することにした。
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%に小遣いを渡して、別행동することにした。
+					ENDIF
+					ボッチ플래그 = 1
+				CASEELSE
+					PRINTFORMW 断られた。 %CALLNAME:TARGET%는 %CALLNAME:MASTER%と縁日を回りたいようだ。
+					PRINTL
+					PRINTL [0] - 回る
+					PRINTL [1] - 振り切る
+					BINPUT
+					PRINTL
+					IF RESULT == 0
+						PRINTFORMW %CALLNAME:TARGET%と一緒に縁日を回ることにした。
+					ELSEIF RESULT == 1
+						PRINTFORML これは言うことを聞きそうにもない。
+						PRINTFORMW 付いてこようとする %CALLNAME:TARGET%を振り払って、 %CALLNAME:MASTER%는増えてきた人の波に乗り込んだ。
+						PRINTFORMW あなたを呼ぶ %CALLNAME:TARGET%の声は、雑踏の中に飲み込まれていった・・・
+						NTR플래그 = 1
+					ENDIF
+			ENDSELECT
+		ELSE
+			IF TALENT:TARGET:듀얼리스트 >= 1
+				PRINTFORMW %CALLNAME:TARGET%と別행동することにした。
+			ELSE
+				PRINTFORMW %CALLNAME:TARGET%に小遣いを渡して、別행동することにした。
+			ENDIF
+			ボッチ플래그 = 1
+		ENDIF
+	ENDIF
+ELSEIF TARGET == 0
+	PRINTFORML よく見ると、祭りの客は親子連れやカップルがほとんどだ。
+	PRINTFORMW やっぱり誰か呼ぼうか・・・？
+	PRINTL
+	PRINTL [0] - 呼ぶ
+	PRINTL [1] - 呼ばない
+	BINPUT
+	PRINTL
+	IF RESULT == 0
+		PRINTFORML この中を一人で歩く배짱は無い・・・
+		PRINTFORMW （의뢰의 처음으로 돌아갑니다）
+		RETURN 1
+	ELSEIF RESULT == 1
+		PRINTFORMW ボッチだって構わない、孤独が男を強くするのさ・・・
+		ボッチ플래그 = 1
+	ENDIF
+ENDIF
+
+経過時間 = 0
+WHILE 経過時間 < 5
+	PRINTW
+	PRINTL
+	호감도修正 = 4
+	SIF TALENT:TARGET:연모 >= 1
+		호감도修正 += 3
+	IF 経過時間 >= 1 && ボッチ플래그 == 0 && NTR플래그 == 0
+		SELECTCASE RAND:호감도修正
+			CASE 0
+				PRINTFORMW %CALLNAME:TARGET%と軽く雑談した・・・
+			CASE 1
+				PRINTFORMW %CALLNAME:TARGET%と一緒に縁日を楽しむ人々を眺めた・・・
+			CASE 2
+				PRINTFORMW %CALLNAME:TARGET%と次はどの屋台へ行こうか話し合った・・・
+			CASE 3
+				PRINTFORMW %CALLNAME:TARGET%と静かに휴식した・・・
+			CASE 4
+				PRINTFORMW じゃれついてくる %CALLNAME:TARGET%をなだめつつ휴식した・・・
+			CASE 5
+				PRINTFORMW 浴衣を着ている女性を見ていたら %CALLNAME:TARGET%に小突かれた・・・
+			CASE 6
+				PRINTFORMW %CALLNAME:TARGET%と腕を組みながら、人の波を避けて歩いた・・・
+		ENDSELECT
+	ENDIF
+	PRINTL
+	PRINTFORMW さて、どこへ行こうか・・・
+	PRINTL
+	PRINTL [0] - 食べ歩き
+	PRINTL [1] - 型抜き
+	PRINTL [2] - クジ引き
+	PRINTL [3] - 射的
+	IF カード投げクリア횟수 == 0
+		PRINTL [4] - カード投げ
+	ENDIF
+	BINPUT
+	PRINTFORML
+	IF RESULT == 0
+		PRINTFORML 屋台と言えば食い物だろ！
+		PRINTFORMW 食えるだけ食ってやるぜー！
+		PRINTL
+		식사횟수 = 0
+		WHILE 식사횟수 < 3
+			PRINTL
+			PRINTFORMW 一律５００円、何を食べようか・・・
+			PRINTL
+			PRINTL [0] - 焼きそば
+			PRINTL [1] - ラムネ
+			PRINTL [2] - わたあめ
+			PRINTL [3] - りんご飴
+			PRINTL [4] - ベビーカステラ
+			PRINTL [5] - 초코バナナ
+			PRINTL [6] - 이제 그만한다
+			BINPUT
+			PRINTL
+			IF RESULT == 0
+				CALL MONEY_GET(-500)
+				BASE:MASTER:체력 += 200
+				BASE:MASTER:기력 += 200
+				IF ボッチ플래그 == 0 && NTR플래그 == 0
+					PRINTFORMW %CALLNAME:TARGET%と焼きそばを食べた。
+					BASE:TARGET:체력 += 200
+					BASE:TARGET:기력 += 200
+					;FIRE
+					IF TALENT:TARGET:속성 == 5
+						PRINTL
+						PRINTFORMW %CALLNAME:TARGET%는夢中になって焼きそばを啜っていた・・・
+						CALL EVENT_FAVUP(TARGET,20)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 20
+						PRINTW
+					ELSE
+						CALL EVENT_FAVUP(TARGET,10)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 10
+						PRINTW
+					ENDIF
+				ELSE
+					PRINTFORML ソースのよく絡んだ焼きそばを啜る。
+					PRINTFORMW 間違いなくコスパは悪いのに買っちゃうんだよなあ・・・
+				ENDIF
+			ELSEIF RESULT == 1
+				CALL MONEY_GET(-500)
+				BASE:MASTER:체력 += 50
+				BASE:MASTER:기력 += 100
+				IF ボッチ플래그 == 0 && NTR플래그 == 0
+					PRINTFORMW %CALLNAME:TARGET%とラムネを飲んだ。
+					BASE:TARGET:체력 += 50
+					BASE:TARGET:기력 += 100
+					;AQUA
+					IF TALENT:TARGET:속성 == 4
+						PRINTL
+						PRINTFORMW %CALLNAME:TARGET%는清涼感が気に入ったようだ・・・
+						CALL EVENT_FAVUP(TARGET,20)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 20
+						PRINTW
+					ELSE
+						CALL EVENT_FAVUP(TARGET,10)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 10
+						PRINTW
+					ENDIF
+				ELSE
+					PRINTFORML ビー玉を押し込んでから、キンキンに冷えたラムネを流し込む。
+					PRINTFORMW 祭りの熱で火照った身体によく染みる・・・
+				ENDIF
+			ELSEIF RESULT == 2
+				CALL MONEY_GET(-500)
+				BASE:MASTER:체력 += 50
+				BASE:MASTER:기력 += 100
+				IF ボッチ플래그 == 0 && NTR플래그 == 0
+					PRINTFORMW %CALLNAME:TARGET%とわたあめを食べた。
+					BASE:TARGET:체력 += 50
+					BASE:TARGET:기력 += 100
+					;WIND
+					IF TALENT:TARGET:속성 == 6
+						PRINTL
+						PRINTFORMW %CALLNAME:TARGET%는口元をベタベタにしながらかぶりついていた・・・
+						CALL EVENT_FAVUP(TARGET,20)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 20
+						PRINTW
+						PRINTL
+					ELSE
+						CALL EVENT_FAVUP(TARGET,10)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 10
+						PRINTW
+					ENDIF
+				ELSE
+					PRINTFORML 真っ白な顔程の大きさのわたあめにかぶりつく。
+					PRINTFORMW ふわふわだぜ！
+				ENDIF
+			ELSEIF RESULT == 3
+				CALL MONEY_GET(-500)
+				BASE:MASTER:체력 += 50
+				BASE:MASTER:기력 += 100
+				IF ボッチ플래그 == 0 && NTR플래그 == 0
+					PRINTFORMW %CALLNAME:TARGET%とりんご飴を食べた。
+					BASE:TARGET:체력 += 50
+					BASE:TARGET:기력 += 100
+					;EIRTH
+					IF TALENT:TARGET:속성 == 3
+						PRINTL
+						PRINTFORMW %CALLNAME:TARGET%는上機嫌に嚙み砕いていた・・・
+						CALL EVENT_FAVUP(TARGET,20)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 20
+						PRINTW
+					ELSE
+						CALL EVENT_FAVUP(TARGET,10)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 10
+						PRINTW
+					ENDIF
+				ELSE
+					PRINTFORML りんご飴を音を立ててかじる。
+					PRINTFORMW 固いうえにりんごまでが遠い・・・
+				ENDIF
+			ELSEIF RESULT == 4
+				CALL MONEY_GET(-500)
+				BASE:MASTER:체력 += 50
+				BASE:MASTER:기력 += 100
+				IF ボッチ플래그 == 0 && NTR플래그 == 0
+					PRINTFORMW %CALLNAME:TARGET%とベビーカステラを食べた。
+					BASE:TARGET:체력 += 50
+					BASE:TARGET:기력 += 100
+					;LIGHT
+					IF TALENT:TARGET:속성 == 1
+						PRINTFORMW %CALLNAME:TARGET%는あっという間に空になった包みを寂しそうに見つめていた・・・
+						CALL EVENT_FAVUP(TARGET,20)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 20
+						PRINTW
+					ELSE
+						CALL EVENT_FAVUP(TARGET,10)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 10
+						PRINTW
+					ENDIF
+				ELSE
+					PRINTFORML テキトーに屋台を眺めながらカステラを口へ運ぶ。
+					PRINTFORMW ・・・・・・いつの間にか食べきっていた。
+				ENDIF
+			ELSEIF RESULT == 5
+				CALL MONEY_GET(-500)
+				BASE:MASTER:체력 += 50
+				BASE:MASTER:기력 += 100
+				IF ボッチ플래그 == 0 && NTR플래그 == 0
+					PRINTFORMW %CALLNAME:TARGET%と초코バナナを食べた。
+					BASE:TARGET:체력 += 50
+					BASE:TARGET:기력 += 100
+					;DARK
+					IF TALENT:TARGET:속성 == 2
+						PRINTFORMW %CALLNAME:TARGET%는초코の苦味とバナナの甘さによるギャップがお気に召したらしい・・・
+						CALL EVENT_FAVUP(TARGET,20)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 20
+						PRINTW
+					ELSE
+						CALL EVENT_FAVUP(TARGET,10)
+						PRINTL
+						PRINTFORML 　（ %CALLNAME:TARGET%）
+						PRINTL 　호감도 + 10
+						PRINTW
+					ENDIF
+				ELSE
+					PRINTFORML 串に刺して초코をかけただけのバナナを頬張る。
+					PRINTFORMW 家で作った方が安く済むな・・・やらないけど。
+				ENDIF
+			ELSEIF RESULT == 6
+				식사횟수 += 3
+			ENDIF
+			식사횟수 += 1
+		WEND
+		PRINTFORMW 少し休むか・・・
+		経過時間 += 1
+
+	ELSEIF RESULT == 1
+		PRINTFORMW 型抜きに挑戦してみるか・・・
+		PRINTFORMW
+		PRINTFORML
+		PRINTFORML 「ここでは型抜きやってまーす。綺麗に型から抜けたら賞品がもらえまーす」
+		PRINTFORMW 「手さばきに自信があるなら挑戦してみてくださーい。１回１００円でーす」
+		PRINTFORMW 「型抜きの絵柄と난이도、賞品はこんな感じでーす」
+		PRINTL
+		PRINTL クリボー（☆１）
+		PRINTL 드래곤메이드・ラドリー（☆２）		
+		PRINTL 幽鬼うさぎ（☆３）
+		PRINTL ブラックマジシャンガール（☆４）
+		PRINTL 푸른 눈의 백룡（☆４）
+		PRINTL モリンフェン（☆５）
+		PRINTL
+		PRINTL ☆１・・・３００円
+		PRINTL ☆２・・・お菓子セット＋スプライト
+		PRINTL ☆３・・・마스터カードパック×１
+		PRINTL ☆４・・・調整中
+		PRINTL ☆５・・・마스터カードパック×５
+		PRINTL
+		CALL MONEY_GET(-100)
+		PRINTFORMW 金は払った。さて、どれにしようか・・・
+		PRINTL
+		PRINTL [0] - クリボー（☆１）
+		PRINTL [1] - ラドリー（☆２）
+		PRINTL [2] - うさぎ（☆３）
+		PRINTL [3] - ＢＭＧ（☆４）
+		PRINTL [4] - 푸른 눈의 백룡（☆４）
+		PRINTL [5] - モリンフェン（☆５）
+		BINPUT
+		PRINTFORM 「じゃあはいこれ、どぞー
+		IF RESULT == 0
+			PRINTFORMW 」
+			PRINTFORML おそらく一番有名な緑のもさもさスタイルのクリボーが描かれている。
+			PRINTFORMW 手足が簡略化되어있는 ので、そこまで難しくは無さそうだ・・・
+			PRINTFORMW ・・・・・・
+			PRINTFORMW ・・・・・・・・・・・・
+			IF ABL:MASTER:손가락 <= 1
+				SELECTCASE RAND:5
+					CASE 1,3
+						PRINTFORMW ・・・・・・・・・・・・できた！
+						PRINTFORMW 「出来ましたー？どれどれ・・・・・・」
+						PRINTFORMW 「・・・あー、おっけーでーす。こちら、賞品の５００円になりまーす」
+						CALL MONEY_GET(500)
+						PRINTFORMW ５００円を手渡された。
+						PRINTFORMW 「出来た型は自由にしていただいて結構ですんでー、またのおこしをー」
+						IF ボッチ플래그 == 0 && NTR플래그 == 0
+							CALL EVENT_FAVUP(TARGET,5)
+							PRINTL
+							PRINTFORML 　（ %CALLNAME:TARGET%）
+							PRINTL 　호감도 + 5
+							PRINTW
+						ENDIF
+					CASEELSE
+						PRINTFORMW ・・・・・・あっ
+						PRINTFORMW 型が割れてしまった。失敗だ・・・
+						PRINTFORMW 「ありゃ、失敗しちゃいましたかー。割れた型はあっちの袋に入れといてくださーい」
+						PRINTFORMW 「それじゃ、またのおこしをー」
+				ENDSELECT
+			ELSE
+				PRINTFORMW ・・・・・・・・・・・・できた！
+				PRINTFORMW 「出来ましたー？どれどれ・・・・・・」
+				PRINTFORMW 「・・・あー、おっけーでーす。こちら、賞品の５００円になりまーす」
+				CALL MONEY_GET(500)
+				PRINTFORMW ５００円を手渡された。
+				PRINTFORMW 「出来た型は自由にしていただいて結構ですんでー、またのおこしをー」
+				IF ボッチ플래그 == 0 && NTR플래그 == 0
+					CALL EVENT_FAVUP(TARGET,5)
+					PRINTL
+					PRINTFORML 　（ %CALLNAME:TARGET%）
+					PRINTL 　호감도 + 5
+					PRINTW
+				ENDIF
+			ENDIF
+		ELSEIF RESULT == 1
+			PRINTFORMW 」
+			PRINTFORML どや顔のラドリーが描かれている。
+			PRINTFORMW 顔だけのうえ、簡略化も되어있는 ので、そこまで難しくはなさそうだ・・・
+			PRINTFORMW ・・・・・・
+			PRINTFORMW ・・・・・・・・・・・・
+			IF ABL:MASTER:손가락 <= 2
+				SELECTCASE RAND:5
+					CASE 1,3
+						PRINTFORMW ・・・・・・・・・・・・できた！
+						PRINTFORMW 「出来ましたー？どれどれ・・・・・・」
+						PRINTFORMW 「・・・あー、おっけーでーす。こちら、賞品のお菓子セットとスプライトになりまーす」
+						PRINTFORMW 袋入りのお菓子セットとスプライトを渡された。荷物になるし、すぐに食べてしまおう。
+						PRINTFORMW 「出来た型は自由にしていただいて結構ですんでー、またのおこしをー」
+						BASE:MASTER:체력 += 500
+						BASE:MASTER:기력 += 1000
+						IF ボッチ플래그 == 0 && NTR플래그 == 0
+							BASE:TARGET:체력 += 500
+							BASE:TARGET:기력 += 1000
+							CALL EVENT_FAVUP(TARGET,15)
+							PRINTL
+							PRINTFORML 　（ %CALLNAME:TARGET%）
+							PRINTL 　호감도 + 15
+							PRINTW
+						ENDIF
+					CASEELSE
+						PRINTFORMW ・・・・・・あっ
+						PRINTFORMW 型が割れてしまった。失敗だ・・・
+						PRINTFORMW 「ありゃ、失敗しちゃいましたかー。割れた型はあっちの袋に入れといてくださーい」
+						PRINTFORMW 「それじゃ、またのおこしをー」
+				ENDSELECT
+			ELSE
+				PRINTFORMW ・・・・・・・・・・・・できた！
+				PRINTFORMW 「出来ましたー？どれどれ・・・・・・」
+				PRINTFORMW 「・・・あー、おっけーでーす。こちら、賞品のお菓子セットとスプライトになりまーす」
+				PRINTFORMW 袋入りのお菓子セットとスプライトを渡された。
+				PRINTFORMW 「出来た型は自由にしていただいて結構ですんでー、またのおこしをー」
+				PRINTFORML
+				PRINTFORMW その辺でお菓子を食べた・・・
+				BASE:MASTER:체력 += 500
+				BASE:MASTER:기력 += 1000
+				IF ボッチ플래그 == 0 && NTR플래그 == 0
+					BASE:TARGET:체력 += 500
+					BASE:TARGET:기력 += 1000
+					CALL EVENT_FAVUP(TARGET,15)
+					PRINTL
+					PRINTFORML 　（ %CALLNAME:TARGET%）
+					PRINTL 　호감도 + 15
+					PRINTW
+				ENDIF
+			ENDIF
+		ELSEIF RESULT == 2
+			PRINTFORMW 」
+			PRINTFORML いつもの絵柄の幽鬼うさぎが描かれている。
+			PRINTFORMW 輪郭が結構はっきり出ているため、なんとかなりそうではある・・・
+			PRINTFORMW ・・・・・・
+			PRINTFORMW ・・・・・・・・・・・・
+			IF ABL:MASTER:손가락 <= 3
+				SELECTCASE RAND:5
+					CASE 1,3
+						PRINTFORMW ・・・・・・・・・・・・できた！
+						PRINTFORMW 「出来ましたー？どれどれ・・・・・・」
+						PRINTFORMW 「・・・あー、おっけーでーす。こちら、賞品のカードパックになりまーす」
+						CALL CARD_PACK_SHORI(1)
+						PRINTFORMW 「出来た型は自由にしていただいて結構ですんでー、またのおこしをー」
+						IF ボッチ플래그 == 0 && NTR플래그 == 0
+							CALL EVENT_FAVUP(TARGET,20)
+							PRINTL
+							PRINTFORML 　（ %CALLNAME:TARGET%）
+							PRINTL 　호감도 + 20
+							PRINTW
+						ENDIF
+					CASEELSE
+						PRINTFORMW ・・・・・・あっ
+						PRINTFORMW 型が割れてしまった。失敗だ・・・
+						PRINTFORMW 「ありゃ、失敗しちゃいましたかー。割れた型はあっちの袋に入れといてくださーい」
+						PRINTFORMW 「それじゃ、またのおこしをー」
+				ENDSELECT
+			ELSE
+				PRINTFORMW ・・・・・・・・・・・・できた！
+				PRINTFORMW 「出来ましたー？どれどれ・・・・・・」
+				PRINTFORMW 「・・・あー、おっけーでーす。こちら、賞品のカードパックになりまーす」
+				CALL CARD_PACK_SHORI(1)
+				PRINTFORMW 「出来た型は自由にしていただいて結構ですんでー、またのおこしをー」
+				IF ボッチ플래그 == 0 && NTR플래그 == 0
+					CALL EVENT_FAVUP(TARGET,20)
+					PRINTL
+					PRINTFORML 　（ %CALLNAME:TARGET%）
+					PRINTL 　호감도 + 20
+					PRINTW
+				ENDIF
+			ENDIF
+		ELSEIF RESULT == 3
+			PRINTFORMW 。難しいかもですけど、頑張ってくださいねー」
+			PRINTFORML デフォルメされた블랙매지션걸が描かれている。
+			PRINTFORMW 絵柄としてはトゥーンの方なので、頑張ればなんとかなりそうだ・・・
+			PRINTFORMW ・・・・・・
+			PRINTFORMW ・・・・・・・・・・・・
+			IF ABL:MASTER:손가락 <= 4
+				SELECTCASE RAND:5
+					CASE 1,3
+						PRINTFORMW ・・・・・・・・・・・・できた！
+						PRINTFORMW 「出来ましたー？どれどれ・・・・・・」
+						PRINTFORMW 「・・・あー、おっけーでーす。こちら、賞品は調整中のため１０００円になりまーす」
+						CALL MONEY_GET(1000)
+						PRINTFORMW １０００円を手渡された。
+						PRINTFORMW 「出来た型は自由にしていただいて結構ですんでー、またのおこしをー」
+						IF ボッチ플래그 == 0 && NTR플래그 == 0
+							CALL EVENT_FAVUP(TARGET,30)
+							PRINTL
+							PRINTFORML 　（ %CALLNAME:TARGET%）
+							PRINTL 　호감도 + 30
+							PRINTW
+						ENDIF
+					CASEELSE
+						PRINTFORMW ・・・・・・あっ
+						PRINTFORMW 型が割れてしまった。失敗だ・・・
+						PRINTFORMW 「ありゃ、失敗しちゃいましたかー。割れた型はあっちの袋に入れといてくださーい」
+						PRINTFORMW 「それじゃ、またのおこしをー」
+				ENDSELECT
+			ELSE
+				PRINTFORMW ・・・・・・・・・・・・できた！
+				PRINTFORMW 「出来ましたー？どれどれ・・・・・・」
+				PRINTFORMW 「・・・あー、おっけーでーす。こちら、賞品の１０００円になりまーす」
+				CALL MONEY_GET(1000)
+				PRINTFORMW １０００円を手渡された。
+				PRINTFORMW 「出来た型は自由にしていただいて結構ですんでー、またのおこしをー」
+				IF ボッチ플래그 == 0 && NTR플래그 == 0
+					CALL EVENT_FAVUP(TARGET,30)
+					PRINTL
+					PRINTFORML 　（ %CALLNAME:TARGET%）
+					PRINTL 　호감도 + 30
+					PRINTW
+				ENDIF
+			ENDIF
+		ELSEIF RESULT == 4
+			PRINTFORMW 。難しいかもですけど、頑張ってくださいねー」
+			PRINTFORML デフォルメされた푸른 눈의 백룡が描かれている。
+			PRINTFORMW 絵柄としてはトゥーンの方なので、頑張ればなんとかなりそうだ・・・
+			PRINTFORMW ・・・・・・
+			PRINTFORMW ・・・・・・・・・・・・
+			IF ABL:MASTER:손가락 <= 4
+				SELECTCASE RAND:5
+					CASE 1,3
+						PRINTFORMW ・・・・・・・・・・・・できた！
+						PRINTFORMW 「出来ましたー？どれどれ・・・・・・」
+						PRINTFORMW 「・・・あー、おっけーでーす。こちら、賞品は調整中のため１０００円になりまーす」
+						CALL MONEY_GET(1000)
+						PRINTFORMW １０００円を手渡された。
+						PRINTFORMW 「出来た型は自由にしていただいて結構ですんでー、またのおこしをー」
+						IF ボッチ플래그 == 0 && NTR플래그 == 0
+							CALL EVENT_FAVUP(TARGET,30)
+							PRINTL
+							PRINTFORML 　（ %CALLNAME:TARGET%）
+							PRINTL 　호감도 + 30
+							PRINTW
+						ENDIF
+					CASEELSE
+						PRINTFORMW ・・・・・・あっ
+						PRINTFORMW 型が割れてしまった。失敗だ・・・
+						PRINTFORMW 「ありゃ、失敗しちゃいましたかー。割れた型はあっちの袋に入れといてくださーい」
+						PRINTFORMW 「それじゃ、またのおこしをー」
+				ENDSELECT
+			ELSE
+				PRINTFORMW ・・・・・・・・・・・・できた！
+				PRINTFORMW 「出来ましたー？どれどれ・・・・・・」
+				PRINTFORMW 「・・・あー、おっけーでーす。こちら、賞品の１０００円になりまーす」
+				CALL MONEY_GET(1000)
+				PRINTFORMW １０００円を手渡された。
+				PRINTFORMW 「出来た型は自由にしていただいて結構ですんでー、またのおこしをー」
+				IF ボッチ플래그 == 0 && NTR플래그 == 0
+					CALL EVENT_FAVUP(TARGET,30)
+					PRINTL
+					PRINTFORML 　（ %CALLNAME:TARGET%）
+					PRINTL 　호감도 + 30
+					PRINTW
+				ENDIF
+			ENDIF
+		ELSEIF RESULT == 5
+			PRINTFORMW 」
+			PRINTFORMW 「よくわかんないケド、めちゃくちゃ難しいらしいっすよ？」
+			PRINTFORML カードの絵柄그대로 のモリンフェンが描かれている。
+			PRINTFORMW デフォルメとかは一切無い、これは骨が折れるぞ・・・
+			PRINTFORMW ・・・・・・
+			PRINTFORMW ・・・・・・・・・・・・
+			PRINTFORMW ・・・・・・・・・・・・・・・・・・
+			IF ABL:MASTER:손가락 >= 5
+				SELECTCASE RAND:10
+					CASE 1,3,5
+						PRINTFORMW ・・・・・・・・・・・・・・・・・・！！！
+						PRINTFORMW できた・・・！？やった！できたぞー！
+						IF ボッチ플래그 == 0 && NTR플래그 == 0
+							PRINTFORMW あまりの出来映えに %CALLNAME:TARGET%も思わず見惚れている！
+						ENDIF
+						PRINTFORML
+						PRINTFORMW 「出来ましたー？どれどれ・・・・・・」
+						PRINTFORML 「・・・おー、おっけーでーす。すごいっすねー。
+						PRINTFORMW 　こちら、賞品のカードパックになりまーす」
+						CALL CARD_PACK_SHORI(5)
+						PRINTFORMW 「出来た型は自由にしていただいて結構ですんでー、またのおこしをー」
+						IF ボッチ플래그 == 0 && NTR플래그 == 0
+							CALL EVENT_FAVUP(TARGET,50)
+							PRINTL
+							PRINTFORML 　（ %CALLNAME:TARGET%）
+							PRINTL 　호감도 + 50
+							PRINTW
+						ENDIF
+					CASEELSE
+						PRINTFORMW ・・・・・・あっ
+						PRINTFORMW 型が割れてしまった。失敗だ・・・
+						PRINTFORML 「ありゃ、失敗しちゃいましたかー。まあ仕方ないっすよー。
+						PRINTFORMW 　割れた型はあっちの袋に入れといてくださーい」
+						PRINTFORMW 「それじゃ、またのおこしをー」
+				ENDSELECT
+			ELSE
+				PRINTFORMW ・・・・・・あっ
+				PRINTFORMW 型が割れてしまった。失敗だ・・・
+				PRINTFORML 「ありゃ、失敗しちゃいましたかー。まあ仕方ないっすよー。
+				PRINTFORMW 　割れた型はあっちの袋に入れといてくださーい」
+				PRINTFORMW 「それじゃ、またのおこしをー」
+			ENDIF
+		ENDIF
+		PRINTFORMW 結構時間を使った。そろそろ行くか・・・
+		経過時間 += 1
+
+	ELSEIF RESULT == 2
+		PRINTFORMW クジ引きで運試しでもするか・・・
+		PRINTFORMW
+		クジを引いた횟수 = 0
+		PRINTFORML
+		PRINTFORML 「はいようこそ！ここではクジ引きをやってますよー！」
+		PRINTFORML 「クジを引いて当たりが出たら景品がもらえまーす！」
+		PRINTFORMW 「ラインナップはこんな感じでーす！」
+		PRINTL
+		PRINTL 当たり・・・・・・・・・・・・・・・・・・・・・・・・・・・마스터カードパック５장
+		PRINTL 大当たり・・・・・・・・・・・・・・・・・・・・・・・・・・마스터カードパック１０장
+		PRINTL 超絶豪快悶絶エレガントスーパーウルトラスーパー大当たり・・・마스터カードパック３０장
+		PRINTL
+		PRINTFORMW 「１回５００円でーす！」
+		WHILE クジを引いた횟수 < 5
+			PRINTL
+			PRINTL [0] - クジを引く
+			PRINTL [1] - 그만둔다
+			BINPUT
+			PRINTFORML
+			IF RESULT == 0
+				CALL MONEY_GET(-500)
+				PRINTFORMW 「それじゃあこの中から一つ選んで引っ張ってください！」
+				PRINTFORMW 差し出された紐の中から一개를 選んで引いた・・・
+				PRINTFORML
+				PRINTFORMW ・・・・・・・・・・・・
+				PRINTFORML
+				SELECTCASE RAND:100 + 1
+					CASE 7
+						PRINTFORMW 「お・・・お、お、おっ・・・！」
+						PRINTFORMW 「超絶豪快悶絶エレガントスーパーウルトラスーパー大当たりぃぃぃぃぃ！！！！！」
+						PRINTFORML
+						PRINTFORML 　　　　　ワー　　　　　　　　　　　　　ワー
+						PRINTFORML 　　　　　　　　　　　　　ワー　　　　　　　　　　　　ワー
+						PRINTFORMW
+						PRINTFORMW なんと、超絶豪快悶絶エレガントスーパーウルトラスーパー大当たりが当たってしまった。
+						PRINTFORMW 周りの通行人達もあまりの出来事にざわざわと騒ぎ出す。
+						IF ボッチ플래그 == 0 && NTR플래그 == 0
+							PRINTFORMW そばで見ていた %CALLNAME:TARGET%も大はしゃぎだ！
+						ENDIF
+						PRINTFORML
+						PRINTFORMW 「いやー、まさかこれ当てられるとはなー。びっくりして叫んじゃいましたよ！」
+						PRINTFORMW 「はい、では超絶（中略）大当たりなので、賞品の마스터カードパック３０장です！もってけードロボー！」
+						CALL CARD_PACK_SHORI(10)
+						CALL CARD_PACK_SHORI(10)
+						CALL CARD_PACK_SHORI(10)
+						PRINTFORMW 「次は手加減してくださいねー！」
+						IF ボッチ플래그 == 0 && NTR플래그 == 0
+							CALL EVENT_FAVUP(TARGET,50)
+							PRINTL
+							PRINTFORML 　（ %CALLNAME:TARGET%）
+							PRINTL 　호감도 + 50
+							PRINTW
+						ENDIF
+					CASE 1,50,100
+						PRINTFORMW 「おおおおおおおおっ！大当たり！大当たりですよ！すごい！すごいです！」
+						PRINTFORMW 「そんなスーパーラッキーなあなたにはこちら！賞品の마스터カードパック１０장です！」
+						CALL CARD_PACK_SHORI(10)
+						PRINTFORMW 「また引いてくださいねー！」
+						IF ボッチ플래그 == 0 && NTR플래그 == 0
+							CALL EVENT_FAVUP(TARGET,30)
+							PRINTL
+							PRINTFORML 　（ %CALLNAME:TARGET%）
+							PRINTL 　호감도 + 30
+							PRINTW
+						ENDIF
+					CASE 17,27,37,47,57,67,77,87,97
+						PRINTFORMW 「おおっ！当たりですねー！」
+						PRINTFORMW 「ではこちら、賞品の마스터カードパック５장です！おめでとうございます！」
+						CALL CARD_PACK_SHORI(5)
+						PRINTFORMW 「また引いてくださいねー！」
+						IF ボッチ플래그 == 0 && NTR플래그 == 0
+							CALL EVENT_FAVUP(TARGET,10)
+							PRINTL
+							PRINTFORML 　（ %CALLNAME:TARGET%）
+							PRINTL 　호감도 + 10
+							PRINTW
+						ENDIF
+					CASEELSE
+						PRINTFORMW 「あ～、残念！ハズレです！」
+						PRINTFORMW 「まあ当たる方が珍しいんで、気を落とさないでください！」
+						PRINTFORMW 「また引いてくださいねー！」
+				ENDSELECT
+				クジを引いた횟수 += 1
+			ELSEIF RESULT == 1
+				クジを引いた횟수 += 5
+			ENDIF
+		WEND
+		PRINTFORMW そろそろいい時間だ、一旦離れよう。
+		経過時間 += 1
+
+	ELSEIF RESULT == 3
+		PRINTFORMW 久しぶりに"本気"を出すか────
+		PRINTFORML
+		PRINTFORMW 「いらっしゃい────」
+		PRINTFORMW 「ここは射的屋、まあ見ての通りだ────」
+		PRINTFORML
+		PRINTFORMW 屋台の中には何人かの女性が目隠しを着けられたまま、椅子に縛り付けられている。
+		PRINTFORMW 銃は手前にあるコルク銃を使うようだ。
+		PRINTFORML
+		PRINTFORMW 「一回五百円、チャンスは五回────」
+		PRINTFORMW 「報酬はこんなところだ────」
+		PRINTL
+		PRINTL 　　　５００点以上　────　로션３本
+		PRINTL 　　１０００点以上　────　ほかほかジュース１本
+		PRINTL 　　１５００点以上　────　ロウソク１本
+		PRINTL 　　２０００点以上　────　なかよしセット
+		PRINTL
+		PRINTFORML
+		PRINTFORMW どうする────？
+		PRINTL
+		PRINTL [0] - やろう────
+		PRINTL [1] - 유치な────
+		BINPUT
+		PRINTFORML
+		IF RESULT == 0
+			PRINTFORMW 「そうか────」
+			PRINTFORMW 店主はマトをカーテンでシャ────と隠し、新しいマトを出してきた。
+			PRINTFORML
+			PRINTFORML 「유두も클리토리스も、性感帯に近いほど高得点────最高１００────
+			PRINTFORMW 　절정したら１０００点────
+			PRINTFORMW 　喘ぎ声も加点の대상になったり────ならなかったり────」
+			PRINTFORML
+			PRINTFORMW コルク銃のセーフティを外し────机に寝そべって構える────
+			PRINTFORML
+			PRINTFORMW 「プロとして────助言をしてやる────
+			PRINTFORMW 　ここのマトになるような奴は、大体마조끼が強い────」
+			PRINTFORML
+			PRINTFORMW MISSION START────
+			PRINTL
+			PRINTL
+			CALL MONEY_GET(-500)
+			残弾数 = 5
+			射的得点 = 0
+			興奮度 = 40
+			SELECTCASE RAND:3
+				;허접유두────
+				CASE 0
+					WHILE 残弾数 > 0
+						PRINTFORMW 何処を狙う────
+						PRINTL
+						PRINTL [0] - 유두────
+						PRINTL [1] - 클리토리스────
+						PRINTL [2] - 下腹部────
+						BINPUT
+						PRINTFORML
+						IF RESULT == 0
+							IF ABL:MASTER:기교 >= 6
+								PRINTFORML ド真ん中に命中────喘ぎ声を漏らす的────
+								PRINTFORMW 「１００点────」
+								射的得点 += 100
+								興奮度 += 10
+							ELSE
+								SELECTCASE RAND:7
+									CASE 1,3
+										PRINTFORML 유두を掠める────ビクつく的────
+										PRINTFORMW 「６０点────」
+										射的得点 += 60
+										興奮度 += 5
+									CASE 2,4
+										PRINTFORML 유방に当たった────吐息を漏らす的────
+										PRINTFORMW 「４０点────」
+										射的得点 += 40
+									CASE 5
+										PRINTFORML ド真ん中に命中────喘ぎ声を漏らす的────
+										PRINTFORMW 「１００点────」
+										射的得点 += 100
+										興奮度 += 10
+									CASE 6
+										PRINTFORML 見当違いの所に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 0
+										PRINTFORML 外れた────
+										PRINTFORMW 「０点────」
+								ENDSELECT
+							ENDIF
+						ELSEIF RESULT == 1
+							IF ABL:MASTER:기교 >= 6
+								PRINTFORML ド真ん中に命中────
+								PRINTFORMW 「２０点────」
+								射的得点 += 20
+							ELSE
+								SELECTCASE RAND:7
+									CASE 1,3
+										PRINTFORML 클리토리스を掠める────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 2,4
+										PRINTFORML 秘唇に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 5
+										PRINTFORML ド真ん中に命中────
+										PRINTFORMW 「２０点────」
+										射的得点 += 20
+									CASE 6
+										PRINTFORML 見当違いの所に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 0
+										PRINTFORML 外れた────
+										PRINTFORMW 「０点────」
+								ENDSELECT
+							ENDIF
+						ELSEIF RESULT == 2
+							IF ABL:MASTER:기교 >= 6
+								PRINTFORML ド真ん中に命中────
+								PRINTFORMW 「１０点────」
+								射的得点 += 10
+							ELSE
+								SELECTCASE RAND:7
+									CASE 1,3
+										PRINTFORML へそに当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 2,4
+										PRINTFORML 허리に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 5
+										PRINTFORML ド真ん中に命中────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 6
+										PRINTFORML 見当違いの所に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 0
+										PRINTFORML 外れた────
+										PRINTFORMW 「０点────」
+								ENDSELECT
+							ENDIF
+						ENDIF
+						IF 射的得点 >= 100 && EXP:MASTER:가학쾌락경험 >= 100
+							PRINTFORMW マトを言葉責めする────息を切らせるマト────
+							興奮度 += 10
+						ENDIF
+						IF 興奮度 >= 100
+							PRINTFORML
+							PRINTFORMW 椅子に縛られたままのマトの身体がガクガクと震え、절정に達する────
+							PRINTFORMW  「１０００点────」
+							射的得点 += 1000
+						ENDIF
+						残弾数 -= 1
+					WEND
+				;雑魚マンコ────
+				CASE 1
+					WHILE 残弾数 > 0
+						PRINTFORMW 何処を狙う────
+						PRINTL
+						PRINTL [0] - 유두────
+						PRINTL [1] - 클리토리스────
+						PRINTL [2] - 下腹部────
+						BINPUT
+						PRINTFORML
+						IF RESULT == 0
+							IF ABL:MASTER:기교 >= 6
+								PRINTFORML ド真ん中に命中────
+								PRINTFORMW 「２０点────」
+								射的得点 += 20
+							ELSE
+								SELECTCASE RAND:7
+									CASE 1,3
+										PRINTFORML 유두を掠める────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 2,4
+										PRINTFORML 유방に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 5
+										PRINTFORML ド真ん中に命中────
+										PRINTFORMW 「２０点────」
+										射的得点 += 20
+									CASE 6
+										PRINTFORML 見当違いの所に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 0
+										PRINTFORML 外れた────
+										PRINTFORMW 「０点────」
+								ENDSELECT
+							ENDIF
+						ELSEIF RESULT == 1
+							IF ABL:MASTER:기교 >= 6
+								PRINTFORML ド真ん中に命中────喘ぎ声を漏らす的────
+								PRINTFORMW 「１００点────」
+								射的得点 += 100
+								興奮度 += 10
+							ELSE
+								SELECTCASE RAND:7
+									CASE 1,3
+										PRINTFORML 클리토리스を掠める────ビクつく的────
+										PRINTFORMW 「６０点────」
+										射的得点 += 60
+										興奮度 += 5
+									CASE 2,4
+										PRINTFORML 秘唇に当たった────吐息を漏らす的────
+										PRINTFORMW 「４０点────」
+										射的得点 += 40
+									CASE 5
+										PRINTFORML ド真ん中に命中────喘ぎ声を漏らす的────
+										PRINTFORMW 「１００点────」
+										射的得点 += 100
+										興奮度 += 10
+									CASE 6
+										PRINTFORML 見当違いの所に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 0
+										PRINTFORML 外れた────
+										PRINTFORMW 「０点────」
+								ENDSELECT
+							ENDIF
+						ELSEIF RESULT == 2
+							IF ABL:MASTER:기교 >= 6
+								PRINTFORML ド真ん中に命中────
+								PRINTFORMW 「１０点────」
+								射的得点 += 10
+							ELSE
+								SELECTCASE RAND:7
+									CASE 1,3
+										PRINTFORML へそに当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 2,4
+										PRINTFORML 허리に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 5
+										PRINTFORML ド真ん中に命中────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 6
+										PRINTFORML 見当違いの所に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 0
+										PRINTFORML 外れた────
+										PRINTFORMW 「０点────」
+								ENDSELECT
+							ENDIF
+						ENDIF
+						IF 射的得点 >= 100 && EXP:MASTER:가학쾌락경험 >= 100
+							PRINTFORMW マトを言葉責めする────息を切らせるマト────
+							興奮度 += 10
+						ENDIF
+						IF 興奮度 >= 100
+							PRINTFORML
+							PRINTFORMW 椅子に縛られたままのマトの身体がガクガクと震え、절정に達する────
+							PRINTFORMW  「１０００点────」
+							射的得点 += 1000
+						ENDIF
+						残弾数 -= 1
+					WEND
+				;雑魚子宮────
+				CASE 2
+					WHILE 残弾数 > 0
+						PRINTFORMW 何処を狙う────
+						PRINTL
+						PRINTL [0] - 유두────
+						PRINTL [1] - 클리토리스────
+						PRINTL [2] - 下腹部────
+						BINPUT
+						PRINTFORML
+						IF RESULT == 0
+							IF ABL:MASTER:기교 >= 6
+								PRINTFORML ド真ん中に命中────
+								PRINTFORMW 「２０点────」
+								射的得点 += 20
+							ELSE
+								SELECTCASE RAND:7
+									CASE 1,3
+										PRINTFORML 유두を掠める────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 2,4
+										PRINTFORML 유방に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 5
+										PRINTFORML ド真ん中に命中────
+										PRINTFORMW 「２０点────」
+										射的得点 += 20
+									CASE 6
+										PRINTFORML 見当違いの所に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 0
+										PRINTFORML 外れた────
+										PRINTFORMW 「０点────」
+								ENDSELECT
+							ENDIF
+						ELSEIF RESULT == 1
+							IF ABL:MASTER:기교 >= 6
+								PRINTFORML ド真ん中に命中────
+								PRINTFORMW 「２０点────」
+								射的得点 += 20
+							ELSE
+								SELECTCASE RAND:7
+									CASE 1,3
+										PRINTFORML 클리토리스を掠める────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 2,4
+										PRINTFORML 秘唇に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 5
+										PRINTFORML ド真ん中に命中────
+										PRINTFORMW 「２０点────」
+										射的得点 += 20
+									CASE 6
+										PRINTFORML 見当違いの所に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 0
+										PRINTFORML 外れた────
+										PRINTFORMW 「０点────」
+								ENDSELECT
+							ENDIF
+						ELSEIF RESULT == 2
+							IF ABL:MASTER:기교 >= 6
+								PRINTFORML ド真ん中に命中────喘ぎ声を漏らす的────
+								PRINTFORMW 「１００点────」
+								射的得点 += 100
+								興奮度 += 10
+							ELSE
+								SELECTCASE RAND:7
+									CASE 1,3
+										PRINTFORML へそに当たった────ビクつく的────
+										PRINTFORMW 「６０点────」
+										射的得点 += 60
+										興奮度 += 5
+									CASE 2,4
+										PRINTFORML 허리に当たった────吐息を漏らす的────
+										PRINTFORMW 「４０点────」
+										射的得点 += 40
+									CASE 5
+										PRINTFORML ド真ん中に命中────喘ぎ声を漏らす的────
+										PRINTFORMW 「１００点────」
+										射的得点 += 100
+										興奮度 += 10
+									CASE 6
+										PRINTFORML 見当違いの所に当たった────
+										PRINTFORMW 「１０点────」
+										射的得点 += 10
+									CASE 0
+										PRINTFORML 外れた────
+										PRINTFORMW 「０点────」
+								ENDSELECT
+							ENDIF
+						ENDIF
+						IF 射的得点 >= 100 && EXP:MASTER:가학쾌락경험 >= 100
+							PRINTFORMW マトを言葉責めする────息を切らせるマト────
+							興奮度 += 10
+						ENDIF
+						IF 興奮度 >= 100
+							PRINTFORML
+							PRINTFORMW 椅子に縛られたままのマトの身体がガクガクと震え、절정に達する────
+							PRINTFORMW  「１０００点────」
+							射的得点 += 1000
+						ENDIF
+						残弾数 -= 1
+					WEND
+			ENDSELECT
+			
+			PRINTFORMW
+			PRINTFORML 「終了────得点は{射的得点}点────
+			IF 射的得点 >= 2000
+				PRINTFORMW 　お前、プロだな────」
+				PRINTFORML 「こちら────賞品のなかよしセットとなります────
+				PRINTFORMW 　気になるあの子と一緒に使えば────仲良くなれること間違いなし────」
+				PRINTFORMW 低温양초と미약と로션を５つずつ受け取った────
+				ITEM:40 += 5
+				ITEM:41 += 5
+				ITEM:46 += 5
+			ELSEIF 射的得点 >= 1500 && 射的得点 < 2000
+				PRINTFORMW 　中々やるじゃないか────」
+				PRINTFORML 「こちら────賞品のロウソクとなります────
+				PRINTFORMW 　これがあれば────暗い夜道でも安心────」
+				CALL ITEM_GET(46)
+			ELSEIF 射的得点 >= 1000 && 射的得点 < 1500
+				PRINTFORMW 　いい腕だ────」
+				PRINTFORML 「こちら────賞品のほかほかジュースとなります────
+				PRINTFORMW 　気になるあの子と一緒に飲めば────仲良くなれること間違いなし────」
+				CALL ITEM_GET(41)
+			ELSEIF 射的得点 >= 500 && 射的得点 < 1000
+				PRINTFORMW 　まあまあだな────」
+				PRINTFORML 「こちら────賞品の로션３本となります────
+				PRINTFORMW 　普通に遊んでも────食べてもよし────」
+				ITEM:40 += 3
+			ELSEIF 射的得点 < 500
+				PRINTFORMW 　まあこんなもんだ────」
+			ENDIF
+			PRINTFORML
+			PRINTFORMW 「またのお越しを────お待ちしています────」
+		ELSEIF RESULT == 1
+			PRINTFORML 「そういう見方もあるだろうな────
+			PRINTFORMW 　気が向いたらまたお越しくださいませ────」
+		ENDIF
+		PRINTFORML
+		PRINTFORMW 射的屋を後にした────
+		経過時間 += 1
+
+	ELSEIF RESULT == 4
+		PRINTFORMW 修行の成果を見せる時が来た。
+		PRINTFORML
+		PRINTFORMW 「よく来たな！ここではカード投げをしてもらうぜ！」
+		PRINTFORML 「あそこに的が見えるだろ？あの的に向けて카드를 投げて得点を競い合う！
+		PRINTFORMW 　正に、真の듀얼리스트を決めるに相応しい方法ってことだ！」
+		PRINTL
+		PRINTFORML 店主の손가락さした方にはモンスター型の的がある。
+		PRINTFORMW あれに카드를 投げるのだろう。
+		PRINTL
+		PRINTFORML 「さ゛あ゛！財布を出しな！
+		PRINTFORMW 　参加費はお前の듀얼리스트としての프라이드と、５００円だぜ！」
+		PRINTFORMW 参加費を────
+		PRINTL
+		PRINTL [0] - ５００ポイント払う！
+		PRINTL [1] - 払わない！
+		BINPUT
+		PRINTL
+		IF RESULT == 0
+			モンスター討伐数 = 0
+			CALL MONEY_GET(-500)
+			PRINTFORMW 「ぃよし！お前の魂、たしかに受け取ったぜ！」
+			PRINTFORMW 「そして、ここからはオレ独自のルールでやらせてもらうぜ！」
+			PRINTFORMW 「投げるのはお前のカードじゃない！オレお手製の、カードのレプリカだぜ！」
+			PRINTL
+			PRINTL
+			PRINTFORMW 「準備はいいな？始めるぜ！」
+			PRINTL
+			PRINTL
+			PRINTFORMW 「オレはグレムリンを소환！守備표시！」
+			PRINTL
+			PRINTL [0] - 카드를 投げる！
+			BINPUT 
+			PRINTL
+			IF EXP:MASTER:듀얼경험 > 10
+				PRINTFORMW グレムリンの額に카드가 突き刺さる！
+				PRINTFORMW 「はっ！やるな！だがこんなのはまだ小手調べだぜ！」
+				モンスター討伐数 += 1
+				PRINTL
+				PRINTL
+				PRINTFORMW 「ＴＨＥ・トリッキーを소환！攻撃표시！」
+				PRINTL
+				PRINTL [0] - 카드를 投げる！
+				BINPUT 
+				PRINTL
+				IF EXP:MASTER:듀얼경험 > 50
+					PRINTFORMW 카드가 突き刺さったトリッキーはバラバラになった！
+					PRINTFORMW 「まさかそんな技を隠し持っていたとはな！だが！オレもここで切り札を使わせてもらうぜ！」
+					モンスター討伐数 += 1
+					PRINTL
+					PRINTL
+					PRINTFORMW 「암흑기사가이아とカース・オブ・ドラゴンを융합！룡기사가이아を소환！コイツは飛行能力を持っているぜ！」
+					PRINTL
+					PRINTL [0] - 카드를 投げる！
+					BINPUT 
+					PRINTL
+					IF EXP:MASTER:듀얼경험 > 100	
+						PRINTFORMW 左右から挟み込むように카드를 投げ、高い所にいる룡기사가이아を上下に三分割した！
+						PRINTFORMW 「なにっ！？はさみ撃ちだと！？なら、コイツを出すしか無いぜ！」
+						モンスター討伐数 += 1
+						PRINTL
+						PRINTL
+						PRINTFORMW 「さあ来い、我が最強のしもべ！ブラックマジシャン！」
+						PRINTL
+						PRINTL [0] - 카드를 投げる！
+						BINPUT 
+						PRINTL
+						PRINTFORML 「トラップ발동！매지션즈プロテクション！ブラックマジシャンの受けるダメージは半分になるぜ！」
+						PRINTFORMW ガコガコガコッ！ブラックマジシャンの前に、블랙매지션걸と애플マジシャンガールが立ちふさがった！
+						PRINTL
+						IF EXP:MASTER:듀얼경험 > 150	
+							PRINTFORMW 初めに投げた二つのカードで매지션즈を左右に散らし、３つ目のカードでブラックマジシャンを公園の奥まで吹っ飛ばす！
+							PRINTFORMW 「くっ！まさかここまでとはな！どうやら、オレも全力を出さなきゃいけないみたいだぜ！」
+							モンスター討伐数 += 1
+							PRINTL
+							PRINTL
+							PRINTFORMW 「オレはこれまで共に戦ってきたモンスターたちの思いを糧に・・・신を喚ぶ！」
+							PRINTFORMW 「강림せよ！オシリスの天空룡！」
+							PRINTL
+							PRINTFORML ぷしゅーっ、ぎゃおーん！
+							PRINTFORMW 目の前に現れたオシリスの天空룡はどこからどう見ても金属製だった！
+							PRINTL
+							PRINTFORMW 「さあ、来い！捻り潰してやるぜ！」
+							PRINTL
+							PRINTL [0] - 카드를 投げる！
+							BINPUT 
+							PRINTL
+							IF EXP:MASTER:듀얼경험 > 200
+								PRINTFORMW 듀얼をし続けた %CALLNAME:MASTER%のカードさばきは、遂に音を置き去りにした────
+								PRINTFORMW 静かに投げられた、たった１장의 カード에 따라、신は灰と化した────
+								PRINTL
+								PRINTFORMW 「そんな、そんなっ・・・！
+								PRINTFORMW 　うわああああああああっ！あいぼおおおおおおおっ！」
+								モンスター討伐数 += 1
+							ELSE
+								PRINTFORML カンッ──そんな乾いた音を立てて、あなたの投げた 카드는 땅面に落ちた。
+								PRINTFORMW いや無理だって！
+								PRINTFORMW 「신にそんな物は効かない！超伝導波・サンダーフォース！」
+							ENDIF
+						ELSE
+							PRINTFORMW  카드는 매지션즈に阻まれ、ブラックマジシャンまで届かなかった・・・
+							PRINTFORMW 「ありがとう、二人とも・・・」
+							PRINTFORMW 「行け！ブラックマジシャン！흑마도（ブラック・マジック）！」
+						ENDIF
+					ELSE
+						PRINTFORMW 카드를 投げたが、上の方に吊る되어있는 룡기사가이아には届かなかった・・・
+						PRINTFORML 「空中にいるモンスターに、お前の攻撃は届かないぜ！」
+						PRINTFORMW 「룡기사가이아で攻撃！　螺旋刺突（スパイラル・シェイパー）！」
+					ENDIF
+				ELSE
+					PRINTFORMW  카드는 トリッキーに当たり、ひらひらと땅面に落ちていった・・・
+					PRINTFORMW 「どうした？コイツを超えられないようじゃ、オレに勝つことは到底불가能だぜ！」
+					PRINTFORMW 「オレはトリッキーズ・マジック４を발동！一斉攻撃！」
+				ENDIF
+			ELSE
+				PRINTFORMW  카드는 グレムリンに当たり、ひらひらと땅面に落ちていった・・・
+				PRINTFORMW 「今日は調子が悪いようだな！グレムリンで攻撃！」
+			ENDIF
+			
+			PRINTL
+			IF モンスター討伐数 == 5
+				PRINTL
+				PRINTFORMW 　　　ＹＯＵ　ＷＩＮ！
+				PRINTL
+			ELSE
+				PRINTL
+				PRINTFORMW 　　　ＹＯＵ　ＬＯＳＥ・・・
+				PRINTL
+			ENDIF
+			SELECTCASE モンスター討伐数
+				CASE 0
+					PRINTFORMW 「はっきり言うぜ！お前、弱いだろ！」
+				CASE 1
+					PRINTFORMW 「まだまだ修行が足りないようだな！」
+				CASE 2
+					PRINTFORMW 「룡기사가이아を突破しない限り、お前に勝ち目は無いぜ！」
+				CASE 3
+					PRINTFORMW 「これが！オレの매지션즈・コンボだぜ！」
+				CASE 4
+					PRINTFORMW 「これが신のカード！デュエルモンスターズ最強の存在！」
+				CASE 5
+					PRINTFORMW 「ははっ・・・オレの負けだ・・・・・・」
+			ENDSELECT
+			PRINTL
+			PRINTL
+			IF モンスター討伐数 == 5
+				PRINTFORMW 「お前と出会えてよかった！これはオレからの感謝の気持ちだぜ！」
+				CALL CARD_PACK_SHORI(10)
+				PRINTFORML 「次は絶対に勝つからな！」
+				PRINTFORMW そう言ってパチモン感あふれる店主は、五つに分かれたへにょへにょの髪を揺らしながら、祭りの光の中へと消えて行った・・・
+				カード投げクリア횟수 = 1
+			ELSE
+				PRINTFORMW 「というわけで罰ゲーム！お前の魂は頂いていくぜ！」
+				PRINTFORMW ５００円玉を見せつけながら高笑いする店主に背を向け、その場から立ち去った・・・
+			ENDIF
+		ELSEIF RESULT == 1
+			PRINTFORMW 俺は踵を返して、ターンエンドだ！
+		ENDIF
+		経過時間 += 1
+	ENDIF
+
+	IF NTR플래그 == 1 && 経過時間 == 2
+		PRINTL
+		PRINTL
+		PRINTFORMW ・・・ん？
+		PRINTFORML 一人で祭りを楽しんでいると、見知らぬ男と一緒にいる %CALLNAME:TARGET%を見つけた。
+		PRINTFORMW 積極的な男の様子から、どうやらナンパを断り切れなかったようだ。
+		PRINTFORML しばらく眺めていると、次第に %CALLNAME:TARGET%の顔には笑顔が浮かぶようになっていく。
+		PRINTFORMW 男が %CALLNAME:TARGET%の手を掴んでも驚きはあれど、振り払う様子は見られない。
+		PRINTL
+		PRINTFORMW ん？男が何かを喋って・・・ %CALLNAME:TARGET%が首を振った？
+		PRINTFORML 嫌がる %CALLNAME:TARGET%を無理やり引っ張っていく気のようだ。
+		PRINTFORMW 引いていく方向から推測するに、行先は인기の無い茂みの中だろう。
+		PRINTL
+		PRINTL [0] - 그대로 眺める
+		PRINTL [1] - 声をかける
+		BINPUT
+		PRINTL
+		IF RESULT == 0
+			PRINTFORML しばらく眺めていると、男は懐から布を取り出し、 %CALLNAME:TARGET%の口元に当てた。
+			PRINTFORMW するとすぐに %CALLNAME:TARGET%の目はトロンとし始め、男に完全に身を任せるようになった。
+			PRINTFORMW 男は脱力した %CALLNAME:TARGET%を支えながら、인기の無い方向へと歩いていく・・・
+			PRINTL
+			PRINTL [0] - 後をつける
+			PRINTL [1] - 祭りを楽しむ
+			BINPUT
+			PRINTL
+			IF RESULT == 0
+				PRINTFORML 後をつけていくと、휴식するのに丁度いい感じのベンチがあった。
+				PRINTFORMW 男はそこに %CALLNAME:TARGET%を座らせると、慣れた手付きで身体をまさぐり始めた。
+				PRINTFORMW 初めは反応の薄かった %CALLNAME:TARGET%だったが、次第に隠れているこちらまで聞こえるほど、大きく嬌声を上げ始めた。
+				PRINTL
+				PRINTFORMW 男は %CALLNAME:TARGET%の服をはだけさせ、자신も하반신を노출させると、 %CALLNAME:TARGET%の秘裂にあてがい、一気に삽입した。
+				EXP:TARGET:Ｖ성교경험 += 1
+				IF EXP:TARGET:Ｖ성교경험 == 1
+					PRINTFORMW その瞬間、 %CALLNAME:TARGET%는大きく悲鳴を上げた。
+					PRINTFORML 자신의 知る限りでは、彼女は처녀だったはずだ。
+					PRINTFORMW となれば、今の叫びは파과の痛みから来たものだろう。
+					PRINTFORML しかし、そんなことは男にとって重要なことでは無いらしく、
+					PRINTFORMW 放心している %CALLNAME:TARGET%を無視して허리を動かし始めた・・・
+					TCVAR:TARGET:파과 = 1
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%がくぐもったように喘ぎ声を漏らす。
+					PRINTFORMW 彼女の질내はとてもあっさりとナンパ男の男性器を受け入れていた。
+					PRINTFORMW 遂に一線を越えてしまった彼女の表情は暗어둠に紛れてよくわからない。
+					PRINTFORMW だが、聞こえてくる嬌声からは쾌락を感じていることが読み取れる。
+				ENDIF
+				PRINTL
+				PRINTW
+				PRINTFORMW 성교によって生じる물音と嬌声が정적の中に浸食していく・・・
+				PRINTFORML すでに %CALLNAME:TARGET%の中では성교への嫌悪感などは消え去っているようで、
+				PRINTFORMW 時折唇を重ねているような音も聞こえる・・・
+				PRINTL
+				PRINTFORMW 男は突然허리の動きを速め、それに伴い %CALLNAME:TARGET%の喘ぎ声も激しくなっていく。
+				PRINTFORML そして허리を押し付けて、身体を微かに震わせながら動きを止めた。
+				PRINTFORMW おそらく절정に達したのだろう。二人の荒い息遣いが聞こえる・・・
+				PRINTL
+				PRINTFORMW 男は %CALLNAME:TARGET%から離れると懐からスマホを取り出し、フラッシュを焚いた。
+				PRINTFORMW ここまで聞こえてくる대화によると、今日はこれで終わりのようだ。
+				PRINTFORMW ナンパ男は申し訳程度に %CALLNAME:TARGET%の착의を正すと、그대로 立ち去って行った。
+				PRINTFORMW 자신もそろそろ離れるか・・・
+				EXP:TARGET:약물경험 += 1
+				EXP:TARGET:Ｃ경험 += 15
+				EXP:TARGET:Ｃ절정경험 += 5
+				EXP:TARGET:Ｂ경험 += 15
+				EXP:TARGET:Ｂ절정경험 += 5
+				IF TALENT:TARGET:2 == 2
+					;男
+					EXP:TARGET:Ａ경험 += 10
+					EXP:TARGET:Ａ절정경험 += 1
+					EXP:TARGET:Ａ성교경험 += 10
+				ELSE
+					;女とふたなり
+					EXP:TARGET:Ｖ경험 += 10
+					EXP:TARGET:Ｖ절정경험 += 1
+					EXP:TARGET:Ｖ성교경험 += 10
+				ENDIF
+				EXP:TARGET:정액경험 += 1
+				EXP:TARGET:키스경험 += 5
+				EXP:TARGET:피사경험 += 3
+				経過時間 += 2
+			ELSEIF RESULT == 1
+				PRINTFORML まあいいや。そんなことより今は祭りだ！
+				PRINTFORMW 背後から聞こえ始めた嬌声は、すぐに祭りの喧騒に飲まれて聞こえなくなった。
+				EXP:TARGET:약물경험 += 1
+				EXP:TARGET:Ｃ경험 += 15
+				EXP:TARGET:Ｃ절정경험 += 5
+				EXP:TARGET:Ｂ경험 += 15
+				EXP:TARGET:Ｂ절정경험 += 5
+				IF TALENT:TARGET:2 == 2
+					;男
+					EXP:TARGET:Ａ경험 += 10
+					EXP:TARGET:Ａ절정경험 += 1
+					EXP:TARGET:Ａ성교경험 += 10
+				ELSE
+					;女とふたなり
+					EXP:TARGET:Ｖ경험 += 10
+					EXP:TARGET:Ｖ절정경험 += 1
+					EXP:TARGET:Ｖ성교경험 += 10
+				ENDIF
+				EXP:TARGET:정액경험 += 1
+				EXP:TARGET:키스경험 += 5
+				EXP:TARGET:피사경험 += 3
+				;ログ
+				PRINTL
+				PRINTFORML 　（ %CALLNAME:TARGET%）
+				PRINTL 　약물경험　　+　1
+				PRINTL 　Ｃ경험　　　+　15
+				PRINTL 　Ｃ절정경험　+　5
+				PRINTL 　Ｂ경험　　　+　15
+				PRINTL 　Ｂ절정경험　+　5
+				IF TALENT:TARGET:2 == 2
+					PRINTL 　Ａ경험　　　+　10
+					PRINTL 　Ａ절정경험　+　1
+					PRINTL 　Ａ성교경험　+　10
+				ELSE
+					PRINTL 　Ｖ경험　　　+　10
+					PRINTL 　Ｖ절정경험　+　1
+					PRINTL 　Ｖ성교경험　+　10
+				ENDIF
+				PRINTL 　정액경험　　+　1
+				PRINTL 　키스경험　　+　5
+				PRINTL 　피사경험　　+　3
+				PRINTW
+			ENDIF
+		ELSEIF RESULT == 1
+			PRINTFORMW さすがに見過ごせない。揉めている二人の前に姿を現した。
+			PRINTFORMW あなたが姿を見せると、半泣きの %CALLNAME:TARGET%는思わず笑顔を零した。
+			PRINTFORMW 男の手から %CALLNAME:TARGET%を引きはがし、그대로 小脇に抱きしめる。
+			PRINTFORMW いきなり何をしやがるだの、卑怯者だのと五月蠅いので、黙らせるために덱とデュエルディスクを取り出す。
+			PRINTFORMW 男も상황を理解したのか、デュエルディスクを取り出す。
+			PRINTFORMW 祭りの喧騒から離れた場所で、デュエルディスクを起動させた。
+			CALL CHOICE_DUEL_TYPE(205)
+			IF RESULT == 1
+				PRINTFORMW 듀얼に勝利すると、ナンパ男は悔しそうな顔で走り去って行った。
+				PRINTFORMW デュエルディスクを仕舞うと、 %CALLNAME:TARGET%が抱き着いてきた。
+				PRINTFORMW テキトーになだめつつ時間を確認する。
+				CALL EVENT_FAVUP(TARGET,50)
+				NTR플래그 = 2
+			ELSEIF RESULT == 1
+				PRINTFORMW %CALLNAME:TARGET%の腕がナンパ男に乱暴に掴まれ、引っ張られる。
+				PRINTFORMW 拒絶の言葉を口にする %CALLNAME:TARGET%だが、듀얼に負けたあなたに出来ることは無い。
+				PRINTFORMW 暗어둠의 中へと消えて行く二人を見送り、時折聞こえる嬌声から目を背けた・・・
+				EXP:TARGET:약물경험 += 1
+				EXP:TARGET:Ｃ경험 += 15
+				EXP:TARGET:Ｃ절정경험 += 5
+				EXP:TARGET:Ｂ경험 += 15
+				EXP:TARGET:Ｂ절정경험 += 5
+				IF TALENT:TARGET:2 == 2
+					;男
+					EXP:TARGET:Ａ경험 += 10
+					EXP:TARGET:Ａ절정경험 += 1
+					EXP:TARGET:Ａ성교경험 += 10
+				ELSE
+					;女とふたなり
+					EXP:TARGET:Ｖ경험 += 10
+					EXP:TARGET:Ｖ절정경험 += 1
+					EXP:TARGET:Ｖ성교경험 += 10
+				ENDIF
+				EXP:TARGET:정액경험 += 1
+				EXP:TARGET:키스경험 += 5
+				EXP:TARGET:피사경험 += 3
+				;ログ
+				PRINTL
+				PRINTFORML 　（ %CALLNAME:TARGET%）
+				PRINTL 　약물경험　　+　1
+				PRINTL 　Ｃ경험　　　+　15
+				PRINTL 　Ｃ절정경험　+　5
+				PRINTL 　Ｂ경험　　　+　15
+				PRINTL 　Ｂ절정경험　+　5
+				IF TALENT:TARGET:2 == 2
+					PRINTL 　Ａ경험　　　+　10
+					PRINTL 　Ａ절정경험　+　1
+					PRINTL 　Ａ성교경험　+　10
+				ELSE
+					PRINTL 　Ｖ경험　　　+　10
+					PRINTL 　Ｖ절정경험　+　1
+					PRINTL 　Ｖ성교경험　+　10
+				ENDIF
+				PRINTL 　정액경험　　+　1
+				PRINTL 　키스경험　　+　5
+				PRINTL 　피사경험　　+　3
+				PRINTW
+			ENDIF
+			経過時間 += 3
+		ENDIF
+	ENDIF
+WEND
+
+PRINTL
+PRINTFORML ２０時５０分。いつの間にかこんな時間になっていた。
+PRINTFORMW 先程まで歩くのも一苦労だった公園は、子供がキャッチボールをできるくらいには閑散としている。
+PRINTFORMW 屋台もほとんどが撤収を始めている。今日の縁日はもう終わりのようだ。
+IF ボッチ플래그 == 0 && NTR플래그 == 0
+	PRINTFORMW ふと、ずっと %CALLNAME:TARGET%の手を握っていたことに気が付いた。
+	PRINTFORMW 少し疲れているようだし、자신의 家で休ませようか・・・？
+	PRINTL
+	PRINTL [0] - 連れて行く
+	PRINTL [1] - 解散する
+	BINPUT
+	PRINTL
+	IF RESULT == 0
+		PRINTFORMW %CALLNAME:TARGET%に자신의 家で休んでいくことを提案した・・・
+		PRINTL
+		PRINTL ・・・・・・
+		PRINTW
+		IF TALENT:TARGET:연모 >= 1
+			PRINTFORMW %CALLNAME:TARGET%는快く了承してくれた。
+			PRINTFORMW 祭りの感想を言い合いながら家路に着いた・・・
+			CFLAG:MASTER:현재위치 = 場所_玄関
+			CFLAG:TARGET:현재위치 = 場所_玄関
+			TCVAR:친밀감 = 3
+		ELSE
+			SELECTCASE RAND:5
+				CASE 0,2,3
+					PRINTFORMW %CALLNAME:TARGET%는少し考える仕草をした後、了承してくれた。
+					PRINTFORMW 祭りの感想を言い合いながら家路に着いた・・・
+					CFLAG:MASTER:현재위치 = 場所_玄関
+					CFLAG:TARGET:현재위치 = 場所_玄関
+					TCVAR:친밀감 = 3
+				CASEELSE
+					PRINTFORMW %CALLNAME:TARGET%に断られた。
+					PRINTFORMW 『友達に噂とかされると恥ずかしい』？そっか・・・
+					PRINTFORMW %CALLNAME:TARGET%と別れて家路に着いた・・・
+					CFLAG:MASTER:현재위치 = 場所_玄関
+			ENDSELECT
+		ENDIF
+	ELSEIF RESULT == 1
+		PRINTFORMW わざわざ一緒に帰る必要も無いだろう。 %CALLNAME:TARGET%に今日はこれでお開きにすることを告げた。
+		IF TALENT:TARGET:연모 >= 1
+			PRINTL
+			PRINTFORML ・・・・・・断られてしまった。
+			PRINTFORMW どうやらもう少し一緒にいたいようだ。
+			PRINTFORMW このまま引きはがしてもいいが、さすがに暗くなってきたので家まで連れて帰ることにした・・・
+			CFLAG:MASTER:현재위치 = 場所_玄関
+			CFLAG:TARGET:현재위치 = 場所_玄関
+			TCVAR:친밀감 = 3
+		ELSE
+			PRINTFORMW %CALLNAME:TARGET%と別れた・・・
+			CFLAG:MASTER:현재위치 = 場所_玄関
+		ENDIF
+		TIME = KANTAN_TIME(20,50)
+		RETURN 2
+	ENDIF
+ELSEIF ボッチ플래그 == 1
+	PRINTFORMW 一人で祭りっていうのも気楽でいい。また来ようかな・・・
+	CFLAG:MASTER:현재위치 = 場所_玄関
+	TIME = KANTAN_TIME(20,50)
+	RETURN 2
+ELSEIF NTR플래그 == 1
+	PRINTFORMW どこか後ろめたそうな顔をした %CALLNAME:TARGET%と合流した。
+	PRINTFORMW 何があったのかは聞かないが、着崩れた衣服を見る限り随分とお楽しみだったようだ。
+	PRINTFORMW %CALLNAME:TARGET%と少し距離を感じつつ、祭りを後にした・・・
+ELSEIF NTR플래그 == 2
+	PRINTFORMW %CALLNAME:TARGET%는あなたにべったりとくっついている。
+	PRINTFORMW とりあえず一度帰ろう。その後はどうしようか・・・・・・
+ENDIF
+TIME = KANTAN_TIME(20,50)
+CFLAG:MASTER:현재위치 = 場所_玄関
+CFLAG:TARGET:현재위치 = 場所_玄関
+TCVAR:친밀감 = 3
+
+RETURN 2
+
+
+@IRAI_DECK_205(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+;依頼201から丸パクリ
+IF 듀얼리스트 == "상대"
+	SELECTCASE RAND:4
+		CASE 0
+			RETURN 59650
+		CASE 1
+			RETURN 59702
+		CASE 2
+			RETURN 59751
+		CASE 3
+			RETURN 39710
+	ENDSELECT
+ENDIF
+RETURN 0
+

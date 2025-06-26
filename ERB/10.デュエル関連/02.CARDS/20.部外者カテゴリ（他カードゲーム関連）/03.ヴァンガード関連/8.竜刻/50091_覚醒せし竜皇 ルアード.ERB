@@ -1,0 +1,185 @@
+﻿@CARDNAME_50091,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 각성한 룡황 루아드
+	CASE "略称"
+RESULTS = 각성 루아드
+	CASE "カテゴリ"
+RESULTS:0 = 루아드
+RESULTS:1 = 룡각
+RESULTS:2 = 섀도우 팔라딘
+RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_50091(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RESULT:1 = 드래곤족
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수불가"
+		RETURN 1
+
+ENDSELECT
+
+RETURN 0
+
+
+@CARDSUMMON_50091(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+
+CALL RESETCONDITION_MAT
+必要素材数 = 1
+素材条件カテゴリ = 루아드
+
+IF EX参照 == 1
+	CALL STRIDECAN(듀얼리스트,소환カード,50091) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50091(종류)
+#DIM DYNAMIC 종류
+
+PRINTL '초월' '루아드' 몬스터
+PRINTL (자신의 패에서 몬스터 1장을 제외하고 발동할 수 있다.
+PRINTL 　EX덱의 이 카드를, 자신 필드의 지정된 몬스터 1장 위에 겹쳐서 '초월'한다.
+PRINTL  '초월'한 이 카드의 이름은 겹친 몬스터와 같은 이름으로 취급하고,
+PRINTL 　겹친 몬스터의 공격력 수비력만큼, 이 카드의 공격력 수비력을 올린다.
+PRINTL  '초월'은 1턴에 1번밖에 할 수 없으며, 선공 1턴째에는 사용할 수 없다)
+CALLFORM CARD_ABLE(11,필드起動)
+PRINTL ①: 이 카드가 필드에 앞면 표시로 존재하는 한 1번만, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 자신 필드의 이 카드 이외의 몬스터 2장을 파괴하고,
+PRINTL 손패를 임의의 매수만큼 고르고, 파괴한다.
+PRINTL 파괴한 수만큼, 상대 필드의 카드를 고르고 파괴한다.
+PRINTL 이 카드는 턴 종료시까지 공격력은 파괴한 자신의 카드의 수× 300 올린다.
+PRINTL 이 턴에, 상대는 자신의 필드의 몬스터의 효과를 발동할 수 없다.
+
+@CARDCAN_50091(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50091)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件他所 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 短紋章起動
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50091(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"不材")
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50091,11)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件他所 = 1
+		효과条件複数 = 2
+		효과範囲필드 = 1
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+
+			REPEAT 2
+				カウンタ ++
+			REND
+
+			REPEAT 99
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과条件行先플래그 = 破壊行き
+				효과条件任意 = 1
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+				IF RESULT == 1
+					カウンタ ++
+				ELSE
+					BREAK
+				ENDIF
+			REND
+
+			REPEAT カウンタ
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지",50091)
+			REND
+			攻撃力修正 = カウンタ * 300
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",攻撃力修正)
+			CALL CARD_RESERV(듀얼리스트,50091,短紋章予約)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 短紋章起動
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"発無")
+ENDIF

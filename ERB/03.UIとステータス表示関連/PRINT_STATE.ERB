@@ -1,0 +1,1610 @@
+﻿@PRINT_STATE(캐릭터_ID,설정モード)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 前캐릭터
+#DIM DYNAMIC 最前캐릭터
+#DIM DYNAMIC 次캐릭터
+#DIM DYNAMIC 最次캐릭터
+#DIM DYNAMIC 캐릭터クター
+#DIM DYNAMIC 가슴サイズ
+#DIM DYNAMIC 尻サイズ
+#DIM DYNAMIC 체력_ターゲット
+#DIM DYNAMIC 기력_ターゲット
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 설정モード
+#DIM DYNAMIC 現在値
+#DIM DYNAMIC 最大値
+#DIMS DYNAMIC 덱名
+#DIM DYNAMIC 소환_現在値
+#DIM DYNAMIC 現リスト値
+#DIM DYNAMIC 開始時LCOUNT
+#DIM DYNAMIC 終了時LCOUNT
+#DIM DYNAMIC GDI値
+#DIM DYNAMIC サムネ_ID
+#DIM DYNAMIC 顔グラ_ID
+#DIM DYNAMIC ALT_グラID,20
+#DIM DYNAMIC グラ数
+#DIM GDI보존
+
+$INPUT_LOOP
+CALL FIND_CHARA_GID(캐릭터_ID)
+サムネ_ID = RESULT
+IF CFLAG:캐릭터_ID:그래픽설정 >= 1
+	IF ENUMFILES("RESOURCES/DUEL", @"{CFLAG:캐릭터_ID:그래픽설정}_DUEL.*")
+		サムネ_ID = CFLAG:캐릭터_ID:그래픽설정
+	ELSE 
+		CFLAG:캐릭터_ID:그래픽설정 = 0
+	ENDIF
+ENDIF
+
+顔グラ_ID = NO:캐릭터_ID
+GDI値 = 1000 + GDI보존
+GDI보존 ++
+IF GDI보존 >= 20
+	GDI보존 = 0
+ENDIF
+
+
+
+;가슴関連
+IF オプション_가슴AWS == 1
+	IF TALENT:캐릭터_ID:체형 == -3
+		가슴サイズ = (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장) / 100
+	ELSEIF TALENT:캐릭터_ID:체형 == -2
+		가슴サイズ = (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장 - 500) / 10
+	ELSE 
+		가슴サイズ = (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장) / 10
+	ENDIF
+ELSE
+	IF TALENT:캐릭터_ID:체형 == -3
+		가슴サイズ = (CFLAG:캐릭터_ID:가슴초기치) / 100
+	ELSEIF TALENT:캐릭터_ID:체형 == -2
+		가슴サイズ = (CFLAG:캐릭터_ID:가슴초기치 - 500) / 10
+	ELSE
+		가슴サイズ = (CFLAG:캐릭터_ID:가슴초기치) / 10
+	ENDIF
+ENDIF
+
+;尻関連
+IF オプション_尻AWS == 1
+	IF TALENT:캐릭터_ID:체형 == -3
+		尻サイズ = (CFLAG:캐릭터_ID:엉덩이초기치 + CFLAG:캐릭터_ID:엉덩이성장) / 100
+	ELSEIF TALENT:캐릭터_ID:체형 == -2
+		尻サイズ = (CFLAG:캐릭터_ID:엉덩이초기치 + CFLAG:캐릭터_ID:엉덩이성장 - 500) / 10
+	ELSE 
+		尻サイズ = (CFLAG:캐릭터_ID:엉덩이초기치 + CFLAG:캐릭터_ID:엉덩이성장) / 10
+	ENDIF
+ELSE
+	IF TALENT:캐릭터_ID:체형 == -3
+		尻サイズ = (CFLAG:캐릭터_ID:엉덩이초기치) / 100
+	ELSEIF TALENT:캐릭터_ID:체형 == -2
+		尻サイズ = (CFLAG:캐릭터_ID:엉덩이초기치 - 500) / 10
+	ELSE
+		尻サイズ = (CFLAG:캐릭터_ID:엉덩이초기치) / 10
+	ENDIF
+ENDIF
+
+
+
+CUSTOMDRAWLINE —
+PRINT ┏━━━━━━━━━━┓
+
+
+PRINT 
+;PRINTFORM [캐릭터ID:{캐릭터_ID,10,LEFT}]
+PRINTFORM 【ID:{NO:캐릭터_ID,10,LEFT}】
+IF デバッグシステム
+	PRINTFORM 【ID2:{캐릭터_ID,10,LEFT}】
+	PRINTFORM %"",44,LEFT%
+ELSE
+	PRINTFORM %"",62,LEFT%
+ENDIF
+;カード画像취득＆표시
+CALL PRINT_STATE_INFO(캐릭터_ID,サムネ_ID)
+
+PRINTL
+PRINT ┃
+;顔画像취득
+CALL SHOW_GRAPHICS(캐릭터_ID,GDI値,5)
+PRINT ┃
+PRINTFORM 【%NAME:캐릭터_ID%】
+
+IF TALENT:캐릭터_ID:성별 == 1
+	SETCOLOR C_PINK
+	PRINTFORM （%"♀",2%）
+ELSEIF TALENT:캐릭터_ID:성별 == 2
+	SETCOLOR C_BLUE
+	PRINTFORM （%"♂",2%）
+ELSEIF TALENT:캐릭터_ID:성별 == 3
+	SETCOLOR C_P_PURPLE
+	PRINTFORM （%"♀♂",2%）
+ELSE
+	PRINTFORM （%"성별 없음",2%）
+ENDIF	
+RESETCOLOR
+PRINTL 
+PRINTFORM ┃%"",20,LEFT%┃
+체력_ターゲット = BASE:캐릭터_ID:체력
+SIF BASE:캐릭터_ID:체력 < 0
+    체력_ターゲット = BASE:캐릭터_ID:체력
+PRINT 【 체력 】
+CALL PRINT_COLORBAR, 체력_ターゲット, MAXBASE:캐릭터_ID:체력, 40, UNICODE(0x2585), UNICODE(0x2585),  BARCOLORSET("赤"), RESULT:1
+PRINTFORM  ({체력_ターゲット,5}/{MAXBASE:캐릭터_ID:체력,5})
+
+PRINTL
+
+PRINTFORM ┃%"",20,LEFT%┃
+기력_ターゲット = BASE:캐릭터_ID:기력
+SIF BASE:캐릭터_ID:기력 < 0
+    기력_ターゲット = BASE:캐릭터_ID:기력
+PRINT 【 기력 】
+CALL PRINT_COLORBAR, 기력_ターゲット, MAXBASE:캐릭터_ID:기력, 40, UNICODE(0x2585), UNICODE(0x2585),  BARCOLORSET("緑"), RESULT:1
+PRINTFORML  ({기력_ターゲット,5}/{MAXBASE:캐릭터_ID:기력,5})
+
+
+PRINTFORM ┃%"",20,LEFT%┃
+
+PRINT ————————————————————————————————————————————————————————————————————————
+PRINTL
+PRINTFORM ┃%"",20,LEFT%┃
+PRINT 
+
+IF 캐릭터_ID != MASTER
+	PRINTFORM ・호감도 랭크:
+	CALL FAV_RANK(CFLAG:캐릭터_ID:호감도)
+	PRINTFORM ({CFLAG:캐릭터_ID:호감도})
+ENDIF
+PRINTFORML
+
+PRINTFORM ┃%"",20,LEFT%┃
+; IF TALENT:캐릭터_ID:성별 != 2
+; 	PRINT 
+; 	IF 가슴サイズ <= 限界値_가슴AWS || 限界値_가슴AWS == 0 || CFLAG:캐릭터_ID:가슴초기치 > 限界値_가슴AWS
+; 		PRINTFORM ・가슴 사이즈：{가슴サイズ}mm
+; 	ELSEIF 가슴サイズ >= 限界値_가슴AWS
+; 		PRINTFORM ・가슴 사이즈：{限界値_가슴AWS}mm
+; 	ENDIF
+; 	PRINT 　/　
+; 	IF 尻サイズ <= 限界値_尻AWS || 限界値_가슴AWS == 0 || CFLAG:캐릭터_ID:엉덩이초기치 > 限界値_尻AWS
+; 		PRINTFORM 엉덩이 사이즈：{尻サイズ}mm
+; 	ELSEIF 尻サイズ >= 限界値_가슴AWS
+; 		PRINTFORM 엉덩이 사이즈：{限界値_尻AWS}mm
+; 	ENDIF
+; ENDIF
+CALL SHOW_BODYSIZE(캐릭터_ID)
+PRINTL
+
+PRINTFORM ┃%"",20,LEFT%┃
+
+IF !GROUPMATCH(설정モード,0,3) 
+	IF 캐릭터_ID != MASTER
+		PRINT ・
+		VARSET RESULTS
+		TRYCALLFORM CARDNAME_{NO:캐릭터_ID}, "名前"
+		IF RESULTS != ""
+			PRINTBUTTON "카드 정보：[있음]", 9000
+		ELSE
+			PRINT  [카드 정보：없음]
+		ENDIF
+	ENDIF
+ENDIF
+PRINTL
+
+PRINTFORM ┃%"",20,LEFT%┃
+
+SIF !GROUPMATCH(CSTR:캐릭터_ID:등장작품,"","/")
+	PRINTFORM ・등장작품:%CSTR:캐릭터_ID:등장작품%
+
+
+PRINTL
+
+REPEAT 1
+	PRINTFORM ┃%"",20,LEFT%┃
+REND
+
+
+PRINTL
+
+PRINTFORM ┃%"",20,LEFT%┃
+IF !GROUPMATCH(설정モード,0,3) 
+	IF 캐릭터_ID != MASTER
+		PRINT ・
+		CALL ENEMYDECK_CHECK(캐릭터_ID)
+		IF RESULT != 0
+			IF CFLAG:캐릭터_ID:호감도 >= 1000
+				덱名 = 소유 덱:【%RESULTS:1%】
+				PRINTBUTTON @"%덱名%", 9001
+			ELSE
+				PRINT 【？？？？？】
+			ENDIF
+		ELSE
+			PRINT 소유 덱:없음
+		ENDIF
+	ENDIF
+ENDIF
+PRINTL
+
+
+PRINT ┗━━━━━━━━━━┛
+;ALT그림がある事の確認
+IF ENUMFILES("RESOURCES/CHARA", @"{NO:캐릭터_ID}_FACE_2*")
+	PRINTBUTTON "・[ALT얼굴 그래픽]", 9002
+	PRINTFORM [설정：{CFLAG:캐릭터_ID:ALT그림 + 1}]
+ENDIF
+;캐릭터蔵が2つ以上あるとき
+CALL FIND_CHARA_GID(캐릭터_ID,1)
+PRINT 　　
+IF RESULT >= 2
+	PRINTBUTTON "[ALT카드 있음]", 9003
+;	PRINTFORM [설정：{CFLAG:캐릭터_ID:그래픽설정}]
+ENDIF
+
+
+PRINTL
+
+
+CALL PRINT_STATE_TALENT(캐릭터_ID)
+
+;CALL PRINT_STATE_CLOTH(캐릭터_ID)
+CALL PRINT_STATE_ABL(캐릭터_ID)
+
+SIF 설정モード != 10
+	CALL PRINT_STATE_SKILL(캐릭터_ID)
+PRINTL
+
+IF 캐릭터_ID != MASTER
+	IF デバッグシステム == 2
+		PRINTL
+		PRINTL □ 플래그 □——————————————————————————————————————————————————————————————————————————————————————
+		PRINTFORML 플래그 관리
+		PRINTFORM 동행시간 {CFLAG:캐릭터_ID:동행}/
+		PRINTFORM 데이트플래그 {CFLAG:캐릭터_ID:데이트중}/
+		PRINTFORM 목욕플래그 {CFLAG:캐릭터_ID:목욕}/
+		PRINTFORM 쇠약플래그 {CFLAG:캐릭터_ID:쇠약}/
+
+		PRINTFORM 정액량 {TCVAR:캐릭터_ID:질내정액량}/
+		PRINTFORM 아기씨플래그 {CFLAG:캐릭터_ID:HIT아기씨}/
+		PRINTFORM 임신플래그 {CFLAG:캐릭터_ID:ECE임신플래그}/
+		PRINTFORM 임신경과 {CFLAG:캐릭터_ID:임신경과}/
+		PRINTFORM 소유플래그 {CFLAG:캐릭터_ID:소유함}/
+	ENDIF
+ENDIF
+
+
+CALL PRINT_STATE_EX(캐릭터_ID)
+PRINTL
+
+PRINTL □ 성적정보 □——————————————————————————————————————————————————————————————————————————————————
+IF CFLAG:캐릭터_ID:호감도 >= 1000 || 캐릭터_ID == MASTER
+	IF TALENT:캐릭터_ID:키스미경험 == 0
+		SETCOLOR C_PINK
+		PRINT ・
+		IF CFLAG:캐릭터_ID:키스상실상대 == MASTER
+			IF CFLAG:캐릭터_ID:첫키스시츄 == 1
+			;접촉조교かつ催眠　コントロール奪取状態
+				PRINTFORM 듀얼중、
+				SELECTCASE RAND:2
+				CASE 0
+					PRINTFORM 적이었을 터인 %CALLNAME:MASTER%%TEXTR("에게 세뇌되어/의 최면을 받아")%、
+				CASE 1
+					PRINTFORM 대전상대였던 %CALLNAME:MASTER%에게 세뇌되어、
+				ENDSELECT
+				PRINTFORML %TEXTR("섬겨야할 주인/사랑하는 마스터")%라고 착각하게 한 채로、
+				PRINTFORM 　원래 주인%TEXTR("의 눈 앞에서/을 배신하고")% %CALLNAME:MASTER%
+			ELSEIF CFLAG:캐릭터_ID:첫키스시츄 == 2
+			;접촉조교
+				PRINTFORM 듀얼중에 %CALLNAME:MASTER%に%TEXTR("밑에 깔려/끌어안겨져")%、 %CALLNAME:MASTER%
+			ELSEIF CFLAG:캐릭터_ID:첫키스시츄 == 3
+			;賭け負け 지는 습관 후에 처녀상실도 생각할수 없었던건 아니지만……귀찮다！！
+				SELECTCASE RAND:2
+				CASE 0
+					PRINTFORM 가볍게 내기를 승낙한 결과、듀얼에서 패배해、
+				CASE 1
+					PRINTFORM 몸을 건 듀얼에서 패배해、
+				ENDSELECT
+				PRINTFORM 무리하게 %CALLNAME:MASTER%
+			ELSEIF CFLAG:캐릭터_ID:첫키스시츄 == 4
+			;逆レ ムラつきが限界でとか酒の勢いでとかは취득めんどそうなのでいったんひとまとめ
+				PRINTFORM %CALLNAME:MASTER%를 밀어 넘어뜨려、자신이 직접 %CALLNAME:MASTER%
+			ELSEIF CFLAG:캐릭터_ID:첫키스시츄 == 5
+			;정신조작コマンドの影響下
+				PRINTFORM %CALLNAME:MASTER%의 정신조작을 받아、의지와는 상관없이 %CALLNAME:MASTER%
+			ELSEIF CFLAG:캐릭터_ID:첫키스시츄 == 6
+			;발정중접촉조교
+				PRINTFORM 듀얼중、발정에%TEXTR("쑤시는/따끈해진")%몸을 %CALLNAME:MASTER%에게 안겨져、그대로 %CALLNAME:MASTER%
+;			ELSEIF 強姦系이벤트 イベのERBにいちいち플래그発生を付けなきゃいけなさそう。めんどい
+			ELSE
+			;その他。特筆する事項がない普通の키스。키스時연모は……これ以上CFLAG추가するのもアレだしひとまずいいや。誰か추가したくなったらいじるヨロシ
+				PRINTFORM %CALLNAME:MASTER%
+			ENDIF
+		ELSEIF CFLAG:캐릭터_ID:키스상실상대 != -1
+			PRINTFORM %CALLNAME:(CFLAG:캐릭터_ID:키스상실상대)%
+		ELSE
+			IF CFLAG:캐릭터_ID:첫키스시츄 == 7
+				;裏ショップに売られたりした 現場を見ていないので伝聞口調にしてみたが……直接聞きだしたわけでもないか？違和感出たら変えよう
+				PRINTFORM %CALLNAME:MASTER%의 곁을 떨어지자마자、호사가들
+		ELSE
+			PRINTFORM 누군가
+			ENDIF
+		ENDIF
+		IF CFLAG:캐릭터_ID:키스상실장소 == 1 
+			PRINTFORM 의 입술
+		ELSEIF CFLAG:캐릭터_ID:키스상실장소 == 2 
+			PRINTFORM 의 자지
+		ELSEIF CFLAG:캐릭터_ID:키스상실장소 == 3
+			PRINTFORM 의 보지
+		ELSEIF CFLAG:캐릭터_ID:키스상실장소 == 4 
+			PRINTFORM 의 아날
+		ENDIF
+		PRINTFORM 에게 퍼스트키스를 
+		SELECTCASE CFLAG:캐릭터_ID:첫키스시츄
+		CASE 1
+			PRINTFORM 바쳐버렸다。
+		CASE 2
+			PRINTFORM 바쳤다。
+		CASE 3
+			PRINTFORM %TEXTR("바쳐져버렸/빼앗겼")%다。
+		CASE 4
+			PRINTFORM 바쳤다。
+		CASE 5
+			PRINTFORM 바쳐버렸다。
+		CASE 6
+			PRINTFORM 바쳤다。
+		CASE 7
+			PRINTFORM %TEXTR("빼앗겼/바치게했")%다는듯 하다……。
+		CASEELSE
+			PRINTFORM 바쳤다。
+		ENDSELECT
+		PRINTL
+	ELSE
+		PRINTL ・미경험❤
+	ENDIF
+	IF TALENT:캐릭터_ID:성별 & 1
+		IF TALENT:캐릭터_ID:처녀 == 0
+			PRINT ・
+			IF CFLAG:캐릭터_ID:처녀버린상대 == MASTER
+				;シチュのCFLAGはTRACHECKのLOST_VIRGIN処理でつける
+				IF CFLAG:캐릭터_ID:처녀버린시츄 == 1
+				;접촉조교かつ催眠　コントロール奪取状態
+					PRINTFORM 듀얼중、
+					SELECTCASE RAND:2
+					CASE 0
+						PRINTFORM 적이었을 터인 %CALLNAME:MASTER%%TEXTR("에게 세뇌되어/의 최면을 받아")%、
+					CASE 1
+						PRINTFORM 대전상대였던 %CALLNAME:MASTER%에게 세뇌되어、
+					ENDSELECT
+					PRINTFORML %TEXTR("섬겨야할 주인/사랑하는 마스터")%라고 착각당한 채、
+					PRINTFORM 　원래 주인%TEXTR("의 눈앞에서/을 배신하고")% %CALLNAME:MASTER%에게 처녀를 바쳐버렸다。
+				ELSEIF CFLAG:캐릭터_ID:처녀버린시츄 == 2
+				;접촉조교
+						IF CFLAG:캐릭터_ID:처녀버린시연모 >= 2
+							PRINTFORM %CALLNAME:MASTER%에게 듀얼중에 끌어안겨져、그대로 처녀를 바쳤다。
+						ELSE
+							PRINTFORM 듀얼중에 %CALLNAME:MASTER%に%TEXTR("밑에 깔려/끌어안겨져")%、거스를수 없는것을 좋다하고 그대로 처녀를%TEXTR("바쳐버리게/빼앗기게/흩날리게")%되어버렸다。
+						ENDIF
+				ELSEIF CFLAG:캐릭터_ID:처녀버린시츄 == 3
+				;賭け負け 패배버릇後に처녀喪失も考えなくもなかったけど……めんどい！！
+					SELECTCASE RAND:2
+					CASE 0
+						PRINTFORM 가볍게 내기를 승낙한 결과、듀얼에서 패배해、
+					CASE 1
+						PRINTFORM 몸을 건 듀얼에서 패배해、
+					ENDSELECT
+					PRINTFORM %CALLNAME:MASTER%に%TEXTR("무리하게/범해져서")%처녀를%TEXTR("바쳐버렸/빼았겼/흩날려버렸")%다。
+				ELSEIF CFLAG:캐릭터_ID:처녀버린시츄 == 4
+				;逆レ ムラつきが限界でとか酒の勢いでとかは취득めんどそうなのでいったんひとまとめ
+					IF CFLAG:캐릭터_ID:처녀버린시연모 == 3
+						PRINTFORM 사랑하는 %CALLNAME:MASTER%을 넘어뜨려、자신이 직접 처녀를 바쳤다。
+					ELSEIF CFLAG:캐릭터_ID:처녀버린시연모 == 2
+						PRINTFORM 가장좋아하는 %CALLNAME:MASTER%를 넘어뜨려、자신이 직접 처녀를 바쳤다。
+					ELSE
+						PRINTFORM %CALLNAME:MASTER%를 넘어뜨려、자신이 직접 처녀를 바쳤다。
+					ENDIF
+				ELSEIF CFLAG:캐릭터_ID:처녀버린시츄 == 5
+				;정신조작コマンドの影響下
+					PRINTFORM %CALLNAME:MASTER%의 정신조작을 받아、의지와 상관없이 %CALLNAME:MASTER%에게 처녀를%TEXTR("바쳐버렸/빼앗겼/흩날려버렸")%다。
+				ELSEIF CFLAG:캐릭터_ID:처녀버린시츄 == 6
+				;발정중접촉조교
+					PRINTFORM 듀얼중、발정에%TEXTR("쑤시는/뜨거워진")%몸을 %CALLNAME:MASTER%에게
+					IF  CFLAG:캐릭터_ID:처녀버린시연모 >= 2
+						PRINTFORM 끌어안겨져、그대로 처녀를 바쳤다。
+					ELSE
+						PRINTFORM 밑에 깔려、흘러가는대로 처녀를%TEXTR("바쳐/빼앗겨/흩날려")%버렸다。
+					ENDIF
+;				ELSEIF エネコン기승위 処理見てみたけどま～たこれだけのために新플래그要求されそうなのでノータッチ
+;				ELSEIF 強姦系이벤트 イベのERBにいちいち플래그発生を付けなきゃいけなさそう。めんどい
+				ELSE
+				;その他。特筆する事項がない普通の우후후。処理入れてないからビッグコア의 이벤트での처녀喪失もここになる
+					IF CFLAG:캐릭터_ID:처녀버린시연모 == 3
+						PRINTFORM 사랑하는 %CALLNAME:MASTER%에게 처녀를 바쳤다。
+					ELSEIF CFLAG:캐릭터_ID:처녀버린시연모 == 2
+						PRINTFORM 가장 좋아하는 %CALLNAME:MASTER%에게 처녀를 바쳤다。
+					ELSE
+						PRINTFORM 흘러가는대로 %CALLNAME:MASTER%に%TEXTR("끌어안겨져/몸을 허락해")%、처녀를 바쳤다。
+					ENDIF
+				ENDIF
+			ELSEIF CFLAG:캐릭터_ID:처녀버린상대 == -1
+			;-1は初期値。つまりLOST_VIRGINの처녀버린상대の処理を通っていない非처녀
+			;最初から非처녀である場合のほか、裏ショップに売られたりサバイバルデュエルでベットされたりして手元を離れたりしたときはLOST_VIRGINを経由せずに처녀を失うので現状ここ
+			;将来的には처녀버린상대에게 好事家とかを入れる場合があるかもしれないので、その場合は都度別に설정してください
+				IF CFLAG:캐릭터_ID:처녀버린시츄 == 7
+				;裏ショップに売られたりした 現場を見ていないので伝聞口調にしてみたが……直接聞きだしたわけでもないか？違和感出たら変えよう
+					PRINTFORM %CALLNAME:MASTER%의 곁을 떠나자마자、호사가들%TEXTR("에게 멋대로 범해져/에게 마구 사용되어/의 장난감이 되어")%、처녀를 빼앗겨버렸다는것같다……。
+				ELSE
+					PRINTFORM 누군가
+					PRINTFORM 에게 처녀를 바쳤다。
+				ENDIF
+			ELSEIF CFLAG:캐릭터_ID:처녀버린상대 != -1
+			;あなたでも初期値でもない場合。誰かに憑依してたとか？
+				PRINTFORM %CALLNAME:(CFLAG:캐릭터_ID:처녀버린상대)%
+				PRINTFORM 에게 처녀를 바쳤다。
+			ELSE
+			;念のため
+				PRINTFORM 누군가
+				PRINTFORM 에게 처녀를 바쳤다。
+			ENDIF
+			PRINTL
+		ELSE
+			PRINTL ・미개통❤
+		ENDIF
+	ELSEIF TALENT:캐릭터_ID:성별 == 2 && CFLAG:캐릭터_ID:처녀버린상대 == 0
+		PRINT ・
+		PRINTFORM %CALLNAME:(CFLAG:캐릭터_ID:처녀버린상대)%
+		PRINTFORM 에게 처녀를 바쳤다。
+		PRINTL
+	ENDIF
+	IF TALENT:캐릭터_ID:동정 != 0 && HAS_PENIS(캐릭터_ID)
+		PRINTFORM ・
+		IF CFLAG:캐릭터_ID:동정버린상대 != -1
+			PRINTFORM %CALLNAME:(CFLAG:캐릭터_ID:동정버린상대)%
+		ELSE
+			PRINTFORM 누군가
+		ENDIF
+		PRINTFORM 에게 동정을 빼앗겨버렸다。
+		PRINTL
+	ENDIF
+	IF 캐릭터_ID == MASTER && 아이의数 > 0
+		;ふたなりとか性転換とかでありえそうなので
+		IF EXP:캐릭터_ID:출산경험 > 0 && (아이의数 > EXP:캐릭터_ID:출산경험)
+			PRINTFORML ・지금까지{아이의数 - EXP:캐릭터_ID:출산경험}명의 아이를 낳게하고、{EXP:캐릭터_ID:출산경험}명의 아이를 낳았다。
+		ELSEIF EXP:캐릭터_ID:출산경험 > 0
+			PRINTFORML ・지금까지{EXP:캐릭터_ID:출산경험}명의 아이를 낳았다。
+		ELSE
+			PRINTFORML ・지금까지{아이의数}명의 아이를 낳게했다。
+		ENDIF
+	ELSEIF EXP:캐릭터_ID:출산경험 > 0
+		PRINTFORML ・지금까지{EXP:캐릭터_ID:출산경험}명의 아이를 낳았다。
+	ENDIF
+	IF TALENT:캐릭터_ID:성별 && TALENT:캐릭터_ID:임신
+		PRINTFORM ・
+		IF CFLAG:캐릭터_ID:HIT아기씨 != -1
+			PRINTFORM %CALLNAME:(CFLAG:캐릭터_ID:HIT아기씨)%
+		ELSE
+			PRINTFORM 누군가
+		ENDIF
+		PRINTFORM 와의 아이를 임신중。
+		PRINTL
+	ENDIF
+	RESETCOLOR
+	CALL PRINT_STATE_EXP(캐릭터_ID)
+	PRINTL
+
+ELSE
+	PRINTFORML ・호감도：({CFLAG:캐릭터_ID:호감도}/1000)필요。
+ENDIF
+
+IF TALENT:캐릭터_ID:생성자 >= 1
+	PRINTL □ 출신정보 □——————————————————————————————————————————————————————————————————————————————————
+	PRINTFORML 부친：%NAME:(CFLAG:캐릭터_ID:부친종)%
+	PRINTFORML 모친：%NAME:(CFLAG:캐릭터_ID:모친종)%
+ENDIF
+
+
+IF 캐릭터_ID != MASTER && 설정モード == 1
+	CUSTOMDRAWLINE —
+	PRINT 　　
+	FOR カウンタ,1,6
+		SIF CFLAG:캐릭터_ID:お気に入り == カウンタ
+			SETCOLOR C_GREEN
+
+		SIF お気に入り:カウンタ >= 1
+			SETCOLOR C_AQUA
+		SIF お気に入り:カウンタ == 캐릭터_ID
+			SETCOLOR C_GREEN
+		PRINTBUTTON @"[お気に入り{カウンタ}に설정]", (20 + カウンタ)
+
+		IF お気に入り:カウンタ >= 1
+			PRINTFORM %"（결정）",10,LEFT%
+		ELSEIF お気に入り:カウンタ == 캐릭터_ID
+			PRINTFORM %"（결정）",10,LEFT%
+		ELSE
+			PRINTFORM %"",10,LEFT%
+		ENDIF
+		RESETCOLOR
+	NEXT
+	PRINTL
+	CUSTOMDRAWLINE —
+	IF GET_TARGETNUM() > 1
+		PRINTBUTTON "[이전 캐릭터]", 10
+		PRINTFORM %"",40,RIGHT%
+		PRINTBUTTON "[다음 캐릭터]", 11
+		PRINTL
+		CUSTOMDRAWLINE —
+		PRINTL
+	ENDIF
+	PRINTBUTTON "[확인 종료]", 0
+ELSEIF 설정モード == 2 || 설정モード == 5 || 설정モード == 6
+	CUSTOMDRAWLINE —
+	PRINTBUTTON "[이전 캐릭터]", 10
+	PRINTFORM %"",40,RIGHT%
+	PRINTBUTTON "[다음 캐릭터]", 11
+	PRINTL
+	CUSTOMDRAWLINE —
+	PRINTL
+	IF 설정モード == 2
+		PRINTBUTTON "[확인 종료]", 0
+	ELSEIF 설정モード == 5
+		SIF CFLAG:캐릭터_ID:현재위치 != CFLAG:MASTER:현재위치
+			PRINTFORML %NAME:캐릭터_ID%를 소환하시겠습니까？		
+		SIF CFLAG:캐릭터_ID:현재위치 == CFLAG:MASTER:현재위치
+			PRINTFORML %NAME:캐릭터_ID%에게 돌아가라고 하시겠습니까？
+		PRINTBUTTON "[　예　]", 9050
+		PRINT 　　
+		PRINTBUTTON "[ 아니오 ]", 9051
+	ELSEIF 설정モード == 6
+		SIF CFLAG:캐릭터_ID:현재위치 != CFLAG:MASTER:현재위치
+			PRINTFORML %NAME:캐릭터_ID%에게 말을 겁니까？
+		SIF CFLAG:캐릭터_ID:현재위치 == CFLAG:MASTER:현재위치
+			PRINTFORML %NAME:캐릭터_ID%에게 돌아가라고 하시겠습니까？
+		PRINTBUTTON "[　예　]", 9050
+		PRINT 　　
+		PRINTBUTTON "[ 아니오 ]", 9051
+
+	ENDIF
+	IF デバッグシステム == 2
+		PRINTFORM %"",20,RIGHT%
+		PRINTBUTTON "[ID수정]", 8888
+		PRINTFORM %"",20,RIGHT%
+		PRINTBUTTON "[캐릭터 삭제]", 9999
+	ENDIF
+
+ENDIF
+
+
+IF 캐릭터_ID != MASTER && 설정モード == 1
+	VARSET 現在値
+	FOR カウンタ,1,CHARANUM
+		SIF TARGET:カウンタ <= 0
+			CONTINUE
+		SIF 캐릭터_ID == TARGET:カウンタ
+			現在値 = カウンタ
+		最大値 = カウンタ
+	NEXT
+	;PRINTFORML 현재치　TARGET:{現在値}
+	BINPUT
+	SELECTCASE RESULT
+	CASE 20 TO 30
+		RESULT -= 20
+		IF お気に入り:RESULT != 캐릭터_ID
+			お気に入り:RESULT = 캐릭터_ID
+		ELSEIF お気に入り:RESULT == 캐릭터_ID
+			お気に入り:RESULT = 0
+		ENDIF
+	CASE 10
+		캐릭터_ID = TARGET:(現在値 - 1)
+		SIF 現在値 <= 1
+			캐릭터_ID = TARGET:最大値
+	CASE 11
+		캐릭터_ID = TARGET:(現在値 + 1)
+		SIF 現在値 >= 最大値
+			캐릭터_ID = TARGET:1
+	CASE 9000
+		TRYCALLFORM CARD_UI(NO:캐릭터_ID,1);　덱편집画面でのカード情報
+
+	CASE 9001
+		CALL ENEMYDECK_CHECK(캐릭터_ID)
+		SIF RESULT != 0
+			CALL CARD_DECK_CHECK(RESULT,4)
+
+	CASE 9002
+		IF CFLAG:캐릭터_ID:ALT그림 == 0
+			CFLAG:캐릭터_ID:ALT그림 = 1
+		ELSE
+			CFLAG:캐릭터_ID:ALT그림 = 0
+		ENDIF
+	CASE 0
+		RETURN 1
+	ENDSELECT
+
+	GOTO INPUT_LOOP
+
+ELSEIF 설정モード == 2 || 설정モード == 5 || 설정モード == 6
+	BINPUT
+	FOR カウンタ,0,リスト最大値
+		SIF 소환_リスト:カウンタ != 캐릭터_ID
+			CONTINUE
+		現リスト値 = カウンタ
+		BREAK
+	NEXT
+	SELECTCASE RESULT
+	CASE 10
+		IF 現リスト値 <= 0
+			캐릭터_ID =  소환_リスト:(リスト最大値 - 1)
+		ELSE
+			캐릭터_ID = 소환_リスト:(現リスト値 - 1)
+		ENDIF
+	CASE 11
+		IF 現リスト値 >= リスト最大値 - 1
+			캐릭터_ID =  소환_リスト:0
+		ELSE
+			캐릭터_ID = 소환_リスト:(現リスト値 + 1)
+		ENDIF
+	CASE 0
+		RETURN 1
+	CASE 9000
+		TRYCALLFORM CARD_UI(NO:캐릭터_ID,1);　덱편집画面でのカード情報
+	CASE 9001
+		CALL ENEMYDECK_CHECK(캐릭터_ID)
+		SIF RESULT != 0
+			CALL CARD_DECK_CHECK(RESULT,4)
+	CASE 9002
+		;現在値＋ALT그림がある場合に설정。
+		IF ENUMFILES("RESOURCES/CHARA", @"{NO:캐릭터_ID}_FACE_{(CFLAG:캐릭터_ID:ALT그림 + 2)}*")
+			CFLAG:캐릭터_ID:ALT그림 += 1
+		ELSE
+			CFLAG:캐릭터_ID:ALT그림 = 0
+		ENDIF
+	CASE 9003
+		CALL FIND_CHARA_GID(캐릭터_ID,1)
+		グラ数 = RESULT
+		FOR カウンタ,0,10
+			ALT_グラID:カウンタ = RESULT:(カウンタ + 1)
+		NEXT
+		PRINTFORML 설정한 그래픽을 선택해주세요
+		FOR カウンタ,0,グラ数
+			CALL PRINT_STATE_DUEL(ALT_グラID:カウンタ,0,2)
+			CALLFORM CARDNAME_{ALT_グラID:カウンタ}("名前")
+;			PRINTFORML %RESULTS%
+		NEXT
+		FOR カウンタ,0,10 
+			PRINTL
+		NEXT
+		BINPUT
+		IF NO:캐릭터_ID == RESULT
+			CFLAG:캐릭터_ID:그래픽설정 = 0
+		ELSE
+			CFLAG:캐릭터_ID:그래픽설정 = RESULT
+		ENDIF
+	CASE 9010
+		CALL SHOW_GRAPHICS(캐릭터_ID,2021,6)
+		WAIT
+	CASE 9011
+		CALL PRINT_STATE_DUEL(サムネ_ID,2)
+		WAIT
+	CASE 9050
+		IF デバッグシステム == 1
+			IF CFLAG:캐릭터_ID:면식 == 0
+				CALL SUMMON_SHORI(캐릭터_ID)
+				RETURN 2
+			ELSE
+				CALL SUMMON_SHORI(캐릭터_ID)
+			ENDIF
+		ELSEIF CFLAG:캐릭터_ID:소유함 != 1 && CFLAG:캐릭터_ID:전화번호 != 1 
+			PRINTFORMW %NAME:캐릭터_ID%와의 관계를 갖고있지 않습니다。
+		ELSE
+			IF CFLAG:캐릭터_ID:면식 == 0
+				CALL SUMMON_SHORI(캐릭터_ID)
+				RETURN 2
+			ELSE
+				CALL SUMMON_SHORI(캐릭터_ID)
+			ENDIF
+		ENDIF
+		FOR カウンタ,1,CHARANUM
+			SIF CFLAG:カウンタ:현재위치 != 0 && CFLAG:カウンタ:현재위치 <= 20
+				소환_現在値	++
+		NEXT
+		IF 소환_現在値 >= 最大소환値
+			PRINTFORMW 한번에 소환할수 있는 몬스터의 수가 최대가 되었습니다。
+			RETURN 2
+		ELSE
+			PRINTFORML 계속해서 몬스터를 소환하겠습니까？
+			PRINTFORML [0] - 예
+			PRINTFORML [1] - 아니오
+			BINPUT
+			SIF RESULT == 1
+				RETURN 2
+		ENDIF
+		RETURN 1
+	CASE 9051
+		RETURN 1
+	CASE 8888
+		PRINTL 입력대기
+		INPUT
+		NO:캐릭터_ID = RESULT
+	CASE 9999
+		DELCHARA 캐릭터_ID
+		RETURN 1
+	ENDSELECT
+	GOTO INPUT_LOOP	
+ENDIF
+
+
+
+
+PRINTL
+CUSTOMDRAWLINE —
+RETURN 1
+
+
+
+
+
+@PRINT_STATE_CLOTH(캐릭터_ID,설정モード)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 服装타입
+#DIM DYNAMIC 설정モード
+
+PRINTL □ 복장 □——————————————————————————————————————————————————————————————————————————————————————
+IF !EQUIP:캐릭터_ID:0
+	PRINTL 전라
+	RETURN 0
+ENDIF
+FOR 服装타입,1,20
+	IF 服装타입 == 6 || 服装타입 == 10
+		PRINT
+	ELSE
+		IF STRLENS(CLOTHNAME(服装타입,EQUIP:캐릭터_ID:服装타입))
+			LOCALS += CLOTHNAME(服装타입,EQUIP:캐릭터_ID:服装타입)
+			PRINTFORM 【%CLOTHNAME(服装타입,EQUIP:캐릭터_ID:服装타입)%】
+			LOCAL:1 ++
+		ENDIF
+	ENDIF
+NEXT
+
+IF EQUIP:캐릭터_ID:6 >= 1
+	IF STRLENS(CLOTHNAME(6,EQUIP:캐릭터_ID:6)) || 설정モード == 10
+		PRINTFORM 【%CLOTHNAME(6,EQUIP:캐릭터_ID:6)%】
+	ELSEIF (EQUIP:캐릭터_ID:7 >= 1 || EQUIP:캐릭터_ID:9 >= 1 || EQUIP:캐릭터_ID:15 >= 1)
+		PRINTFORM 【？？？】
+	ENDIF
+ENDIF
+IF EQUIP:캐릭터_ID:10 >= 1
+	IF STRLENS(CLOTHNAME(10,EQUIP:캐릭터_ID:10)) || 설정モード == 10
+		PRINTFORM 【%CLOTHNAME(10,EQUIP:캐릭터_ID:10)%】
+	ELSEIF (EQUIP:캐릭터_ID:13 >= 1 || EQUIP:캐릭터_ID:15 >= 1)
+		PRINTFORM 【？？？】
+	ENDIF
+ENDIF
+
+SIF !LOCAL:1
+	PRINTL 전라
+@PRINT_STATE_ABL(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+;PRINTL
+PRINTL □ 능력 □——————————————————————————————————————————————————————————————————————————————————————
+LOCAL:1 = 0
+FOR LOCAL,0,50
+	SIF !STRLENS(ABLNAME:LOCAL)
+		CONTINUE
+	SIF LOCAL > 50 && 캐릭터_ID != MASTER
+		CONTINUE
+	;同性愛관계
+	IF !(TALENT:캐릭터_ID:2 & 1) && (LOCAL == 17 || LOCAL == 32)
+		CONTINUE
+	ELSEIF TALENT:캐릭터_ID:2 & 1 && (LOCAL == 18 || LOCAL == 33)
+		CONTINUE
+	ENDIF		
+	SIF LOCAL:1 % 5 == 0 && LOCAL:1 != 0
+		PRINTL 
+	PRINTFORM %ABLNAME:LOCAL,9%:
+	CALL ABL_RANK(LOCAL,ABL:캐릭터_ID:LOCAL)
+	PRINTFORM {ABL:캐릭터_ID:LOCAL,5,RIGHT} 
+	LOCAL:1 ++
+NEXT
+PRINTL
+
+@PRINT_STATE_SKILL(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+
+PRINTL □ 성기술 □——————————————————————————————————————————————————————————————————————————————————————
+LOCAL:1 = 0
+FOR LOCAL,50,60
+	SIF !STRLENS(ABLNAME:LOCAL)
+		CONTINUE
+	SIF !(TALENT:캐릭터_ID:2 & 1) && (LOCAL == 52 || LOCAL == 54)
+		CONTINUE
+
+	SIF LOCAL:1 % 6 == 0 && LOCAL:1 != 0
+		PRINTL 
+	PRINTFORM %ABLNAME:LOCAL,9%:
+	CALL ABL_RANK(LOCAL,ABL:캐릭터_ID:LOCAL)
+	PRINTFORM {ABL:캐릭터_ID:LOCAL,3,RIGHT} 
+	LOCAL:1 ++
+NEXT
+
+
+@PRINT_STATE_TALENT(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 속성설정
+#DIM DYNAMIC 開始時LCOUNT
+#DIM DYNAMIC 終了時LCOUNT
+#DIM FONTSIZE
+#DIM LINEHEIGHT
+#DIM SRC_WIDTH
+#DIM SRC_HEIGHT
+
+PRINTL □ 소질 □——————————————————————————————————————————————————————————————————————————————————————
+LOCAL:1 = 0
+LOCALS = ""
+;TALENT:200(名無し)は표시させない
+開始時LCOUNT = LINECOUNT
+
+SETCOLOR C_L_GRAY
+PRINT 　속성종족：
+RESETCOLOR
+IF TALENT:캐릭터_ID:듀얼리스트 >= 1
+	PRINTFORM [듀얼리스트][인간]
+ELSE
+	IF TALENT:캐릭터_ID:속성 == 1
+		PRINT [（빛）]
+	ELSEIF TALENT:캐릭터_ID:속성 == 2
+		PRINT [（어둠）]
+	ELSEIF TALENT:캐릭터_ID:속성 == 3
+		PRINT [（땅）]
+	ELSEIF TALENT:캐릭터_ID:속성 == 4
+		PRINT [（물）]
+	ELSEIF TALENT:캐릭터_ID:속성 == 5
+		PRINT [（화염）]
+	ELSEIF TALENT:캐릭터_ID:속성 == 6
+		PRINT [（바람）]
+	ENDIF
+	PRINTFORM [%GET_TALENTNAME(191,TALENT:캐릭터_ID:종족)%]
+ENDIF
+
+;PRINT 함락소질：
+FOR LOCAL,3,10
+	CONTINUE
+	IF STRLENS(GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL))
+		PRINTFORM [%GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)%]
+		LOCALS += GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)
+		IF STRLENS(LOCALS) > 50
+			LOCALS = ""
+			PRINTL
+		ENDIF
+	ENDIF
+NEXT
+PRINTL
+VARSET LOCALS
+SETCOLOR C_L_GRAY
+PRINT 　정신특징：
+RESETCOLOR
+FOR LOCAL,10,40
+	IF STRLENS(GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL))
+		IF STRLENS(LOCALS) > 50
+			LOCALS = ""
+			PRINTL 
+			PRINT 　　　　　　
+		ENDIF
+		PRINTFORM [%GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)%]
+		LOCALS += GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)
+	ENDIF
+NEXT
+
+PRINTL
+VARSET LOCALS
+SETCOLOR C_L_GRAY
+PRINT 　성적특징：
+RESETCOLOR
+FOR LOCAL,0,10
+	SIF LOCAL == 7
+		CONTINUE
+	IF STRLENS(GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL))
+		SIF LOCAL == 1 && !(TALENT:캐릭터_ID:2 & 2)
+			CONTINUE
+		IF STRLENS(LOCALS) > 50
+			LOCALS = ""
+			PRINTL 
+			PRINT 　　　　　　
+		ENDIF
+
+		PRINTFORM [%GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)%]
+		LOCALS += GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)
+	ENDIF
+NEXT
+
+FOR LOCAL,60,100
+	IF STRLENS(GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL))
+		IF STRLENS(LOCALS) > 50
+			LOCALS = ""
+			PRINTL 
+			PRINT 　　　　　　
+		ENDIF
+		;人間不信の치료
+		IF LOCAL == 81 && CFLAG:캐릭터_ID:호감도 >= 100000 && TALENT:캐릭터_ID:LOCAL >= 3
+			PRINTFORM [당신 의존]
+			LOCALS += "[あなた依存]"
+		ELSE
+			PRINTFORM [%GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)%]
+			LOCALS += GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)
+		ENDIF
+	ENDIF
+NEXT
+PRINTL
+
+VARSET LOCALS
+SETCOLOR C_L_GRAY
+PRINT 　기술소질：
+RESETCOLOR
+FOR LOCAL,50,60
+	IF STRLENS(GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL))
+		IF STRLENS(LOCALS) > 50
+			LOCALS = ""
+			PRINTL 
+			PRINT 　　　　　　
+		ENDIF
+		PRINTFORM [%GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)%]
+		LOCALS += GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)
+	ENDIF
+NEXT
+PRINTL
+
+VARSET LOCALS
+SETCOLOR C_L_GRAY
+PRINT 　신체특징：
+RESETCOLOR
+FOR LOCAL,40,50
+	IF STRLENS(GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL))
+		IF STRLENS(LOCALS) > 50
+			LOCALS = ""
+			PRINTL 
+			PRINT 　　　　　　
+		ENDIF
+		PRINTFORM [%GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)%]
+		LOCALS += GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)
+	ENDIF
+NEXT
+FOR LOCAL,100,130
+	IF STRLENS(GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL))
+		IF STRLENS(LOCALS) > 50
+			LOCALS = ""
+			PRINTL 
+			PRINT 　　　　　　
+		ENDIF
+		IF LOCAL == 121
+			PRINTFORM [%GET_TALENTNAME(LOCAL,BUST_SIZE(캐릭터_ID))%]
+		ELSE
+			PRINTFORM [%GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)%]
+		ENDIF
+		LOCALS += GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)
+	ENDIF
+NEXT
+IF HAS_PENIS(캐릭터_ID)
+	IF STRLENS(GET_TALENTNAME(250,TALENT:캐릭터_ID:250))
+		IF STRLENS(LOCALS) > 50
+			LOCALS = ""
+			PRINTL 
+			PRINT 　　　　　　
+		ENDIF
+		PRINTFORM [%GET_TALENTNAME(250,TALENT:캐릭터_ID:250)%]
+		LOCALS += GET_TALENTNAME(250,TALENT:캐릭터_ID:250)
+	ENDIF
+ENDIF
+
+
+
+PRINTL
+VARSET LOCALS
+SETCOLOR C_L_GRAY
+PRINT  　그　외 ：
+RESETCOLOR
+FOR LOCAL,130,180
+	SIF LOCAL == 131
+		CONTINUE
+	IF STRLENS(GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL))
+		PRINTFORM [%GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)%]
+		LOCALS += GET_TALENTNAME(LOCAL,TALENT:캐릭터_ID:LOCAL)
+		IF STRLENS(LOCALS) > 50
+			LOCALS = ""
+			PRINTL 
+			PRINT 　　　　　　
+		ENDIF
+	ENDIF
+NEXT
+PRINTL
+IF TALENT:캐릭터_ID:모브 >= 1
+	SETCOLOR C_L_GRAY
+	PRINT 　모브종　：
+	RESETCOLOR
+	PRINTFORM [%GET_TALENTNAME(200,TALENT:캐릭터_ID:모브)%]
+	PRINTL
+ENDIF
+
+VARSET LOCALS
+SETCOLOR C_L_GRAY
+PRINT  　각　인 ：
+RESETCOLOR
+PRINT_MARK 캐릭터_ID
+[SKIPSTART]
+CALL PREPARE_DUEL_THUMBNAIL(캐릭터_ID)
+SRC_WIDTH = GWIDTH(22)
+SRC_HEIGHT = GHEIGHT(22)
+LOCALS = <img src='CROP_THUMBNAIL' srcb='' height='{400}'>
+HTML_PRINT LOCALS,30
+[SKIPEND]
+
+終了時LCOUNT = LINECOUNT
+IF 終了時LCOUNT - 開始時LCOUNT < 12
+	REPEAT  12 - (終了時LCOUNT - 開始時LCOUNT)
+		PRINTL
+	REND
+ENDIF
+
+
+;-------------------------------------------------
+;関数名:GET_TALENTNAME
+;概　要:素質名취득関数
+;引　数:ARG:0…TALENT登録番号
+;　　　:ARG:1…TALENTの中身
+;戻り値:素質名
+;備　考:文中関数
+;素質の名前を返す。
+;-------------------------------------------------
+@GET_TALENTNAME(ARG,ARG:1)
+#FUNCTIONS
+SELECTCASE ARG
+	;성별
+	CASE 1
+		IF ARG:1 == 0
+			RETURNF "동정"
+		ELSEIF ARG:1 == 1
+			RETURNF "V경험함"
+		ELSEIF ARG:1 == 2
+			RETURNF "A경험함"
+		ELSEIF ARG:1 == 3
+			RETURNF "양쪽구멍경험함"
+		ENDIF
+	;성별
+	CASE 2
+		IF ARG:1 == 3
+			RETURNF "후타나리"
+		ELSEIF ARG:1 == 2
+			RETURNF "남성"
+		ELSEIF ARG:1 == 1
+			RETURNF "여성"
+		ENDIF
+	;연모/친애
+	CASE 3
+		IF ARG:1 == 1
+			RETURNF "연정"
+		ELSEIF ARG:1 == 2
+			RETURNF "친애"
+		ENDIF
+	;배짱
+	CASE 10
+		IF ARG:1 == -1
+			RETURNF "겁쟁이"
+		ELSEIF ARG:1 == 1
+			RETURNF "당당함"
+		ENDIF
+	;태도
+	CASE 11
+		IF ARG:1 == -1
+			RETURNF "솔직"
+		ELSEIF ARG:1 == 1
+			RETURNF "반항적"
+		ENDIF
+	;반응
+	CASE 12
+		IF ARG:1 == -1
+			RETURNF "얌전함"
+		ELSEIF ARG:1 == 1
+			RETURNF "건방짐"
+		ENDIF
+	;프라이드
+	CASE 13
+		IF ARG:1 == -1
+			RETURNF "프라이드 낮음"
+		ELSEIF ARG:1 == 1
+			RETURNF "프라이드 높음"
+		ENDIF
+	;츤／데레
+	CASE 14
+		IF ARG:1 == -1
+			RETURNF "데레데레"
+		ELSEIF ARG:1 == 1
+			RETURNF "츤데레"
+		ENDIF
+	;성적흥미
+	CASE 23
+		IF ARG:1 == -1
+			RETURNF "보수적"
+		ELSEIF ARG:1 == 1
+			RETURNF "호기심"
+		ENDIF
+	;양기／음기,
+	CASE 24
+		IF ARG:1 == -1
+			RETURNF "음기"
+		ELSEIF ARG:1 == 1
+			RETURNF "양기"
+		ENDIF
+	;目立ちたがり/引っ込み思案,
+	CASE 26
+		IF ARG:1 == -1
+			RETURNF "틀어박히기 안건"
+		ELSEIF ARG:1 == 1
+			RETURNF "관심받고싶음"
+		ENDIF
+	;페이스배분,
+	CASE 28
+		IF ARG:1 == -1
+			RETURNF "마이페이스"
+		ELSEIF ARG:1 == 1
+			RETURNF "덜렁대다"
+		ENDIF
+	;정조観念
+	CASE 30
+		IF ARG:1 == -1
+			RETURNF "정조무관심"
+		ELSEIF ARG:1 == 1
+			RETURNF "정조관념"
+		ENDIF
+	;자기애
+	CASE 31
+		IF ARG:1 == -1
+			RETURNF "억압"
+		ELSEIF ARG:1 == 1
+			RETURNF "해방"
+		ENDIF
+	;수치심
+	CASE 33
+		IF ARG:1 == -1
+			RETURNF "수치심옅음"
+		ELSEIF ARG:1 == 1
+			RETURNF "부끄럼쟁이"
+		ENDIF
+	;통각
+	CASE 40
+		IF ARG:1 == -1
+			RETURNF "아픔에 강함"
+		ELSEIF ARG:1 == 1
+			RETURNF "아픔에 약함"
+		ENDIF
+	;젖기쉬움정도
+	CASE 41
+		IF ARG:1 == -1
+			RETURNF "젖기 힘듬"
+		ELSEIF ARG:1 == 1
+			RETURNF "젖기 쉬움"
+		ENDIF
+	;습득속도
+	CASE 50
+		IF ARG:1 == -1
+			RETURNF "습득 느림"
+		ELSEIF ARG:1 == 1
+			RETURNF "습득 빠름"
+		ENDIF
+	;악취내성
+	CASE 61
+		IF ARG:1 == -2
+			RETURNF "결벽증"
+		ELSEIF ARG:1 == -1
+			RETURNF "악취민감"
+		ELSEIF ARG:1 == 1
+			RETURNF "악취둔감"
+		ELSEIF ARG:1 == 2
+			RETURNF "더러움 무시"
+		ENDIF
+	;쾌락반응
+	CASE 70
+		IF ARG:1 == -1
+			RETURNF "쾌감의 부정"
+		ELSEIF ARG:1 == 1
+			RETURNF "쾌감에 솔직"
+		ENDIF
+	CASE 72
+		IF ARG:1 == -1
+			RETURNF "버그데이즈"
+		ELSEIF ARG:1 == 1
+			RETURNF "즉시타락"
+		ELSEIF ARG:1 == 2
+			RETURNF "허접암컷"
+		ENDIF
+	;성별嗜好
+	CASE 81
+
+	
+		IF ARG:1 == -1
+			RETURNF "양날의 검"
+		ELSEIF ARG:1 == 3
+			RETURNF "인간불신"
+		ELSEIF ARG:1 == 1
+			RETURNF "남성혐오"
+		ELSEIF ARG:1 == 2
+			RETURNF "여성혐오"
+		ENDIF
+	;체형
+	CASE 100
+		IF ARG:1 == -4
+			RETURNF "손바닥사이즈"
+		ELSEIF ARG:1 == -3
+			RETURNF "소인"
+		ELSEIF ARG:1 == -2
+			RETURNF "유아체형"
+		ELSEIF ARG:1 == -1
+			RETURNF "작은체형"
+		ELSEIF ARG:1 == 1
+			RETURNF "장신"
+		ELSEIF ARG:1 == 2
+			RETURNF "큰체형"
+		ELSEIF ARG:1 == 3
+			RETURNF "거인"
+		ENDIF
+	;Ｃ감도
+	CASE 101
+		IF ARG:1 == -1
+			RETURNF "Ｃ둔감"
+		ELSEIF ARG:1 == 1
+			RETURNF "Ｃ민감"
+		ENDIF
+	;Ｖ감도
+	CASE 102
+		IF ARG:1 == -1
+			RETURNF "Ｖ둔감"
+		ELSEIF ARG:1 == 1
+			RETURNF "Ｖ민감"
+		ENDIF
+	;Ａ감도
+	CASE 103
+		IF ARG:1 == -1
+			RETURNF "Ａ둔감"
+		ELSEIF ARG:1 == 1
+			RETURNF "Ａ민감"
+		ENDIF
+	;Ｂ감도
+	CASE 104
+		IF ARG:1 == -1
+			RETURNF "Ｂ둔감"
+		ELSEIF ARG:1 == 1
+			RETURNF "Ｂ민감"
+		ENDIF
+	;Ｍ감도
+	CASE 105
+		IF ARG:1 == -1
+			RETURNF "Ｍ둔감"
+		ELSEIF ARG:1 == 1
+			RETURNF "Ｍ민감"
+		ENDIF
+	;용모
+	CASE 116
+		IF ARG:1 == -1
+			RETURNF "추악"
+		ELSEIF ARG:1 == 1
+			RETURNF "용모단정"
+		ENDIF
+	;연령
+	CASE 117
+		IF ARG:1 == -2
+			RETURNF "어린이"
+		ELSEIF ARG:1 == -1
+			RETURNF "10대"
+		ELSEIF ARG:1 == 0
+			RETURNF "성년"
+		ELSEIF ARG:1 == 1
+			RETURNF "어른"
+		ELSEIF ARG:1 == 2
+			RETURNF "중년"
+		ENDIF
+
+	;体系
+	CASE 120
+		IF ARG:1 == 1
+			RETURNF "살찔기미"
+		ELSEIF ARG:1 == 2
+			RETURNF "포동포동"
+		ELSEIF ARG:1 == 3
+			RETURNF "통통❤"
+		ELSEIF ARG:1 == 4
+			RETURNF "뚱뚱"
+		ELSEIF ARG:1 == 5
+			RETURNF "운동해라"
+		ENDIF
+	;가슴사이즈
+	CASE 121
+		IF ARG:1 == -3
+			RETURNF "허무"
+		ELSEIF ARG:1 == -2
+			RETURNF "절벽"
+		ELSEIF ARG:1 == -1
+			RETURNF "빈유"
+		ELSEIF ARG:1 == 0
+			RETURNF "평유"
+		ELSEIF ARG:1 == 1
+			RETURNF "거유"
+		ELSEIF ARG:1 == 2
+			RETURNF "폭유"
+		ELSEIF ARG:1 == 3
+			RETURNF "소 젖"
+		ELSEIF ARG:1 == 4
+			RETURNF "마유"
+		ELSEIF ARG:1 == 5
+			RETURNF "규격 외（젖）"
+		ELSEIF ARG:1 >= 6
+			LOCALS = 規格外（乳）+{ARG:1 - 5}
+			RETURNF LOCALS
+
+		ENDIF
+	;おしりサイズ
+	CASE 122
+		IF ARG:1 == -1
+			RETURNF "얇은허벅지"
+		ELSEIF ARG:1 == 1
+			RETURNF "통통한 허벅지"
+		ELSEIF ARG:1 == 2
+			RETURNF "육중한 허벅지"
+		ELSEIF ARG:1 == 3
+			RETURNF "거대한 허벅지"
+		ENDIF
+	;가슴사이즈
+	CASE 128
+		IF ARG:1 == -1
+			RETURNF "얇은엉덩이"
+		ELSEIF ARG:1 == 0
+			RETURNF "보통엉덩이"
+		ELSEIF ARG:1 == 1
+			RETURNF "안산형"
+		ELSEIF ARG:1 == 2
+			RETURNF "큰 엉덩이"
+		ELSEIF ARG:1 >= 3
+			RETURNF "질량병기"
+		ENDIF
+	CASE 123
+		IF ARG:1 == -4
+			RETURNF "쓸데없는 뿔"
+		ELSEIF ARG:1 == -3
+			RETURNF "부러진 뿔"
+		ELSEIF ARG:1 == -2
+			RETURNF "반 뿔"
+		ELSEIF ARG:1 == -1
+			RETURNF "가공된 뿔"
+		ELSEIF ARG:1 == 1
+			RETURNF "뿔"
+		ELSEIF ARG:1 == 2
+			RETURNF "훌륭한 뿔"
+		ENDIF
+	;회복속도
+	CASE 130
+		IF ARG:1 == -1
+			RETURNF "회복느림"
+		ELSEIF ARG:1 == 1
+			RETURNF "회복빠름"
+		ENDIF
+	;エクストラ
+	CASE 131
+		IF ARG:1 == 1
+			RETURNF "듀얼리스트"
+		ENDIF
+	CASE 140
+		IF ARG:1 == 1
+			RETURNF "외부자"
+		ENDIF
+	;회복속도
+	CASE 125
+		IF ARG:1 == -2
+			RETURNF "에너지체"
+		ELSEIF ARG:1 == -1
+			RETURNF "슬라임체"
+		ELSEIF ARG:1 == 1
+			RETURNF "경질체"
+		ELSEIF ARG:1 == 2
+			RETURNF "영체"
+		ENDIF
+	CASE 162
+		IF ARG:1 == 1
+			RETURNF "음란"
+		ELSEIF ARG:1 == 2
+			RETURNF "쾌락광"
+		ENDIF
+	CASE 190
+		IF ARG:1 == 1
+			RETURNF "빛속성"
+		ELSEIF ARG:1 == 2
+			RETURNF "어둠속성"
+		ELSEIF ARG:1 == 3
+			RETURNF "땅속성"
+		ELSEIF ARG:1 == 4
+			RETURNF "물속성"
+		ELSEIF ARG:1 == 5
+			RETURNF "화염속성"
+		ELSEIF ARG:1 == 6
+			RETURNF "바람속성"
+		ENDIF
+	CASE 191
+		IF ARG:1 == 1
+			RETURNF "마법사족"
+		ELSEIF ARG:1 == 2
+			RETURNF "드래곤족"
+		ELSEIF ARG:1 == 3
+			RETURNF "언데드족"
+		ELSEIF ARG:1 == 4
+			RETURNF "전사족"
+		ELSEIF ARG:1 == 5
+			RETURNF "기계족"
+		ELSEIF ARG:1 == 6
+			RETURNF "야수족"
+		ELSEIF ARG:1 == 7
+			RETURNF "비행야수족"
+		ELSEIF ARG:1 == 8
+			RETURNF "비늘야수족"
+		ELSEIF ARG:1 == 9
+			RETURNF "악마족"
+		ELSEIF ARG:1 == 10
+			RETURNF "천사족"
+		ELSEIF ARG:1 == 11
+			RETURNF "곤충족"
+		ELSEIF ARG:1 == 12
+			RETURNF "원소정령족"
+		ELSEIF ARG:1 == 13
+			RETURNF "식물족"
+		ELSEIF ARG:1 == 14
+			RETURNF "사이킥족"
+		ELSEIF ARG:1 == 15
+			RETURNF "사이버스족"
+		ELSEIF ARG:1 == 16
+			RETURNF "바다생물족"
+		ELSEIF ARG:1 == 17
+			RETURNF "미확인족"
+		ELSEIF ARG:1 == 20
+			RETURNF "환신야수족"
+		ENDIF
+	CASE 250
+		IF ARG:1 == 1
+			RETURNF "암컷쥬지"
+		ELSEIF ARG:1 == 2
+			RETURNF "미성숙"
+		ELSEIF ARG:1 == 3
+			RETURNF "작은자지"
+		ELSEIF ARG:1 == 4
+			RETURNF "평범한"
+		ELSEIF ARG:1 == 5
+			RETURNF "큰 편"
+		ELSEIF ARG:1 == 6
+			RETURNF "두꺼운"
+		ELSEIF ARG:1 == 7
+			RETURNF "암컷죽이기"
+		ELSEIF ARG:1 == 8
+			RETURNF "신근"
+		ENDIF
+	CASE 195
+		IF ARG:1 == 1
+			RETURNF "아카데미아"
+		ELSEIF ARG:1 == 2
+			RETURNF "그 외의 학교"
+		ENDIF
+
+	CASE 173
+		IF ARG:1 == 1
+			RETURNF "카드의 정령"
+		ELSEIF ARG:1 == 2
+			RETURNF "이세계의 주민"
+		ELSEIF ARG:1 == 3
+			RETURNF "똑닮은 사람"
+		ELSEIF ARG:1 == 4
+			RETURNF "클론"
+		ELSEIF ARG:1 == 5
+			RETURNF "안티"
+		ENDIF
+	CASE 200
+		IF ARG:1 == 1
+			RETURNF "매지션"
+		ELSEIF ARG:1 == 2
+			RETURNF "깡패아이"
+		ELSEIF ARG:1 == 3
+			RETURNF "오컬트오타쿠"
+		ELSEIF ARG:1 == 4
+			RETURNF "알바전사"
+		ELSEIF ARG:1 == 5
+			RETURNF "메카닉"
+		ELSEIF ARG:1 == 6
+			RETURNF "농부"
+		ELSEIF ARG:1 == 7
+			RETURNF "힙합퍼"
+		ELSEIF ARG:1 == 8
+			RETURNF "Ｂ급마니아"
+		ELSEIF ARG:1 == 9
+			RETURNF "지뢰걸"
+		ELSEIF ARG:1 == 10
+			RETURNF "수녀님"
+		ELSEIF ARG:1 == 11
+			RETURNF "걸스카우트"
+		ELSEIF ARG:1 == 12
+			RETURNF "연금술사"
+		ELSEIF ARG:1 == 13
+			RETURNF "플로리스트"
+		ELSEIF ARG:1 == 14
+			RETURNF "자칭우주인"
+		ELSEIF ARG:1 == 15
+			RETURNF "하이스코어 걸"
+		ELSEIF ARG:1 == 16
+			RETURNF "수영복 갸루"
+		ELSEIF ARG:1 == 17
+			RETURNF "이상한 리포터"
+		ELSEIF ARG:1 == 20
+			RETURNF "아카데미아 학생"
+
+		ENDIF
+	CASEELSE
+		SIF ARG:1
+			RETURNF @"%TALENTNAME:ARG%"
+ENDSELECT
+
+@PRINT_STATE_EXP(ARG)
+#DIMS DYNAMIC ローカル
+PRINTL
+PRINTL □ 경험 □——————————————————————————————————————————————————————————————————————————————————————
+;PRINTL □ 경험—————————————————————————————————————————————————————————————————————————————————————————
+LOCAL:1 = 0
+FOR LOCAL,0,100
+	;未경험を표시させない
+	SIF !EXP:ARG:LOCAL
+		CONTINUE
+	;同性愛관계
+	IF !(TALENT:ARG:2 & 1) && LOCAL == 51
+		CONTINUE
+	ELSEIF TALENT:ARG:2 & 1 && LOCAL == 52
+		CONTINUE
+	ENDIF
+	;改行or표시위치あけ
+	SIF LOCAL:1 % 5 == 0 && LOCAL:1 != 0
+		PRINTL 
+	PRINTFORM %EXPNAME:LOCAL,12%:{EXP:ARG:LOCAL,5,LEFT} 
+	LOCAL:1 += 1
+
+NEXT
+@PRINT_STATE_JUEL(ARG)
+PRINTL
+PRINTL □ 보주 □——————————————————————————————————————————————————————————————————————————————————————
+LOCAL:1 = 0
+FOR LOCAL,0,22
+	;PALAM.CSVに名称が登録されていないとCONTINUE
+	SIF !STRLENS(PALAMNAME:LOCAL)
+		CONTINUE
+	;윤활
+	SIF LOCAL == 9
+		CONTINUE
+	;1000,1000000,単位で区切る
+	LOCALS = {JUEL:ARG:LOCAL}
+	SIF JUEL:ARG:LOCAL > 1000000
+		LOCALS = {JUEL:ARG:LOCAL / 1000}k
+	SIF JUEL:ARG:LOCAL > 1000000000
+		LOCALS = {JUEL:ARG:LOCAL / 1000000}m
+	PRINTFORM %PALAMNAME:LOCAL,6%의 보주:%LOCALS,7,LEFT%
+	LOCAL:1 += 1
+	;改行or표시위치あけ
+	SIF LOCAL:1 % 4 == 0
+		PRINTL 
+NEXT
+;부정の珠
+LOCALS = {JUEL:ARG:100}
+SIF JUEL:ARG:100 > 1000000
+	LOCALS = {JUEL:ARG:100 / 1000}k
+PRINTFORM %PALAMNAME:100,6%의 보주:%LOCALS,7,LEFT%
+
+@PRINT_STATE_EX(ARG)
+SIF EX:ARG:Ｃ절정 + EX:ARG:Ｖ절정 + EX:ARG:Ａ절정 + EX:ARG:Ｂ절정 + EX:ARG:분유 + EX:ARG:사정 == 0
+	RETURN 0
+LOCAL:1 = 0
+PRINTL
+PRINTL □ 절정횟수 □——————————————————————————————————————————————————————————————————————————————————————
+FOR LOCAL,0,20
+	SIF !STRLENS(EXNAME:LOCAL)
+		CONTINUE
+	SIF !EX:LOCAL
+		CONTINUE
+	PRINTFORM %EXNAME:LOCAL,12%:{EX:ARG:LOCAL,5,LEFT}
+	LOCAL:1 ++
+	IF LOCAL:1 == 5
+		PRINTL
+		LOCAL:1 = 0
+	ENDIF
+NEXT
+PRINT

@@ -1,0 +1,91 @@
+﻿;-------------------------------------------------
+;角削り
+;ハードな조교コマンド、レベル4
+;-------------------------------------------------
+@COM151
+#DIM DYNAMIC リピート횟수
+#DIM DYNAMIC カウンタ
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+IF TALENT:TARGET:뿔이남 == -4
+	PRINTFORML 뿔을 바치려 해도、이미 제대로 뗄 수 있는 뿔은 없습니다。
+	RETURN 0
+ENDIF
+PRINTFORML 뿔을 깎기 위해、 %CALLNAME:TARGET%를 의자에 앉히고 날뛰지 않게 묶은 다음 아픔에 버티기 위해 천을 물게했습니다。
+PRINTFORML %CALLNAME:TARGET%는 공포와 기대에 가득찬 눈으로…덜그럭、덜그럭 하며 준비된 공구를 쳐다봅니다。
+PRINTFORML 그러면、어떻게 뿔을 가공해줄까요？
+PRINTFORML 
+PRINTL [1] - 쇠줄로 깎는다
+PRINTL [2] - 드릴로 구멍을 뚫는다
+PRINTL [3] - 톱을 사용한다
+;SIF TALENT:MASTER:근육질
+;	PRINTL [4] - 腕力でへし折る
+PRINTL 
+PRINTL [100] - 돌아간다
+BINPUT
+IF RESULT == 1
+	リピート횟수 = 1
+	PRINTFORML 쓱삭……쓱삭쓱삭……❤　움찔……움찔…❤
+	PRINTFORML 쓱삭❤！　움찔…❤움찔……❤
+	PRINTFORML 서걱서걱서걱……っ❤셔걱……❤　움찔움찔움찔…❤부들부들부들…❤
+ELSEIF RESULT == 2
+	リピート횟수 = 2
+	PRINTFORML 기이이잉…！！！키이이이이이이잉…！！！！　「후ー읏…❤！！훗후ー읏❤！？」
+	PRINTFORML 끼리리리릭…！！！그륵그륵그륵그륵그륵그륵…！！！！바바바바바박！！！
+	PRINTFORML 움찔움찔움찔 부들부들부들부들～～～～❤「＃゛＄％＆＊％゛＄゛～～～～゛～～～❤！？！？！？」
+ELSEIF RESULT == 3
+	リピート횟수 = 4
+	PRINTFORML 서걱…스걱…서걱서걱스걱스걱！！！「후ー읏…❤！！훗후ー읏❤！？」
+	PRINTFORML 끼긱끼긱서걱！끼긱끼긱서걱서걱！「응규핏❤！？　응규밧！？」
+	PRINTFORML 끼긱끼긱끼긱끼긱……또각「응호❤！？　호오오오옷！？＄％＆＄゛～～～～゛～～～❤！！！」
+;ELSEIF RESULT == 4
+;	リピート횟수 = RAND:4 + 1
+ENDIF
+FOR カウンタ,0,リピート횟수
+	;消費체력、기력
+	DOWNBASE:체력 += 300
+	DOWNBASE:기력 += 150
+	CALL SOURCE_CALC_정복(TARGET, MASTER, 200)
+	CALL SOURCE_CALC_拘束(TARGET, MASTER, 300)
+	;固定値
+	CALL SOURCE_CALC_고통(TARGET, MASTER, 1000)
+	EXP:이상경험 ++
+	TALENT:TARGET:뿔이남 += -1
+NEXT
+
+SIF TALENT:TARGET:뿔이남 <= -4
+	TALENT:TARGET:뿔이남 = -4
+SIF TALENT:TARGET:뿔이남 == 0
+	TALENT:TARGET:뿔이남 = -1
+
+
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+TIME += 60
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE151
+;角削り
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(151)
+	RETURN RESULT
+;순종が4以上かつ마조끼が4以上じゃないと実行できない
+SIF ABL:순종 <= 3 || ABL:마조끼 <= 3
+	RETURN 0
+SIF TALENT:TARGET:뿔이남 == 0
+	RETURN 0
+;主人が금단의지식持ちじゃないとダメ
+SIF TALENT:MASTER:금단의지식 == 0
+	RETURN 0
+;침대ルームでないとダメ
+SIF !BEDROOM(CFLAG:MASTER:현재위치)
+	RETURN 0
+RETURN 1

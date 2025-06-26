@@ -1,0 +1,151 @@
+﻿@CARDNAME_81228,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 트릭스터 디퓨전
+	CASE "略称"
+RESULTS = 트릭스터 디퓨전
+	CASE "カテゴリ"
+RESULTS:0 = 트릭스터
+RESULTS:1 = 융합
+ENDSELECT
+
+
+@CARD_81228(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_81228(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動,フリー誘発)
+PRINTL ①: 다음의 효과에서 하나를 선택하여 발동할 수 있다.
+PRINTL ●자신의 묘지의 몬스터를 융합 소재로서 제외하고, 「트릭스터」 융합 몬스터 1장을 융합 소환한다.
+PRINTL ●「트릭스터」 L 몬스터 1장의 L 소환을 실행한다.
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ②: 묘지의 이 카드를 제외하고,
+PRINTL 자신 필드의 「트릭스터」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 이 턴, 그 몬스터가 자신 필드에 앞면 표시로 존재하는 한,
+PRINTL 상대 몬스터는 대상의 몬스터밖에 공격 대상으로 선택할 수 없다.
+
+
+
+@CARDCAN_81228(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,81228)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,81228)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲묘지 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 트릭스터
+	효과条件종류:0 = 융합
+	효과条件종류:1 = 링크
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,81228)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 트릭스터
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_81228(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ドロー枚数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81228,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL RESETAREA_MAT
+		素材範囲묘지 = 1
+		CALL FULLRESET
+		효과条件カテゴリ = 트릭스터
+		효과条件종류:0 = 융합
+		효과条件종류:1 = 링크
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			TRYCALLFORM CARD_{選択カード_ID},"종류"
+			IF RESULT == 융합
+				CALL FUSSUMMON(듀얼리스트,選択カード)
+			ELSEIF RESULT == 링크
+				CALL LINSUMMON(듀얼리스트,選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81228,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 트릭스터
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",RESULT,"攻誘",1,1)
+		ENDIF
+	ENDIF
+ENDIF

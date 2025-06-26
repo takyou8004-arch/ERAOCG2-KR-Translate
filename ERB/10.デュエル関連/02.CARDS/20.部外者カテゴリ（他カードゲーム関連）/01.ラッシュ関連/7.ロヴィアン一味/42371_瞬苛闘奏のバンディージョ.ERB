@@ -1,0 +1,175 @@
+﻿@CARDNAME_42371,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 순가 투주의 밴디지
+	CASE "略称"
+RESULTS = 순가 투주 밴디
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_42371(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 융합
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 사이킥족 
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2100
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_42371(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「투주의 밴디지」＋「피들바두르」
+PRINTL 이 카드 이름의 ①의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ①: 자신 또는 상대의 메인 페이즈에 발동할 수 있다.
+PRINTL 자신은 1장 드로우한다.
+PRINTL 그 후, 이 카드의 공격력은, 서로의 패의 수의 합계 ×500 올린다.
+PRINTL 자신의 손패가 상대보다 적을 경우, 추가로 상대 필드의 카드 1장을 고르고 파괴할 수 있다.
+CALLFORM CARD_ABLE(0,필드→묘지,破壊→묘지,戦闘→묘지,필드→戦離)
+PRINTL ②: 이 카드가 필드를 벗어났을 경우, 자신 필드의 몬스터(바람 속성 / 사이킥족) 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 자신의 묘지의 장착 마법 카드를 임의의 매수만큼 고르고, 대상 몬스터에게 장착한다.
+
+@CARDSUMMON_42371(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+IF EX参照 == 0 || EX参照 == 1
+素材条件名前 = 투주의 반디죠
+ELSEIF EX参照 >= 10
+素材条件名前 = 피들바두르
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,42371) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_42371(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,42371)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	IF 듀얼리스트 != "자신" && ターンプレイヤー != 듀얼리스트
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지 || 종류 == 필드→戦離
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 바람속성
+	효과条件종족 = 사이킥족
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 装備마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_42371(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 繰り返し횟수
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42371,1)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+		攻撃力修正 = (손패数(対面者) + 손패数(듀얼리스트)) * 500
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",攻撃力修正)
+
+		IF 손패数(対面者) > 손패数(듀얼리스트)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지 || 종류 == 필드→戦離
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42371)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件속성 = 바람속성
+		효과条件종족 = 사이킥족
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			繰り返し횟수 = 5 - 마함数(듀얼리스트)
+			REPEAT 繰り返し횟수
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件종류 = 装備마법
+				CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,選択カード)
+				SIF RESULT != 1
+					BREAK
+			REND 
+		ENDIF
+	ENDIF
+ENDIF

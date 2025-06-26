@@ -1,0 +1,125 @@
+﻿@CARDNAME_73351,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성유물로 이르는 열쇠
+	CASE "略称"
+RESULTS = 성유물이르는열쇠
+	CASE "カテゴリ"
+RESULTS:0 = 성유물
+ENDSELECT
+
+
+@CARD_73351(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73351(종류)
+#DIM DYNAMIC 종류
+
+
+CALLFORM CARD_ABLE(0,마함起動 ,손패起動)
+PRINTL ①: 이 카드의 발동 시에, 제외되어 있는 자신의 카드 중에서,
+PRINTL "잭나이츠" 몬스터 1체 또는 "성유물" 카드 1장을 대상으로 할 수 있다.
+PRINTL 그 경우, 그 카드를 패에 넣는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신 필드의 "잭나이츠" 몬스터는 함정 내성을 얻는다.
+CALLFORM CARD_ABLE(0,발동誘発)
+PRINTL ③: 자신 필드에 "잭나이츠" 몬스터가 5체 존재할 경우,
+PRINTL 상대가 함정 카드의 효과를 발동했을 때 발동할 수 있다.
+PRINTL 그 발동을 무효로 한다.
+
+@CARDCAN_73351(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73351)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "마함"
+	 	RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 잭나이츠
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	 SIF RESULT != 5
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+    RETURN 1
+ENDIF
+
+@CARDEFFECT_73351(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73351)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件カテゴリ:0 = 잭나이츠
+		효과条件カテゴリ:1 = 성유물
+		효과条件任意 = 1
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 잭나이츠
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"함정耐")
+
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73351)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

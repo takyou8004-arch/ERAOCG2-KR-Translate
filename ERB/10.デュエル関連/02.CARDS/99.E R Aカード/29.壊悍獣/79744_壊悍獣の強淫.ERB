@@ -1,0 +1,194 @@
+@CARDNAME_79744,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 괴한수의 강음
+	CASE "略称"
+		RESULTS = 괴한수의 강음
+	CASE "カテゴリ"
+		RESULTS:0 = 괴한수
+		RESULTS:1 = 괴한에 물든 경계의 날개
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+@CARD_79744(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250420
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_79744(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_79744(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL 이 카드명의  ①②의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+PRINTL ①：패의 "계한전희의 정환수" １장을 제외하고 발동할 수 있다。
+PRINTL 상대 필드의 수컷 / 무성 몬스터 １장을 골라 묘지로 보내고、ＥＸ덱에서 "계한전희 프레세리아" １장을 소환조건을 무시하고 상대 필드에 특수 소환한다。
+PRINTL 이 때、이 효과로 묘지에 보내진 몬스터를、"계한전희 프레세리아"의 특수 소환 소재로 릴리스한 암컷 몬스터로 취급한다。
+CALL CARD_ABLE(2,묘지起動)
+PRINTL ②：자신 메인 페이즈에 묘지의 이 카드를 제외하고、
+PRINTL 자신 필드의 레벨７ 이상의 "괴한수" 수컷 몬스터 １장과 자신 / 상대 필드의 "괴한 플랜트" 카드 １장을 대상으로 하고 발동할 수 있다。
+PRINTL 그 "괴한 플랜트" 카드에 악성 카운터를 １개 놓는다。
+PRINTL "괴한 플랜트" 카드가 "계한전희" 또는 "괴한수" 몬스터인 경우、대신에 악성 카운터를 ２개 놓는다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79744(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79744)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,79744)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件名前 = 계한전희의 정환수
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 雌以外
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件名前 = 계한전희 프레세리아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79744)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 괴한수
+	효과条件성별 = 雄性
+	CALLFORM 효과条件レベル_ADV(7, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 괴한플랜트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79744(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 変身カードID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79744,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件名前 = 계한전희의 정환수
+		효과条件行先플래그 = 제외行き
+	    CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과条件성별 = 雌以外
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				変身カードID = RESULT:1
+				CALL FULLRESET
+				효과範囲EX덱 = 1
+				효과条件名前 = 계한전희 프레세리아
+				CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+				IF RESULT != 9999
+					CALL CARD_EX_SUMMON_PLEASUREHEROIN(듀얼리스트,選択カード（CS）,変身カードID)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79744,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+	    효과範囲필드 = 1
+	    효과条件カテゴリ = 괴한수
+	    효과条件성별 = 雄性
+	    CALLFORM 효과条件レベル_ADV(7, "以上")
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+            選択カード = RESULT:99
+			CALL FULLRESET
+	        효과範囲필드 = 1
+	        효과範囲마함 = 1
+	        효과範囲상대필드 = 1
+	        효과範囲상대마함 = 1
+	        효과条件カテゴリ = 괴한플랜트
+	        CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		    IF RESULT != 9999
+                CALL TRAIN_PLEASUREBEAST(듀얼리스트,RESULT,RESULT:99,選択カード)
+            ENDIF
+        ENDIF
+	ENDIF
+ENDIF

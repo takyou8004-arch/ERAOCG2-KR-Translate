@@ -1,0 +1,380 @@
+﻿@STATCHANGE_BASIC(듀얼리스트,효과範囲,場所,修正値,守備修正,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC 実行者
+#DIMS DYNAMIC 효과範囲
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 修正値
+#DIM DYNAMIC 守備修正
+#DIM DYNAMIC 星修正
+#DIM DYNAMIC カードID
+
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 攻撃力修正 
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+SIF 효과条件표시 == -1
+	효과条件표시 = 表側표시
+
+SELECTCASE 효과範囲
+	CASE "자신"
+		SETVAR @"%듀얼리스트%_MZ_攻:場所", GETVAR(@"%듀얼리스트%_MZ_攻:場所") + 修正値
+		SETVAR @"%듀얼리스트%_MZ_守:場所", GETVAR(@"%듀얼리스트%_MZ_守:場所") + 守備修正
+;		SETVAR @"%듀얼리스트%_MZ_星:場所", GETVAR(@"%듀얼리스트%_MZ_星:場所") + 星修正
+	CASE "装備"
+		CALL 装備판정(듀얼리스트,場所,"마함")
+		装備先 = RESULT	
+		装備者 = %RESULTS%
+		SETVAR @"%装備者%_MZ_攻:装備先", GETVAR(@"%装備者%_MZ_攻:装備先") + 修正値
+		SETVAR @"%装備者%_MZ_守:装備先", GETVAR(@"%装備者%_MZ_守:装備先") + 守備修正
+;		SETVAR @"%듀얼리스트%_MZ_星:装備先", GETVAR(@"%듀얼리스트%_MZ_星:装備先") + 星修正
+
+	CASE "필드","상대필드"
+		IF 효과範囲 == "상대필드"
+			実行者 = %対面者%
+		ELSE
+			実行者 = %듀얼리스트%
+		ENDIF
+
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%実行者%_필드:カウンタ") == -1
+				CONTINUE
+			IF 효과条件他所 == 1
+				SIF 実行者 == 듀얼리스트 && 場所 == カウンタ
+					CONTINUE			
+			ENDIF
+			VARSET 条件달성
+			CALL CARD_S_FILTER_SET(実行者,"필드",カウンタ,듀얼리스트)
+			SIF RESULT == 1
+				条件달성 = 1
+			CALL CARD_FILTER_SET(実行者,"필드",カウンタ,듀얼리스트)
+			SIF RESULT == 1
+				条件달성 = 1
+			SIF 条件달성 != 1
+				CONTINUE
+		
+			IF 효과範囲 == "상대필드"
+				SIF GETVAR(@"%実行者%_MZ_無差耐:カウンタ") >= 1
+					CONTINUE
+				IF カードID >= 1
+					TRYCALLFORM CARD_{カードID}, "종류"
+					IF GETVAR(@"%実行者%_MZ_モ耐:カウンタ") >= 1 && INRANGE(RESULT, 0,15)
+						CONTINUE
+					ELSEIF GETVAR(@"%実行者%_MZ_魔耐:カウンタ") >= 1 && INRANGE(RESULT, 20,30)
+						CONTINUE
+					ELSEIF GETVAR(@"%実行者%_MZ_함정耐:カウンタ") >= 1 && INRANGE(RESULT, 30,40)
+						CONTINUE
+					ENDIF
+				ENDIF
+			ENDIF
+			SETVAR @"%実行者%_MZ_攻:カウンタ", GETVAR(@"%実行者%_MZ_攻:カウンタ") + 修正値
+			SETVAR @"%実行者%_MZ_守:カウンタ", GETVAR(@"%実行者%_MZ_守:カウンタ") + 守備修正
+		NEXT
+ENDSELECT
+
+
+
+
+@STATCHANGE_OTHER(듀얼리스트,효과範囲,場所,효과種,修正値,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC 実行者
+#DIMS DYNAMIC 효과範囲
+#DIMS DYNAMIC 효과種
+
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 修正値
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 攻撃力修正 
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+SIF 효과条件표시 == -1 && 효과種 != "表固"
+	효과条件표시 = 表側표시
+
+SELECTCASE 효과範囲
+	CASE "자신"
+		IF 효과種 == "星"
+			SETVAR @"%듀얼리스트%_MZ_星:場所", GETVAR(@"%듀얼리스트%_MZ_星:場所") + 修正値
+		ELSE
+			SETVAR @"%듀얼리스트%_MZ_%효과種%:場所", 修正値
+		ENDIF
+	CASE "装備"
+		CALL 装備판정(듀얼리스트,場所,"마함")
+		装備先 = RESULT	
+		装備者 = %RESULTS%
+		IF 효과種 == "星"
+			SETVAR @"%듀얼리스트%_MZ_星:装備先", GETVAR(@"%듀얼리스트%_MZ_星:装備先") + 修正値
+		ELSE
+			SETVAR @"%듀얼리스트%_MZ_%효과種%:装備先", 修正値
+		ENDIF
+	CASE "필드","상대필드"
+		IF 효과範囲 == "상대필드"
+			実行者 = %対面者%
+		ELSE
+			実行者 = %듀얼리스트%
+		ENDIF
+
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%実行者%_필드:カウンタ") == -1
+				CONTINUE		
+
+			VARSET 条件달성
+			CALL CARD_S_FILTER_SET(実行者,"필드",カウンタ,듀얼리스트)
+			SIF RESULT == 1
+				条件달성 = 1
+			CALL CARD_FILTER_SET(実行者,"필드",カウンタ,듀얼리스트)
+			SIF RESULT == 1
+				条件달성 = 1
+			SIF 条件달성 != 1
+				CONTINUE
+		
+			IF 효과範囲 == "상대필드"
+				SIF GETVAR(@"%実行者%_MZ_無差耐:カウンタ") >= 1
+					CONTINUE
+				IF カードID >= 1
+					TRYCALLFORM CARD_{カードID}, "종류"
+					IF GETVAR(@"%実行者%_MZ_モ耐:カウンタ") >= 1 && INRANGE(RESULT, 0,15)
+						CONTINUE
+					ELSEIF GETVAR(@"%実行者%_MZ_魔耐:カウンタ") >= 1 && INRANGE(RESULT, 20,30)
+						CONTINUE
+					ELSEIF GETVAR(@"%実行者%_MZ_함정耐:カウンタ") >= 1 && INRANGE(RESULT, 30,40)
+						CONTINUE
+					ENDIF
+				ENDIF
+			ENDIF
+			IF 효과種 == "星"
+				SETVAR @"%実行者%_MZ_星:カウンタ", GETVAR(@"%実行者%_MZ_星:カウンタ") + 修正値
+			ELSE
+				SETVAR @"%実行者%_MZ_%효과種%:カウンタ", 修正値
+			ENDIF
+		NEXT
+ENDSELECT
+
+
+
+
+
+@STATCHANGE_EFFECT(듀얼리스트,효과範囲,場所,효과種,持続,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC 実行者
+#DIMS DYNAMIC 효과範囲
+#DIMS DYNAMIC 효과種
+#DIMS DYNAMIC MZ魔판정
+#DIMS DYNAMIC 参照先
+
+#DIM DYNAMIC 修正値
+#DIM DYNAMIC 守備修正
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 攻撃力修正 
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 持続
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カードID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+SIF 효과条件표시 == -1
+	효과条件표시 = 表側표시
+
+SELECTCASE 효과範囲
+	CASE "자신"
+		IF 持続 == 0
+			SIF GETVAR(@"%듀얼리스트%_MZ_%효과種%:場所") == 0
+				SETVAR @"%듀얼리스트%_MZ_%효과種%:場所", 3
+			SIF 효과種 == "追戦"
+				SETVAR @"%듀얼리스트%_MZ_%효과種%:場所", 0
+		ELSEIF 持続 == -1
+			SETVAR @"%듀얼리스트%_MZ_%효과種%:場所", 0		
+		ELSE
+			SETVAR @"%듀얼리스트%_MZ_%효과種%:場所", 持続
+		ENDIF
+	CASE "対面자신"
+		IF 持続 == 0
+			SIF GETVAR(@"%対面者%_MZ_%효과種%:場所") == 0
+				SETVAR @"%対面者%_MZ_%효과種%:場所", 3
+		ELSE
+			SETVAR @"%対面者%_MZ_%효과種%:場所", 持続
+		ENDIF
+	CASE "魔자신"
+		IF 持続 == 0
+			SIF GETVAR(@"%듀얼리스트%_魔_%효과種%:場所") == 0
+				SETVAR @"%듀얼리스트%_魔_%효과種%:場所", 3
+		ELSE
+			SETVAR @"%듀얼리스트%_魔_%효과種%:場所", 持続
+		ENDIF
+	CASE "装備"
+		CALL 装備판정(듀얼리스트,場所,"마함")
+		装備先 = RESULT	
+		装備者 = %RESULTS%
+		IF 持続 == 0
+			SIF GETVAR(@"%装備者%_MZ_%효과種%:装備先") == 0
+				SETVAR @"%装備者%_MZ_%효과種%:装備先", 3
+		ELSE
+			SETVAR @"%装備者%_MZ_%효과種%:装備先", 持続
+		ENDIF
+	CASE "필드","마함","상대필드","상대마함"
+
+		IF 효과範囲 == "상대필드" || 효과範囲 == "상대마함"
+			実行者 = %対面者%
+		ELSE
+			実行者 = %듀얼리스트%
+		ENDIF
+	
+		IF 효과範囲 == "필드" || 효과範囲 == "상대필드"
+			参照先 = 필드
+			MZ魔판정 = MZ			
+		ELSEIF 효과範囲 == "마함" || 효과範囲 == "상대마함"
+			参照先 = 마함
+			MZ魔판정 = 魔
+		ENDIF
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%実行者%_%参照先%:カウンタ") == -1
+				CONTINUE
+			IF 효과条件他所 > 0
+				SIF カウンタ == 場所
+					CONTINUE
+			ENDIF
+
+			VARSET 条件달성
+			CALL CARD_S_FILTER_SET(実行者,参照先,カウンタ,듀얼리스트)
+			SIF RESULT == 1
+				条件달성 = 1
+			CALL CARD_FILTER_SET(実行者,参照先,カウンタ,듀얼리스트)
+			SIF RESULT == 1
+				条件달성 = 1
+			SIF 条件달성 != 1
+				CONTINUE
+
+			IF 효과範囲 == "상대필드"
+				SIF GETVAR(@"%実行者%_MZ_無差耐:カウンタ") >= 1
+					CONTINUE
+				IF カードID >= 1
+					TRYCALLFORM CARD_{カードID}, "종류"
+					IF GETVAR(@"%実行者%_MZ_モ耐:カウンタ") >= 1 && INRANGE(RESULT, 0,15)
+						CONTINUE
+					ELSEIF GETVAR(@"%実行者%_MZ_魔耐:カウンタ") >= 1 && INRANGE(RESULT, 20,30)
+						CONTINUE
+					ELSEIF GETVAR(@"%実行者%_MZ_함정耐:カウンタ") >= 1 && INRANGE(RESULT, 30,40)
+						CONTINUE
+					ENDIF
+				ENDIF
+			ENDIF
+
+			IF 持続 == 0
+				SIF GETVAR(@"%実行者%_%MZ魔판정%_%효과種%:カウンタ") == 0
+					SETVAR @"%実行者%_%MZ魔판정%_%효과種%:カウンタ", 3
+			ELSEIF 持続 == -1
+				SETVAR @"%実行者%_%MZ魔판정%_%효과種%:カウンタ", 0
+			ELSE
+				IF 参照先 == "필드" && GROUPMATCH(효과種,"一攻","永攻","一守","永守")
+					CALL SET_FIELD_INFO(実行者,"필드",カウンタ,효과種,持続)
+				ELSEIF 参照先 == "필드" && GROUPMATCH(효과種,"一星変動")
+					CALL SET_FIELD_INFO(実行者,"필드",カウンタ,"一星",持続)
+				ELSE
+					SETVAR @"%実行者%_%MZ魔판정%_%효과種%:カウンタ", 持続
+				ENDIF
+			ENDIF
+		NEXT
+ENDSELECT
+
+
+
+
+
+
+@STATCHANGE_HAND(듀얼리스트,효과範囲,場所,효과種,持続)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC 実行者
+#DIMS DYNAMIC 효과範囲
+#DIMS DYNAMIC 효과種
+#DIMS DYNAMIC MZ魔판정
+#DIMS DYNAMIC 参照先
+
+#DIM DYNAMIC 修正値
+#DIM DYNAMIC 守備修正
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 攻撃力修正 
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 持続
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カードID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+SIF 효과条件표시 == -1
+	효과条件표시 = 表側표시
+
+SELECTCASE 효과範囲
+	CASE "지정"
+		IF GROUPMATCH(효과種,"一星")
+			SETVAR @"%듀얼리스트%_手_%효과種%:場所", GETVAR(@"%듀얼리스트%_手_%효과種%:場所") + 持続
+		ELSE
+			IF 持続 == 0
+				SIF GETVAR(@"%듀얼리스트%_手_%효과種%:場所") == 0
+					SETVAR @"%듀얼리스트%_手_%효과種%:場所", 3
+			ELSE
+				SETVAR @"%듀얼리스트%_手_%효과種%:場所", 持続
+			ENDIF
+		ENDIF
+	CASE "全体","상대全体"
+		IF 효과範囲 == "상대全体"
+			実行者 = %対面者%
+		ELSE
+			実行者 = %듀얼리스트%
+		ENDIF
+		FOR カウンタ,0,紙束最大値
+			SIF GETVAR(@"%実行者%_손패:カウンタ") == -1
+				CONTINUE
+			IF 효과条件他所 > 0
+				SIF カウンタ == 場所
+					CONTINUE
+			ENDIF
+
+			VARSET 条件달성
+			CALL CARD_S_FILTER_SET(実行者,"손패",カウンタ,듀얼리스트)
+			SIF RESULT == 1
+				条件달성 = 1
+			CALL CARD_FILTER_SET(実行者,"손패",カウンタ,듀얼리스트)
+			SIF RESULT == 1
+				条件달성 = 1
+			SIF 条件달성 != 1
+				CONTINUE
+
+
+			IF GROUPMATCH(효과種,"一星")
+				SETVAR @"%実行者%_手_%효과種%:カウンタ", GETVAR(@"%実行者%_手_%효과種%:カウンタ") + 持続
+			ELSE
+				IF 持続 == 0
+					SIF GETVAR(@"%実行者%_手_%효과種%:カウンタ") == 0
+						SETVAR @"%実行者%_手_%효과種%:カウンタ", 3
+				ELSEIF 持続 == -1
+					SETVAR @"%実行者%_手_%효과種%:カウンタ", 0
+				ELSE
+					SETVAR @"%実行者%_手_%효과種%:カウンタ", 持続
+				ENDIF
+			ENDIF
+		NEXT
+ENDSELECT

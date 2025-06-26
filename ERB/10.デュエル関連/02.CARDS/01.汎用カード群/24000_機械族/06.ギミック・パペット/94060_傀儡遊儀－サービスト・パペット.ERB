@@ -1,0 +1,162 @@
+﻿@CARDNAME_94060,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 꼭두각시 유희－서비스트 퍼핏
+	CASE "略称"
+RESULTS = 꼭두각시 유희
+	CASE "カテゴリ"
+RESULTS:0 = 퍼핏
+ENDSELECT
+
+
+@CARD_94060(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_94060(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 어느 쪽이든 1개밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,フリー誘発)
+PRINTL ①: 자신 필드의 「기믹 퍼핏」 엑시즈 몬스터의 수까지,
+PRINTL 상대 필드의 몬스터의 컨트롤을 엔드 페이즈까지 얻는다.
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ②: 자신 필드에 「기믹 퍼핏」 엑시즈 몬스터가 존재할 경우, 이 카드를 묘지에서 제외하고 발동할 수 있다.
+PRINTL 자신 또는 상대의 묘지의 엑시즈 몬스터 1장을 자신 또는 상대의 필드에 수비 표시로 특수 소환한다.
+
+
+@CARDCAN_94060(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,94060)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,94060)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	효과条件カテゴリ = 기믹 퍼핏
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,94060)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5 && モンスター数(対面者) >= 5
+		RETURN 0
+
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	효과条件カテゴリ = 기믹 퍼핏
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲상대묘지 = 1
+	효과条件종류 = 엑시즈
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_94060(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード,5
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 実行횟수
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,94060,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 엑시즈
+		효과条件カテゴリ = 기믹 퍼핏
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		実行횟수 = RESULT
+		CALL FULLRESET
+		효과추가종류:0 = 5
+		효과추가종류:1 = 695 ;仕様
+		효과条件複数 = 100 - 実行횟수
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		TRYCALLFORM CARDNAME_{他参照選択カードID},"名前"
+		PRINTFORMW %RESULTS%는操り인형にされた！
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,94060,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		PRINTFORML 소환する場所を選択してください。
+		CALL YN_CHOICE(듀얼리스트,"자신 필드","상대 필드")
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲상대묘지 = 1
+			효과条件종류 = 엑시즈
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		ELSEIF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲상대묘지 = 1
+			효과条件종류 = 엑시즈
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시",,1)
+		ENDIF
+	ENDIF
+ENDIF

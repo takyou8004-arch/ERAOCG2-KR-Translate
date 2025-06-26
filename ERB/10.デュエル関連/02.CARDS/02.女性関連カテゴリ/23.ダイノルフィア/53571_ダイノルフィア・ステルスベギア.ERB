@@ -1,0 +1,173 @@
+﻿@CARDNAME_53571,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 다이놀피어 스텔스베기어
+	CASE "略称"
+RESULTS = 스텔스베기어
+	CASE "カテゴリ"
+RESULTS:0 = 다이놀피어
+ENDSELECT
+
+
+@CARD_53571(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2500
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_53571(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 카드명이 다른 「다이놀피어」 몬스터 2장
+PRINTL 
+PRINTL 이 카드명의 ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①: 자신의 LP가 2000 이하인 한, 자신은 「다이놀피어」 몬스터의 효과 및,
+PRINTL 「다이놀피어」 함정 카드를 발동하기 위해 지불하는 LP가 필요 없어진다.
+CALL CARD_ABLE(1,발동誘発)
+PRINTL ②: 상대가 몬스터의 효과를 발동했을 때 발동할 수 있다.
+PRINTL 그 몬스터의 원래 공격력만큼의 데미지를 상대에게 준다.
+CALL CARD_ABLE(2,破壊→묘지 ,戦闘→묘지)
+PRINTL ③: 이 카드가 전투 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지에서 레벨 4 이하의 「다이놀피어」 몬스터 1장을 고르고 특수 소환한다.
+PRINTL 
+
+
+
+@CARDSUMMON_53571(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+IF EX参照 == 0 || EX参照 == 1
+	CALL RESETCONDITION_MAT
+	必要素材数 = 2
+	素材条件カテゴリ = 다이놀피어
+	素材条件固名前起動 = 1
+ELSEIF EX参照 >= 10
+	必要素材数 = 2
+	素材条件カテゴリ = 다이놀피어
+	素材条件固名前起動 = 1
+ENDIF
+
+
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,53571) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_53571(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,53571)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") > 2000
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,53571)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_2(듀얼리스트,53571)
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 다이놀피어
+	CALL 효과条件レベル_ADV(4, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_53571(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"ぺギア",3)
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53571,1)
+	IF RESULT == 0
+		TRYCALLFORM CARD_{効後_효과ID:(処理中番号 - 1)},"攻撃力"
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",RESULT,1)
+	ENDIF
+	RETURN 0
+
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53571,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 다이놀피어
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+

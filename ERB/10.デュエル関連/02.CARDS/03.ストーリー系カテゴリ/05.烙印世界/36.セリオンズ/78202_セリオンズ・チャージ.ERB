@@ -1,0 +1,102 @@
+﻿@CARDNAME_78202,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 세리온즈 차지
+	CASE "略称"
+RESULTS = T 차지
+	CASE "カテゴリ"
+RESULTS:0 = 세리온즈
+ENDSELECT
+
+
+@CARD_78202(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_78202(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①: 손패 및 자신의 마법 & 함정 존의 앞면 표시의 카드 중에서,
+PRINTL 「세리온즈 차지」 이외의 「세리온즈」 카드 또는 「무진기관 아르기로 시스템」 1장을 묘지로 보내고 발동할 수 있다.
+PRINTL 자신은 덱에서 2장 드로우한다.
+
+@CARDCAN_78202(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,78202)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,78202)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 세리온즈
+	효과条件スーパー名前 = 무진기관 아르기로 시스템
+	효과条件표시 = 表側표시
+	효과条件固名前 = 세리온즈 차지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_78202(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,78202,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = 세리온즈
+		효과条件スーパー名前 = 무진기관 아르기로 시스템
+		효과条件표시 = 表側표시
+		효과条件固名前 = 세리온즈 차지
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		ENDIF
+	ENDIF
+ENDIF
+

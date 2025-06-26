@@ -1,0 +1,122 @@
+﻿@CARDNAME_25553,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 제알 웨폰－토네이도 브링어
+	CASE "略称"
+RESULTS = ZW－풍신운룡검
+	CASE "カテゴリ"
+RESULTS:0 = 제알 웨폰
+RESULTS:1 = 제알
+ENDSELECT
+
+
+@CARD_25553(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1300
+	CASE "守備力"
+		RETURN 1800
+	CASE "分割"
+		RETURN 유니온
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_25553(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,손패起動,필드起動)
+PRINTL ①：자신의 필드의 「유토피아」 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 자신의 패/필드에서 이 카드를 공격력 1300 올리는 장비 카드로서, 대상으로 한 몬스터에게 장착한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드가 장착되어 있을 경우, 장착 몬스터와 자신의 필드의 「ZW」 카드는 대상 내성을 가진다.
+
+@CARDCAN_25553(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25553)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動 || 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 유토피아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25553(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 손패起動 || 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25553)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 유토피아
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,1300)
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"対耐")
+
+	CALL FULLRESET
+	효과条件カテゴリ = 제알 웨폰
+	CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"対耐")
+ENDIF
+

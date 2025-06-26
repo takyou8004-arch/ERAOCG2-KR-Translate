@@ -1,0 +1,147 @@
+﻿@CARDNAME_72205,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 저주받은 하인 마스터
+	CASE "略称"
+RESULTS = 저주받하인마스터
+	CASE "カテゴリ"
+RESULTS:0 = 저주받은 하인
+ENDSELECT
+
+
+@CARD_72205(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72205(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 자신의 「저주받은 하인 킹」의 공격은 관통한다.
+CALLFORM CARD_ABLE(10,마함起動)
+PRINTL ②: 1턴에 1번, 자신의 묘지의 「저주받은 하인」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 덱에서 「저주받은 하인」 몬스터 1장을 묘지로 보내고, 대상으로 한 몬스터와 동명의 몬스터 1장을 묘지에서 특수 소환한다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 언데드족 몬스터밖에 특수 소환할 수 없다.
+
+
+@CARDCAN_72205(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72205)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 저주받은 하인
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 저주받은 하인
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72205(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 選択カード名前
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72205,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 저주받은 하인
+		효과条件종류 = モン全般
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT != 9999
+			TRYCALLFORM CARDNAME_{RESULT:99},"名前"
+			選択カード名前 = %RESULTS%
+
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 저주받은 하인
+			효과条件종류 = モン全般
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲묘지 = 1
+효과条件名前 = %選択カード名前%
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+		SS소환可能종족 = 언데드족
+		CALL CARD_SS_RESTRICTION(듀얼리스트)
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72205)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+효과条件名前 = 저주받은 하인 킹
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"貫通")
+ENDIF

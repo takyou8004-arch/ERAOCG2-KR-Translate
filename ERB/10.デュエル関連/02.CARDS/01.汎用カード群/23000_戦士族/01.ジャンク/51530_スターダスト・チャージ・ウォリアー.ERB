@@ -1,0 +1,125 @@
+﻿@CARDNAME_51540,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스타더스트 차지 워리어
+	CASE "略称"
+RESULTS = SDC 워리어
+	CASE "カテゴリ"
+RESULTS:0 = 스타더스트
+RESULTS:1 = 워리어
+
+ENDSELECT
+
+
+@CARD_51540(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1300
+
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_51540(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 6
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,51540) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_51540(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너＋튜너 이외의 몬스터 1체 이상
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 S 소환했을 때에 발동할 수 있다. 자신은 1장 드로우한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 1번의 배틀 페이즈 중에 2회 공격할 수 있다.
+
+
+@CARDCAN_51540(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51540)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,51540)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51540(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51540,1)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",1)
+ENDIF

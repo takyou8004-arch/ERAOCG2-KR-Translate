@@ -1,0 +1,187 @@
+﻿@CARDNAME_50210,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 묘지기의 이능자
+	CASE "略称"
+RESULTS = 묘지기의 이능자
+	CASE "カテゴリ"
+RESULTS:0 = 묘지기
+ENDSELECT
+
+
+@CARD_50210(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250409
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_50210(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「묘지기」 몬스터 2장
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(10,EX소환時)
+PRINTL ①: 이 카드가 융합 소환했을 경우에 발동할 수 있다.
+PRINTL 자신 묘지의 「묘지기」 몬스터 1장을 고르고, 이 카드의 공격력을 그 몬스터의 레벨 x 200 올린다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신 필드에 앞면 표시의 이 카드와 「왕가의 잠자는 골짜기－네크로밸리」가 존재하는 한,
+PRINTL 자신 필드의 앞면 표시의 「묘지기」 몬스터 및 「네크로밸리」 마법 / 함정 카드는 효과 파괴 내성을 얻는다.
+CALLFORM CARD_ABLE(3,ターン終了時)
+PRINTL ③: 자신 또는 상대의 엔드 페이즈에 발동할 수 있다.
+PRINTL 덱에서 「묘지기」 마법 / 함정 카드 1장 또는 「네크로밸리」 마법 / 함정 카드 1장을 자신 필드에 세트한다.
+
+;「묘지기」のエ-スモンスター。自己パンプと네크로벨리込みで３０００オ-バ-の攻撃力を狙えて、
+;지속효과で필드의 テ-マカードに破壊耐性を付与するので、盤面の강도が大きく増す。
+;さらにエンドフェイズのサーチがフィールドにセットする形になっているので、네크로벨리함정を引っ張ってきて次のターンに備えられる。
+;女の子ではないにも関わらず효과를 上方修正しているのは、「マリク」に見えなくもない見た目が理由。
+
+
+@CARDSUMMON_50210(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件カテゴリ = 묘지기
+素材条件종류 = モン全般
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,50210) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50210(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50210)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 묘지기
+	효과条件종류 = レベル持ち
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+효과条件名前 = 왕가의 골짜기-네크로밸리
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時
+	SIF 발동済_3(듀얼리스트,50210)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ:0 = 묘지기
+	효과条件カテゴリ:1 = 네크로벨리
+	효과条件종류 = 마함全般
+	효과条件うらら解除 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_50210(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードレベル
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50210,10)
+	IF RESULT == 0
+		;묘지の「묘지기」モンスター１体を選び、자신의 攻撃力を選んだ몬스터의 レベル×２００アップ
+		CALL FULLRESET
+		효과条件カテゴリ = 묘지기
+		효과条件종류 = レベル持ち
+		CALL 효과条件レベル_ADV(1,"以上")
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		選択カード = RESULT
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:選択カード")},"レベル"
+		攻撃力修正 = RESULT * 200
+		PRINTFORML 묘지기의 異能者の공격력이{攻撃力修正}アップした。
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",攻撃力修正)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ:1 = 묘지기
+	효과条件표시 = 表側표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	CALL FULLRESET
+	효과条件カテゴリ:1 = 네크로벨리
+	효과条件표시 = 表側표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐")
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50210,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ:0 = 묘지기
+		효과条件カテゴリ:1 = 네크로벨리
+		효과条件종류 = 마함全般
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF

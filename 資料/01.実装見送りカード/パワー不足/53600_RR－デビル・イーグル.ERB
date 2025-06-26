@@ -1,0 +1,121 @@
+﻿@CARDNAME_53600,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = RR－デビル・イーグル
+	CASE "略称"
+		RESULTS = デビル・Ｅ
+	CASE "カテゴリ"
+		RESULTS:0 = レイドラプターズ
+ENDSELECT
+
+
+@CARD_53600(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_53600(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 3
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,53600) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_53600(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨３ 몬스터×２
+PRINTL このカード名의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①：이 카드의 Ｘ소재를 １개 제거하고、상대필드의 특수 소환된 表側표시몬스터 １体を대상として발동할 수 있다。
+PRINTL 그 몬스터의 원래의 공격력 만큼의 데미지를 상대에게 준다。
+
+@CARDCAN_53600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,53600)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,53600)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件召種 = 召種全특수
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_53600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53600,1,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件召種 = 召種全특수
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:選択カード")}("攻撃力")
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",RESULT,1)
+		ENDIF
+	ENDIF
+ENDIF

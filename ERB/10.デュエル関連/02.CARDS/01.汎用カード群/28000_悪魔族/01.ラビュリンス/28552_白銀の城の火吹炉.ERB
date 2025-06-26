@@ -1,0 +1,132 @@
+﻿@CARDNAME_28552,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 라뷰린스 스토피
+	CASE "略称"
+		RESULTS = 라뷰린스 스토피
+	CASE "カテゴリ"
+		RESULTS:0 = 라뷰린스
+ENDSELECT
+
+
+@CARD_28552(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28552(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,손패起動,필드起動,フリー誘発)
+PRINTL ①：자신 / 상대 턴에, 패 / 필드의 이 카드를 묘지에 보내고, 패를 1장 버리고 발동할 수 있다。
+PRINTL 패 / 댁에서 "라뷰린스」 마법 / 함정 카드 1장을 선택하여 자신의 필드에 세트한다。
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②：자신의 일반 함정카드 효과로 몬스터가 필드에 벗어날 경우에 발동할 수 있다。
+PRINTL 이 카드를 묘지에서 특수 소환한다。
+
+@CARDCAN_28552(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28552)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 손패起動 || 종류 == 필드起動 || 종류 == フリー誘発
+	SIF !GROUPMATCH(ゾーン,"손패","필드")
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,28552)
+		RETURN 0
+	SIF 마함数(듀얼리스트) == 5
+		RETURN 0
+	IF 종류 == 손패起動
+		SIF 손패数(듀얼리스트) <= 1
+			RETURN 0
+	ELSEIF 종류 == 필드起動
+		SIF 손패数(듀얼리스트) == 0
+			RETURN 0
+	ENDIF
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,28552)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,28552,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"除去成功")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_28552(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 손패起動 || 종류 == 필드起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28552,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件カテゴリ = 라뷰린스
+			효과範囲덱 = 1
+			효과範囲손패 = 1
+			효과条件종류 = 마함全般
+			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시",28552)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28552,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "묘지", 場所)
+	ENDIF
+ENDIF

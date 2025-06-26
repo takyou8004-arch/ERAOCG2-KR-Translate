@@ -1,0 +1,116 @@
+﻿@CARDNAME_26642,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 험프티 루피아
+	CASE "略称"
+RESULTS = 험프티루피아
+	CASE "カテゴリ"
+RESULTS:0 = 파이어 버드
+RESULTS:1 = 아머드
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_26642(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1300
+	CASE "守備力"
+		RETURN 1100
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26642(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時)
+PRINTL ①: 이 카드가 소환 특수소환했을 경우에 발동할 수 있다.
+PRINTL 상대의 손패를 확인하고, 그 중에서 1장을 선택하여 묘지로 보낸다.
+PRINTL 이 효과로 묘지에 보낸 카드가 몬스터 카드였을 경우,
+PRINTL 또한 상대 필드의 몬스터 1장을 파괴한다.
+PRINTL (이 효과는 선공 1턴째에는 사용할 수 없다.)
+
+
+
+@CARDCAN_26642(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26642)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,26642)
+		RETURN 0
+	SIF 손패数(対面者) < 1
+		RETURN 0
+	SIF ターン数 <= 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_26642(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26642,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			TRYCALLFORM CARD_{選択カード_ID},"종류"
+			IF RESULT <= モン全般
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

@@ -1,0 +1,293 @@
+﻿@CARDNAME_79680,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 슈가 러쉬★초콜릿
+	CASE "略称"
+RESULTS = 초콜릿
+	CASE "カテゴリ"
+RESULTS:0 = 슈가 러쉬
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79680(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79680(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①: 상대 플레이어, 또는 상대 필드의 몬스터를 1장 골라 발동할 수 있다.
+PRINT 고른 대상에게
+FONTSTYLE 4
+PRINT 드러그
+FONTSTYLE 0
+PRINTL 해피 카운터를 놓아, 상대는 자신에게 놓인 해피 카운터와 필드 위의 해피 카운터의 합계 × 100 LP 회복한다.
+PRINTL 그 후, 고른 대상에 따라 이하의 효과를 적용할 수 있다.
+PRINTL ●상대 플레이어: 자신의 패를 전부 덱에 넣고 셔플하며, 덱에 넣은 수만큼 카드를 드로우한다.
+PRINTL 그 후, 상대에게 해피 카운터가 7개 이상 놓여 있는 경우, 이 턴의 배틀 페이즈를 스킵한다.
+PRINTL ●상대 몬스터: 덱에서 "트립 트리트" 카드를 1장 패에 넣는다.
+PRINTL 그 후, 상대의 해피 카운터가 2개 이상 놓여 있는 모든 몬스터의 컨트롤을 얻는다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79680(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79680)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		IF GETVARS(@"%듀얼리스트%_フィールド名") != "트립 트리트 トラック！"
+			SIF ターンプレイヤー != 듀얼리스트
+				RETURN 0
+		ENDIF
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,79680)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79680(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 回復量
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウント数
+#DIM DYNAMIC ドロー枚数
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79680,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1	
+PRINTL 어느 쪽에 효과를 사용하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트,"●상대플레이어","●상대 몬스터")
+		ELSE
+			RESULT = 0
+		ENDIF
+		IF RESULT == 0
+			CALL SET_PLAYER_INFO(듀얼리스트,"薬Ｃ",1,1,1)
+			
+			CALL FIELD_INFO_COUNT(듀얼리스트,"薬Ｃ",1,2)
+			回復量 += RESULT + GETVAR(@"%対面者%_薬Ｃ")
+			CALL LIFE_CHANGE(対面者,"増加","효과", 回復量 * 100)
+
+			SIF 듀얼리스트 == "자신"
+PRINTL 패를 덱으로 되돌리시겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+			SIF RESULT == いいえ
+				RETURN 0
+			
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") == -1
+					CONTINUE
+				CALL CARD_DISPOSE(듀얼리스트,"손패",カウンタ,덱行き)
+				ドロー枚数 ++
+			NEXT
+			CALL CARDDRAW_BASIC(듀얼리스트,ドロー枚数)
+			
+			IF GETVAR(@"%対面者%_薬Ｃ") >= 7
+                IF ターンプレイヤー == 듀얼리스트
+    				CALL SET_PLAYER_INFO(듀얼리스트,"バトルスキップ", 1)
+                ELSE
+		            CALL SET_PLAYER_INFO(듀얼리스트,"バトルスキップ",1,1)
+                ENDIF
+            ENDIF
+
+		ELSEIF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"選択")
+			IF RESULT == 1
+				選択カード = RESULT:1
+				CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",選択カード,1)
+				IF RESULT != -1
+					조교대상 = RESULT
+					PRINTFORML %CALLNAME:조교대상%는 과자가 가져다주는 고양에 저항하지 못하고、자위를 시작해버렸다。
+					CALL EROTIC_MOVE("麻薬자위",조교대상)
+				ENDIF
+				CALL SET_FIELD_INFO(対面者,"필드",選択カード,"薬Ｃ",1)
+
+				
+				CALL FIELD_INFO_COUNT(듀얼리스트,"薬Ｃ",1,2)
+				回復量 += RESULT + GETVAR(@"%対面者%_薬Ｃ")
+				CALL LIFE_CHANGE(対面者,"増加","효과", 回復量 * 100)
+
+				CALL FULLRESET
+				효과範囲덱 = 1
+효과条件カテゴリ = 트립 트리트
+				효과条件任意 = 1
+				CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+
+				FOR カウンタ,0,5
+					SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+						CONTINUE
+					SIF GETVAR(@"%対面者%_MZ_薬Ｃ:カウンタ") <= 1
+						CONTINUE
+					CALL FULLRESET
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",カウンタ,"強奪")
+					条件달성 = 1
+				NEXT
+				IF 条件달성 && 듀얼리스트 == "자신"
+PRINTL 상대 필드의 하수인은 과자를 요구하며 당신에게 머리를 숙여왔다.
+PRINTL 지금 이 순간부터 당신은 그들의 지배자다. 자, 어떻게 다루어줄까?
+				ENDIF
+			ENDIF
+
+		ENDIF
+	ENDIF
+ENDIF
+
+
+;―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARDNAME_179680,参照先
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 해피 프렌드
+	CASE "略称"
+RESULTS = 해피 프렌드
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_179680(参照先)
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+@CARD_EXPLANATION_179680(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINT ①：이 카드의 수비력은 、상대플레이어에게 놓여져 있는
+FONTSTYLE 4
+PRINT 드러그
+FONTSTYLE 0
+PRINTL 해피 카운터의 수× 300만큼 올린다.
+CALL CARD_ABLE(2,)
+PRINTL ②: 이 카드가 전투 효과로 파괴될 때, 대신 상대 플레이어에게 놓여 있는 해피 카운터를 1개 제거한다.
+
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_179680(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,179680)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%対面者%_薬Ｃ") <= 0
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_179680(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,179680)
+	IF RESULT == 0
+		CALL SET_PLAYER_INFO(듀얼리스트,"薬Ｃ",-1,1,1)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 攻守変動
+	攻撃力修正 = GETVAR(@"%対面者%_薬Ｃ") * 300
+	CALL STATCHANGE_BASIC(듀얼리스트,"자신",場所,0,攻撃力修正)	
+ENDIF
+

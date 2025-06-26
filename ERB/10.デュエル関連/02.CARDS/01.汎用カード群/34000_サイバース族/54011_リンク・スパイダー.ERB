@@ -1,0 +1,117 @@
+﻿@CARDNAME_54011,参照先
+;ココで지정카드의 名前、略称を返す予定
+;#FUNCTIONS
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 링크 스파이더
+	CASE "略称"
+RESULTS = L 스파이더
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_54011(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_54011(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件종류 = 효과無し全般
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,54011) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_54011(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 효과가 없는 몬스터 1장
+CALL CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 패에서 레벨 4 이하의 일반 몬스터 1장을 자신 필드에 특수 소환한다.
+
+@CARDCAN_54011(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54011)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = 通常モン
+	효과条件소환可 = 1
+	CALL 효과条件レベル_ADV(4, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_54011(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID 
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54011,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종류 = 通常モン
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

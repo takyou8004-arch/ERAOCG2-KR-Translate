@@ -1,0 +1,103 @@
+﻿;-------------------------------------------------
+;확장벌룬
+;ハードな조교コマンド、レベル4
+;-------------------------------------------------
+@COM147
+;着脱の処理
+TEQUIP:확장벌룬 = !TEQUIP:확장벌룬
+
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 150
+DOWNBASE:기력 += 200
+
+CALL SOURCE_CALC_쾌Ａ(TARGET, MASTER, 200)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 300)
+
+;固定値
+CALL SOURCE_CALC_고통(TARGET, MASTER, 500)
+;変動値추가
+LOCAL = 800 * PAIN_CHECK_A(TARGET) / 1000
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+STAIN:7 |= STAIN:4
+STAIN:4 |= STAIN:7
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+EXP:Ａ경험 += 4
+
+IF !EXP:Ｖ확장경험 && !EXP:Ａ확장경험 && !GETBIT(CFLAG:3,5)
+	EXP:이상경험 += 1
+	SETBIT CFLAG:3,5
+ENDIF
+
+EXP:Ａ확장경험 += 1
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 1
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 1
+ENDIF
+
+RETURN 1
+;-------------------------------------------------
+;装着계속の処理
+;-------------------------------------------------
+@EQUIP_COM147(ARG)
+;확장벌룬
+
+PRINTL ＜확장벌룬 삽입중＞
+
+DOWNBASE:ARG:체력 += 75
+DOWNBASE:ARG:기력 += 100
+
+CALL SOURCE_CALC_쾌Ａ(TARGET, -1, 100)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 150)
+
+;固定値
+CALL SOURCE_CALC_고통(TARGET, MASTER, 250)
+;変動値추가
+LOCAL = 400 * PAIN_CHECK_A(TARGET) / 1000
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+EXP:ARG:Ａ경험 += 1
+EXP:ARG:Ａ확장경험 += 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE147
+;확장벌룬実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(147)
+	RETURN RESULT
+;하반신착의
+SIF TEQUIP:0 > 1
+	RETURN 0
+;解除はいつでも可能
+SIF TEQUIP:22
+	RETURN 1
+;아이템を持っているか、아이템なし설정でないとダメ
+SIF ITEM:8 == 0 && NOITEM == 0
+	RETURN 0
+;애널바이브사용중は불가
+SIF TEQUIP:14
+	RETURN 0
+;애널비즈사용중は불가
+SIF TEQUIP:15
+	RETURN 0
+;普通の관장사용중は불가
+SIF TEQUIP:21
+	RETURN 0
+;電極사용중は불가
+SIF TEQUIP:23
+	RETURN 0
+RETURN 1

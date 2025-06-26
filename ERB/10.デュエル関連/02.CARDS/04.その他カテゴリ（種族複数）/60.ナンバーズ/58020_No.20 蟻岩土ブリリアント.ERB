@@ -1,0 +1,112 @@
+﻿@CARDNAME_58020,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = No.20 기간도 브릴리언트
+	CASE "略称"
+RESULTS = #20 기간도
+	CASE "カテゴリ"
+RESULTS:0 = 넘버즈
+ENDSELECT
+
+
+@CARD_58020(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 곤충족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1800
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_58020(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 3
+;추가효과用
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,58020) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_58020(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 3 몬스터 x 2
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ①: 이 카드의 엑스 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 자신 필드의 모든 몬스터의 공격력은 300 올린다.
+PRINTL 
+
+@CARDCAN_58020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58020)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_58020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58020,0,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"永攻",300)
+	ENDIF
+ENDIF

@@ -1,0 +1,195 @@
+@CARDNAME_54109,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = DDD 쌍효왕 칼리 유가
+	CASE "略称"
+RESULTS = DDD 칼리 유가
+	CASE "カテゴリ"
+RESULTS:0 = DD
+RESULTS:1 = DDD
+ENDSELECT
+
+
+@CARD_54109(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3500
+	CASE "守備力"
+		RETURN 3000
+	CASE "C불가"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_54109(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件カテゴリ = DD
+素材条件レベル = 8
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,54109) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_54109(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 8 "DD" 몬스터 × 2
+PRINTL 이 카드 효과의 발동에 대해 상대는 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 X소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 이 카드 이외의 필드 위에 앞면 표시로 존재하는 카드의 효과를 턴 종료시까지 무효로 한다.
+CALLFORM CARD_ABLE(0,필드起動 ,フリー誘発)
+PRINTL ②: 1턴에 1번, 이 카드의 X 소재 1개를 제거하고 발동할 수 있다.
+PRINTL 필드의 마법 / 함정 카드를 전부 파괴한다.
+PRINTL ③: 이 카드의 X 소재 1개를 제거하고,
+PRINTL 자신의 묘지의 "계약서" 마법 / 함정 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 자신 필드에 세트한다.
+
+
+@CARDCAN_54109(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 발동불가,10
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54109)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == EX소환時
+	RETURN 1
+ELSEIF  종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所") >= 1
+		발동불가:1 = 1
+	SIF ターンプレイヤー != 듀얼리스트
+		발동불가:2 = 1
+	SIF メインフェイズ != 1
+		발동불가:2 = 1
+	SIF 마함数(듀얼리스트) >= 5
+		발동불가:2 = 1
+	CALL FULLRESET
+	IF 듀얼리스트 == "자신"
+		효과範囲마함 = 1
+	ENDIF
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:1 = 1
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 계약서
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:2 = 1
+	SIF 발동불가:1 == 1 && 발동불가:2 == 1 
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54109(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 발동불가,10
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54109)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과条件他所 = 1
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場全体",場所,"無効")
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54109,0,X消費1)
+	IF RESULT == 0
+		SIF GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所") >= 1
+			발동불가:1 = 1
+		SIF ターンプレイヤー != 듀얼리스트
+			발동불가:2 = 1
+		SIF メインフェイズ != 1
+			발동불가:2 = 1
+		SIF 마함数(듀얼리스트) >= 5
+			발동불가:2 = 1
+		CALL FULLRESET
+		IF 듀얼리스트 == "자신"
+			효과範囲마함 = 1
+		ENDIF
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			발동불가:1 = 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 마함全般
+		효과条件カテゴリ = 계약서
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			발동불가:2 = 1
+		IF 발동불가:1 == 0 && 발동불가:2 == 0
+			CALL YN_CHOICE(듀얼리스트,"●필드의 마법 / 함정카드를 全て破壊する。","●묘지の「계약서」마법 / 함정 카드 １장을 セットする。")
+		ELSEIF 발동불가:1 == 1
+			RESULT = いいえ
+		ELSE
+			RESULT = はい
+		ENDIF
+		IF RESULT == はい
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"T1汎数",1)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"両마함全体",場所,"묘지")
+		ELSE
+			CALL FULLRESET
+			효과条件カテゴリ = 계약서
+			효과条件종류 = 마함全般
+			CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"裏側표시")
+		ENDIF
+	ENDIF
+ENDIF

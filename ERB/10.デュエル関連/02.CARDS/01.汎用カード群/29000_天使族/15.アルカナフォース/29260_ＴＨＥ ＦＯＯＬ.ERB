@@ -1,0 +1,138 @@
+﻿@CARDNAME_29260,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아르카나 포스 ０－더 풀
+	CASE "略称"
+RESULTS = ０－우자
+	CASE "カテゴリ"
+RESULTS:0 = 아르카나 포스
+ENDSELECT
+
+
+@CARD_29260(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "추가日"
+		RETURN 250520
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29260(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①: 자신 필드에 「빛의 결계」가 존재할 경우에 발동할 수 있다.
+PRINTL 패/묘지의 이 카드를 상대 필드에 공격 표시로 특수 소환한다.
+PRINTL 이 턴, 자신은 「아르카나 포스」 몬스터밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 전투로 파괴되지 않으며, 표시 형식을 변경할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 소환 / 특수 소환한 이 카드는 이 카드의 방향에 따라 이하의 효과를 얻는다.
+PRINTL ●정위치: 상대 필드의 카드는 대상 내성을 얻는다.
+PRINTL ●역위치: 이 카드는 대상 내성을 얻는다.
+
+
+@CARDCAN_29260(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29260)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,29260)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,29260,ゾーン,1)
+	SIF RESULT == 1
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+효과条件名前 = 빛의 결계
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환時強制 || 종류 == 특수소환時強制
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29260(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29260,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所,"攻撃표시",1)
+		IF RESULT == 1
+			CALL CARD_SS_RESTRICTION(듀얼리스트,"아르카나 포스")
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 소환時強制 || 종류 == 특수소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29260)
+	IF RESULT == 0
+		CALL ARCANA_SET(듀얼리스트,ゾーン,場所,29260)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"表固")
+
+	IF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") == 1
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"対耐",,29260)
+	ELSEIF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") == 2
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	ENDIF
+ENDIF

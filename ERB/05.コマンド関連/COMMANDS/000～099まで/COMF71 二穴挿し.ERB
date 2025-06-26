@@ -1,0 +1,227 @@
+﻿;-------------------------------------------------
+;두 구멍 넣기
+;保留
+;식스系파생コマンド
+;-------------------------------------------------
+@COM71
+VARSET LOCAL
+LOCAL:1 = MASTER_POSE(6,1,1)
+LOCAL:2 = MASTER_POSE(7,1,1)
+IF LOCAL:1
+	LOCAL = LOCAL:1
+ELSEIF LOCAL:2
+	LOCAL = LOCAL:2
+ENDIF
+;LOCAL 두 구멍 넣기 받는다人
+;-------------------------------------------------
+;삽입部位관리
+;-------------------------------------------------
+;MASTERがA,TARGETがV삽입
+IF LOCAL == LOCAL:2
+	TCVAR:MASTER:사정대상캐릭터_1 = LOCAL
+	TCVAR:MASTER:사정부위플래그 = 2
+	TCVAR:MASTER:사정쾌락강도 = 1500
+
+	TCVAR:TARGET:사정대상캐릭터_1 = LOCAL
+	TCVAR:TARGET:사정부위플래그 = 1
+	TCVAR:TARGET:사정쾌락강도 = 2500
+
+;MASTERがV,TARGETがA삽입
+ELSE
+	TCVAR:MASTER:사정대상캐릭터_1 = LOCAL
+	TCVAR:MASTER:사정부위플래그 = 1
+	TCVAR:MASTER:사정쾌락강도 = 2500
+
+	TCVAR:TARGET:사정대상캐릭터_1 = LOCAL
+	TCVAR:TARGET:사정부위플래그 = 2
+	TCVAR:TARGET:사정쾌락강도 = 1500
+ENDIF
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 40
+DOWNBASE:기력 += 220
+
+CALL SOURCE_CALC_쾌Ｖ(TARGET, LOCAL, 400)
+CALL SOURCE_CALC_접촉(TARGET, LOCAL, 150)
+CALL SOURCE_CALC_정복(TARGET, LOCAL, 300)
+CALL SOURCE_CALC_불결(TARGET, LOCAL, 300)
+SOURCE:성행동 = 500
+SOURCE:굴종 = 1000
+SOURCE:일탈 = 500
+SOURCE:반감 = 500
+
+DOWNBASE:LOCAL:체력 += 160
+DOWNBASE:LOCAL:기력 += 350
+
+
+;MASTERがV,TARGETがA삽입
+IF LOCAL == LOCAL:1
+	CALL SOURCE_CALC_쾌Ｖ(LOCAL, MASTER, 400)
+	CALL SOURCE_CALC_쾌Ａ(LOCAL, TARGET, 400)
+ELSE
+	CALL SOURCE_CALC_쾌Ｖ(LOCAL, TARGET, 400)
+	CALL SOURCE_CALC_쾌Ａ(LOCAL, MASTER, 400)
+ENDIF
+
+CALL SOURCE_CALC_접촉(LOCAL, MASTER, 150)
+CALL SOURCE_CALC_접촉(LOCAL, TARGET, 150)
+CALL SOURCE_CALC_접촉(LOCAL, TARGET, 150)
+LOCAL:10 = 400
+
+LOCAL:10 = 400 * PAIN_CHECK_V(LOCAL) / 1000
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL:10)
+LOCAL:10 = 800 * PAIN_CHECK_A(LOCAL) / 1000
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL:10)
+CALL SOURCE_CALC_불결(TARGET, LOCAL, 800)
+
+
+;처녀喪失
+CALL LOST_VIRGIN(TARGET, LOCAL, 1)
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;MASTERがV,TARGETがA삽입
+IF LOCAL == LOCAL:1
+	;질내に파과の血の汚れを付加
+	SIF TALENT:LOCAL:처녀
+		STAIN:LOCAL:6 |= 64
+	;LOCALの질내⇔主人のＰの汚れが이동
+	IF TALENT:MASTER:성별 & 2
+		STAIN:MASTER:2 |= STAIN:LOCAL:6
+		STAIN:MASTER:2 |= STAIN:LOCAL:3
+		STAIN:LOCAL:6 |= STAIN:MASTER:2
+		STAIN:LOCAL:3 |= STAIN:MASTER:2
+	ENDIF
+	;LOCALのＡ⇔TARGETのＰの汚れが이동
+	IF TALENT:2 & 2
+		STAIN:2 |= STAIN:LOCAL:7
+		STAIN:2 |= STAIN:LOCAL:4
+		STAIN:LOCAL:7 |= STAIN:2
+		STAIN:LOCAL:4 |= STAIN:2
+	ENDIF
+ELSE
+	;질내に파과の血の汚れを付加
+	SIF TALENT:LOCAL:처녀
+		STAIN:LOCAL:6 |= 64
+	;LOCALの질내⇔TARGETのＰの汚れが이동
+	IF TALENT:MASTER:성별 & 2
+		STAIN:2 |= STAIN:LOCAL:6
+		STAIN:2 |= STAIN:LOCAL:3
+		STAIN:LOCAL:6 |= STAIN:2
+		STAIN:LOCAL:3 |= STAIN:2
+	ENDIF
+	;LOCALのＡ⇔MASTER의Ｐの汚れが이동
+	IF TALENT:2 & 2
+		STAIN:MASTER:2 |= STAIN:LOCAL:7
+		STAIN:MASTER:2 |= STAIN:LOCAL:4
+		STAIN:LOCAL:7 |= STAIN:MASTER:2
+		STAIN:LOCAL:4 |= STAIN:MASTER:2
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+EXP:LOCAL:Ａ경험 ++
+CFLAG:LOCAL:엉덩이성장 += 2
+EXP:LOCAL:Ｖ성교경험 ++
+EXP:LOCAL:Ａ성교경험 ++
+
+;이상경험
+IF TALENT:LOCAL:처녀 && !GETBIT(CFLAG:3,9)
+	EXP:LOCAL:이상경험 += 2
+	SETBIT CFLAG:LOCAL:3,9
+ENDIF
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 3
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 3
+ENDIF
+
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(LOCAL,MASTER)
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 3
+	EXP:LOCAL:(50 + HETEROSEX(TARGET,MASTER)) += 3
+ENDIF
+IF HETEROSEX(TARGET,LOCAL)
+	EXP:(50 + HETEROSEX(TARGET,LOCAL)) += 3
+	EXP:LOCAL:(50 + HETEROSEX(TARGET,LOCAL)) += 3
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE71
+VARSET LOCAL
+LOCAL = MASTER_POSE(6,1,1)
+LOCAL:1 = MASTER_POSE(7,1,1)
+IF LOCAL
+	LOCAL:2 = LOCAL
+ELSEIF LOCAL:1
+	LOCAL:2 = LOCAL:1
+ENDIF
+;두 구멍 넣기実行판정
+SIF !TFLAG:100
+	RETURN 0
+SIF GLOBAL_COMABLE(71)
+	RETURN RESULT
+;TARGETがオトコ、半人半妖、후타나리の場合はある程度발기してないとダメ
+SIF (TALENT:2 & 2) && BASE:발기 < 1000
+	RETURN 0
+;TARGET 이외의 誰かに삽입してないとダメ
+SIF !LOCAL:2 || LOCAL:2 == TARGET
+	RETURN 0
+;상대가 처녀で、순종4以下・레즈끼4이하의 場合はできない（새드ならＯＫ）
+IF LOCAL:2 && TALENT:(LOCAL:2):처녀
+	SIF (ABL:순종 <= 4 || ABL:레즈끼 <= 4) && TALENT:새드 == 0
+		RETURN 0
+ENDIF
+;윤활不足で、순종3以下・레즈끼3이하의 ASSIの場合はできない（새드ならＯＫ）
+IF LOCAL:2 && PALAM:(LOCAL:2):윤활 < PALAMLV:2
+	SIF (ABL:순종 <= 3 || ABL:레즈끼 <= 3) && TALENT:새드 == 0
+		RETURN 0
+ENDIF
+;オトコだとダメ
+SIF LOCAL:2 && !(TALENT:(LOCAL:2):2 & 1)
+	RETURN 0
+;페니스がないとだめ
+SIF HAS_PENIS(TARGET) == 0 && ITEM:PBAND == 0
+	RETURN 0
+;바이브装着中はダメ
+;바이브/딜도 삽입중はダメ
+SIF TEQUIP:(LOCAL:2):바이브 || TEQUIP:(LOCAL:2):딜도
+	RETURN 0
+;애널바이브사용중は불가
+SIF TEQUIP:(LOCAL:2):14
+	RETURN 0
+;애널비즈사용중は불가
+SIF TEQUIP:(LOCAL:2):15
+	RETURN 0
+;普通の관장사용중は불가
+SIF TEQUIP:(LOCAL:2):21
+	RETURN 0
+;バルーン사용중は불가
+SIF TEQUIP:(LOCAL:2):22
+	RETURN 0
+;電極사용중は불가
+SIF TEQUIP:(LOCAL:2):23
+	RETURN 0
+;새댁플레이 중はダメ
+SIF TEQUIP:(LOCAL:2):33 || TEQUIP:새댁플레이
+	RETURN 0
+;体格差がある場合は主人が금단의지식持ちじゃないとダメ
+IF TALENT:MASTER:금단의지식 == 0
+	SIF ABS(TALENT:체형 - TALENT:(LOCAL:2):체형) > 2
+		RETURN 0
+	SIF ABS(TALENT:체형 - TALENT:(LOCAL:2):체형) > 2
+		RETURN 0
+ENDIF
+;一定のＡ경험が必要
+SIF EXP:(LOCAL:2):2 < EXPLV:3
+	RETURN 0
+;하반신착의
+SIF TEQUIP:(LOCAL:2):0 > 1
+	RETURN 0
+RETURN 1

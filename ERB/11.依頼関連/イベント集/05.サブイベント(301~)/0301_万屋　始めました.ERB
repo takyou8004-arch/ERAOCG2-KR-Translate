@@ -1,0 +1,164 @@
+﻿@IRAI_EVENT_301(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP8)해결사　시작했습니다
+	CASE "이벤트種"
+		RETURN 이벤트_通常
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL 今だけオープン特別割引体験CP中。
+		PRINTL お전화번호は：▽▽▽-○○○○-◇◇◇◇
+		PRINTL 依頼料1回:30,000円 →　3,000円!? Special Bonus!! Wow!!
+		PRINTL 
+	CASE "条件"
+		SIF 依頼_完了횟수:1 < 1
+			RETURN 0
+		SIF 依頼_全完了횟수() < 3
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_301(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 획득モンスター
+#DIM DYNAMIC 이벤트主
+
+이벤트主 = NO_TO_CHARANUM(2300)
+
+
+PRINTFORMW 明らかに妙な依頼だが、少し気になりますね……
+IF MONEY < 3000
+	PRINTW しかし今は持ち合わせのお金が足りなかったため、諦めることに……。
+	RETURN 3
+ENDIF
+PRINTFORMW ということで、入金して番号に電話をかけてみました。
+CALL MONEY_GET(-3000)
+PRINTFORMW 『プルル……プルル……ガチャっ』
+PRINTFORMW 『はい、こちら万事屋ハンディー。ご用件をどうぞ。』
+PRINTFORMW 『承りました、すぐに向かうので少々お待ちください。』
+PRINTL 
+PRINTFORMW ………5分後
+PRINTL 
+TIME += 5
+
+CALL SYOTAIMEN(이벤트主)
+PRINTFORMW 「猫探しから要人警護まで。マルチなサイキックレディ、万事屋ハンディー、ハンディーレディです。」
+PRINTFORMW 「依頼とあればなんでもやります、以後お見知りおきを。」
+PRINTFORMW ………
+PRINTL 
+PRINTL [0] - 愉快な人が来たなぁ……本当に何でも？
+IF CFLAG:이벤트主:소유함 == 1
+	PRINTL [2] - 何してんのハンディーさん……？
+ELSE
+	PRINTL [1] - ……モンスターだー！！！
+ENDIF
+BINPUT
+
+IF RESULT == 1
+	PRINTFORMW 「人をモンスター呼ばわりとは失礼ですね。それとも、気軽に誰かを罵倒したいというのが依頼でしょうか？」
+	PRINTFORMW あなたは首を横に振り、デュエルディスクを構え……。
+	PRINTFORMW 「なるほど、最近仲間たちが噂している女の子だけを狙ってカード化している人というのはあなたでしたか」
+	PRINTFORMW そんな噂になっているのか……と軽いショックを受けるも、ディスクに덱を세트한다。
+	PRINTFORMW 「先払いでしか働かない主義ですが、挑まれた듀얼には応じさせていただきましょう、」
+	TARGET = 이벤트主
+	CALL CHOICE_DUEL_TYPE
+	
+	IF RESULT == 1
+		PRINTFORMW 「やはり付け刃では勝てませんね。대상ありがとうございました。」
+		PRINTFORMW 「では、うわーカードにされる～～～」
+		CALL CARD_GET_CHARA(이벤트主)
+		PRINTFORMW %CALLNAME:이벤트主%는カードの姿に戻った……勢いでカード化してしまったが、何だったのだろう？
+		TIME += 60
+		RETURN 2
+	ELSE
+		PRINTFORML ぎゃあ！？
+		PRINTFORMW 「대상、ありがとうございました。ではまたのご利用お願いいたしますね？」
+		CALL RECOVER_PERMIL(MASTER,-1000,"체력")
+		CALL RECOVER_PERMIL(MASTER,-2000,"기력")
+		PRINTFORMW まさかやられてしまうとは……今日はゆっくりと休もう……。
+		TIME += 180
+		RETURN 3
+	ENDIF
+ELSEIF RESULT == 2
+	PRINTFORMW 「はい。何といわれても、仕事ですが？」
+	PRINTFORMW 仕事って……モンスターが人間界で仕事をするのは……。
+	PRINTFORMW 「ああ、そういう。どうやら私この世界에 존재하고ない「カード」ですので、愉快なお姉さんとしか見られていませんよ」
+	PRINTFORMW そうは言ってもモンスターが勝手に歩き回るのは……。
+	PRINTFORMW 「ああ、それなら大丈夫です、すでに중고車を買ったので。先ほどもランチを10件ほど届けたばかりです。」
+	PRINTFORMW すごいなぁ……いやそういう問題じゃなくてといろいろ考えていると、またペースを握られ。
+	PRINTFORMW 「それよりも、私を呼び出したということは何か依頼があるのではありませんか？」
+ENDIF
+PRINTFORMW 「どうぞ、私ができる範囲であればなんでも承りましょう」
+PRINTFORMW なんでも……と、なると……。
+PRINTL 
+PRINTL [0] - デュエル！！
+PRINTL [1] - ごはんが食べたい……。
+PRINTL [2] - エッチなこととか……？
+BINPUT
+PRINTFORMW 「承りました」
+IF RESULT == 0
+	PRINTFORMW 「この世界の常識に合わせてしっかりと덱は磨きました」
+	PRINTFORMW 「ほかの子たちよりは自信あると思うので、容赦なく行かせていただきます」
+	TARGET = 이벤트主
+	CALL CHOICE_DUEL_TYPE
+	
+	IF RESULT == 1
+		PRINTFORMW 「やはり付け刃では勝てませんね。대상ありがとうございました。」
+		PRINTFORMW 「とりあえず賞金として、こちらどうぞ」
+	ELSE
+		PRINTFORML ぎゃあ！？
+		PRINTFORMW 「대상、ありがとうございました。なかなかでしょう私の덱も？」
+		PRINTFORMW 「とりあえず残念賞として、こちらどうぞ」
+	ENDIF
+ELSEIF RESULT == 1
+	PRINTFORMW 「ではキッチンの残り物から適当なものを作りましょうか、少々お待ちください」
+	PRINTFORMW そういって %CALLNAME:MASTER%のキッチンを借りて、ハンディーは手際よく요리を作り始めました。
+	PRINTFORMW ………目の前にあり合わせで作ったとは思えない❤マークが描かれたオムライスが置かれました。
+	PRINTFORMW 「どうぞ。それとも食べさせてあげましょうか？　サービスしますよ？」
+	PRINTL 
+	PRINTL [0] - 예。お願いいたします。
+	PRINTL [1] - 大丈夫です、大人だから一人で食べます
+	BINPUT
+	PRINTFORMW 「ふーっ、ふーっ。はい、あーん」
+	PRINTFORMW くすぐったい感触はありながらも、オムライスを食べさせていただきました。拒否権はなかったようです。
+	PRINTFORMW うー！まー！いー！ぞー！！！！	
+	CALL RECOVER_PERMIL(MASTER,MAXBASE:MASTER:체력,"체력",1)
+	CALL RECOVER_PERMIL(MASTER,MAXBASE:MASTER:기력,"기력",1)
+	PRINTFORMW 「メイド喫茶の臨時お手伝いしていましたので、接待は完璧ですにゃん。それはそうとこちらをどうぞ」
+ELSEIF RESULT == 2
+	PRINTFORMW 「では、失礼しますね？　만족いただけるまで、たっぷりと使ってください。」
+	PRINTFORMW あまりにも無機質的にハンディーはそういうと、容赦なく、その豊満な体を押し付けてきた……。
+	CALL RESET_TARINCON
+	依頼조교대상 = 이벤트主
+	CALL EVENT_TRAIN
+
+	PRINTFORMW 「ふぅ、どうでしたか？　만족いただけたのであればこちらとしてもうれしい限りではありありますが？」
+	SETBIT CFLAG:이벤트主:1 ,0
+	PRINTFORMW 「ハンディサービスが必要となったらいつでもお呼びくださいね？　よいしょっと……」
+	PRINTFORMW 「あっ忘れるところでした。せっかくなので、こちらどうぞ。」
+ENDIF
+
+CALL CARD_GET_CHARA(이벤트主)
+CALL SOURCE_CALC_환락(이벤트主, MASTER, 3000)
+PRINTFORMW 「イリュージョン社のお得意様に名刺대신에 こちら作っていただきました」
+PRINTFORMW 「関連カードもいくらか……（ﾎﾞｿｯ）」
+PRINTFORMW 「もちろん %CALLNAME:MASTER%さんなら、それでいつでも呼び出すこともできるはずなのでご贔屓お願いしますね？」
+PRINTFORMW そういって「では残りのデリバリーに行ってきます」と言い残し、どこかへと向かっていきました。
+TIME += 60
+RETURN 2
+
+
+@RESET_TARINCON
+VARSET 依頼조교대상,-1
+VARSET 依頼조교보정
+
+

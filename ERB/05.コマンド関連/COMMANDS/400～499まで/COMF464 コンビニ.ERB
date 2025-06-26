@@ -1,0 +1,231 @@
+﻿;-------------------------------------------------
+;편의점
+;-------------------------------------------------
+@COM464
+#DIM DYNAMIC リスト開始
+#DIM DYNAMIC リスト終了
+#DIM DYNAMIC カウンタ,2
+
+#DIM DYNAMIC 식사아이템구입数
+
+#DIMS DYNAMIC 아이템名
+#DIM DYNAMIC 아이템価格
+#DIM DYNAMIC 구입아이템
+
+#DIM DYNAMIC 상승지방
+#DIM DYNAMIC 回復率_체력
+#DIM DYNAMIC 回復率_기력
+#DIM DYNAMIC 캐릭터_ID
+IF CFLAG:MASTER:현재위치 == 場所_神社
+	CALL SHOP_OUTSIDE(1)
+ELSE
+	CALL SHOP_OUTSIDE()
+ENDIF
+@SHOP_OUTSIDE(売店종류)
+#DIM DYNAMIC リスト開始
+#DIM DYNAMIC リスト終了
+#DIM DYNAMIC カウンタ,2
+#DIM DYNAMIC 식사아이템구입数
+#DIMS DYNAMIC 아이템名
+#DIM DYNAMIC 아이템価格
+#DIM DYNAMIC 구입아이템
+#DIM DYNAMIC 상승지방
+#DIM DYNAMIC 回復率_체력
+#DIM DYNAMIC 回復率_기력
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 売店종류
+#DIM DYNAMIC 合計価格
+
+$INPUT_LOOP
+CUSTOMDRAWLINE —
+SELECTCASE 売店종류
+CASE 0
+	PRINTFORML 【편의점 KC마트】
+CASE 1
+	PRINTFORML 【재왕신사　매점】
+ENDSELECT
+PRINTFORML (소지금:{MONEY}円)
+CUSTOMDRAWLINE —
+CALL ITEM_SALES
+
+SELECTCASE 売店종류
+CASE 0
+	PRINTFORML ―드링크류――――――
+	PRINTFORM 　[{0,3}] - %"소프트 드링크",20,LEFT%　({120,6}円)
+	PRINTFORM 　[{1,3}] - %"에너지 드링크",20,LEFT%　({210,6}円)
+	PRINTFORM 　[{2,3}] - %"차",20,LEFT%　({100,6}円)
+	PRINTL
+	;お酒関連
+	PRINTFORML ―술관련―――――――
+	FOR 캐릭터_ID,0,CHARANUM
+		SIF CFLAG:캐릭터_ID:동행 <= 0
+			CONTINUE
+		SIF TALENT:캐릭터_ID:연령 <= -1
+			CONTINUE
+		FOR カウンタ,420,430
+			SIF ITEMNAME:カウンタ == ""
+				CONTINUE
+			IF ITEMSTOCK(カウンタ) == 5
+				SETCOLOR C_GRAY
+				PRINTFORML　 <{カウンタ,4}> - %ITEMNAME:カウンタ,20,LEFT%　(　매진　)
+			ELSE
+				PRINTFORML 　[{カウンタ,4}] - %ITEMNAME:カウンタ,20,LEFT%　({ITEMPRICE:カウンタ,6}円)
+			ENDIF
+		NEXT
+		BREAK
+	NEXT
+
+	PRINTL
+	PRINTFORML ―일용품――――――――
+
+	PRINTFORM 　[{40,3}] - %"로션",20,LEFT%　({200,6}円)
+	PRINTFORM 　[{45,3}] - %"콘돔",20,LEFT%　({100,6}円)
+CASE 1
+	PRINTFORML ―드링크류――――――
+	PRINTFORM 　[{2,3}] - %"차",20,LEFT%　({100,6}円)
+	PRINTL
+	PRINTFORML ―부적――――――――
+	FOR カウンタ,110,115
+		SIF ITEMNAME:カウンタ == ""
+			CONTINUE
+		IF ITEMSTOCK(カウンタ) == 2
+			SETCOLOR C_GRAY
+			PRINTFORML 　<{カウンタ,4}> - %ITEMNAME:カウンタ,20,LEFT%　(　매진　)
+		ELSE
+			PRINTFORML 　[{カウンタ,4}] - %ITEMNAME:カウンタ,20,LEFT%　({ITEMPRICE:カウンタ,6}円)
+		ENDIF
+		RESETCOLOR
+	NEXT
+ENDSELECT
+PRINTL
+PRINTFORM 　[{100,3}] - %"마스터 팩",20,LEFT%　({150,6}円)
+PRINTL
+
+
+CUSTOMDRAWLINE —
+PRINTBUTTON "[쇼핑을 끝낸다]", 9999
+BINPUT
+IF RESULT == 9999
+	IF 식사아이템구입数 >= 1
+		PRINTFORM 당신은 가게 밖에서
+		SIF TARGET
+			PRINTFORM %CALLNAME:TARGET%과 같이、
+		PRINTFORML 산 식사를 즐겼다。
+		CALL RECOVER_PERMIL(MASTER,回復率_체력,"체력",1)
+		CALL RECOVER_PERMIL(MASTER,回復率_기력,"기력",1)
+		CFLAG:MASTER:지방 += 상승지방
+		IF TARGET
+			CALL RECOVER_PERMIL(TARGET,回復率_체력,"체력",1)
+			CALL RECOVER_PERMIL(TARGET,回復率_기력,"기력",1)
+			CFLAG:TARGET:지방 += 상승지방
+		ENDIF
+		TCVAR:MASTER:식사가능여부 = 1440 * DAY + TIME
+	ENDIF
+	RETURN 0
+ELSE
+	구입아이템 = RESULT
+	SELECTCASE 구입아이템
+		CASE 0
+			아이템名 = ソフト드링크
+			아이템価格 = 120
+		CASE 1
+			아이템名 = エナジー드링크
+			아이템価格 = 210
+		CASE 2
+			아이템名 = お茶
+			아이템価格 = 100
+
+		CASE 40
+			아이템名 = 로션
+			아이템価格 = 200
+		CASE 45
+			아이템名 = 콘돔
+			아이템価格 = 100
+		CASE 100
+			아이템名 = 마스터パック
+			아이템価格 = 150
+		CASEELSE
+			아이템名 = %ITEMNAME:구입아이템%
+			아이템価格 = ITEMPRICE:구입아이템
+	ENDSELECT
+	PRINTFORML %아이템名%을 구입하시겠습니까？가격：{아이템価格}
+	PRINTL [0] - 예
+	PRINTL [1] - 아니오
+	PRINTL 
+	BINPUT
+	IF RESULT == 0 
+		SELECTCASE 구입아이템
+		CASE 40 TO 50
+			CUSTOMDRAWLINE —
+			PRINTFORML %아이템名%를 얼마나 구입하시겠습니까？　소지금:{MONEY}円
+			CUSTOMDRAWLINE —
+			PRINTL
+			PRINTL [1]　　[5]　　[10]
+			PRINTL
+			PRINTL [0] - 그만둔다
+			BINPUT
+			IF RESULT != 0
+				IF MONEY >= RESULT * 아이템価格
+					PRINTFORML 「구입 감사합니다！」
+;					MONEY -= RESULT * 아이템価格
+					合計価格 = RESULT * 아이템価格
+					PRINTFORML %아이템名%을 {RESULT}개정도 구입했습니다。
+					CALL MONEY_GET(-合計価格)
+				ELSE
+					PRINTFORMW 「돈이 부족한데요？」
+				ENDIF
+			ENDIF
+		CASE 100
+			CALL CARD_PACK(0)
+		CASE 1 TO 30
+			IF MONEY > 아이템価格
+				IF 구입아이템 == 0
+					回復率_체력 += 100
+					回復率_기력 += 200
+					상승지방 += 2
+				ELSEIF 구입아이템 == 1
+					回復率_체력 += 300
+					回復率_기력 += 400
+					상승지방 += 1
+				ELSEIF 구입아이템 == 2
+					回復率_체력 += 50
+					回復率_기력 += 200
+				ENDIF
+				CALL MONEY_GET(-아이템価格)
+				식사아이템구입数 += 1
+			ELSE
+				PRINTW 돈이 부족합니다！
+			ENDIF
+		CASEELSE
+			IF MONEY >= 아이템価格
+				PRINTFORML 「구입 갑사합니다！」
+				CALL MONEY_GET(-아이템価格)
+				ITEM:구입아이템 ++
+				ITEMSALES:구입아이템 = -1
+				PRINTFORML %아이템名%를 구입했습니다。
+			ELSE
+				PRINTFORMW 「돈이 부족한데요？」
+			ENDIF
+		ENDSELECT
+	ENDIF
+ENDIF
+GOTO INPUT_LOOP
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;식사
+@COM_ABLE464
+;식사実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(464)
+	RETURN RESULT
+SIF !CONSTORE(CFLAG:MASTER:현재위치)
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1
+

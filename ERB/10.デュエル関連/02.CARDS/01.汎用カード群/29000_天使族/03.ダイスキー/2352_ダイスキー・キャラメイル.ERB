@@ -1,0 +1,140 @@
+﻿@CARDNAME_2352,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 다이스키- 캐릭터 메일
+	CASE "略称"
+RESULTS = D 캐릭터 메일
+	CASE "カテゴリ"
+RESULTS:0 = 다이스
+ENDSELECT
+
+
+@CARD_2352(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 300
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_2352(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드 명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①: 이 카드가 패에 존재하고, 자신 필드에 몬스터가 존재하지 않는 경우에 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다. 그 후 주사위를 1개 굴려, 나온 눈에 따라 이하의 효과를 적용한다.
+PRINTL ● 5 6: 덱에서 1장 드로우한다.
+PRINTL ● 1 2: 이 턴에, 자신은 「다이스」 몬스터밖에 특수 소환할 수 없다.
+PRINTL ● 그 외: 없음
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②: 자신 필드에 「다이스」 L 몬스터가 존재하는 한, 자신의 「다이스」 L 몬스터는 파괴 내성을 얻고,
+PRINTL 상대는 함정 카드를 발동할 수 없다.
+PRINTL 
+
+@CARDSUMMON_AA_2352
+
+
+@CARDCAN_2352(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2352)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,2352)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,2352,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 다이스
+	효과条件종류 = 링크
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_2352(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC サイコロ結果
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2352,1)
+	IF RESULT == 0
+		CALL DICE_ROLL(듀얼리스트,1)
+		サイコロ結果 = RESULT
+		PRINTFORMW 出た目は……{サイコロ結果}だ！
+		IF サイコロ結果 == 5 || サイコロ結果 == 6
+			PRINTFORMW ヒット！
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		ELSEIF サイコロ結果 == 1 || サイコロ結果 == 2
+			PRINTFORMW ロストロ-ル……
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+			CALL CARD_SS_RESTRICTION(듀얼리스트,"다이스")
+		ELSE
+			PRINTFORMW ノ-보너스。
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件종류 = 링크
+	효과条件カテゴリ = 다이스
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	CALL SET_PLAYER_INFO(듀얼리스트,"함정無効",3,1)
+ENDIF
+
+
+

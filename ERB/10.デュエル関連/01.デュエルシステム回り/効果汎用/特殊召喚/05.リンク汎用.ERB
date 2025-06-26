@@ -1,0 +1,444 @@
+@LINSUMMON(듀얼리스트,소환カード)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 대상者
+
+#DIMS DYNAMIC カード名
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC カウンタC
+#DIM DYNAMIC 固名前CNT
+#DIM DYNAMIC R종족CNT
+#DIM DYNAMIC R속성CNT
+
+#DIM DYNAMIC 選択カード,10
+#DIM DYNAMIC 選択カード_ID,10
+#DIM DYNAMIC 상대지정カード
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC 소환カード_ID	;ザポルグ追記20250309
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択済カード
+#DIM DYNAMIC 링크合計
+#DIM DYNAMIC 上級値
+#DIM DYNAMIC 戦闘耐性플래그
+#DIM DYNAMIC 破壊耐性플래그
+#DIM DYNAMIC 대상耐性플래그
+#DIM DYNAMIC 마법耐性플래그
+#DIM DYNAMIC モンスター耐性플래그
+#DIM DYNAMIC 함정耐性플래그
+#DIM DYNAMIC 一破耐性플래그
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 素材条件固名前설정,99
+#DIM DYNAMIC 素材条件R종족설정,99
+#DIM DYNAMIC 素材条件R속성설정,99
+#DIM DYNAMIC 素材条件レベル설정,99
+
+#DIM DYNAMIC 素材条件종족설정
+#DIMS DYNAMIC 使用素材名前,99
+#DIM DYNAMIC 検出종류,99
+
+#DIM DYNAMIC 素材数起動
+#DIM DYNAMIC 효과추가종류보존,20
+#DIM DYNAMIC 素材ID起動 ;Anonym추가
+#DIM DYNAMIC 보존素材ID
+
+
+VARSET 選択カード, -1
+VARSET 使用素材名前
+
+
+SIF 素材条件素材数起動 >= 1
+	素材数起動 = 1
+SIF 素材条件素材ID起動 >= 1 ;Anonym추가
+	素材ID起動 = 素材条件素材ID起動
+
+FOR カウンタ,0,10
+	효과추가종류보존:カウンタ = 효과추가종류:カウンタ
+NEXT
+
+
+
+
+$CHOICE_LOOP
+VARSET カード名
+IF 素材数 == 0 && 素材条件L値無視 != 1
+	TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{소환カード}")}(듀얼리스트,소환カード,0)
+	SIF 強制必要素材名前 != "" && 素材条件名前 == ""
+		素材条件名前 = %強制必要素材名前%
+	IF 素材条件同レベル起動 >= 1
+		CALL SETSAME_INFO(듀얼리스트,"レベル",素材条件同レベル起動,1)
+	ENDIF
+ELSEIF 素材数 >= 1
+	TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{소환カード}")}(듀얼리스트,소환カード,(9 + 素材数))
+	IF 素材条件同レベル起動 >= 1
+		VARSET 素材条件レベル, -1
+		素材条件レベル = 素材条件レベル설정
+	ENDIF
+	IF 素材条件R종족起動 == 1
+		FOR カウンタ,0,R종족CNT
+			素材条件R종족:カウンタ = 素材条件R종족설정:カウンタ
+		NEXT
+	ENDIF
+	IF 素材条件固名前起動 == 1
+		FOR カウンタ,0,固名前CNT
+			素材条件固名前:カウンタ = %素材条件固名前설정:カウンタ%
+		NEXT
+	ENDIF
+ENDIF
+;자신UI―――――――――――――――――――――――――――――――――――――
+IF 듀얼리스트 == "자신"
+	CUSTOMDRAWLINE —
+	TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_EX덱:{소환カード}")}, "名前"
+	カード名 = %RESULTS%
+	PRINTFORML 소환카드：《%カード名%》
+	PRINTW 소재로 한 몬스터를 골라주세요：
+	PRINTFORML 필요소 링크 수：{링크合計}/{必要링크数}
+	CUSTOMDRAWLINE —
+	PRINTL
+ENDIF
+
+;필터起動――――――――――――――――――――――――――――――――――
+CALL CARD_FILTER_EXSS(듀얼리스트,소환カード,링크,選択カード,"EX덱",素材数)
+
+IF 듀얼리스트 == "자신"
+	PRINTL
+	PRINTL 　[9999] - 돌아간다
+	PRINTL
+	BINPUT
+	選択カード:素材数 = RESULT
+ELSE
+	選択カード:素材数 = RESULT
+ENDIF
+
+;選択処理―――――――――――――――――――――――――――――――――――――
+IF 選択カード:素材数 == 9999
+	PRINTFORMW 돌아갑니다。
+	VARSET ALT条件
+	RETURN 0
+ELSEIF INRANGE (選択カード:素材数, 0, 5)
+	選択カード_ID:素材数 = GETVAR(@"%듀얼리스트%_필드:{選択カード:素材数}")
+	;SIF 選択カード_ID:素材数 == 1335
+	;	戦闘耐性플래그 = 1
+	;マスカレーナ起動
+	SIF 選択カード_ID:素材数 == 1335
+		破壊耐性플래그 = 1
+	;ヴェルスパーダ起動
+	SIF 選択カード_ID:素材数 == 41874
+		함정耐性플래그 = 1
+	;メアリース起動
+	SIF 選択カード_ID:素材数 == 41875
+		마법耐性플래그 = 1
+	;イヴ起動
+	SIF 選択カード_ID:素材数 == 41870
+		モンスター耐性플래그 = 1
+	;デスポリス起動
+	SIF 選択カード_ID:素材数 == 1311
+		一破耐性플래그 = 1
+
+	TRYCALLFORM CARD_{選択カード_ID:素材数}, "종류"
+	IF RESULT == 링크 && GETVAR(@"%듀얼리스트%_MZ_星:{選択カード:素材数}") != 1 && GETVAR(@"%듀얼리스트%_MZ_星:{選択カード:素材数}") != 必要링크数 && 必要링크数 >= GETVAR(@"%듀얼리스트%_MZ_星:{選択カード:素材数}") + 링크合計
+		IF 듀얼리스트 == "자신"
+			TRYCALLFORM CARDNAME_{GETVAR(@"選択カード_ID:{素材数}")}, "名前"
+			PRINTFORMW %RESULTS%를 링크수만큼 소재로 하겠습니까？
+			PRINTL [1] - 예
+			PRINTL [2] - 아니오
+			BINPUT
+		ELSE
+			RESULT = 1
+		ENDIF
+		IF RESULT == 1
+			링크合計 = 링크合計 + GETVAR(@"%듀얼리스트%_MZ_星:{選択カード:素材数}")
+		ELSE
+			링크合計 ++
+		ENDIF
+	ELSE 
+		링크合計 ++
+	ENDIF
+ENDIF
+
+;選択処理―――――――――――――――――――――――――――――――――――――
+IF 素材条件固名前起動 == 1
+	CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+	TRYCALLFORM CARDNAME_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "名前"
+	素材条件固名前설정:固名前CNT = %RESULTS%
+	固名前CNT ++
+ENDIF
+
+IF 素材条件R종족起動 == 1
+	CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+	素材条件R종족설정:R종족CNT = GETVAR(@"%대상者（CS）%_MZ_種:RESULT")
+	R종족CNT ++
+ENDIF
+
+IF 素材条件同レベル起動 >= 1
+	CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+	素材条件レベル설정 = GETVAR(@"%대상者（CS）%_MZ_星:RESULT")
+ENDIF
+
+TRYCALLFORM CARDNAME_{GETVAR(@"選択カード_ID:{素材数}")}, "名前"
+使用素材名前:素材数 = %RESULTS%
+PRINTFORMW %使用素材名前:素材数%를 소재로 합니다({素材数+1}체째)
+
+;Anonym추가
+;현재의 소재의 수と、素材条件素材ID起動で지정した数が同じなら起動
+IF 素材ID起動 == 素材数 + 1
+	CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+	보존素材ID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")
+ENDIF
+素材数 ++
+
+;合計じゃない경우、リピート―――――――――――――――――――――――――――――――――――――
+IF 링크合計 == 必要링크数
+	FOR カウンタ,0,素材数
+
+		IF 지정素材名前 != ""
+			TRYCALLFORM CARDNAME_{選択カード_ID:カウンタ}, "名前"
+			IF MATCH(지정素材名前, RESULTS)
+				条件달성 = 1
+			ENDIF
+		ENDIF
+		IF 지정素材カテゴリ != ""
+			TRYCALLFORM CARDNAME_{選択カード_ID:カウンタ}, "カテゴリ"
+			FOR カウンタC,0,5
+				IF RESULTS:カウンタC != ""
+					SIF MATCH(RESULTS:カウンタC, 지정素材カテゴリ)
+						条件달성 = 1
+					SIF MATCH(지정素材カテゴリ, RESULTS:カウンタC)
+						条件달성 = 1
+				ENDIF
+			NEXT
+		ENDIF
+		IF 지정素材속성 != 0
+			TRYCALLFORM CARD_{選択カード_ID:カウンタ}, "속성"
+			IF MATCH(지정素材속성, RESULT)
+				条件달성 = 1
+			ENDIF
+		ENDIF
+		IF 지정素材종족 != 0
+			TRYCALLFORM CARD_{選択カード_ID:カウンタ}, "종족"
+			IF MATCH(지정素材종족, RESULT)
+				条件달성 = 1
+			ENDIF
+		ENDIF
+		IF 지정素材종류 != 0
+			VARSET 検出종류, -1
+			TRYCALLFORM CARD_{選択カード_ID:カウンタ}, "종류"
+			FOR カウンタC,0,5
+				SIF RESULT:カウンタC <= 0
+					CONTINUE
+				検出종류:カウンタC = RESULT:カウンタC
+			NEXT
+			PRINTFORML 검출종류1:{検出종류}
+			FOR カウンタC,0,5
+				SIF MATCH(検出종류:カウンタC, 지정素材종류)
+					条件달성 = 1
+				PRINTFORML 검출종류2:{検出종류:カウンタC}
+				SIF MATCH(지정素材종류, 検出종류:カウンタC)
+					条件달성 = 1
+			NEXT
+		ENDIF
+
+		CALL CARD_DISPOSE(듀얼리스트,"필드",選択カード:カウンタ,0)
+		CALLFORM CARD_STANBY(選択カード_ID:カウンタ,듀얼리스트,L素材時효과,"묘지")
+	NEXT
+
+
+	PRINTFORML {素材数}체의 몬스터를 링크마커에 세트！
+
+	;ザポルグ追記20250309
+	소환カード_ID = GETVAR(@"%듀얼리스트%_EX덱:{소환カード}")
+	TRYCALLFORM CARD_FINISHER_SHOKO(듀얼리스트,소환カード_ID)
+
+	CALL MAT_EVENT_CHECK(듀얼리스트,カード名,使用素材名前)
+
+	PRINTFORMW 링크소환、링크{必要링크数}！%カード名%！！
+	IF 素材数起動 == 1
+		SETVAR @"%듀얼리스트%_MZ_汎数:現필드(듀얼리스트)", 素材数
+	ENDIF
+
+	VARSET 효과추가종류 ;Anonym修正
+	FOR カウンタ,0,5
+		IF 효과추가종류보존:カウンタ >= 1
+			효과추가종류:カウンタC = 효과추가종류보존:カウンタ
+			カウンタC ++
+		ENDIF
+	NEXT
+
+	IF 戦闘耐性플래그 == 1
+		효과추가종류:カウンタC = 51
+		カウンタC ++
+	ENDIF
+	IF 破壊耐性플래그 == 1
+		PRINTL 마스카레나의 힘에 의해 링크몬스터는 파괴내성을 얻는다！
+		효과추가종류:カウンタC = 52
+		カウンタC ++
+	ENDIF
+	IF 대상耐性플래그 == 1
+		효과추가종류:カウンタC = 53
+		カウンタC ++
+	ENDIF
+	IF モンスター耐性플래그 == 1
+		PRINTL 이브의 힘으로 인해 링크몬스터는 몬스터내성을 얻는다！
+		효과추가종류:カウンタC = 54
+		カウンタC ++
+	ENDIF
+	IF 마법耐性플래그 == 1
+		PRINTL 메어리스의 힘으로 인해 링크몬스터는 마법내성을 얻는다！
+		효과추가종류:カウンタC = 55
+		カウンタC ++
+	ENDIF
+	IF 함정耐性플래그 == 1
+		PRINTL 벨스파다의 힘으로 인해 링크몬스터는 함정내성을 얻는다！
+		효과추가종류:カウンタC = 56
+		カウンタC ++
+	ENDIF
+	IF 一破耐性플래그 == 1
+		PRINTL 데스폴리스의 힘에 의해 링크몬스터는 일시적 파괴내성을 얻는다！
+		효과추가종류:カウンタC = 57
+		カウンタC ++
+	ENDIF
+	SIF 条件달성
+		SETVAR @"%듀얼리스트%_MZ_条達:現필드(듀얼리스트)", 2
+	CALL CARD_EX_SUMMON(듀얼리스트, "EX덱", 소환カード,"攻撃표시",素材数)
+	IF 듀얼리스트 == "자신"
+		リザルト：LIN소환 = 1
+	ENDIF
+
+	VARSET ALT条件
+	RETURN 1
+ELSE
+	GOTO CHOICE_LOOP
+ENDIF
+
+
+
+
+
+@LINCAN(듀얼리스트,소환カード,カードID) 
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 固名前CNT
+#DIM DYNAMIC R종족CNT
+#DIM DYNAMIC R속성CNT
+
+#DIM DYNAMIC 選択カード,10
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択済カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 링크合計
+
+#DIMS DYNAMIC 素材条件固名前설정,99
+#DIM DYNAMIC 素材条件R종족설정,99
+#DIM DYNAMIC 素材条件R속성설정,99
+#DIM DYNAMIC 素材条件종족설정
+#DIM DYNAMIC 素材条件レベル설정,99
+
+#DIM DYNAMIC 上級値
+#DIMS DYNAMIC 대상者
+#DIMS DYNAMIC 参照先
+
+VARSET 選択カード, -1
+CALL CARD_EX_CHECK(듀얼리스트,カードID)
+SIF RESULT == 1
+	RETURN 0
+IF 듀얼리스트 == "상대"
+	CALL ENEMY_RUTIN_EXSUM(소환カード,カードID) 
+	SIF RESULT == 1
+		RETURN 0
+ENDIF
+
+
+IF 素材条件同レベル起動 >= 1
+	CALL SETSAME_INFO(듀얼리스트,"レベル",素材条件同レベル起動,1)
+ENDIF
+
+SIF 強制必要素材名前 != "" && 素材条件名前 == ""
+	素材条件名前 = %強制必要素材名前%
+
+
+$CHOICE_LOOP
+IF 素材数 == 0 && 素材条件L値無視 != 1
+	TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{소환カード}")}(듀얼리스트,소환カード,0)
+	SIF 強制必要素材名前 != "" && 素材条件名前 == ""
+		素材条件名前 = %強制必要素材名前%
+	IF 素材条件同レベル起動 >= 1
+		CALL SETSAME_INFO(듀얼리스트,"レベル",素材条件同レベル起動,1)
+	ENDIF
+ELSEIF 素材数 >= 1
+	TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{소환カード}")}(듀얼리스트,소환カード,(9 + 素材数))
+	IF 素材条件同レベル起動 >= 1
+		VARSET 素材条件レベル, -1
+		素材条件レベル = 素材条件レベル설정
+	ENDIF
+	IF 素材条件R종족起動 == 1
+		FOR カウンタ,0,R종족CNT
+			素材条件R종족:カウンタ = 素材条件R종족설정:カウンタ
+		NEXT
+	ENDIF
+	IF 素材条件R속성起動 == 1
+		FOR カウンタ,0,R속성CNT
+			素材条件R속성:カウンタ = 素材条件R속성설정:カウンタ
+		NEXT
+	ENDIF
+	IF 素材条件固名前起動 == 1
+		FOR カウンタ,0,固名前CNT
+			素材条件固名前:カウンタ = %素材条件固名前설정:カウンタ%
+		NEXT
+	ENDIF
+ENDIF
+
+
+
+CALL CARD_FILTER_EXSS(듀얼리스트,소환カード,링크,選択カード,"EX덱",素材数,1)
+IF RESULT == 1
+	選択カード:素材数 = RESULT:1
+	TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:{選択カード:素材数}")}, "종류"
+	IF RESULT == 링크
+		IF GETVAR(@"%듀얼리스트%_MZ_星:{選択カード:素材数}") == 1
+			링크合計 ++
+		ELSEIF GETVAR(@"%듀얼리스트%_MZ_星:{選択カード:素材数}") >= 必要링크数
+			링크合計 ++
+		ELSE
+			링크合計 += (GETVAR(@"%듀얼리스트%_MZ_星:{選択カード:素材数}"))
+		ENDIF
+	ELSE
+		링크合計 ++
+	ENDIF
+	
+	;選択処理―――――――――――――――――――――――――――――――――――――
+	IF 素材条件固名前起動 == 1
+;		PRINTFORML A4고명전CNT:{固名前CNT}
+		CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+		TRYCALLFORM CARDNAME_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "名前"
+		素材条件固名前설정:固名前CNT = %RESULTS%
+;		PRINTFORML A4소재수:{固名前CNT}:%素材条件固名前설정:固名前CNT%
+		固名前CNT ++
+	ENDIF
+
+	IF 素材条件R종족起動 == 1
+		CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+		TRYCALLFORM CARD_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "종족"
+		素材条件R종족설정:R종족CNT = RESULT
+		R종족CNT ++
+	ENDIF
+
+	IF 素材条件R속성起動 == 1
+		CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+		TRYCALLFORM CARD_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "속성"
+		素材条件R속성설정:R속성CNT = RESULT
+		R속성CNT ++
+	ENDIF
+
+	素材数 ++
+
+	IF 링크合計 >= 必要링크数
+		RETURN 1
+	ELSE
+		GOTO CHOICE_LOOP
+	ENDIF
+ELSEIF RESULT == 0 || RESULT == 9999
+	RETURN 0
+ENDIF

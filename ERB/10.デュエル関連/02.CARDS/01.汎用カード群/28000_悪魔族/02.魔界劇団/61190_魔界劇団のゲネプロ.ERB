@@ -1,0 +1,110 @@
+@CARDNAME_61190,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마계극단의 총연습
+	CASE "略称"
+RESULTS = 마계극단 총연습
+	CASE "カテゴリ"
+RESULTS:0 = 마계극단
+ENDSELECT
+
+
+@CARD_61190(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61190(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,ターン開始時)
+PRINTL ①: 자신 턴 개시 시에 발동할 수 있다.
+PRINTL 덱에서 "마계극단" 카드 1장과 "마계대본" 마법 카드 1장을 패에 추가한다.
+PRINTL 이 카드의 발동 후, 턴 종료 시까지 자신은 "마계극단" 몬스터밖에 특수 소환할 수 없다.
+
+@CARDCAN_61190(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61190)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン開始時
+	SIF 발동済_1(듀얼리스트,61190)
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"손패" ,"마함")
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 마계극단
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 마계대본
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_61190(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과使用불가,3
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ターン開始時
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61190,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 마계극단
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 마계대본
+		효과条件종류 = 마법全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL CARD_SS_RESTRICTION(듀얼리스트,"마계극단")
+	ENDIF
+ENDIF
+

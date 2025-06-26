@@ -1,0 +1,190 @@
+﻿@CARDNAME_55504,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마건변귀－트랜스풀미네
+	CASE "略称"
+RESULTS = 트랜스풀미네
+	CASE "カテゴリ"
+RESULTS:0 = 마건
+ENDSELECT
+
+
+@CARD_55504(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2800
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_55504(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「마건」튜너＋튜너 이외의 통상 몬스터 1체 이상
+PRINTL 이 카드명의 ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 1번의 배틀 페이즈 중에 2번까지 몬스터에게 공격할 수 있다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：자신 메인 페이즈에 발동할 수 있다.
+PRINTL 덱에서 「마건」마법 / 함정 카드 1장을 고르고 자신의 마법＆함정 존에 세트한다.
+CALLFORM CARD_ABLE(3,효과後誘発)
+PRINTL ③：자신의 묘지의 어느 한 몬스터와 같은 속성을 가진 몬스터를 상대가 소환 / 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 그 몬스터를 파괴한다.
+
+
+@CARDSUMMON_55504(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件カテゴリ = 마건
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件종류 = 通常モン
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,55504) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_55504(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,55504)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,55504)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 마건
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_3(듀얼리스트,55504)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	FOR カウンタ,1,8
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件속성 = カウンタ
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			CONTINUE
+		CALL FULLRESET
+		효과条件속성 = カウンタ
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般",1)
+		SIF RESULT != 1
+			CONTINUE
+		条件달성 = 1
+	NEXT
+	SIF 条件달성 == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_55504(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時強制誘発
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"効済",1)
+	IF 戦闘場所(듀얼리스트,1) != 5
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"直無",1)
+	ENDIF
+	
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55504,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 마건
+		효과条件종류 = 마함全般
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55504,3)
+	IF RESULT == 0
+		효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",효과先,"묘지")
+	ENDIF
+ENDIF
+
+
+

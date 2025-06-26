@@ -1,0 +1,142 @@
+﻿@CARDNAME_91650,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 투절의 주안
+	CASE "略称"
+RESULTS = 투절의 주안
+	CASE "カテゴリ"
+RESULTS:0 = 주안
+ENDSELECT
+
+
+@CARD_91650(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91650(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,마함起動 ,フリー誘発)
+PRINTL ①：자신 필드에 「주안」 몬스터가 존재할 경우,
+PRINTL 상대 필드의 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터를 주인의 패로 되돌린다.
+PRINTL 자신의 마법 & 함정 존에 「주안」 장착 마법이 존재할 경우, 이 효과의 대상을 2장으로 할 수 있다.
+CALLFORM CARD_ABLE(0,제외時)
+PRINTL ②：자신의 마법 & 함정 존에 「주안」 장착 마법이 존재하고, 이 카드가 제외되었을 경우,
+PRINTL 상대 필드의 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터를 주인의 패로 되돌린다.
+
+@CARDCAN_91650(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91650)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 제외時
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件종류 = 装備마법
+	효과条件カテゴリ = 주안
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 손패
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 주안
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 손패
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_91650(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード,5
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91650)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"손패")
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91650)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"손패")
+
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件종류 = 装備마법
+		효과条件カテゴリ = 주안
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과条件除去種 = 손패
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과条件任意 = 1
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"손패")
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

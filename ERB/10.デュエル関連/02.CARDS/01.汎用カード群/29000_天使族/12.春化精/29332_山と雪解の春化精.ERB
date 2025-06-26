@@ -1,0 +1,140 @@
+﻿@CARDNAME_29332,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 산과 눈 녹이의 춘화정
+	CASE "略称"
+RESULTS = 산과 눈 녹이
+	CASE "カテゴリ"
+RESULTS:0 = 춘화정
+ENDSELECT
+
+
+@CARD_29332(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1100
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+	CASE "レア度"
+		RETURN RARE
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29332(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 이 카드와, 몬스터 1체 또는 "춘화정" 카드 1장을 패에서 버리고 발동할 수 있다.
+PRINTL 자신은 덱에서 1장 드로우한다.
+PRINTL 그 후, 자신의 묘지에서 땅속성 몬스터 1장을 고르고 특수 소환할 수 있다.
+PRINTL 이 턴, 자신은 땅속성 이외의 몬스터의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신 필드의 "춘화정" 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 이 턴, 그 몬스터는 1번의 배틀 페이즈 중에 2회 공격할 수 있다.
+
+
+@CARDCAN_29332(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29332)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,29332)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件スーパーカテゴリ = 춘화정
+	효과条件종류 = モン全般
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,29332)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29332(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名前
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29332,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件スーパーカテゴリ = 춘화정
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+			
+			IF モンスター数(듀얼리스트) < 5
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件속성 = 땅속성
+				효과条件任意 = 1
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+		CALL SET_PLAYER_INFO(듀얼리스트,"속성효과無効",땅속성)
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29332,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 춘화정
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",RESULT,"戦",2,1)
+		ENDIF
+	ENDIF
+ENDIF

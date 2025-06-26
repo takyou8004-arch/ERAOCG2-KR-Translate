@@ -1,0 +1,106 @@
+﻿@CARDNAME_31132,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 화염제왕 테스탈로스
+	CASE "略称"
+RESULTS = 화염제테스탈로스
+	CASE "カテゴリ"
+RESULTS:0 = 제
+ENDSELECT
+
+
+@CARD_31132(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_31132(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환되었을 경우 발동할 수 있다.
+PRINTL 상대의 손패를 무작위로 1장 선택하여 버린다.
+PRINTL 버린 카드가 몬스터 카드였을 경우, 그 몬스터의 레벨 × 100 데미지를 상대에게 입힌다.
+
+@CARDSUMMON_AA_31132
+
+
+@CARDCAN_31132(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31132)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	SIF 손패数(対面者) < 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31132(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31132)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"손패破壊",場所,"묘지")
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"손패墓送",1)
+		SIF RESULT != 1
+			RETURN 0
+		FOR カウンタ,1,13
+			CALL FULLRESET
+			효과条件종류 = モン全般
+			CALL CARD_CHECK_FIN_DATA(듀얼리스트,"손패墓送",1)
+			IF RESULT == 1
+				条件달성 = カウンタ
+				BREAK
+			ENDIF
+		NEXT
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",条件달성*100,1)
+	ENDIF
+ENDIF

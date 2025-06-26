@@ -1,0 +1,194 @@
+﻿@CARDNAME_50984,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 승리의 패투 가이라오우
+	CASE "略称"
+RESULTS = 가이라오우
+
+	CASE "武装名"
+RESULTS = 패투장룡검 가이오우반
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:1 = 드래그하트
+RESULTS:2 = 웨폰
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_50984(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 9
+	CASE "コスト"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 2600
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50984(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+RETURN 0
+
+@CARD_EXPLANATION_50984(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 『초차원』에 의해 강림.
+PRINTL (이 카드는 카드 효과로만 EX덱에서 필드에 특수 소환하거나 마함 존에 놓을 수 있다)
+CALL TEXT_DECORATION("D_HEART_W")
+PRINTL 웨폰 측 《패투장룡검 가이오우반》 코스트: 5
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드를 장착한 몬스터의 공격력은 500 올린다.
+CALLFORM CARD_ABLE(11,他효과起動)
+PRINTL ②: 이 카드가 장착되었을 경우에 발동할 수 있다.
+PRINTL 장착 몬스터 이하의 공격력을 가진 상대 몬스터 1장을 선택하여 파괴한다.
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ③: 상대 몬스터가 전투로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 몬스터로서 필드에 특수 소환한다.
+CALL TEXT_DECORATION("D_HEART_2")
+PRINTL 이 카드명의 몬스터 효과는, 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動 ,フリー誘発)
+PRINTL ①: 자신 / 상대 턴에 발동할 수 있다.
+PRINTL 이 카드 이하의 공격력을 가진 상대 몬스터 1장을 선택하여 파괴한다.
+PRINTL 
+
+@CARDCAN_50984(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50984)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 他효과起動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 묘지
+	효과条件표시 = 表側표시
+	효과条件攻撃力 = GETVAR(@"%듀얼리스트%_MZ_攻:装備先")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,50984)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 묘지
+	효과条件표시 = 表側표시
+	효과条件攻撃力 = GETVAR(@"%듀얼리스트%_MZ_攻:場所")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,50984,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50984(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 攻守変動
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,500)
+
+ELSEIF 종류 == 他효과起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50984,11)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件攻撃力 = GETVAR(@"%듀얼리스트%_MZ_攻:装備先")
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지",50984)
+	ENDIF
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50984)
+	IF RESULT == 0
+		PRINTFORMW 필드의 勝利に呼応し、드래그하트웨폰が변형をはじめた！！
+		PRINTFORML 『勝利の覇闘 ガイラオウ　龍　解　！！』
+		CALL RESETCONDITION
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50984,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件攻撃力 = GETVAR(@"%듀얼리스트%_MZ_攻:場所")
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지",50984)
+	ENDIF
+ENDIF

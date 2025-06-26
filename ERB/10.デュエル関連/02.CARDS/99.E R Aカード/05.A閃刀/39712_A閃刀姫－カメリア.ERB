@@ -1,0 +1,160 @@
+﻿@CARDNAME_39712,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = A섬도희－카멜리아
+	CASE "略称"
+		RESULTS = A섬도희 카멜리아
+	CASE "カテゴリ"
+		RESULTS:0 = A섬도희
+		RESULTS:1 = A섬도
+		RESULTS:2 = E.R.A
+		RESULTS:3 = 섬도
+		RESULTS:4 = 섬도희
+ENDSELECT
+
+
+@CARD_39712(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 2002
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39712(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다
+CALL CARD_ABLE(1,효과後誘発)
+PRINTL ①：자신 / 상대 턴에, 패에 이 카드가 있는 상태에서 필드에 몬스터가 소환될 때 발동할 수 있다。
+PRINTL 상대 필드의 암컷 몬스터 1체의 공격력을 1500 감소시키고, 이 카드를 패에서 특수 소환한다。
+CALL CARD_ABLE(2,소환時,특수소환時)
+PRINTL ②：이 카드가 소환 또는 특수 소환에 성공했을 때 발동할 수 있다。
+PRINTL 자신의 덱 / 묘지에서 "A섬도」 몬스터를 특수 소환한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39712(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39712)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,39712)
+		RETURN 0
+	SIF ゾーン != "손패" 
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39712,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"通常소환",2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,39712)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = A섬도
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39712(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 필드単体
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39712,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件성별 = 牝性
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"永攻DOWN",1500)
+		IF RESULT == 1
+			CALL CARD_EROTICS(他参照選択カードID)
+			IF RESULT != -1
+				조교대상 = RESULT
+				PRINTFORMW 갑작스레 나타난 카멜리아에게 %CALLNAME:조교대상%은 놀라기도 전에 입술을 빼앗기고, 그대로 마음대로 사지를 애무당했다。
+				PRINTFORMW 애액을 듬뿍 발라지고 나서야 겨우 해방된 %CALLNAME:조교대상%였지만, 쾌감의 여운에 주저앉아 버렸다。
+				CALL EROTIC_MOVE("全身레즈애무",조교대상,NO_TO_CHARANUM(2002),150)
+			ENDIF
+		ENDIF
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39712,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = A섬도
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

@@ -1,0 +1,56 @@
+﻿;-------------------------------------------------
+;공부
+;-------------------------------------------------
+@COM412
+IF CFLAG:MASTER:현재위치 == 場所_学校教室 && (TIME >= 720 && TIME < 780)
+	RETURN 0
+ELSEIF CFLAG:MASTER:현재위치 == 場所_学校教室 && TIME >= 900
+	RETURN 0
+ENDIF
+
+CALL RECOVER_PERMIL(MASTER,-200,"체력")
+CALL RECOVER_PERMIL(MASTER,-300,"기력")
+
+IF TARGET > 0 && !CFLAG:수면
+	CALL SOURCE_CALC_환락(TARGET, MASTER, 300)
+	CALL SOURCE_CALC_정복(TARGET, MASTER, 100)
+	EXP:MASTER:학습경험 ++
+ENDIF
+IF CFLAG:MASTER:현재위치 == 場所_学校教室 && TIME <= 720
+	TIME += 60
+	SIF TIME > 720
+		TIME = 720
+ELSEIF CFLAG:MASTER:현재위치 == 場所_学校教室 && TIME >= 780
+	TIME += 60
+	CALL EVILTY_POINT(-5)
+	SIF TIME > 960
+		TIME = 960
+ELSE
+	TIME += 60
+ENDIF
+EXP:MASTER:학습경험 ++
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;공부
+@COM_ABLE412
+;청소実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(412)
+	RETURN RESULT
+;寝室
+;SIF CFLAG:MASTER:현재위치 != 8 && CFLAG:MASTER:현재위치 != 24 && CFLAG:MASTER:현재위치 != 53
+SIF !GROUPMATCH(CFLAG:MASTER:현재위치,場所_寝室, 場所_カフェ, 場所_学校教室)
+	RETURN 0
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+SIF CFLAG:MASTER:감기플래그 >= 1
+	RETURN 0
+RETURN 1

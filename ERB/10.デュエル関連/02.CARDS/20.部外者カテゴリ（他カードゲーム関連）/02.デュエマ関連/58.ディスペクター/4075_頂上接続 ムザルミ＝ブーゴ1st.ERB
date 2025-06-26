@@ -1,0 +1,222 @@
+﻿@CARDNAME_4075,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 정상 접속 무자르미=부-고1st
+	CASE "略称"
+RESULTS = 무자르미
+	CASE "カテゴリ"
+RESULTS:0 = 디스펙터
+RESULTS:1 = 커맨드
+RESULTS:2 = 드래그너
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_4075(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RESULT:1 = 땅속성
+		RETURN 빛속성
+	CASE "종족"
+		RESULT:1 = 야수족
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 2550
+	CASE "守備力"
+		RETURN 3050
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN ディスペクタ-
+	CASE "특수制限"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4075(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 천사족 몬스터 ＋ 야수족 몬스터
+PRINTL 자신 필드의 상기 카드를 묘지로 보냄으로써 EX덱에서 특수 소환할 수도 있다.
+PRINTL 자신은 「정상 접속 무자르미=부-고1st」을 1턴에 1번밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,EX소환時強制,특수소환時強制)
+PRINTL ①: 『X 라이프』
+PRINTL 이 카드는 X 소재를 가질 수 있으며, X 소재를 1개 가진 상태로 특수 소환된다.
+PRINTL 이 카드가 몬스터 존을 벗어날 경우, 대신에 이 X 소재를 제거한다.
+CALLFORM CARD_ABLE(0,EX소환時 ,특수소환時)
+PRINTL ②: 이 카드가 특수 소환했을 경우에 발동할 수 있다. 이하의 효과 중에서 1개를 선택하여 적용한다.
+PRINTL ●자신 EX덱의 레벨 또는 코스트 6 이하의 초차원 카드를 1장 고르고,
+PRINTL 자신 필드에 특수 소환하거나, 자신 마법 & 함정 존에 앞면 표시로 세트한다.
+PRINTL 그 후, 자신 라이프를 4000 회복한다.
+PRINTL ●자신 EX덱에서 코스트 6 이하의 드래그하트 웨폰을 1장 고르고, 이 카드에 장착한다.
+PRINTL 그 후, 자신 라이프를 4000 회복한다.
+
+
+
+@CARDSUMMON_4075(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件종족 = 천사족
+ELSEIF EX参照 >= 10
+	素材条件종족 = 야수족
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,4075) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_4075(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4075)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,4075)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,4075,ゾーン,1)
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 천사족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 야수족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時強制 || 종류 == 특수소환時強制
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF モンスター数(듀얼리스트) >= 5 && 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 초차원
+	CALL 효과条件レベル_ADV(6, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_4075(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択レベル
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4075,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 천사족
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件속성 = 야수족
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트, "EX덱", 場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4070,00,X消費1)
+	IF RESULT == 0
+		CALLFORM CARD_STANBY(4075,듀얼리스트,他효과起動,"필드",場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == EX소환時強制 || 종류 == 특수소환時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4075)
+	IF RESULT == 0
+PRINTL 효과를 선택해 주세요
+		CALL YN_CHOICE(듀얼리스트,"●モンスターか포트리스を소환。","●ウエポンを装備。")
+		IF RESULT == 0
+			CALL FULLRESET
+			효과条件종류 = 초차원
+			CALL 효과条件レベル_ADV(6, "以下")
+			CALL DIMSUMMON(듀얼리스트,ゾーン,場所,(2 + 4 + 8))
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",4000)
+		ELSEIF RESULT == 1
+			CALL FULLRESET
+			효과条件종류 = 초차원
+			효과条件カテゴリ = 웨폰
+			CALL 효과条件レベル_ADV(6, "以下")
+			CALL DIMSUMMON(듀얼리스트,ゾーン,場所,1)
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",4000)
+		ENDIF
+	ENDIF
+ENDIF

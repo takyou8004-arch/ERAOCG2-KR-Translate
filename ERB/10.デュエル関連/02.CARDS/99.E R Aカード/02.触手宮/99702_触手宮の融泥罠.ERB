@@ -1,0 +1,112 @@
+﻿@CARDNAME_99702,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 촉수궁의 녹이는 함정
+	CASE "略称"
+		RESULTS = 촉수궁녹이는함정
+	CASE "カテゴリ"
+		RESULTS:0 = 촉수
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99702(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99702(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  효과는 1턴에 1번 밖에 사용할  수 없다。
+CALL CARD_ABLE(1,攻撃後誘発)
+PRINTL ①：상대 몬스터가 공격 한 후에 발동할 수 있다.
+PRINTL 상대 필드에 존재하는 모든 몬스터의 효과는 무효화 된다。
+PRINTL 필드가 「촉수궁」일 경우에 이 카드는 패에서 발동할 수 있다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99702(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 操作者
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99702)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃後誘発
+	SIF 발동済_1(듀얼리스트,99702)
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	IF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSEIF ゾーン == "손패"
+		SIF GETVARS(@"%듀얼리스트%_フィールド名") != "촉수궁"
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_99702(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과蓄積
+#DIMS DYNAMIC 操作者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 攻撃後誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99702,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"지속無効",99702)
+		CALL FULLRESET
+		효과条件성별 = 牝性
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"服状",99702)	
+	ENDIF
+ENDIF

@@ -1,0 +1,64 @@
+﻿;-------------------------------------------------
+;電車を使う
+;-------------------------------------------------
+@COM601
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択行先
+$INPUT_LOOP
+CALL GAME_TUTORIAL(10)
+
+
+CUSTOMDRAWLINE —
+PRINTL
+PRINTL 이동 장소 선택
+PRINTL 요금은 어디서나 무료！！　고마워 카이바Corp！
+CUSTOMDRAWLINE —
+
+PRINTL 
+
+SIF CFLAG:MASTER:현재위치 != 場所_東駅
+	PRINTFORML [{場所_東駅,3}] - %GETPLACENAME(場所_東駅),20,LEFT%	
+SIF CFLAG:MASTER:현재위치 != 場所_南駅
+	PRINTFORML [{場所_南駅,3}] - %GETPLACENAME(場所_南駅),20,LEFT%
+PRINTL
+PRINTL 
+CUSTOMDRAWLINE —
+PRINTL [100] - 뒤로
+BINPUT
+
+IF RESULT == 100
+	RETURN 0
+ELSE
+	選択行先 = RESULT
+	ABS PLACEPARAMATOR(CFLAG:MASTER:현재위치) - PLACEPARAMATOR(選択行先)
+	TIME += RESULT
+	CFLAG:MASTER:현재위치 = 選択行先
+	FOR LOCAL,1,CHARANUM
+		SIF !CFLAG:LOCAL:데이트중 == 1
+			CONTINUE
+		CFLAG:LOCAL:현재위치 = 選択行先
+	NEXT
+ENDIF
+
+
+RETURN 1
+
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;산책한다
+@COM_ABLE601
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;외출以外
+SIF !TRAINSTATION(CFLAG:MASTER:현재위치)
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(600)
+	RETURN RESULT
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

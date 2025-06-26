@@ -1,0 +1,190 @@
+﻿@CARDNAME_54466,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 악마세계 와루도바로무
+	CASE "略称"
+RESULTS = 와루도바로무
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_54466(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+	CASE "특수불가"
+		RETURN 1
+	CASE "C불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_54466(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件종족 = 악마족
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,54466) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_54466(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 악마족 몬스터 ×５
+PRINTL 이 카드는 융합소환으로만 특수 소환할 수 없으며, 이 카드의 효과 발동에 대해 상대는 효과를 발동할 수 없다.
+PRINTL 이 카드명의 ②③의 효과는 １턴에 한 번만 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：자신의 필드 묘지에 악마족 몬스터만 존재하는 경우, 이 카드는 완전 내성을 얻는다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ②：자신 상대 턴에 발동할 수 있다.
+PRINTL 필드의 몬스터를 １체 선택하고,
+PRINTL 선택한 몬스터와 같은 속성의 상대 필드의 몬스터를 전부 파괴한다.
+CALLFORM CARD_ABLE(2,攻撃時誘発)
+PRINTL ③：이 카드의 공격 선언 시에 발동할 수 있다.
+PRINTL 상대에게 １０００ 데미지를 주고, 자신의 라이프를 １０００ 회복하고,
+PRINTL 자신은 카드를 １장 드로우하고, 상대는 자신의 손패를 １장 선택하여 버리게 하며,
+PRINTL 자신은 덱 묘지에서 악마족 몬스터 １장을 특수 소환한다.
+
+@CARDCAN_54466(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC EX条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54466)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,54466)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF 발동済_2(듀얼리스트,54466)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	CALL 효과条件종족_ADV(악마족, "以外")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_54466(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 발동불가
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 설정속성
+#DIM DYNAMIC 選択효과
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54466,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			설정속성 = GETVAR(@"%대상者（CS）%_MZ_属:選択カード（CS）")
+			CALL FULLRESET
+			효과条件속성 = 설정속성
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54466,2)
+	IF RESULT == 0
+		ダメージ量 = 1000
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",ダメージ量)
+
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(対面者,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件종족 = 악마족
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+ENDIF

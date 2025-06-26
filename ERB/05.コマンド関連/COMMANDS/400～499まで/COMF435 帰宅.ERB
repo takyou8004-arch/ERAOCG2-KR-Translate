@@ -1,0 +1,231 @@
+﻿;-------------------------------------------------
+;귀가한다
+;-------------------------------------------------
+@COM435
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 帰宅時이벤트불가
+#DIM DYNAMIC 이벤트대상
+#DIMS DYNAMIC 캐릭터名称
+
+;일や学校空の帰宅
+IF CFLAG:MASTER:현재위치 == 場所_직장 || CFLAG:MASTER:현재위치 == 場所_学校教室 || CFLAG:MASTER:현재위치 == 場所_学校内
+	IF 仕事_出席 == 2 || CFLAG:MASTER:현재위치 == 場所_学校教室 || CFLAG:MASTER:현재위치 == 場所_学校内 || (仕事_出席 == 0 && CFLAG:MASTER:현재위치 == 場所_직장)
+		;PRINTFORML 귀가합니다
+		CFLAG:MASTER:현재위치 = 1
+		CALL RECOVER_PERMIL(MASTER,-100,"체력")
+		CALL RECOVER_PERMIL(MASTER,-50,"기력")
+		TIME += 60
+		FOR 캐릭터_ID,1,CHARANUM
+			;家の外はNG
+			SIF CFLAG:캐릭터_ID:현재위치 >= 20
+				CONTINUE
+			IF CFLAG:캐릭터_ID:수면
+				PRINTFORML %CALLNAME:캐릭터_ID%는 곤히 자고있는것 같다。
+			ELSEIF TALENT:캐릭터_ID:연모 > 0
+				CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 11, 1)
+				PRINTFORM %CALLNAME:캐릭터_ID%는 귀가한 %CALLNAME:MASTER%
+					IF RAND:3 == 0
+						PRINTFORML 를 웃는얼굴로 배웅나와주었다。
+					ELSEIF RAND:2 == 0
+						PRINTFORML 에게 어리광부리듯 안겨왔다。
+					ELSEIF RAND:1 == 0
+						PRINTFORML 에게 밥과 목욕이 준비되었다고 알린다。
+					ENDIF
+				CFLAG:캐릭터_ID:현재위치 = 場所_廊下
+				FLAG:2008 = 2
+			ELSE
+				CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 11, 1)
+				PRINTFORML 귀가한 %CALLNAME:MASTER%에게 %CALLNAME:캐릭터_ID%는 적당히 귀가의 인사를 돌려주었다。
+			ENDIF
+		NEXT
+   ELSEIF 仕事_出席 == 1
+		PRINTFORML 남은 일[{8 - 仕事_工数}]
+		PRINTFORMW 아직 일이 남아있는것 같다・・・
+		RETURN 0
+	ENDIF
+
+
+ELSE
+	PRINTFORML 귀가합니다
+	IF INRANGE(CFLAG:MASTER:현재위치,500,800)
+		PRINTW 아리안나「돌아오셨네요、그럼 이쪽으로 오세요……」
+		FOR 캐릭터_ID,1,CHARANUM
+			;帰宅時に別の子が迎えに来ていたら帰宅이벤트はなし
+			IF GROUPMATCH(CFLAG:캐릭터_ID:현재위치,1,2)
+				帰宅時이벤트불가 = 1
+			ENDIF
+		NEXT
+		CFLAG:MASTER:현재위치 = 9
+		FOR 캐릭터_ID,1,CHARANUM
+			IF CFLAG:캐릭터_ID:데이트중 == 1
+				CFLAG:캐릭터_ID:데이트중 = 0
+				IF CFLAG:캐릭터_ID:호감도 >= 1000
+					CFLAG:캐릭터_ID:현재위치 = 9
+					이벤트대상 = 캐릭터_ID
+					CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 11, 2)
+				ELSE
+					PRINTFORMW %CALLNAME:캐릭터_ID%를 방으로 초대했지만、역시 주저하였습니다。
+					PRINTFORMW %CALLNAME:캐릭터_ID%는 혼자서 귀가했다。
+					CFLAG:캐릭터_ID:동행 = 0
+					CFLAG:캐릭터_ID:현재위치 = 100
+				ENDIF
+			ENDIF
+		NEXT
+		TIME += 5
+
+	ELSEIF CFLAG:MASTER:현재위치 == 場所_편의점
+		CFLAG:MASTER:현재위치 = 1
+		FOR 캐릭터_ID,0,CHARANUM
+			IF CFLAG:캐릭터_ID:데이트중 == 1
+				CFLAG:캐릭터_ID:데이트중 = 0
+				CFLAG:캐릭터_ID:현재위치 = 1
+			ENDIF
+		NEXT
+		TIME += 3
+		RETURN 1
+	;캐릭터の家から귀가한다。
+	ELSEIF CFLAG:MASTER:현재위치 == 場所_캐릭터家
+		FOR 캐릭터_ID,1,CHARANUM
+			SIF CFLAG:MASTER:현재위치 != CFLAG:캐릭터_ID:현재위치
+				CONTINUE
+			CFLAG:캐릭터_ID:현재위치 = 100
+			캐릭터名称 = %CALLNAME:캐릭터_ID%
+		NEXT
+		IF 캐릭터名称 != ""
+			PRINTFORM %CALLNAME:MASTER%는 %캐릭터名称%에게 이별을 전하고、귀가했다。			
+		ELSE
+			PRINTFORM %CALLNAME:MASTER%는 혼자서 귀가했다。
+		ENDIF
+		CFLAG:MASTER:현재위치 = 1
+		CALL RECOVER_PERMIL(MASTER,-100,"체력")
+		CALL RECOVER_PERMIL(MASTER,-50,"기력")
+		캐릭터家_名称 = ""
+		TIME += 30
+		RETURN 1
+	ELSE
+		CFLAG:MASTER:현재위치 = 1
+		FOR 캐릭터_ID,1,CHARANUM
+			;帰宅時に別の子が迎えに来ていたら帰宅이벤트はなし
+			IF GROUPMATCH(CFLAG:캐릭터_ID:현재위치,1,2)
+				帰宅時이벤트불가 = 1
+			ENDIF
+		NEXT
+
+		FOR 캐릭터_ID,1,CHARANUM
+			IF CFLAG:캐릭터_ID:데이트중 == 1
+				CFLAG:캐릭터_ID:데이트중 = 0
+				IF CFLAG:캐릭터_ID:호감도 >= 1000
+					CFLAG:캐릭터_ID:현재위치 = 1
+					이벤트대상 = 캐릭터_ID
+					CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 11, 2)
+				ELSE
+					PRINTFORMW %CALLNAME:캐릭터_ID%를 방으로 초대했지만、역시 주저하며 거절했습니다。
+					PRINTFORMW %CALLNAME:캐릭터_ID%는 혼자서 귀가했다。
+					CFLAG:캐릭터_ID:동행 = 0
+					CFLAG:캐릭터_ID:현재위치 = 100
+				ENDIF
+			ENDIF
+		NEXT
+	ENDIF
+	
+	;데이트이벤트起動
+	IF 帰宅時이벤트불가 == 0 && 이벤트대상 >= 1 && CFLAG:이벤트대상:데이트이벤트함 == 0
+		TARGET = 이벤트대상
+		IF BASE:TARGET:무드 >= 1200 && TALENT:TARGET:키스미경험
+			CALL KOJO_MESSAGE_SEND("SPEVENT", 이벤트대상, 1)
+			IF TALENT:MASTER:키스미경험
+				CALL SET_FIRSTKISS(MASTER, TARGET, 1)
+				EXP:TARGET:애정경험 += 10
+			ENDIF
+			IF TALENT:TARGET:키스미경험
+				CALL SET_FIRSTKISS(TARGET, MASTER, 1)
+				EXP:TARGET:애정경험 += 10
+			ENDIF
+			EXP:TARGET:키스경험 ++
+			EXP:MASTER:키스경험 ++
+			CFLAG:TARGET:데이트이벤트함 = 1
+		ELSEIF BASE:TARGET:무드 >= 1200 && TALENT:TARGET:연모 >= 2 && TALENT:TARGET:애처 == 0
+			CALL KOJO_MESSAGE_SEND("SPEVENT", 이벤트대상, 2)
+			PRINTFORML %CALLNAME:TARGET%의 고백을…
+			PRINTFORM [1] - 받아들인다
+			PRINTFORM [2] - 거절한다
+			BINPUT
+			IF RESULT == 1
+				CALL KOJO_MESSAGE_SEND("SPEVENT", 이벤트대상, 2,1)
+				TALENT:TARGET:애처 = 1
+				CFLAG:MASTER:현재위치 = CFLAG:MASTER:시작위치
+				CFLAG:MASTER:수면 = 1
+				CFLAG:MASTER:취침시간 = DAY * 1440 + TIME
+				FLAG:1 = 1
+			ELSE
+				CALL KOJO_MESSAGE_SEND("SPEVENT", 이벤트대상, 2,2)
+			ENDIF
+			CFLAG:TARGET:데이트이벤트함 = 1
+		ELSEIF BASE:TARGET:무드 >= 1000
+			IF MARK:TARGET:반발각인 >= 3
+				;반발각인消去이벤트3
+				CALL KOJO_MESSAGE_SEND("SPEVENT", 이벤트대상, 3,3)
+				CALL ANGER_AWAY(TARGET)
+			ELSEIF MARK:TARGET:반발각인 == 2
+				;반발각인消去이벤트2
+				CALL KOJO_MESSAGE_SEND("SPEVENT", 이벤트대상, 3,2)
+				CALL ANGER_AWAY(TARGET)
+			ELSEIF MARK:TARGET:반발각인 == 1
+				;반발각인消去이벤트1
+				CALL KOJO_MESSAGE_SEND("SPEVENT", 이벤트대상, 3,1)
+				CALL ANGER_AWAY(TARGET)
+			ELSE
+				;その他
+				CALL KOJO_MESSAGE_SEND("SPEVENT", 이벤트대상, 3)
+			ENDIF
+			CFLAG:TARGET:데이트이벤트함 = 1
+		ENDIF
+	ENDIF
+
+	;いろいろお帰り플래그
+	FOR 캐릭터_ID,1,CHARANUM
+		;家の外はNG
+		SIF CFLAG:캐릭터_ID:현재위치 >= 20
+			CONTINUE
+		;前のターン外ならNG
+		SIF CFLAG:캐릭터_ID:전턴위치 >= 20
+			CONTINUE
+
+		IF CFLAG:캐릭터_ID:수면
+			PRINTFORML %CALLNAME:캐릭터_ID%는 곤히 자고있는 것 같다。
+		ELSE
+			CALL KOJO_MESSAGE_SEND("EVENT",캐릭터_ID, 20)
+			PRINTFORML 帰宅した %CALLNAME:MASTER%に %CALLNAME:캐릭터_ID%는 귀가인사를 되돌려주었다。
+		ENDIF
+	NEXT
+
+	CFLAG:MASTER:데이트중 = 0
+	人祓いモード = 0
+	CALL RECOVER_PERMIL(MASTER,-50,"체력")
+	CALL RECOVER_PERMIL(MASTER,-30,"기력")
+	TIME += 30
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;귀가한다
+@COM_ABLE435
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(435)
+	RETURN RESULT
+;玄関
+SIF CFLAG:MASTER:현재위치 <= 12
+	RETURN 0
+SIF INRANGE(CFLAG:MASTER:현재위치, 場所_依頼用エリア０,場所_依頼用エリア９)
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+SIF 듀얼モード == 1
+	RETURN 0
+RETURN 1

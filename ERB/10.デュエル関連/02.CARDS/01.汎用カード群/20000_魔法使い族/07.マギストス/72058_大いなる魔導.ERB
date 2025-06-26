@@ -1,0 +1,146 @@
+﻿@CARDNAME_72058,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 테우르기아 마기스토스
+	CASE "略称"
+RESULTS = 위대한 마도
+	CASE "カテゴリ"
+RESULTS:0 = 마기스토스
+ENDSELECT
+
+
+@CARD_72058(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72058(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신 필드의 「마기스토스」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 자신의 엑스트라 덱에서 「마기스토스」 몬스터 1장을 고르고,
+PRINTL 장착 카드로서 대상의 몬스터에 장착한다.
+PRINTL 또한, 자신 묘지에 「마기스토스」 융합 / 싱크로 / 엑시즈 / 링크 몬스터가 각각 1장 이상 존재할 경우,
+PRINTL 덱 / 엑스트라 덱에서 마법사족 / 악마족 몬스터 1장을 소환 조건을 무시하고 특수 소환한다.
+
+
+@CARDCAN_72058(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72058)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72058)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 마기스토스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72058(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72058,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 마기스토스
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択場所 = 選択カード
+			CALL FULLRESET
+			효과条件カテゴリ = 마기스토스
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL CARD_EQUIP_MONSTER(듀얼리스트,選択場所,"EX덱",選択カード)
+			ENDIF
+		ENDIF
+		IF モンスター数(듀얼리스트) <= 4
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 마기스토스
+			효과条件종류 = 융합
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件달성 ++
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 마기스토스
+			효과条件종류 = 싱크로
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件달성 ++
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 마기스토스
+			효과条件종류 = 엑시즈
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件달성 ++
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 마기스토스
+			효과条件종류 = 링크
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件달성 ++
+			IF 条件달성 >= 4
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과範囲EX덱 = 1
+				효과条件종족:0 = 마법사족
+				효과条件종족:1 = 악마족
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

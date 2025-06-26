@@ -1,0 +1,125 @@
+﻿@CARDNAME_91502,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 지박사령 조마
+	CASE "略称"
+RESULTS = 사령조마
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_91502(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 600
+	CASE "分割"
+		RETURN 효과なし
+	CASE "추가日"
+		RETURN 250523
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91502(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 １턴에 １번、둘 중 １개만 사용 할 수 있다。
+CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①：이 카드를 몬스터존에 특수 소환한다。
+CALLFORM CARD_ABLE(2,지속효과)
+PRINTL ②：이 카드는 공격유도를 가져、상대 필드의 몬스터는 공격 가능하다면 공격해야만 한다。
+CALLFORM CARD_ABLE(1,戦闘→묘지)
+PRINTL ③：이 카드가 전투로 파괴되었을 경우에 발동할 수 있다。
+PRINTL 이 카드를 파괴한 몬스터의 원래 공격력의 수치만큼 상대에게 데미지를 입힌다。
+
+
+@CARDCAN_91502(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91502)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,91502)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,91502,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦闘→묘지
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF 戦闘カードID(듀얼리스트,1) == -1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_91502(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91502,1)
+	IF RESULT == 0
+		CALL FULLRESET		
+		CALL CARD_SP_SUMMON(듀얼리스트, "마함", 場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻誘")
+
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"戦狂",0,91502)
+
+ELSEIF 종류 == 필드→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91502)
+	IF RESULT == 0
+		選択カード = 戦闘場所(듀얼리스트,1)
+		ダメージ量　= GETVAR(@"%対面者%_MZ_攻:選択カード")
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+	ENDIF
+ENDIF

@@ -1,0 +1,138 @@
+﻿@CARDNAME_42030,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 고드름의 마요괴-설랑
+	CASE "略称"
+RESULTS = 마요괴-설랑
+	CASE "カテゴリ"
+RESULTS:0 = 마요괴
+ENDSELECT
+
+
+@CARD_42030(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 언데드족 
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_42030(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 4
+素材条件종족 = 언데드족
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,42030) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_42030(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 언데드족 몬스터 2장 이상
+PRINTL 이 카드명의 ③의 효과는 1턴에 2번까지 사용할 수 있다.
+PRINTL ①: 「고드름의 마요괴-설랑」는 자신 필드에 1장밖에 앞면 표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 몬스터 존에 존재하는 한, 제외되어 있는 상대 몬스터의 효과는 무효화된다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ③: 서로의 묘지에서 카드가 벗어났을 경우에, 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 공격력을 0으로 하고, 그 효과를 무효로 한다.
+
+@CARDCAN_42030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,42030)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,42030) && 발동済_2(듀얼리스트,42030)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"離이동元",3,2)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_42030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID 
+#DIM DYNAMIC リピート횟수
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42030,15)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 5
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"永攻DOWN")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"제외_無効",3,1)
+ENDIF

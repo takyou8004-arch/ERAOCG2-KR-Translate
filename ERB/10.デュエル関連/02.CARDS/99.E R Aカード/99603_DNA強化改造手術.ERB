@@ -1,0 +1,182 @@
+﻿@CARDNAME_99603,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = DNA강화 개조수술
+	CASE "略称"
+RESULTS =강화개조수술
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_99603(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+@CARD_EXPLANATION_99603(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 카드는 필드에 1장만 존재할 수 있다.
+CALL CARD_ABLE(1,마함起動)
+PRINTL ①: 다음 중 1개를 선택하여 발동할 수 있다.
+PRINTL 이 카드가 필드에 존재하는 한, 자신 필드의 암컷 몬스터는 모두 다음 속성 / 종족이 되어 그 효과를 얻는다.
+PRINTL 이 효과는 내성에 의해 무효화되지 않는다.
+CALL CARD_ABLE(2,지속효과)
+PRINTL ●빛 속성/기계족 : 마법 내성을 얻는다.
+PRINTL ●어둠 속성/악마족 : 공격력이 1000 오른다.
+PRINTL ●땅 속성/식물족 : 함정 내성을 얻는다.
+PRINTL ●물 속성/원소령족 : 전투 내성을 얻는다.
+PRINTL ●불 속성/드래곤족 : 대상 내성을 얻는다.
+PRINTL ●바람 속성/야수족 : 파괴 내성을 얻는다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_99603(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC EX条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99603)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+효과条件名前 = DNA강화 개조수술
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0	
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_汎数:場所") >= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99603(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択済カード
+#DIM DYNAMIC 설정속성
+#DIM DYNAMIC 설정종족
+#DIMS DYNAMIC 설정효과
+
+IF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99603)
+	IF RESULT == 0
+		IF 듀얼리스트 == "자신"
+PRINTL 효과를 선택해 주세요
+PRINTL [1] - ●빛 속성/기계족 : 마법 내성을 얻는다.
+PRINTL [2] - ●어둠 속성/악마족 : 공격력이 1000 오른다.
+PRINTL [3] - ●땅 속성/식물족 : 함정 내성을 얻는다.
+PRINTL [4] - ●물 속성/원소령족 : 전투 내성을 얻는다.
+PRINTL [5] - ●불 속성/드래곤족 : 대상 내성을 얻는다.
+PRINTL [6] - ●바람 속성/야수족 : 파괴 내성을 얻는다.
+			BINPUT
+		ELSE
+PRINTL <1> - ●빛 속성/기계족 : 마법 내성을 얻는다.
+PRINTL <2> - ●어둠 속성/악마족 : 공격력이 1000 오른다.
+PRINTL <3> - ●땅 속성/식물족 : 함정 내성을 얻는다.
+PRINTL <4> - ●물 속성/원소령족 : 전투 내성을 얻는다.
+PRINTL <5> - ●불 속성/드래곤족 : 대상 내성을 얻는다.
+PRINTL <6> - ●바람 속성/야수족 : 파괴 내성을 얻는다.
+			WAIT
+			RESULT = RAND:6 + 1
+		ENDIF
+		PRINTFORM %듀얼리스트%는 「{RESULT}」를 선택했고, 필드의 몬스터들은,
+		IF RESULT == 1
+			PRINTFORML 육체가 기계로 뒤덮혀버려, 변화가 완료된 후, 뻣뻣한 자세로 경례했다.
+		ELSEIF RESULT == 2
+			PRINTFORML 어둠의 힘에 물들어 큰 뿔과 함께 악마의 날개와 꼬리가 자라났다.
+		ELSEIF RESULT == 3
+			PRINTFORML 휙… 하고 깊은 구멍에 떨어져, 다시 기어 올라올 때는 유혹적이고 두려운 미소를 지었다.
+		ELSEIF RESULT == 4
+			PRINTFORML 몸이 녹기 시작하며, 자신의 형태를 유지하지 못하고 물소리를 내며 주변과 섞였다.
+		ELSEIF RESULT == 5
+			PRINTFORML 몸 전체에 단단한 비늘이 자라나며, 이에 따라 이빨과 뿔이 자라나 용처럼 거대해졌다.
+		ELSEIF RESULT == 6
+			PRINTFORML 몸 전체에서 수많은 털이 자라나며, 코가 짐승처럼 길어지고 전체적으로 푹신푹신해졌다.
+		ENDIF
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"汎数",RESULT)
+	ENDIF
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	;PRINTFORMW きどうはしてます：{GETVAR(@"%듀얼리스트%_魔_汎数:場所")}
+	IF GETVAR(@"%듀얼리스트%_魔_汎数:場所") == 1
+		설정속성 = 빛속성
+		설정종족 = 기계족
+		설정효과 = 魔耐
+	ELSEIF GETVAR(@"%듀얼리스트%_魔_汎数:場所") == 2
+		설정속성 = 어둠속성
+		설정종족 = 악마족
+	ELSEIF GETVAR(@"%듀얼리스트%_魔_汎数:場所") == 3
+		설정속성 = 땅속성
+		설정종족 = 식물족
+		설정효과 = 함정耐
+	ELSEIF GETVAR(@"%듀얼리스트%_魔_汎数:場所") == 4
+		설정속성 = 물속성
+		설정종족 = 원소정령족
+		설정효과 = 戦耐
+	ELSEIF GETVAR(@"%듀얼리스트%_魔_汎数:場所") == 5
+		설정속성 = 화염속성
+		설정종족 = 드래곤족
+		설정효과 = 対耐
+	ELSEIF GETVAR(@"%듀얼리스트%_魔_汎数:場所") == 6
+		설정속성 = 바람속성
+		설정종족 = 야수족
+		설정효과 = 破耐
+	ENDIF
+	IF 종류 == 攻守変動
+		CALL FULLRESET
+		효과条件성별 = 牝性
+		CALL STATCHANGE_OTHER(듀얼리스트,"필드",場所,"属",설정속성)
+		CALL STATCHANGE_OTHER(듀얼리스트,"필드",場所,"種",설정종족)
+		IF GETVAR(@"%듀얼리스트%_魔_汎数:場所") == 2
+			CALL FULLRESET
+			효과条件성별 = 牝性
+			CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,400)
+		ENDIF
+	ENDIF
+	IF 종류 == 지속효과
+		IF GETVAR(@"%듀얼리스트%_魔_汎数:場所") != 2
+			CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,설정효과)
+		ENDIF
+	ENDIF
+ENDIF

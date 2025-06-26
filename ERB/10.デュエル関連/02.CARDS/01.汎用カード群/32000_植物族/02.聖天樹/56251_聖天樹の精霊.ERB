@@ -1,0 +1,120 @@
+﻿@CARDNAME_56251,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 생아발론 드리아데스
+	CASE "略称"
+RESULTS = 성천수의 정령
+	CASE "カテゴリ"
+RESULTS:0 = 생아발론
+ENDSELECT
+
+
+@CARD_56251(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_56251(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件종족 = 식물족
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 생아발론
+	素材条件종류 = 링크
+ENDIF
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,56251) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_56251(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「생아발론」 L 몬스터를 포함하는 식물족 몬스터 2장
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 공격 회피를 가진다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②: 1턴에 2번까지, 자신이 전투 효과로 데미지를 받았을 경우에 발동할 수 있다.
+PRINTL 그 수치만큼 자신의 LP를 회복하고, EX덱에서 「선바인」 L 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_56251(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,56251)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所") >= 2
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"被弾者")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_56251(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC ダメージ量
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻避")
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,56251,30)
+	IF RESULT == 0
+		ダメージ量 = GETVAR(@"%듀얼리스트%_変動値")
+		CALL FULLRESET
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",ダメージ量)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 생아발론
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"攻撃표시")
+	ENDIF
+ENDIF

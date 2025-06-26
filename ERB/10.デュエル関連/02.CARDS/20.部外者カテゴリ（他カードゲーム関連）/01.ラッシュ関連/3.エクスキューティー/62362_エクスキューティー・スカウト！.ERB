@@ -1,0 +1,101 @@
+﻿@CARDNAME_62362,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 엑스큐티 스카우트!
+	CASE "略称"
+RESULTS = 엑스큐 스카우트!
+	CASE "カテゴリ"
+RESULTS:0 = 엑스큐티
+ENDSELECT
+
+
+@CARD_62362(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62362(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 한 턴에 1장만 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①: 자신의 묘지의 「엑스큐티」 몬스터 3장을 덱으로 되돌리고 발동할 수 있다.
+PRINTL 자신은 2장 드로우한다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 레벨 7 이상의 몬스터를 특수 소환할 수 없다.
+PRINTL 
+PRINTL  
+
+@CARDCAN_62362(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,62362)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,62362)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 엑스큐티
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_62362(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62362,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 엑스큐티
+		효과条件複数 = 3
+		효과条件行先플래그 = 2
+		
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		ENDIF
+	ENDIF
+ENDIF

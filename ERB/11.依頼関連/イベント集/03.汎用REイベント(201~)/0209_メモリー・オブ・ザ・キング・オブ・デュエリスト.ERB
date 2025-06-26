@@ -1,0 +1,494 @@
+﻿@IRAI_EVENT_209(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 메모이 오브 더 킹 오브 듀얼리스트(몇번이든 수주 가능)
+	CASE "이벤트種"
+		RETURN 이벤트_施設
+	CASE "依頼先"
+		RETURN 場所_カドショ
+	CASE "詳細"
+		PRINTL やってみよう、伝説のデュエルキングの덱と대상！
+		PRINTL 
+	CASE "条件"
+		SIF 依頼_全完了횟수() < 3
+			RETURN 0
+		RETURN 1
+	CASE "利用制限"
+		SIF 依頼플래그:209 != 0
+			RETURN 3
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_209(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 대상상대
+#DIM DYNAMIC パック_종류
+#DIM DYNAMIC カウンタ
+
+
+IF 依頼_進行보존:209 == 0
+	PRINTFORML 
+	PRINTFORMW 『やってみよう、伝説のデュエルキングの덱と대상！』
+	PRINTFORMW カードショップの壁に何かしらのキャンペーンのポスターが貼られていたので、店員に聞いてみた。
+	PRINTFORMW 「お客様！ただいまあの伝説のデュエルキングの덱を再現した덱と대상するキャンペーンを開催中です！」
+	PRINTFORMW 「勝利すると、伝説のデュエルキングをイメージした카드가 入ったパックが貰えます！」
+	PRINTFORMW 「チャレンジ、どうですか？」
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML [0] やる
+	PRINTFORML [1] やらない
+	BINPUT
+	IF RESULT == 0
+		PRINTFORML 「分かりました、상대はあちらのデュエルマシンとなります！」
+	ELSE
+		PRINTFORML 「分かりました、ではまたどうぞ！」
+		RETURN 0
+	ENDIF
+
+ELSE
+	PRINTFORML 
+	PRINTFORMW 「お客様！今日もキャンペーンにチャレンジしますか？」
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML [0] やる
+	PRINTFORML [1] やらない
+	BINPUT
+	IF RESULT == 0
+		PRINTFORML 「分かりました、상대はあちらのデュエルマシンとなります！」
+	ELSE
+		PRINTFORML 「分かりました、ではまたどうぞ！」
+		RETURN 0
+	ENDIF
+	PRINTFORML 
+	PRINTFORMW 今日はどの덱とデュエルしようか？
+	PRINTFORML
+	PRINTFORML [0] 騎士가이아덱
+	SIF 依頼_進行보존:209 >= 1
+		PRINTFORML [1] 카오스・ソルジャー덱
+	SIF 依頼_進行보존:209 >= 2
+		PRINTFORML [2] 有翼환수キマイラ덱
+	SIF 依頼_進行보존:209 >= 3
+		PRINTFORML [3] 마그넷 워리어덱
+	SIF 依頼_進行보존:209 >= 4
+		PRINTFORML [4] バスター・ブレーダー덱
+	SIF 依頼_進行보존:209 >= 5
+		PRINTFORML [5] ブラック・マジシャン덱
+	SIF 依頼_進行보존:209 == 6
+		PRINTFORML [6] ？？？덱
+	SIF 依頼_進行보존:209 >= 7
+		PRINTFORML [6] 三幻神덱
+	PRINTFORML
+	PRINTFORML [100] 돌아간다
+	BINPUT
+	依頼_完了횟수:209 = RESULT
+ENDIF
+IF 依頼_完了횟수:209 == 100
+	依頼_完了횟수:209 = 0
+	PRINTFORML しかしまだ準備ができていなかったので、一旦待ってもらうことにした。
+	RETURN 0
+ENDIF
+
+TARGET = -1
+SELECTCASE 依頼_完了횟수:209
+	CASE 0, 1, 2
+		CALL DUEL_SYSTEM(1,209,0,2)
+	CASE 3, 4, 5, 6
+		CALL DUEL_SYSTEM(1,209,0,1)
+	CASEELSE
+		RETURN 0
+ENDSELECT
+IF RESULT == 1
+	PRINTFORML
+	PRINTFORMW 勝った！
+	PRINTFORMW 「おめでとうございます！ではこちら、特別パックになります！」
+	PRINTFORML
+	CALL CARD_PACK_SHORI(5,49)
+	PRINTFORML
+	IF 依頼_進行보존:209 == 0
+		PRINTFORMW 「次回からは別の덱との대상も解禁されますので、是非またどうぞ！」
+		PRINTFORMW ん？別の덱？
+		PRINTFORMW 「はい。あの伝説のデュエルキングの덱を一つの덱で再現するのは難しく、分けて再現されたとの事なんです」
+		PRINTFORMW そうだったのか。
+		PRINTFORMW 「勝ち抜いていけば、いずれはあの神の카드가 入った덱とも대상できる……かも知れませんので、頑張ってくださいね！」
+	ENDIF
+	SIF 依頼_進行보존:209 <= 6 && 依頼_進行보존:209 == 依頼_完了횟수:209
+		依頼_進行보존:209 += 1
+	IF 依頼_進行보존:209 >= 6 && パック_解放:49 == 0
+		PRINTFORMW 「そしてここまで勝ち抜いたボーナスとして、特別パックを通常販売いたします！」
+		PRINTFORML 
+		CALL CARD_PACK_RELEASE(49)
+	ENDIF
+	PRINTFORMW そうして次の順番の人にデュエルマシンの상대を譲ってその場から離れた。
+	PRINTFORML 
+	PRINTFORML 
+ENDIF
+依頼_完了횟수:209 = 0
+TARGET = LOCAL
+RETURN 2
+
+
+@IRAI_DECK_209(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+IF 듀얼리스트 == "상대"
+	RETURN 0
+ENDIF
+RETURN 0
+
+@IRAI_DUEL_INTRO_209
+
+IF 依頼_完了횟수:209 == 0
+	SETVAR @"상대_손패:0", 70004
+	SETVAR @"상대_손패:1", 1263
+	SETVAR @"상대_손패:2", 90100
+	SETVAR @"상대_손패:3", 23057
+	SETVAR @"상대_손패:4", 23059
+
+	SETVAR @"상대_덱:0", 70003
+	SETVAR @"상대_덱:1", 23058
+	SETVAR @"상대_덱:2", 70003
+	SETVAR @"상대_덱:3", 23058
+	SETVAR @"상대_덱:4", 70003
+	SETVAR @"상대_덱:5", 1263
+	SETVAR @"상대_덱:6", 23054
+	SETVAR @"상대_덱:7", 23057
+	SETVAR @"상대_덱:8", 23057
+	SETVAR @"상대_덱:9", 23053
+	SETVAR @"상대_덱:10", 1263
+	SETVAR @"상대_덱:11", 23058
+	SETVAR @"상대_덱:12", 23059
+	SETVAR @"상대_덱:13", 23059
+	SETVAR @"상대_덱:14", 70001
+	SETVAR @"상대_덱:15", 73061
+	SETVAR @"상대_덱:16", 73061
+	SETVAR @"상대_덱:17", 73061
+	SETVAR @"상대_덱:18", 73062
+	SETVAR @"상대_덱:19", 73063
+	SETVAR @"상대_덱:20", 73063
+	SETVAR @"상대_덱:21", 73063
+	SETVAR @"상대_덱:22", 90100
+	SETVAR @"상대_덱:23", 90100
+	SETVAR @"상대_덱:24", 93062
+
+	SETVAR @"상대_EX덱:0", 51501
+	SETVAR @"상대_EX덱:1", 51501
+	SETVAR @"상대_EX덱:2", 51501
+	SETVAR @"상대_EX덱:3", 51502
+	SETVAR @"상대_EX덱:4", 51502
+	SETVAR @"상대_EX덱:5", 51502
+	SETVAR @"상대_EX덱:6", 51504
+	SETVAR @"상대_EX덱:7", 51504
+	SETVAR @"상대_EX덱:8", 51506
+	SETVAR @"상대_EX덱:9", 51506
+	SETVAR @"상대_EX덱:10", 51503
+	SETVAR @"상대_EX덱:11", 51503
+	SETVAR @"상대_EX덱:12", 51503
+	SETVAR @"상대_EX덱:13", 51505
+	SETVAR @"상대_EX덱:14", 51505
+ELSEIF 依頼_完了횟수:209 == 1
+	SETVAR @"상대_손패:0", 1263
+	SETVAR @"상대_손패:1", 90100
+	SETVAR @"상대_손패:2", 70113
+	SETVAR @"상대_손패:3", 23066
+	SETVAR @"상대_손패:4", 23064
+
+	SETVAR @"상대_덱:0", 51508
+	SETVAR @"상대_덱:1", 70004
+	SETVAR @"상대_덱:2", 1263
+	SETVAR @"상대_덱:3", 23055
+	SETVAR @"상대_덱:4", 23056
+	SETVAR @"상대_덱:5", 23060
+	SETVAR @"상대_덱:6", 23061
+	SETVAR @"상대_덱:7", 23061
+	SETVAR @"상대_덱:8", 23062
+	SETVAR @"상대_덱:9", 23062
+	SETVAR @"상대_덱:10", 23064
+	SETVAR @"상대_덱:11", 23069
+	SETVAR @"상대_덱:12", 23068
+	SETVAR @"상대_덱:13", 70113
+	SETVAR @"상대_덱:14", 51508
+	SETVAR @"상대_덱:15", 51508
+	SETVAR @"상대_덱:16", 70001
+	SETVAR @"상대_덱:17", 1263
+	SETVAR @"상대_덱:18", 73066
+	SETVAR @"상대_덱:19", 73066
+	SETVAR @"상대_덱:20", 73066
+	SETVAR @"상대_덱:21", 73067
+	SETVAR @"상대_덱:22", 73067
+	SETVAR @"상대_덱:22", 73068
+	SETVAR @"상대_덱:23", 90100
+	SETVAR @"상대_덱:24", 90100
+
+	SETVAR @"상대_EX덱:0", 51509
+	SETVAR @"상대_EX덱:1", 51509
+	SETVAR @"상대_EX덱:2", 51509
+	SETVAR @"상대_EX덱:3", -1
+	SETVAR @"상대_EX덱:4", -1
+	SETVAR @"상대_EX덱:5", -1
+	SETVAR @"상대_EX덱:6", -1
+	SETVAR @"상대_EX덱:7", -1
+	SETVAR @"상대_EX덱:8", -1
+	SETVAR @"상대_EX덱:9", -1
+	SETVAR @"상대_EX덱:10", -1
+	SETVAR @"상대_EX덱:11", -1
+	SETVAR @"상대_EX덱:12", -1
+	SETVAR @"상대_EX덱:13", -1
+	SETVAR @"상대_EX덱:14", -1
+ELSEIF 依頼_完了횟수:209 == 2
+	SETVAR @"상대_손패:0", 90100
+	SETVAR @"상대_손패:1", 70004
+	SETVAR @"상대_손패:2", 70003
+	SETVAR @"상대_손패:3", 25313
+	SETVAR @"상대_손패:4", 1263
+
+	SETVAR @"상대_덱:0", 75305
+	SETVAR @"상대_덱:1", 1263
+	SETVAR @"상대_덱:2", 1263
+	SETVAR @"상대_덱:3", 1668
+	SETVAR @"상대_덱:4", 1668
+	SETVAR @"상대_덱:5", 1668
+	SETVAR @"상대_덱:6", 25310
+	SETVAR @"상대_덱:7", 25310
+	SETVAR @"상대_덱:8", 25310
+	SETVAR @"상대_덱:9", 25311
+	SETVAR @"상대_덱:10", 25311
+	SETVAR @"상대_덱:11", 25311
+	SETVAR @"상대_덱:12", 25312
+	SETVAR @"상대_덱:13", 25312
+	SETVAR @"상대_덱:14", 25312
+	SETVAR @"상대_덱:15", 25313
+	SETVAR @"상대_덱:16", 25313
+	SETVAR @"상대_덱:17", 70003
+	SETVAR @"상대_덱:18", 70004
+	SETVAR @"상대_덱:19", 70001
+	SETVAR @"상대_덱:20", 75305
+	SETVAR @"상대_덱:21", 75305
+	SETVAR @"상대_덱:22", 90100
+	SETVAR @"상대_덱:23", 90100
+	SETVAR @"상대_덱:24", 91001
+
+	SETVAR @"상대_EX덱:0", 52800
+	SETVAR @"상대_EX덱:1", 52800
+	SETVAR @"상대_EX덱:2", 52800
+	SETVAR @"상대_EX덱:3", 52805
+	SETVAR @"상대_EX덱:4", 52805
+	SETVAR @"상대_EX덱:5", 52805
+	SETVAR @"상대_EX덱:6", 52806
+	SETVAR @"상대_EX덱:7", 52806
+	SETVAR @"상대_EX덱:8", 52806
+	SETVAR @"상대_EX덱:9", 52807
+	SETVAR @"상대_EX덱:10", 52807
+	SETVAR @"상대_EX덱:11", 52910
+	SETVAR @"상대_EX덱:12", 52910
+	SETVAR @"상대_EX덱:13", 53000
+	SETVAR @"상대_EX덱:14", 54520
+ELSEIF 依頼_完了횟수:209 == 3
+	SETVAR @"상대_손패:0", 1263
+	SETVAR @"상대_손패:1", 90100
+	SETVAR @"상대_손패:2", 71010
+	SETVAR @"상대_손패:3", 31016
+	SETVAR @"상대_손패:4", 31020
+
+	SETVAR @"상대_덱:0", 31015
+	SETVAR @"상대_덱:1", 70001
+	SETVAR @"상대_덱:2", 1263
+	SETVAR @"상대_덱:3", 31015
+	SETVAR @"상대_덱:4", 31015
+	SETVAR @"상대_덱:5", 31017
+	SETVAR @"상대_덱:6", 31017
+	SETVAR @"상대_덱:7", 31018
+	SETVAR @"상대_덱:8", 31018
+	SETVAR @"상대_덱:9", 31019
+	SETVAR @"상대_덱:10", 31019
+	SETVAR @"상대_덱:11", 31021
+	SETVAR @"상대_덱:12", 31022
+	SETVAR @"상대_덱:13", 31023
+	SETVAR @"상대_덱:14", 1263
+	SETVAR @"상대_덱:15", 70003
+	SETVAR @"상대_덱:16", 70003
+	SETVAR @"상대_덱:17", 70004
+	SETVAR @"상대_덱:18", 70100
+	SETVAR @"상대_덱:19", 70100
+	SETVAR @"상대_덱:20", 71011
+	SETVAR @"상대_덱:21", 71012
+	SETVAR @"상대_덱:22", 71013
+	SETVAR @"상대_덱:23", 90100
+	SETVAR @"상대_덱:24", 90100
+
+	SETVAR @"상대_EX덱:0", 55510
+	SETVAR @"상대_EX덱:1", 55510
+	SETVAR @"상대_EX덱:2", 55510
+	SETVAR @"상대_EX덱:3", 55511
+	SETVAR @"상대_EX덱:4", 55511
+	SETVAR @"상대_EX덱:5", 55511
+	SETVAR @"상대_EX덱:6", 55512
+	SETVAR @"상대_EX덱:7", 55512
+	SETVAR @"상대_EX덱:8", 55513
+	SETVAR @"상대_EX덱:9", 55513
+	SETVAR @"상대_EX덱:10", 55514
+	SETVAR @"상대_EX덱:11", 55514
+	SETVAR @"상대_EX덱:12", 55516
+	SETVAR @"상대_EX덱:13", 55516
+	SETVAR @"상대_EX덱:14", 55516
+ELSEIF 依頼_完了횟수:209 == 4
+	SETVAR @"상대_손패:0", 21025
+	SETVAR @"상대_손패:1", 71010
+	SETVAR @"상대_손패:2", 23150
+	SETVAR @"상대_손패:3", 21026
+	SETVAR @"상대_손패:4", 21027
+
+	SETVAR @"상대_덱:0", 72365
+	SETVAR @"상대_덱:1", 72365
+	SETVAR @"상대_덱:2", 1263
+	SETVAR @"상대_덱:3", 21025
+	SETVAR @"상대_덱:4", 21025
+	SETVAR @"상대_덱:5", 21028
+	SETVAR @"상대_덱:6", 23150
+	SETVAR @"상대_덱:7", 23150
+	SETVAR @"상대_덱:8", 70001
+	SETVAR @"상대_덱:9", 70003
+	SETVAR @"상대_덱:10", 70003
+	SETVAR @"상대_덱:11", 70003
+	SETVAR @"상대_덱:12", 70004
+	SETVAR @"상대_덱:13", 1263
+	SETVAR @"상대_덱:14", 72365
+	SETVAR @"상대_덱:15", 1263
+	SETVAR @"상대_덱:16", 72366
+	SETVAR @"상대_덱:17", 72366
+	SETVAR @"상대_덱:18", 72366
+	SETVAR @"상대_덱:19", 90100
+	SETVAR @"상대_덱:20", 90100
+	SETVAR @"상대_덱:21", 90100
+	SETVAR @"상대_덱:22", 92365
+	SETVAR @"상대_덱:23", 92366
+	SETVAR @"상대_덱:24", 92367
+
+	SETVAR @"상대_EX덱:0", 51605
+	SETVAR @"상대_EX덱:1", 51605
+	SETVAR @"상대_EX덱:2", 51605
+	SETVAR @"상대_EX덱:3", 50635
+	SETVAR @"상대_EX덱:4", 50635
+	SETVAR @"상대_EX덱:5", 50635
+	SETVAR @"상대_EX덱:6", -1
+	SETVAR @"상대_EX덱:7", -1
+	SETVAR @"상대_EX덱:8", -1
+	SETVAR @"상대_EX덱:9", -1
+	SETVAR @"상대_EX덱:10", -1
+	SETVAR @"상대_EX덱:11", -1
+	SETVAR @"상대_EX덱:12", -1
+	SETVAR @"상대_EX덱:13", -1
+	SETVAR @"상대_EX덱:14", -1
+ELSEIF 依頼_完了횟수:209 == 5
+	SETVAR @"상대_손패:0", 61001
+	SETVAR @"상대_손패:1", 20000
+	SETVAR @"상대_손패:2", 1263
+	SETVAR @"상대_손패:3", 1263
+	SETVAR @"상대_손패:4", 90100
+
+	SETVAR @"상대_덱:0", 20001
+	SETVAR @"상대_덱:1", 20001
+	SETVAR @"상대_덱:2", 20001
+	SETVAR @"상대_덱:3", 20000
+	SETVAR @"상대_덱:4", 1000
+	SETVAR @"상대_덱:5", 1731
+	SETVAR @"상대_덱:6", 20501
+	SETVAR @"상대_덱:7", 20501
+	SETVAR @"상대_덱:8", 20501
+	SETVAR @"상대_덱:9", 50103
+	SETVAR @"상대_덱:10", 50103
+	SETVAR @"상대_덱:11", 50103
+	SETVAR @"상대_덱:12", 61001
+	SETVAR @"상대_덱:13", 70001
+	SETVAR @"상대_덱:14", 70003
+	SETVAR @"상대_덱:15", 70004
+	SETVAR @"상대_덱:16", 72000
+	SETVAR @"상대_덱:17", 72000
+	SETVAR @"상대_덱:18", 72000
+	SETVAR @"상대_덱:19", 72001
+	SETVAR @"상대_덱:20", 72001
+	SETVAR @"상대_덱:21", 1731
+	SETVAR @"상대_덱:22", 90100
+	SETVAR @"상대_덱:23", 90100
+	SETVAR @"상대_덱:24", 92000
+
+	SETVAR @"상대_EX덱:0", 50102
+	SETVAR @"상대_EX덱:1", 50102
+	SETVAR @"상대_EX덱:2", 50102
+	SETVAR @"상대_EX덱:3", -1
+	SETVAR @"상대_EX덱:4", -1
+	SETVAR @"상대_EX덱:5", -1
+	SETVAR @"상대_EX덱:6", -1
+	SETVAR @"상대_EX덱:7", -1
+	SETVAR @"상대_EX덱:8", -1
+	SETVAR @"상대_EX덱:9", -1
+	SETVAR @"상대_EX덱:10", -1
+	SETVAR @"상대_EX덱:11", -1
+	SETVAR @"상대_EX덱:12", -1
+	SETVAR @"상대_EX덱:13", -1
+	SETVAR @"상대_EX덱:14", -1
+ELSEIF 依頼_完了횟수:209 == 6
+	SETVAR @"상대_손패:0", 92360
+	SETVAR @"상대_손패:1", 72360
+	SETVAR @"상대_손패:2", 70100
+	SETVAR @"상대_손패:3", 70100
+	SETVAR @"상대_손패:4", 40000
+
+	SETVAR @"상대_덱:0", 79998
+	SETVAR @"상대_덱:1", 79998
+	SETVAR @"상대_덱:2", 79998
+	SETVAR @"상대_덱:3", 11607
+	SETVAR @"상대_덱:4", 11607
+	SETVAR @"상대_덱:5", 11607
+	SETVAR @"상대_덱:6", 23221
+	SETVAR @"상대_덱:7", 23222
+	SETVAR @"상대_덱:8", 23220
+	SETVAR @"상대_덱:9", 23220
+	SETVAR @"상대_덱:10", 23220
+	SETVAR @"상대_덱:11", 70100
+	SETVAR @"상대_덱:12", 23222
+	SETVAR @"상대_덱:13", 40001
+	SETVAR @"상대_덱:14", 40002
+	SETVAR @"상대_덱:15", 70001
+	SETVAR @"상대_덱:16", 70004
+	SETVAR @"상대_덱:17", 72360
+	SETVAR @"상대_덱:18", 79999
+	SETVAR @"상대_덱:19", 1263
+	SETVAR @"상대_덱:20", 1263
+	SETVAR @"상대_덱:21", 1263
+	SETVAR @"상대_덱:22", 90100
+	SETVAR @"상대_덱:23", 90100
+	SETVAR @"상대_덱:24", 90100
+
+	SETVAR @"상대_EX덱:0", -1
+	SETVAR @"상대_EX덱:1", -1
+	SETVAR @"상대_EX덱:2", -1
+	SETVAR @"상대_EX덱:3", -1
+	SETVAR @"상대_EX덱:4", -1
+	SETVAR @"상대_EX덱:5", -1
+	SETVAR @"상대_EX덱:6", -1
+	SETVAR @"상대_EX덱:7", -1
+	SETVAR @"상대_EX덱:8", -1
+	SETVAR @"상대_EX덱:9", -1
+	SETVAR @"상대_EX덱:10", -1
+	SETVAR @"상대_EX덱:11", -1
+	SETVAR @"상대_EX덱:12", -1
+	SETVAR @"상대_EX덱:13", -1
+	SETVAR @"상대_EX덱:14", -1
+ELSE
+	;想定してない入力を受けてデュエルが開始されたら、エクゾディアで終了
+	SETVAR @"상대_손패:0", 20150
+	SETVAR @"상대_손패:1", 20151
+	SETVAR @"상대_손패:2", 20152
+	SETVAR @"상대_손패:3", 20153
+	SETVAR @"상대_손패:4", 20154
+ENDIF
+
+

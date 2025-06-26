@@ -1,0 +1,159 @@
+﻿@CARDNAME_24040,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 자이언트 보머 - 에어레이드
+	CASE "略称"
+RESULTS = 에어레이드
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_24040(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+	CASE "소환불가"
+		RETURN 1
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24040(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 통상 소환할 수 없으며, "소환 리액터 - AI"의 효과로만 특수 소환할 수 있다.
+PRINTL 이 카드명의 ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ①: 자신 또는 상대 턴에 1번, 손패를 1장 묘지로 보내고 발동할 수 있다.
+PRINTL 상대 필드의 카드 1장을 고르고 파괴한다.
+CALL CARD_ABLE(2,소환誘発)
+PRINTL ②: 상대가 몬스터를 소환 / 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 그 몬스터를 파괴하고, 상대에게 800 데미지를 준다.
+CALL CARD_ABLE(1,효과後誘発)
+PRINTL ③: 상대가 마법 / 함정 카드의 효과를 발동했을 경우에 발동할 수 있다.
+PRINTL 상대 필드의 마법 / 함정 카드 1장을 파괴하고, 상대에게 800 데미지를 준다.
+
+@CARDCAN_24040(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24040)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,24040)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환誘発
+	SIF 발동済_2(듀얼리스트,24040)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 最終소환決者 == 듀얼리스트
+		RETURN 0
+	SIF 最終소환타입 == ""
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24040(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과先
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24040,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,"묘지")
+		SIF RESULT == 1
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",800,1)
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24040,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 소환誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24040,2)
+	IF RESULT == 0
+		효과先 = 最終소환場所
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",효과先,"묘지")
+		SIF RESULT == 1
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",800,1)
+	ENDIF
+ENDIF

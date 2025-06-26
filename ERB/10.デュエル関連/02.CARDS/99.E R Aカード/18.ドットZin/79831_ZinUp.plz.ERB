@@ -1,0 +1,116 @@
+﻿@CARDNAME_79831,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ZinUp.plz
+	CASE "略称"
+		RESULTS = ZinUp.plz
+	CASE "カテゴリ"
+		RESULTS:0 = 닷진
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79831(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79831(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：몬스터 존에 “.zin” 카드가 2장 이상 존재할 경우, 2500 라이프를 지불하고 발동할 수 있다.
+PRINTL 상대 덱 또는 EX덱에서 암컷 몬스터 1장을 선택하고, 그 몬스터를 소환 조건을 무시하고 상대 필드에 특수 소환한다.
+PRINTL 이 방식으로 특수 소환된 몬스터의 효과는 무효화되고, “.zin” 카드로 취급된다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79831(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79831)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,79831)
+		RETURN 0
+
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 2500
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件カテゴリ = 닷진
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79831(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79831,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",2500)
+		CALL FULLRESET
+		효과範囲상대덱 = 1
+		효과範囲상대EX덱 = 1
+		효과条件성별 = 牝性 
+		효과条件特不無視 = 1
+		효과추가종류:0 = 効追無効
+		효과추가종류:1 = 695
+		효과추가종류:2 = 8
+		효과추가종류:3 = 51
+		효과추가カテ = 닷진
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,,,1)
+	ENDIF
+ENDIF
+

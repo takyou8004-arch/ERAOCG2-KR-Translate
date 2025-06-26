@@ -1,0 +1,141 @@
+﻿@CARDNAME_54010,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 링크 리보
+	CASE "略称"
+RESULTS = 링크 리보
+	CASE "カテゴリ"
+RESULTS:0 = 크리보
+ENDSELECT
+
+
+@CARD_54010(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 300
+	CASE "守備力"
+		RETURN 200
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_54010(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件종류 = レベル持ち
+素材条件レベル = 1
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,54010) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_54010(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 레벨 1 몬스터 1체
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(0,攻撃時誘発)
+PRINTL ①: 상대 몬스터의 공격 선언 시, 이 카드를 릴리스하고 발동할 수 있다.
+PRINTL 그 상대 몬스터의 공격력은 턴 종료시까지 0이 된다.
+CALL CARD_ABLE(2,묘지起動 ,フリー誘発)
+PRINTL ②: 자신 상대 턴에, 이 카드가 묘지에 존재할 경우,
+PRINTL 자신 필드의 레벨 1 몬스터 1장을 릴리스하고 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+
+@CARDCAN_54010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54010)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,54010)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,54010,ゾーン,1)
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件レベル = 1
+	효과条件종류 = レベル持ち
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_54010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID 
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54010)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		選択カード = 戦闘場所(듀얼리스트,1)
+		CALL SET_FIELD_INFO(対面者,"필드",選択カード,"攻固",0,1)
+	ENDIF
+ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54010,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件レベル = 1
+		효과条件종류 = レベル持ち
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "묘지", 場所)
+		ENDIF
+	ENDIF
+ENDIF

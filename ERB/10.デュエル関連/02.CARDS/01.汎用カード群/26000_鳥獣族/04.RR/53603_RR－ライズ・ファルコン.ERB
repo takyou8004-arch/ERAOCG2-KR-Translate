@@ -1,0 +1,138 @@
+﻿@CARDNAME_53603,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = RR－라이즈 팔콘
+	CASE "略称"
+RESULTS = RR라이즈 F
+	CASE "カテゴリ"
+RESULTS:0 = 레이드 랩터즈
+ENDSELECT
+
+
+@CARD_53603(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_53603(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 4
+素材条件종족 = 비행야수족
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,53603) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_53603(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 비행야수족 레벨 4 몬스터 × 3
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 상대 몬스터 전체에게 1번씩 공격할 수 있다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 이 카드의 엑시즈 소재를 1개 제거하고,
+PRINTL 이 카드의 공격력은, 상대 필드의 특수 소환된 몬스터 전체의 공격력만큼 증가한다.
+PRINTL 그 후, 자신의 LP가 상대보다 3000 이상 적은 상태로 이 카드가 엑시즈 소환했을 경우,
+PRINTL 이 카드의 공격력은 3000 증가한다.
+
+
+@CARDCAN_53603(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,53603)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	효과条件召種 = 召種全특수
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_53603(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力상승
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53603,10,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件표시 = 表側표시
+		효과条件召種 = 召種全특수
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		攻撃力상승 = RESULT:3
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",攻撃力상승)
+		IF 	GETVAR(@"ライフ_%듀얼리스트%") <= GETVAR(@"ライフ_%対面者%") + 3000
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",3000)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과 
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦")
+ENDIF

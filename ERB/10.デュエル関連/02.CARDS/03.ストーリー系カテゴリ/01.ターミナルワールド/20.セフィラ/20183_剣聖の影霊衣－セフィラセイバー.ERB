@@ -1,0 +1,245 @@
+﻿@CARDNAME_20183,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 검성의 네크로즈－세피라 세이바-
+	CASE "略称"
+RESULTS = 세피라 세이바-
+	CASE "カテゴリ"
+RESULTS:0 = 네크로즈
+RESULTS:1 = 세피라
+ENDSELECT
+
+
+@CARD_20183(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 雄性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+
+@CARD_EXPLANATION_20183(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL 이 카드명의 P 효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL ①: 자신의 마법 & 함정 존에 이 카드명 이외의 P 몬스터 카드가 존재할 경우, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 패 / EX덱에서 EX 몬스터 이외의 「네크로즈」「세피라」 몬스터 1장을 특수 소환한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 카드명의 몬스터 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(2,손패起動,필드起動)
+PRINTL ①: 자신의 패 / 필드의 이 카드를 릴리스하고 발동할 수 있다.
+PRINTL 레벨의 합계가 의식 소환하는 몬스터의 레벨 이상이 되도록,
+PRINTL 자신의 패 / 필드 / EX덱의 「네크로즈」「세피라」 몬스터를 릴리스하고,
+PRINTL 패 / 묘지에서 「네크로즈」 의식 몬스터 1장을 의식 소환한다.
+
+
+@CARDCAN_20183(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 효과使用불가,10
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20183)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン, "손패", "필드")
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		효과使用불가:1 = 1
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件名前 = 검성의 네크로즈－세피라 세이바-
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			효과使用불가:1 = 1
+	ENDIF
+	SIF 발동済_2(듀얼리스트,20183)
+		효과使用불가:2 = 1
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲손패 = 1
+	素材範囲EX덱 = 1
+	素材条件カテゴリ:0 = 세피라
+	素材条件カテゴリ:1 = 네크로즈
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = 의식
+	효과条件カテゴリ = 네크로즈
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		효과使用불가:2 = 1
+	SIF 효과使用불가:1 == 1 && 효과使用불가:2 == 1
+		RETURN 0
+	SIF 종류 == 필드起動 && 효과使用불가:2 == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,20183)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件固名前 = 검성의 네크로즈－세피라 세이바-
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ:0 = 네크로즈
+	효과条件カテゴリ:1 = 세피라
+	효과条件종류 = 효과モン
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_20183(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 효과使用불가,10
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動 || 종류 == 필드起動
+	SIF 마함数(듀얼리스트) >= 5
+		효과使用불가:1 = 1
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件名前 = 검성의 네크로즈－세피라 세이바-
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			효과使用불가:1 = 1
+	ENDIF
+	SIF 발동済_2(듀얼리스트,20183)
+		효과使用불가:2 = 1
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲손패 = 1
+	素材範囲EX덱 = 1
+	素材条件カテゴリ:0 = 세피라
+	素材条件カテゴリ:1 = 네크로즈
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = 의식
+	효과条件カテゴリ = 네크로즈
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		효과使用불가:2 = 1
+	IF ゾーン == "필드"
+		RESULT = はい
+	ELSEIF ゾーン == "손패" && 효과使用불가:1 == 0 && 효과使用불가:2 == 0
+		CALL YN_CHOICE(듀얼리스트,"●この카드를 リリースし의식소환を行う","●지속마법として마법＆함정 존에 置く")
+	ELSEIF 효과使用불가:2 == 1
+		RESULT = いいえ
+	ELSEIF 효과使用불가:1 == 1
+		RESULT = はい
+	ENDIF
+
+	IF RESULT == いいえ
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20183)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		ENDIF
+	ELSEIF RESULT == はい
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20183,2)
+		IF RESULT == 0
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件종류 = 의식
+			효과条件カテゴリ = 네크로즈
+			효과条件소환可 = 1
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL RESETAREA_MAT
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_%参照先（CS）%:{選択カード}")}(듀얼리스트,選択カード)
+				素材範囲필드 = 1
+				素材範囲손패 = 1
+				素材範囲EX덱 = 1
+				素材条件カテゴリ:0 = 세피라
+				素材条件カテゴリ:1 = 네크로즈
+				TRYCALLFORM RITSUMMON(듀얼리스트, 選択カード,参照先（CS）)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20183,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ:0 = 네크로즈
+		효과条件カテゴリ:1 = 세피라
+		효과条件종류 = 효과モン
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

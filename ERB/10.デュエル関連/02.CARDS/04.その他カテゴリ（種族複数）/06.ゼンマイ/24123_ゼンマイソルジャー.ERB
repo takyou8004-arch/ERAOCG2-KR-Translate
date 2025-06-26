@@ -1,0 +1,110 @@
+﻿@CARDNAME_24123,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 태엽 솔저
+	CASE "略称"
+RESULTS = Z 솔저
+	CASE "カテゴリ"
+RESULTS:0 = 태엽
+ENDSELECT
+
+@CARD_24123(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1200
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24123(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 자신 필드에 「태엽」 몬스터가 존재할 경우 발동할 수 있다.
+PRINTL 이 카드의 레벨을 1 내리고, 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(11,필드起動)
+PRINTL ②: 자신의 메인 페이즈에 발동할 수 있다.
+PRINTL 턴 종료시까지 이 카드의 레벨을 1 올리고, 공격력을 400 올린다.
+PRINTL 이 효과는 이 카드가 필드 위에 앞면 표시로 존재하는 한 1번밖에 사용할 수 없다.
+
+
+
+@CARDCAN_24123(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24123)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,24123)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24123,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 젠마이
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24123(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 戦闘カード
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24123,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 効追一星 + 3
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24123,11)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一星",1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",400)
+	ENDIF
+ENDIF
+

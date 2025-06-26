@@ -1,0 +1,397 @@
+﻿;────────────────────────────────────
+;절정系の処理など
+;────────────────────────────────────
+;-------------------------------------------------
+;절정処理
+;-------------------------------------------------
+@ORGASM_ADD(ARG)
+#DIM DYNAMIC 절정강도
+#DIM DYNAMIC 쾌락計算
+#DIM DYNAMIC 절정BASE計算
+#DIM DYNAMIC 절정重複
+;BASEに加算
+SIF HAS_PENIS(ARG)
+	절정BASE計算 += SHOOT_CALC(ARG) * (50000 - BASE:ARG:절정) / 50000
+
+절정BASE計算 += CUP:ARG:쾌Ｃ * (10000 + ABL:ARG:Ｃ감각 * 1000) / (10000 + BASE:ARG:절정)
+절정BASE計算 += CUP:ARG:쾌Ｖ * (5000 + ABL:ARG:Ｖ감각 * 2000) / (5000 + BASE:ARG:절정)
+절정BASE計算 += CUP:ARG:쾌Ａ * (3000 + ABL:ARG:Ａ감각 * 5000) / (3000 + BASE:ARG:절정)
+절정BASE計算 += CUP:ARG:쾌Ｂ * (8000 + ABL:ARG:Ｂ감각 * 1000) / (8000 + BASE:ARG:절정)
+절정BASE計算 += CUP:ARG:쾌Ｍ * (8000 + ABL:ARG:Ｍ감각 * 1000) / (8000 + BASE:ARG:절정)
+절정BASE計算 += CUP:ARG:쾌Ｅ * (10000 + ABL:ARG:Ｅ감각 * 1000) / (8000 + BASE:ARG:절정)
+
+절정BASE計算 = 절정BASE計算 * (BASE:ARG:쾌감 + 20000) / 20000
+BASE:ARG:절정 += 절정BASE計算
+쾌락計算 = 절정BASE計算
+쾌락計算 += CUP:ARG:욕정
+쾌락計算 += CUP:ARG:치정 * (ABL:ARG:노출증 - 2)
+쾌락計算 += CUP:ARG:고통 * (ABL:ARG:마조끼 - 2)
+쾌락計算 += CUP:ARG:공포 * (ABL:ARG:마조끼 - 2) / 2
+
+BASE:ARG:쾌감 += 쾌락計算
+BASE:ARG:쾌감 = MAX(0, BASE:ARG:쾌감)
+SIF HAS_PENIS(ARG)
+	BASE:ARG:발기 += (쾌락計算 * (BASE:ARG:정력 + 1000)) / (10 * 1000)
+
+;절정강도
+IF BASE:ARG:쾌감 > 500000
+	절정강도 = 5
+ELSEIF BASE:ARG:쾌감 > 200000
+	절정강도 = 4
+ELSEIF BASE:ARG:쾌감 > 100000
+	절정강도 = 3
+ELSEIF BASE:ARG:쾌감 > 30000
+	절정강도 = 2
+ELSE
+	절정강도 = 1
+ENDIF
+
+;SIF ARG == TARGET
+;	PRINTFORML BASE:ARG:절정:{BASE:ARG:절정} /절정BASE計算:{절정BASE計算}
+SIF TEQUIP:ARG:절정금지
+	RETURN 0
+
+;절정BASE計算が0、つまり절정BASE計算を上げない場合は절정に行かない
+SIF BASE:ARG:절정 - 절정BASE計算 < 10000 || !절정BASE計算
+	RETURN 0
+;연속절정時、절정ゲージは増えない
+SIF TCVAR:ARG:전턴절정
+	BASE:ARG:절정 -= 절정BASE計算
+;-------------------------------------------------
+;절정時の추가処理
+;-------------------------------------------------
+
+;절정を기록
+NOWEX:ARG:절정 = 절정강도
+TCVAR:ARG:절정여운 += 절정강도
+CFLAG:ARG:축적 -= 50 * (절정강도)
+SIF CFLAG:ARG:축적 <= 0
+	CFLAG:ARG:축적 = 0
+
+;절정のSOURCE추가
+IF CFLAG:ARG:같은방
+	CALL SOURCE_CALC_절정(ARG, MASTER, 100 + 300 * 절정강도)
+ELSE
+	CALL SOURCE_CALC_절정(ARG, -1, 100 + 300 * 절정강도)
+ENDIF
+
+;사정
+IF HAS_PENIS(ARG)
+	NOWEX:ARG:사정 = 절정강도
+	BASE:ARG:정력 = (BASE:ARG:정력 * 4 * 5 ) / (5 * (절정강도 + 4))
+ENDIF
+
+TCVAR:ARG:갈것같음 += NOWEX:ARG:절정 - 2
+;強い절정ほど절정ゲージは減少しにくく、쾌락ゲージは減少しやすくなる
+BASE:ARG:절정 = BASE:ARG:절정 * BASE:ARG:쾌감 / (50000 + BASE:ARG:쾌감)
+BASE:ARG:쾌감 = BASE:ARG:쾌감 * 2 / (2 + NOWEX:ARG:절정)
+
+;쾌락각인の処理
+;절정강도에 의해 각인취득
+IF 절정강도 > 3 && MARK:ARG:1 < 3
+	TCVAR:ARG:쾌락강도 = 3
+;Rが3以上で쾌락각인２に相当
+ELSEIF 절정강도 > 2 && MARK:ARG:1 < 2
+	TCVAR:ARG:쾌락강도 = 2
+;Rが2以上で쾌락각인１に相当
+ELSEIF 절정강도 > 1 && MARK:ARG:1 < 1
+	TCVAR:ARG:쾌락강도 = 1
+ELSEIF 절정강도 >= 1
+	TCVAR:ARG:쾌락강도 = 0
+ENDIF
+;とりあえず残しておく
+SIF CUP:ARG:쾌Ｃ
+	절정重複 += 1
+SIF CUP:ARG:쾌Ｖ
+	절정重複 += 1
+SIF CUP:ARG:쾌Ａ
+	절정重複 += 1
+SIF CUP:ARG:쾌Ｂ
+	절정重複 += 1
+SIF CUP:ARG:쾌Ｍ
+	절정重複 += 1
+SIF CUP:ARG:쾌Ｅ
+	절정重複 += 1
+SELECTCASE 절정重複
+CASE 5
+	NOWEX:ARG:오중절정 = 1
+CASE 4
+	NOWEX:ARG:사중절정 = 1
+CASE 3
+	NOWEX:ARG:삼중절정 = 1
+CASE 2
+	NOWEX:ARG:이중절정 = 1
+ENDSELECT
+
+DOWNBASE:ARG:체력 += 20 * 절정강도
+DOWNBASE:ARG:기력 += 10 * 절정강도
+
+;NOWEXにデータを入れる（절정時구상に使う）
+
+SIF CUP:ARG:쾌Ｃ
+	NOWEX:ARG:Ｃ절정 ++
+SIF CUP:ARG:쾌Ｖ
+	NOWEX:ARG:Ｖ절정 ++
+SIF CUP:ARG:쾌Ａ
+	NOWEX:ARG:Ａ절정 ++
+SIF CUP:ARG:쾌Ｂ
+	NOWEX:ARG:Ｂ절정 ++
+SIF CUP:ARG:쾌Ｍ
+	NOWEX:ARG:Ｍ절정 ++
+SIF CUP:ARG:쾌Ｅ
+	NOWEX:ARG:Ｅ절정 ++
+
+;절정횟수を増やす
+SIF CUP:ARG:쾌Ｃ
+	EX:ARG:Ｃ절정 ++
+SIF CUP:ARG:쾌Ｖ
+	EX:ARG:Ｖ절정 ++
+SIF CUP:ARG:쾌Ａ
+	EX:ARG:Ａ절정 ++
+SIF CUP:ARG:쾌Ｂ
+	EX:ARG:Ｂ절정 ++
+SIF CUP:ARG:쾌Ｍ
+	EX:ARG:Ｍ절정 ++
+SIF CUP:ARG:쾌Ｅ
+	EX:ARG:Ｅ절정 ++
+
+;절정경험を増やす
+EXP:ARG:절정경험 += 절정강도
+SIF CUP:ARG:쾌Ｃ
+	EXP:ARG:Ｃ절정경험 ++
+SIF CUP:ARG:쾌Ｖ
+	EXP:ARG:Ｖ절정경험 ++
+SIF CUP:ARG:쾌Ａ
+	EXP:ARG:Ａ절정경험 ++
+SIF CUP:ARG:쾌Ｂ
+	EXP:ARG:Ｂ절정경험 ++
+SIF CUP:ARG:쾌Ｍ
+	EXP:ARG:Ｍ절정경험 ++
+SIF CUP:ARG:쾌Ｅ
+	EXP:ARG:Ｅ절정경험 ++
+
+;前回절정
+IF CUP:ARG:쾌Ｃ || CUP:ARG:쾌Ｖ || CUP:ARG:쾌Ａ || CUP:ARG:쾌Ｂ || CUP:ARG:쾌Ｍ || CUP:ARG:쾌Ｅ
+	TCVAR:ARG:전회절정부위 = 0
+	TCVAR:ARG:전회절정보존 = 2
+ENDIF
+
+SIF CUP:ARG:쾌Ｃ
+	SETBIT TCVAR:ARG:전회절정부위, 1
+SIF CUP:ARG:쾌Ｖ
+	SETBIT TCVAR:ARG:전회절정부위, 2
+SIF CUP:ARG:쾌Ａ
+	SETBIT TCVAR:ARG:전회절정부위, 3
+SIF CUP:ARG:쾌Ｂ
+	SETBIT TCVAR:ARG:전회절정부위, 4
+SIF CUP:ARG:쾌Ｍ
+	SETBIT TCVAR:ARG:전회절정부위, 5
+SIF CUP:ARG:쾌Ｅ
+	SETBIT TCVAR:ARG:전회절정부위, 6
+
+
+;사정後の処理
+IF NOWEX:ARG:사정
+	CALL EVENT_SHOOT(ARG)
+ENDIF
+
+IF TALENT:ARG:함몰유두 == 1 && GETPALAMLV(PALAM:3,15) >= 3
+	CFLAG:ARG:함몰개방 = 1
+ENDIF
+
+
+RETURN 1
+
+
+
+@MESSAGE_PALAMCNG_B2(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+IF NOWEX:캐릭터_ID:절정 > 3
+	IF !GETBIT(CFLAG:캐릭터_ID:3,2)
+		EXP:이상경험 ++
+		SETBIT CFLAG:캐릭터_ID:3,2
+	ENDIF
+	PRINTFORML
+	PRINTFORML 승　천 ( %CALLNAME:캐릭터_ID%)
+	PRINTFORML
+ELSEIF NOWEX:캐릭터_ID:절정 > 2
+	PRINTFORML
+	PRINTFORML 초강절정 ( %CALLNAME:캐릭터_ID%)
+	PRINTFORML
+ELSEIF NOWEX:캐릭터_ID:절정 > 1
+	PRINTFORML
+	PRINTFORML 강절정 ( %CALLNAME:캐릭터_ID%)
+	PRINTFORML
+ELSEIF NOWEX:캐릭터_ID:절정 >= 1
+	PRINTFORML
+	PRINTFORML 절정 ( %CALLNAME:캐릭터_ID%)
+	PRINTFORML
+ENDIF
+
+;절정による욕망ＬＶアップ
+LOCAL = NOWEX:캐릭터_ID:절정
+;자제심があると１下がる
+SIF TALENT:캐릭터_ID:자제심
+	LOCAL -= 1
+
+IF ABL:캐릭터_ID:욕망 < LOCAL
+	ABL:캐릭터_ID:욕망 ++
+	PRINTFORML 그리고 %CALLNAME:캐릭터_ID%의 욕망이 LV{LOCAL}되었다
+	PRINTFORML
+	;욕망の상승による[抑圧]の消滅をチェック
+	CALL YOKUBO_UP_CHECK
+ENDIF
+;-------------------------------------------------
+;조교대상의 분유チェック
+;-------------------------------------------------
+@TARGET_MILK_CHECK(ARG)
+SIF MILK_CAN(ARG) == 0
+	RETURN 0
+
+
+LOCAL = CUP:ARG:쾌Ｃ / 10 + CUP:ARG:쾌Ｖ / 10 + CUP:ARG:쾌Ａ / 10 + CUP:ARG:쾌Ｂ * 3
+SIF LOCAL == 0
+	RETURN 0
+;자제심
+SIF TALENT:ARG:자제심
+	LOCAL /= 2
+
+;쾌락に素直
+SIF TALENT:ARG:쾌감반응 > 0
+	TIMES LOCAL , 1.20
+
+;쾌락の부정（음란、쾌락狂で無効）
+SIF TALENT:ARG:쾌감반응 < 0 && !TALENT:ARG:음란
+	TIMES LOCAL , 0.80
+
+;B敏感
+SIF TALENT:ARG:Ｂ감도 > 0
+	TIMES LOCAL , 1.20
+
+;미약
+SIF TEQUIP:ARG:미약
+	LOCAL *= 2
+
+;이뇨제
+SIF TEQUIP:ARG:이뇨제
+	LOCAL /= 2
+
+;조교者が幼児退行
+SIF TALENT:MASTER:유아／유아퇴행
+	TIMES LOCAL , 1.20
+
+;조교者が유치
+SIF TALENT:MASTER:유치
+	TIMES LOCAL , 1.20
+
+;貧乳
+SIF TALENT:ARG:가슴사이즈 < 0
+	TIMES LOCAL , 0.50
+
+;가슴사이즈보정
+SIF BUST_SIZE(ARG) >= 0
+	LOCAL += BUST_SIZE(ARG)
+
+
+LOCAL = 500 + LOCAL / 2
+BASE:ARG:모유 += LOCAL
+
+IF  BASE:ARG:모유 > MAXBASE:ARG:모유 * 2
+	LOCAL = 1
+ELSEIF BASE:ARG:모유 > MAXBASE:ARG:모유
+	LOCAL = 0
+ELSE
+	RETURN 0
+ENDIF
+LOCAL ++
+DOWNBASE:ARG:체력 += 20 * LOCAL
+DOWNBASE:ARG:기력 += 100 * (LOCAL - 1)
+IF EXP:ARG:분유경험 < EXPLV:1
+	SOURCE:ARG:노출 += 5000 * LOCAL
+	SOURCE:ARG:굴종 += 2500 * LOCAL
+	SOURCE:ARG:불결 += 1000 * LOCAL
+ELSEIF EXP:ARG:분유경험 < EXPLV:2
+	SOURCE:ARG:노출 += 2500 * LOCAL
+	SOURCE:ARG:굴종 += 1500 * LOCAL
+	SOURCE:ARG:불결 += 750 * LOCAL
+ELSEIF EXP:ARG:분유경험 < EXPLV:3
+	SOURCE:ARG:노출 += 1500 * LOCAL
+	SOURCE:ARG:굴종 += 750 * LOCAL
+	SOURCE:ARG:불결 += 500 * LOCAL
+ELSEIF EXP:ARG:분유경험 < EXPLV:4
+	SOURCE:ARG:노출 += 750 * LOCAL
+	SOURCE:ARG:굴종 += 400 * LOCAL
+	SOURCE:ARG:불결 += 350 * LOCAL
+ELSEIF EXP:ARG:분유경험 < EXPLV:5
+	SOURCE:ARG:노출 += 500 * LOCAL
+	SOURCE:ARG:굴종 += 250 * LOCAL
+	SOURCE:ARG:불결 += 200 * LOCAL
+ELSE
+	SOURCE:ARG:노출 += 250 * LOCAL
+	SOURCE:ARG:굴종 += 150 * LOCAL
+ENDIF
+
+;가슴사이즈보정
+SIF BUST_SIZE(ARG) >= 0
+	LOCAL += BUST_SIZE(ARG)
+
+	;PRINTFORML %CALLNAME:ARG%은 젖꼭지에서\@ LOCAL == 2 ? 대량 # \@의 모유를 분출했다
+IF EXP:ARG:분유경험 == 0
+	EXP:ARG:이상경험 ++
+ENDIF
+EXP:ARG:분유경험 += LOCAL
+
+;Ｂに모유汚れ
+STAIN:ARG:5 |= 16
+	BASE:ARG:모유 -= MAXBASE:ARG:모유 * LOCAL
+SIF BASE:ARG:모유 >= MAXBASE:ARG:모유
+	BASE:ARG:모유 = MAXBASE:ARG:모유 - 1
+
+
+
+NOWEX:ARG:분유 += LOCAL
+EX:ARG:분유 += LOCAL
+
+
+
+
+
+@TARGET_MILK_MESSAGE(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 모유량
+
+모유량 = EXP:캐릭터_ID:분유경험
+;가슴사이즈보정
+TIMES 모유량 , 0.10
+
+모유량 += NOWEX:캐릭터_ID:분유 * 10
+모유량 += (RAND:모유량) / 10
+
+
+
+;PRINTFORML %CALLNAME:캐릭터_ID%는 젖꼭지에서\@ NOWEX:캐릭터_ID:분유 > 1 ? 대량의 # \@모유를 분출했다
+IF TEQUIP:캐릭터_ID:유두빨기
+	PRINTFORML %CALLNAME:MASTER%은 입안에서 부드럽게 퍼지는{모유량}의 단맛을 목구멍으로 들이 마셨다.
+	CALL RECOVER(MASTER,NOWEX:캐릭터_ID:분유 * 10,"체력")
+	CALL RECOVER(MASTER,NOWEX:캐릭터_ID:분유 * 20,"기력")
+	CALL RECOVER(MASTER,NOWEX:캐릭터_ID:분유 * 10,"정력")
+	CALL COLORMESSAGE(@"체력＋{NOWEX:캐릭터_ID:분유 * 10}",C_AQUA,1)
+	CALL COLORMESSAGE(@"기력＋{NOWEX:캐릭터_ID:분유 * 20}",C_AQUA,1)
+	CALL COLORMESSAGE(@"정력＋{NOWEX:캐릭터_ID:분유 * 10}",C_AQUA,1)
+ELSEIF TEQUIP:캐릭터_ID:착유기
+	PRINTFORML %CALLNAME:MASTER%는{모유량}ml의 모유를 짜내어、저장용 병에 보관했다。
+	CFLAG:캐릭터_ID:저장모유량 += 모유량
+ENDIF
+
+
+
+;ビデオ
+IF TEQUIP:캐릭터_ID:비디오촬영
+	IF NOWEX:캐릭터_ID:분유 == 1
+		LOCALS = MILK/
+	ELSEIF NOWEX:캐릭터_ID:분유 == 2
+		LOCALS = MILK/MILK/
+	ENDIF
+	TSTR:1 += LOCALS
+ENDIF
+

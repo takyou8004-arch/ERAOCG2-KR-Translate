@@ -1,0 +1,220 @@
+﻿@CARDNAME_57830,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 궁극체 뮤트리아스
+	CASE "略称"
+RESULTS = 궁극체 Myt
+	CASE "カテゴリ"
+RESULTS:0 = 뮤트리아
+ENDSELECT
+
+
+@CARD_57830(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3500
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_57830(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 8 이상 1장을 포함하는 "뮤트리아" 몬스터 x 3
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,발동誘発)
+PRINTL ①: 카드의 효과가 발동했을 때, 그 효과와 같은 종류(몬스터 마법 / 함정)의 "뮤트리아" 카드를
+PRINTL 자신의 손패, 묘지 및 자신 필드의 카드 중에서 1장 제외하고 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 제외한다.
+CALL CARD_ABLE(2,필드→묘지 ,破壊→묘지)
+PRINTL ②: 이 카드가 파괴되었을 경우에 발동할 수 있다.
+PRINTL 제외되어 있는 자신의 "뮤트리아" 카드 3종류까지 고르고, 패에 넣는다.
+CALL CARD_ABLE(10,攻撃後誘発)
+PRINTL ③: 자신의 "뮤트리아" 몬스터가 전투로 상대 몬스터를 파괴했을 때에 발동할 수 있다.
+PRINTL 자신은 덱에서 1장 드로우한다.
+
+
+
+@CARDSUMMON_57830(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 뮤트리아
+	CALLFORM 素材条件レベル_ADV(8, "以上")
+ELSEIF EX参照 >= 10
+	素材条件カテゴリ = 뮤트리아
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,57830) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_57830(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57830)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,57830)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	TRYCALLFORM CARD_{効後_효과ID:(効後_カウンタ - 1)},"종류"
+	IF RESULT <= 10
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSEIF INRANGE(RESULT,20,29)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件종류 = 마법全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSEIF RESULT >= 30
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件종류 = 함정全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_2(듀얼리스트,57830)
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件カテゴリ = 뮤트리아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	CALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	 SIF !MATCH(RESULTS,"뮤트리아")
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_57830(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57830,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		TRYCALLFORM CARD_{効後_효과ID:(処理中番号 - 1)},"종류"
+		IF RESULT <= 10
+			효과条件종류 = モン全般
+		ELSEIF INRANGE(RESULT,20,29)
+			효과条件종류 = 마법全般
+		ELSEIF RESULT >= 30
+			효과条件종류 = 함정全般
+		ENDIF
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"제외")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57830,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 뮤트리아
+		효과条件複数 = 97
+		효과条件固名前選択 = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"제외",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57830)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ENDIF

@@ -1,0 +1,128 @@
+﻿@CARDNAME_72471,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스피리건즈 워치
+	CASE "略称"
+RESULTS = 에스 워치
+	CASE "カテゴリ"
+RESULTS:0 = 스피리건즈
+ENDSELECT
+
+
+@CARD_72471(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72471(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①: 덱에서 「대사해 골드 고르곤다」 1장을 패에 더한다.
+PRINTL 자신 필드가 「대사해 골드 고르곤다」일 경우, 대신에 이하의 효과를 적용할 수 있다.
+PRINTL ● 덱에서 「스피리건즈」 몬스터 1장을 패에 더하고,
+PRINTL 덱에서 「스피리건즈」 몬스터 1장을 묘지로 보낸다.
+PRINTL 
+
+@CARDCAN_72471(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72471)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,72471)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_72471(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件チェック
+#DIM DYNAMIC 条件달성,5
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;EX덱에서 直出し
+;参考：마법族の里、フラワリング エトワ-ル、해피 チャネラ-
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72471,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件名前 = 대사해 골드 고르곤다
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			条件달성:0 = 1
+		
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 스프리건즈
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1 || GETVARS(@"%듀얼리스트%_フィールド名") != "대사해 골드 고르곤다"
+			条件달성:1 = 1
+
+		IF 条件달성:0 != 1 && 条件달성:1 != 1
+PRINTL 발동하는 효과를 선택해 주세요.
+			CALL YN_CHOICE(듀얼리스트,"대사해 골드 고르곤다を손패に加える","「스프리건즈」몬스터를 손패に加え、묘지へ送る")
+		ELSEIF 条件달성:0 != 1 && 条件달성:1 == 1
+			RESULT = 0
+		ELSE
+			RESULT = 1
+		ENDIF
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件名前 = 대사해 골드 고르곤다
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ELSE
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 스프리건즈
+			효과条件종류 = モン全般
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+			CALL FULLRESET
+			효과条件カテゴリ = 스프리건즈
+			효과条件종류 = モン全般
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

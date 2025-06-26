@@ -1,0 +1,154 @@
+﻿@CARDNAME_1168,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 문라이트 세이버 댄서
+	CASE "略称"
+RESULTS = 문라이트 검호희
+	CASE "カテゴリ"
+RESULTS:0 = 문라이트
+ENDSELECT
+
+
+@CARD_1168(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2600
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1168(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "문라이트" 몬스터 × 3장
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 공격력은, 서로의 묘지 / 제외 상태의 야수족 몬스터의 수× 200 올라간다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 대상 내성을 가진다.
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ③: 묘지에서 이 카드를 제외하고, 자신 필드의 융합 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 공격력은 턴 종료시까지 3000 올라간다.
+
+
+
+@CARDSUMMON_1168(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件カテゴリ = 문라이트
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,1168) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_1168(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1168)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF  종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,1168)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 융합
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_1168(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과範囲상대묘지 = 1
+	효과範囲상대제외 = 1
+	효과条件종족 = 야수족
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 200
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1168,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = 융합
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"一攻",3000)
+		ENDIF
+	ENDIF
+ENDIF

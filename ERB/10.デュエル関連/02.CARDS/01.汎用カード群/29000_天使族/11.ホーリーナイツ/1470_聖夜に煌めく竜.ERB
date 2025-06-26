@@ -1,0 +1,146 @@
+﻿@CARDNAME_1470,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성야에 빛나는 룡
+	CASE "略称"
+RESULTS = 성야에 빛나는 룡
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1470(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2300
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1470(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時,특수소환時)
+PRINTL ①：이 카드가 패에서 소환 / 특수 소환에 성공했을 경우,
+PRINTL 필드의 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：필드의 이 카드는, 어둠 속성 몬스터와의 전투로는 파괴되지 않으며,
+PRINTL 효과로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(10,攻撃時誘発)
+PRINTL ③：1턴에 1번, 이 카드가 상대 몬스터에게 공격하는 데미지 스텝 개시 시에 발동할 수 있다.
+PRINTL 그 상대 몬스터를 엔드 페이즈까지 제외한다.
+PRINTL 그 후, 이 카드의 공격 횟수를 +1 한다.
+
+@CARDCAN_1470(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1470)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種손패
+		RETURN 0
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1470(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1470)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場単体",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1470,10)
+	IF RESULT == 0
+		選択カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		효과추가종류 = 1
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"제외")
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",1)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF GETVAR(@"%対面者%_MZ_属:戦闘場所(듀얼리스트,1)") != 어둠속성
+		RETURN 0
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+ENDIF
+
+
+

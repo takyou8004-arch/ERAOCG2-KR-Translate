@@ -1,0 +1,254 @@
+﻿@CARDNAME_59812,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 글로리 홀－플레시아
+	CASE "略称"
+		RESULTS = 영몰의 프레시아
+	CASE "カテゴリ"
+		RESULTS:0 = 함정 속으로
+		RESULTS:1 = 충혹마
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59812(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 300
+	CASE "守備力"
+		RETURN 2500
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_59812(종류)
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC ゾーン
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 「충혹마" 몬스터 4장
+SIF ゾーン == "묘지"
+	CALLFORM CARD_ABLE(0,지속효과);이 카드自体に효과は無く、다른 カード側で묘지에 フレシアがあったら～をしている。
+PRINTL ①：이 카드가 묘지에 존재하는 동안, 마법 & 함정 존의 앞면 표시의 '함정 속으로' 몬스터는,
+PRINTL "상대가 몬스터의 일반 일반 소환 / 특수 소환에 성공했을 때 발동할 수 있다. 자신과 그 몬스터를 파괴한다.” 효과를 가진다.
+CALLFORM CARD_ABLE(1,필드起動,묘지起動);「ホ-ル」カテゴリで９種。
+PRINTL ②：서로의 묘지의 '충혹마' 몬스터의 종류가 20종류 이상일 때 발동할 수 있다. 상대 플레이어는 포식당한다.
+SIF ゾーン == "필드"
+	CALL CARD_ABLE(3,지속효과)
+PRINTL ③：이 카드는 함정 내성을 가진다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_59812(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC ゾーン
+
+CALL RESETCONDITION_MAT
+必要素材数 = 4
+素材条件カテゴリ = 충혹마
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,59812) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_59812(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 충혹마수
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 효과先
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59812)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == 묘지起動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 트랩트릭 네스트홀
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		CALL FULLRESET
+		효과条件カテゴリ = 충혹마
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과条件固名前起動 = 1
+		효과条件종류 = モン全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		충혹마수 = RESULT
+	ELSE
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과条件固名前起動 = 1
+		효과条件종류 = モン全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		충혹마수 = RESULT
+	ENDIF
+	SIF 충혹마수 < 20
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+;シトリス묘지효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 오나 홀－시트리스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+;フレシア묘지효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 글로리 홀－플레시아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	SIF FINAL_SUMMON_TARGET(듀얼리스트,1) == 5 
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_59812(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 충혹마수
+#DIM DYNAMIC ダメージ
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 효과先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"함정耐")
+ELSEIF 종류 == 攻撃時誘発
+	;シトリス묘지효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59812)
+	IF RESULT == 0
+		;通常마법汎用処理
+		PRINTFORMW 플레시아는 시트리스의 큰 구멍으로 유도했다…
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		戦闘カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		효과추가종류 = 6
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘カード,"永攻DOWN")
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	;フレシア묘지효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59812)
+	IF RESULT == 0
+		PRINTFORMW 플레시아는 플레시아의 큰 구멍으로…
+		PRINTFORMW ！？
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",효과先,"묘지")
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59812,2)
+	IF RESULT == 0
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상 = RESULT
+
+			PRINTFORML 어느새 %CALLNAME:조교대상%의 주변에는 무수한 충혹마들이 몰려들고 있었다.
+			PRINTFORMW 완전히 빠져든 %CALLNAME:조교대상%을 보며 프레시아는 미소를 짓고는,
+			PRINTFORMW 주변의 충혹마들과 함께 일제히 달려들어 %CALLNAME:조교대상%을 구멍 깊숙이 몰아넣었다……
+			PRINTFORMW ………
+			PRINTFORMW ……
+			PRINTFORMW …
+			SETCOLOR C_PINK 
+			PRINTFORMW 잠시 후, 구멍 안쪽에서 충혹마들과 %CALLNAME:조교대상%의 헐떡이는 신음이 들려왔다…
+			PRINTFORMW ……♡……♡♡
+			RESETCOLOR
+
+	    	CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과範囲묘지 = 1
+			효과条件固名前起動 = 1
+  			효과条件종류 = モン全般
+  			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			ダメージ = RESULT * 100
+			CALL EROTIC_MOVE("全身애무",조교대상,-1,ダメージ)
+		ELSE
+			PRINTFORML 어느새 상대 플레이어의 주변에는 무수한 충혹마들이 몰려들고 있었다.
+			PRINTFORMW 주변의 충혹마들과 한꺼번에 달려들어 상대 플레이어를 구멍 깊숙이 몰아넣었다…….
+			PRINTFORMW ………
+			PRINTFORMW ……
+			PRINTFORMW …
+			PRINTFORMW 잠시 후, 구멍 안쪽에서 충혹마들의 웃음소리가 들려왔다…
+		ENDIF
+		CALL SET_PLAYER_INFO(듀얼리스트,"듀얼패배플래그",4,1)
+		SETCOLOR C_RED
+		PRINTFORML 
+		PRINTFORMW 상대 플레이어가 포식당했습니다.
+		RESETCOLOR
+	ENDIF
+ENDIF

@@ -1,0 +1,139 @@
+﻿@CARDNAME_20030,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 침묵의 마술사 제로
+	CASE "略称"
+RESULTS = 침묵의 마술사0
+	CASE "カテゴリ"
+RESULTS:0 = 침묵의
+RESULTS:1 = 빛의 황금궤
+ENDSELECT
+
+
+@CARD_20030(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20030(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①: 상대가 드로우했을 경우에 발동한다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL 드로우한 매수만큼, 이 카드의 레벨을 올린다.
+CALLFORM CARD_ABLE(3,지속효과)
+PRINTL ②: 이 카드의 레벨이 원래의 레벨보다 높을 경우, 그 차이값 × 500만큼 이 카드의 공격력은 증가한다.
+PRINTL ③: 자신 필드에 「빛의 황금궤」가 존재하고, 상대가 마법 카드의 효과를 발동했을 때에 발동할 수 있다.
+
+
+
+@CARDCAN_20030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20030)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") >= 3
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"Ｃドロー",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") >= 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_3(듀얼리스트,20030)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") >= 3
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_20030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC レベル修正
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20030)
+	IF RESULT == 0
+		レベル修正 = GETVAR(@"%対面者%_手加数")
+		CALL FULLRESET
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星",レベル修正)
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	レベル修正 = GETVAR(@"%듀얼리스트%_MZ_星:場所") - 4
+	攻撃力修正 = 500 * レベル修正
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20030,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星",1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+	ENDIF
+ENDIF

@@ -1,0 +1,96 @@
+﻿@CARDNAME_70032,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 어둠의 유혹
+	CASE "略称"
+RESULTS = 어둠의 유혹
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_70032(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_70032(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①：자신은 덱에서 2장 드로우하고, 그 후 패의 어둠속성 몬스터 1장을 제외한다.
+PRINTL 패에 어둠속성 몬스터가 없을 경우, 손패를 모두 묘지로 보낸다.
+PRINTL 
+PRINTL 
+
+@CARDCAN_70032(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,70032)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_70032(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70032)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL CARDDRAW_BASIC(듀얼리스트,2)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件속성 = 어둠속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT != 1
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") == -1
+					CONTINUE
+				CALL CARD_DISPOSE(듀얼리스트,"손패",カウンタ,1)
+			NEXT
+		ELSE
+			CALL FULLRESET
+			효과条件속성 = 어둠속성
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

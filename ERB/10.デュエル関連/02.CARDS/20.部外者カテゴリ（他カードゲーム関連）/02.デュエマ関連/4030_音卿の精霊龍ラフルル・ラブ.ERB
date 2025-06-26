@@ -1,0 +1,192 @@
+﻿@CARDNAME_4030,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 음경의 정령룡 라프루루 러브
+	CASE "略称"
+RESULTS = 라프루루 러브
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_4030(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 2700
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_4030(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드의 ①②의 효과는 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,攻撃時誘発)
+PRINTL ①：자신의 빛 물 속성 드래곤족 몬스터의 공격 선언 시에 발동할 수 있다.
+PRINTL 그 카드를 패로 되돌리고 이 카드를 패에서 특수 소환한다.
+PRINTL 이 턴, 상대는 마법 / 함정 카드의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(2,손패起動)
+PRINTL ②：자신 묘지에 빛 물 속성 몬스터가 존재할 경우, 이 카드를 패에서 버리고 발동할 수 있다.
+PRINTL 자신 묘지에서 몬스터 카드 3장을 덱으로 되돌리고, 자신은 2장 드로우한다.
+
+
+@CARDCAN_4030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4030)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,4030)
+		RETURN 0
+
+	CALLFORM ATTACK_CARD(듀얼리스트,"종족")
+	SIF !MATCH(RESULT, 드래곤족)
+		RETURN 0
+	CALLFORM ATTACK_CARD(듀얼리스트,"속성")
+	SIF !MATCH(RESULT,빛속성) && !MATCH(RESULT,물속성) 
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 손패起動
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,4030)
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 빛속성
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 물속성
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+
+	RETURN 1
+ENDIF
+		
+@CARDEFFECT_4030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 戦闘カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4030,1)
+	IF RESULT == 0
+		SETCOLOR C_AQUA
+		PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+		PRINTL
+		VARSET RESULTS
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:戦闘場所(듀얼리스트)")}("名前")
+		SIF RESULTS == ""
+			GOTO INPUT_FAILED
+		PRINTFORMW 「行きます、%RESULTS%さん！」
+		PRINTL
+		PRINTFORML 　　　　C L A P ☆！
+		PRINTW
+		PRINTFORMW 「私も奇跡を！　革命체인지っ！」
+		PRINTL
+		CUSTOMDRAWLINE ―
+		RESETCOLOR
+		戦闘カード = 戦闘場所(듀얼리스트)
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,"필드",戦闘カード,손패行き)
+		IF RESULT == 0
+			$INPUT_FAILED
+			SETCOLOR C_AQUA
+			PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+			PRINTL
+			PRINTFORMW 「あっ、あれれ？　失敗しちゃいましたね……？」
+			PRINTL
+			CUSTOMDRAWLINE ―
+		ELSE
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+			IF GETVAR(@"%듀얼리스트%_필드:カード소환先") > 0
+				CALL EVADE_ATTACK(듀얼리스트)
+				CALL SET_PLAYER_INFO(듀얼리스트,"魔無効",1,1)
+				CALL SET_PLAYER_INFO(듀얼리스트,"함정無効",1,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4030,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		SETCOLOR C_AQUA
+		PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+		PRINTL
+		PRINTFORMW 「未来から来る、だからミラクル！」
+		PRINTL
+		CUSTOMDRAWLINE ―	
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件複数 = 3
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		ENDIF
+	ENDIF
+ENDIF

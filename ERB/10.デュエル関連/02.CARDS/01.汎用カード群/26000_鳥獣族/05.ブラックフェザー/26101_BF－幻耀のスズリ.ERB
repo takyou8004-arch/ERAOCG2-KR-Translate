@@ -1,0 +1,188 @@
+﻿@CARDNAME_26101,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = BF－환요의 스즈리
+	CASE "略称"
+RESULTS = BF 스즈리
+	CASE "カテゴリ"
+RESULTS:0 = 블랙 페더
+RESULTS:1 = 블랙 페더 드래곤
+ENDSELECT
+
+
+@CARD_26101(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 1400
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26101(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환했을 때 발동할 수 있다.
+PRINTL 「BF－환요의 스즈리」를 제외한, 「블랙 페더 드래곤」 카드 1장을 덱에서 패에 추가한다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신 필드의 몬스터 1장을 릴리스하고 발동할 수 있다.
+PRINTL (이 효과를 발동하는 턴, 자신은 싱크로 몬스터밖에 EX덱에서 특수 소환할 수 없다)
+PRINTL 자신 필드에 「환요 토큰」 1장을 특수 소환한다.
+PRINTL 그 후, 자신은 700 데미지를 받는다.
+PRINTL 
+PRINTL 「환요 토큰」
+PRINTL (비행야수족 튜너 어둠 레벨 2 공/수 700)
+
+@CARDCAN_26101(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26101)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件固名前 = BF－환요의 스즈리
+	효과条件カテゴリ = 블랙 페더 드래곤
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,26101)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,126101,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류:0 = 융합
+	효과条件종류:1 = 엑시즈
+	효과条件종류:2 = 효과モン
+	효과条件종류:3 = 通常モン
+	효과条件종류:4 = 링크
+	효과条件종류:5 = 초차원
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX이력")
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26101(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26101)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件固名前 = BF－환요의 스즈리
+		효과条件カテゴリ = 블랙 페더 드래곤
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26101,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_GENERATE(듀얼리스트,126101)
+
+			EX소환可能종류 = 싱크로
+			CALL CARD_EX_RESTRICTION(듀얼리스트)
+		ENDIF
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",700)
+	ENDIF
+ENDIF
+
+
+
+
+
+@CARDNAME_126101,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 환요 토큰
+	CASE "略称"
+RESULTS = 환요 토큰
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+@CARD_126101(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 700
+	CASE "守備力"
+		RETURN 700
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+
+@CARDCAN_126101(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+RETURN 0
+

@@ -1,0 +1,94 @@
+﻿;-------------------------------------------------
+;시설 이벤트
+;-------------------------------------------------
+@COM433
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 캐릭터セット,1000
+#DIM DYNAMIC 지정캐릭터
+#DIM DYNAMIC 지정캐릭터_ID
+#DIM DYNAMIC 依頼_ID_C
+#DIM DYNAMIC 選択依頼
+
+CALL UPDATE_CHARA
+$INPUT_FILTER
+CALL IRAI_SORT(5)
+$INPUT_LOOP
+CUSTOMDRAWLINE ―
+PRINTL 　시설 이벤트
+CUSTOMDRAWLINE ―
+PRINT ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+PRINTL
+FOR カウンタ,0,10
+	VARSET RESULT
+	VARSET RESULTS
+
+
+	TRYCALLFORM IRAI_EVENT_{(依頼_リスト:カウンタ)}("名前")
+	SIF RESULTS == ""
+		CONTINUE
+	PRINTPLAIN ┃
+	TRYCALLFORM IRAI_EVENT_{(依頼_リスト:カウンタ)}("利用制限")
+	SIF RESULT != 0	
+		SETCOLOR C_GRAY
+	TRYCALLFORM IRAI_EVENT_{(依頼_リスト:カウンタ)}("名前")
+	PRINTFORM [{(カウンタ + 1),3}] - %RESULTS,64,LEFT%
+	RESETCOLOR
+
+	PRINTPLAIN ┃
+	PRINTL
+NEXT
+PRINT ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+PRINTL
+PRINTL
+CUSTOMDRAWLINE ―
+PRINTFORML [9999] - 돌아간다
+CUSTOMDRAWLINE ―
+
+BINPUT
+IF RESULT == 9999
+	RETURN 0
+ELSE
+	選択依頼 = 依頼_リスト:(RESULT - 1)
+	TRYCALLFORM IRAI_EVENT_{選択依頼}("利用制限")
+	IF RESULT != 0
+		IF RESULT == 3
+			CUSTOMDRAWLINE ―
+			PRINTL
+			PRINTFORML 이 이벤트는 이미 사용되었습니다。
+			PRINTW
+			CUSTOMDRAWLINE ―
+		ENDIF
+		GOTO INPUT_LOOP
+	ENDIF
+	CALL IRAI_RESET
+	CALLFORM IRAI_ACT_{選択依頼}
+	;やったよー的なマーカーセット
+	依頼플래그:選択依頼 = 2
+	RETURN RESULT
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;学校に行く
+@COM_ABLE433
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(433)
+	RETURN RESULT
+
+CALL IRAI_SORT(5)
+;PRINTFORML RESULT:{RESULT}
+SIF RESULT == 0
+	RETURN 0
+SIF 依頼플래그:依頼_受領中 == 1
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1
+

@@ -1,0 +1,107 @@
+﻿@CARDNAME_73330,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = JAM: P 업!
+	CASE "略称"
+RESULTS = JAM: P 업!
+	CASE "カテゴリ"
+RESULTS:0 = JAM: P
+ENDSELECT
+
+
+@CARD_73330(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73330(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①: 자신 필드의 사이킥족 몬스터 1장을 묘지로 보내고 발동할 수 있다.
+PRINTL 자신의 패/덱에서 레벨 7의 "CAN：D" 몬스터 1장을 고르고, 자신 필드에 특수 소환한다.
+PRINTL 이 효과로 "CAN：D"를 묘지로 보냈을 경우, 이 효과로 특수 소환한 몬스터의 공격력은 턴 종료시까지 1500 올린다.
+
+@CARDCAN_73330(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73330)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,73330)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 사이킥족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;最低でもモンスター1枚あればOK
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件カテゴリ = CAN：D
+	효과条件レベル = 7
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73330(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 묘지送カード_ID
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73330,1)
+	IF RESULT == 0
+		;通常마법汎用발동後묘지送り処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 사이킥족 
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			묘지送カード_ID = RESULT:1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲덱 = 1
+			효과条件カテゴリ = CAN：D
+			효과条件レベル = 7
+			CALLFORM CARDNAME_{묘지送カード_ID}("名前")
+			SIF RESULTS == "CAN：D"
+				효과추가종류 = 100000 + 1500
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

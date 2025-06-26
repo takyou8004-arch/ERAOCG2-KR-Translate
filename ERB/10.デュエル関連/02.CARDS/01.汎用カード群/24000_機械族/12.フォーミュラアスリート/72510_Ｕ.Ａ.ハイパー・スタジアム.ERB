@@ -1,0 +1,146 @@
+﻿@CARDNAME_72510,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = Ｕ.Ａ. 하이퍼 스타디움
+	CASE "略称"
+RESULTS = Hyper Stadium
+	CASE "カテゴリ"
+RESULTS:0 = 울트라 애슬리트
+RESULTS:1 = 포뮬러 애슬리트
+ENDSELECT
+
+
+@CARD_72510(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72510(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「하이퍼 스타디움」이 된다.
+PRINTL 이 카드는 룰상 「Ｆ.Ａ.」 카드로서도 취급한다.
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없고, 그 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①: 이 카드의 발동 시의 효과 처리로서,
+PRINTL 덱에서 「Ｕ.Ａ.」 몬스터 또는 「Ｆ.Ａ.」 몬스터 1장을 패에 추가할 수 있다.
+;PRINTL 자신의 묘지から「Ｕ.Ａ.スタジアム」１장을 選んで손패に加える事が할 수 있다。
+CALLFORM CARD_ABLE(2,마함起動)
+PRINTL ②: 패의 필드 마법 카드 1장을 상대에게 보여주고, 1000 LP를 지불하고 발동할 수 있다.
+PRINTL 이 턴, 자신은 일반 소환에 더해 1번만, 「Ｕ.Ａ.」 몬스터 또는 「Ｆ.Ａ.」 몬스터 1장을 소환할 수 있다.
+
+@CARDCAN_72510(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72510)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_2(듀얼리스트,72510)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 1000
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = フィールド
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72510)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 短紋章起動
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72510(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72510,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = フィールド
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT != 9999
+			CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1000)
+			CALL CARD_RESERV(듀얼리스트,72510,短紋章予約)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72510,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ:0 = 울트라 애슬리트
+		효과条件カテゴリ:1 = 포뮬러 애슬리트
+		효과条件종류 = モン全般
+		효과条件任意 = 1
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 短紋章起動
+	CALL FULLRESET
+	효과条件カテゴリ:0 = 울트라 애슬리트
+	효과条件カテゴリ:1 = 포뮬러 애슬리트
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "ハイパ- スタジアム")
+ENDIF

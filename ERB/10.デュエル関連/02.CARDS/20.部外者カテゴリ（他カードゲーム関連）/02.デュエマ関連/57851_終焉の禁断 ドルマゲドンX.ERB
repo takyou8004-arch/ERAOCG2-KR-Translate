@@ -1,0 +1,339 @@
+﻿@CARDNAME_57851,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 포비든 스타 ~세상 마지막 날~
+	CASE "略称"
+RESULTS = 세상 마지막 날
+	CASE "カテゴリ"
+RESULTS:0 = 금단
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_57851(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RESULT:1 = 어둠속성
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 99
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "특수불가"
+		RETURN 1
+	CASE "単一存在"
+		RETURN 1
+	CASE "分割"
+		RETURN KNDN
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_57851(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("KNDN")
+PRINTL 자신 필드는 「FORBIDDEN STAR ~세상 마지막 날~」이 된다.
+PRINTL 「FORBIDDEN STAR ~세상 마지막 날~」은 자신 필드에 1개밖에 존재할 수 없으며,
+PRINTL 그 ②③의 효과는 각각 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(0,ターン開始時強制)
+PRINTL ①: 스탠바이 페이즈에 발동한다.
+PRINTL 이 카드는 EX덱에서 필드에 전개하고, 봉인 카운터를 4개 놓는다.
+PRINTL 그 후, 덱의 위에서부터 카드를 4장 제외한다. 이 효과로 제외된 카드는 효과를 발동할 수 없다.
+PRINTL 
+CALLFORM CARD_ABLE(1,소환強制誘発)
+PRINTL ②: 1턴에 1번, 자신의 화염 어둠 속성의 코스트 5 이상의 「커맨드」 몬스터가 소환 / 특수 소환되었을 경우,
+PRINTL 이 카드의 봉인 카운터를 1개 제거하고,
+PRINTL 자신의 제외되어 있는 카드를 무작위로 1장을 묘지로 보낸다.
+PRINTL 그 후, 상대 필드의 몬스터 1장을 선택하여 파괴한다.
+PRINTL (코스트 5는 레벨/랭크/링크 5의 카드를 지칭한다)
+PRINTL
+CALLFORM CARD_ABLE(0,소환強制誘発)
+PRINTL ③: 『금단 폭발』
+PRINTL 이 카드의 봉인 카운터가 모두 없어졌을 때 발동한다.
+PRINTL 상대 필드의 카드를 전부 제외하고, 이 카드는 뒷면으로 「종언의 금단 도르마게돈X」이 된다.
+PRINTL 그 후, 이 카드의 X 소재를 4개 늘린다.
+PRINTL (이 효과로 제외된 카드는 효과를 발동할 수 없다).
+PRINTL
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ④: 이 카드가 전개되어 있는 한, 이 카드는 상대의 효과의 대상이 되지 않으며, 효과로는 파괴되지 않는다.
+PRINTL 또한, 자신은 「커맨드」, 「이니셜즈」, 「금단」 몬스터로밖에 공격 선언할 수 없다.
+CALL TEXT_DECORATION("KNDN")
+
+@CARDSUMMON_57851(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+RETURN 0
+
+@CARDCAN_57851(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57851)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン開始時強制
+	SIF ゾーン != "EX덱"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲EX덱 = 1
+효과条件名前 = 전설의 금단 도킨덤X
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환強制誘発
+	SIF 발동済_1(듀얼리스트,57851)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") < 1
+		RETURN 0
+	SIF 最終소환決者 != 듀얼리스트
+		RETURN 0
+	SIF 最終소환타입 == ""
+		RETURN 0
+	CALLFORM CARDNAME_{最終소환ID}("カテゴリ") 
+	SIF !MATCH(RESULTS, "커맨드")
+		RETURN 0
+	CALLFORM CARD_{最終소환ID}("속성") 
+	SIF !MATCH(RESULT,화염속성) && !MATCH(RESULT,어둠속성) 
+		RETURN 0
+	SIF GETVAR(@"%最終소환決者%_MZ_星:最終소환場所") < 5
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+
+@CARDEFFECT_57851(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 카운터数
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ターン開始時強制
+	CALL FULLRESET
+	CALL CARD_ADD(듀얼리스트,"EX덱", "마함", 場所,"表側표시")
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",カード설치先,"個Ｃ",4)
+	REPEAT 4
+		CALL CARD_DISPOSE(듀얼리스트,"덱",0,完全제외行き)
+	REND
+ELSEIF 종류 == 지속효과
+	IF ゾーン == "마함"
+		CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"対耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"破耐")
+		CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "FORBIDDEN STAR ～世界最後の日～")
+
+		CALL FULLRESET
+		효과条件固カテゴリ:0 = 커맨드
+		효과条件固カテゴリ:1 = イニシャルズ
+		효과条件固カテゴリ:2 = 금단
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦無")
+	ENDIF
+ELSEIF 종류 == 소환強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57851,1)
+	카운터数 = GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所")
+	PRINTFORMW 最終금단필드의 封印카운터が取り除かれました。
+	PRINTFORMW 封印카운터：{카운터数} → {카운터数 - 1}
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",-1)
+	CALL CARD_DECK_DISPOSE(듀얼리스트,"제외",1)
+	IF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") > 0
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+	IF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") < 1
+		SETCOLOR C_RED
+PRINTL 종언의 금단 도르마게돈X의 봉인이 풀렸습니다.
+		PRINTW 禁 断 爆 発（ビッグバン）!
+		RESETCOLOR
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"完全제외")
+		CALL CARD_GENERATE(듀얼리스트,157851)
+
+		CALL FULLRESET
+효과条件名前 = 종언의 금단 돌마게돈X
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"Ｘ",4)
+		ENDIF
+		CALL CARD_RESERV(듀얼리스트,57851,永紋章予約)
+	ENDIF
+ELSEIF 종류 == 永紋章起動
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과範囲제외 = 1
+	효과範囲묘지 = 1
+효과条件名前 = 포비든 스타 ~세상 마지막 날~
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		CALL SET_PLAYER_INFO(듀얼리스트,"듀얼패배플래그",9)
+ENDIF
+
+;----------------------------------------------------------トークン
+
+@CARDNAME_157851,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 종언의 금단 도르마게돈X
+	CASE "略称"
+RESULTS = 도르마게돈X
+	CASE "カテゴリ"
+RESULTS:0 = 금단
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+@CARD_157851(参照先)
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "トークン"
+		RETURN 1	
+	CASE "속성"
+		RESULT:1 = 어둠속성
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 999
+	CASE "攻撃力"
+		RETURN 99999
+	CASE "守備力"
+		RETURN 99999
+	CASE "分割"
+		RETURN KNDN
+ENDSELECT
+
+@CARD_EXPLANATION_157851(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("KNDN")
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한, 상대는 제외 상태의 몬스터를 특수 소환할 수 없다.
+PRINTL ②: 이 카드가 몬스터 존을 벗어날 경우, 대신 1000 LP를 지불하고, X 소재를 2개 제거할 수 있다.
+PRINTL ③: 이 카드가 자신 필드 이외에 존재할 경우, 자신은 게임에 패배한다.
+CALL TEXT_DECORATION("KNDN")
+
+@CARDCAN_157851(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,157851)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 1000
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_157851(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 카운터数
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+		CALL SET_PLAYER_INFO(듀얼리스트,"SS소환禁止제외",3,1)
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4070,00,X消費2)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1000)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

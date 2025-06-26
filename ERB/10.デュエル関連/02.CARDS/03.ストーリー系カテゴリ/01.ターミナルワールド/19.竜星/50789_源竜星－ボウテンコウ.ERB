@@ -1,0 +1,179 @@
+﻿@CARDNAME_50789,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 원룡성－보우텐코우
+	CASE "略称"
+RESULTS = 보우텐코우
+	CASE "カテゴリ"
+RESULTS:0 = 룡성
+ENDSELECT
+
+
+@CARD_50789(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2800
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수制限"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50789(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 5
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50789) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50789(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 + 튜너 이외의 몬스터 1체 이상
+PRINTL 자신은 「원룡성－보우텐코우」를 1턴에 1번밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,특수소환時 ,EX소환時)
+PRINTL ①: 이 카드가 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 덱에서 「룡성」 카드 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 덱에서 드래곤족 몬스터 1장을 묘지로 보내고 발동할 수 있다.
+PRINTL 이 카드의 레벨은, 묘지로 보낸 몬스터와 같아진다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ③: 이 카드가 필드에서 벗어났을 경우에 발동할 수 있다.
+PRINTL 덱에서 「룡성」 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_50789(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50789)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 특수소환時 || 종류 == EX소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 룡성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 드래곤족
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 룡성
+	효과条件소환可 = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_50789(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 参照レベル
+#DIM DYNAMIC 選択カード_ID
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 특수소환時 || 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50789)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 룡성
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50789,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종족 = 드래곤족
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			TRYCALLFORM CARD_{選択カード_ID},"レベル"
+			参照レベル = RESULT
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星",参照レベル,上書きモード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50789)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 룡성
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,)
+	ENDIF
+ENDIF

@@ -1,0 +1,120 @@
+﻿@CARDNAME_25551,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 제알 웨폰－아수라 부완
+	CASE "略称"
+RESULTS = ZW－아수라부완
+	CASE "カテゴリ"
+RESULTS:0 = 제알 웨폰
+RESULTS:1 = 제알
+ENDSELECT
+
+
+@CARD_25551(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 2100
+	CASE "分割"
+		RETURN 유니온
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_25551(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ①: 자신 필드의 「유토피아」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 자신 필드의 이 카드를 공격력을 1000 올리는 장착 마법 카드로 취급하여 그 몬스터에 장착한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 장착되어 있을 경우, 장착 몬스터는 연속 전투를 가진다.
+PRINTL (이 카드는 상대 필드의 모든 몬스터에게 공격할 수 있으며, 직접 공격을 하거나 전투 파괴에 실패한 경우에만 공격은 멈춘다.)
+PRINTL 
+
+@CARDCAN_25551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25551)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 유토피아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25551)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 유토피아
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,"필드",場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,1000)
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"連戦")
+ENDIF
+

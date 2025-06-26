@@ -1,0 +1,122 @@
+@CARDNAME_79755,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 다름다운 비밀의 춤
+	CASE "略称"
+		RESULTS = 비밀의 춤
+	CASE "カテゴリ"
+		RESULTS:0 = 비밀
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79755(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79755(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  카드는 １턴에 １번밖에 발동할 수 없다。
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：자신 필드의 "비밀벌" 카드 １장을 파괴하고 발동할 수 있다。
+PRINTL 패 / 덱에서 "비밀벌" 몬스터 １장을 특수 소환한다。
+PRINTL 그 후、덱에서 "비밀벌" 몬스터 １장을 마법＆함정 존에 앞면표시로 둔다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79755(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79755)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79755)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	SIF モンスター数(듀얼리스트) < 5
+		효과範囲마함 = 1
+	효과条件カテゴリ = 비밀벌
+	SIF ゾーン == "마함"
+		효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件カテゴリ = 비밀벌
+	효과条件소환可 = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+
+
+@CARDEFFECT_79755(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 変換カード
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79755,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		SIF モンスター数(듀얼리스트) < 5
+			효과範囲마함 = 1
+		효과範囲필드 = 1
+		효과条件カテゴリ = 비밀벌
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件カテゴリ = 비밀벌
+			효과範囲덱 = 1
+			효과範囲손패 = 1
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+			효과条件カテゴリ = 비밀벌
+			효과範囲덱 = 1
+			CALL CARD_SET_BASIC(듀얼리스트,"덱",ゾーン,場所,"表側표시")
+		ENDIF
+
+	ENDIF
+ENDIF

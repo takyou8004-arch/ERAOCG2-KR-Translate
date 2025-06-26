@@ -1,0 +1,162 @@
+﻿@CARDNAME_55351,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 뇌화의 대왕귀아
+	CASE "略称"
+RESULTS = 다이오가
+	CASE "カテゴリ"
+RESULTS:0 = 뇌화
+ENDSELECT
+
+
+@CARD_55351(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 곤충족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 3300
+	CASE "守備力"
+		RETURN 2900
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_55351(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 곤충족 / 식물족 / 비늘야수족 몬스터 2체 이상
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①: 상대의 덱 / 엑스트라 덱에서 몬스터가 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 필드의 몬스터 2장을 파괴한다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 이 카드가 묘지에 존재할 경우,
+PRINTL 자신 필드의 곤충족 / 식물족 / 비늘야수족 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 덱의 맨 아래로 되돌리고, 이 카드를 특수 소환한다.
+PRINTL 이 턴, 자신은 곤충족 / 식물족 / 비늘야수족 몬스터밖에 특수 소환할 수 없다.
+
+@CARDSUMMON_55351(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 5
+素材条件종족:0 = 곤충족
+素材条件종족:1 = 식물족
+素材条件종족:2 = 비늘야수족
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,55351) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_55351(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,55351)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,55351)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	;参考：フェルグラント
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"소환出処",5,1)
+	SIF RESULT == 1
+		条件달성 = 1
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"소환出処",4,1)
+	SIF RESULT == 1
+		条件달성 = 1
+
+	SIF 条件달성 != 1
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,55351)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,55351,"묘지",1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족:0 = 곤충족
+	효과条件종족:1 = 식물족
+	효과条件종족:2 = 비늘야수족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_55351(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 破壊횟수
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55351,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件複数 = 2
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55351,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족:0 = 곤충족
+		효과条件종족:1 = 식물족
+		효과条件종족:2 = 비늘야수족
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,"묘지",場所)
+			SS소환可能종족:0 = 곤충족
+			SS소환可能종족:1 = 식물족
+			SS소환可能종족:2 = 비늘야수족
+			CALL CARD_SS_RESTRICTION(듀얼리스트)
+		ENDIF
+	ENDIF
+ENDIF
+
+

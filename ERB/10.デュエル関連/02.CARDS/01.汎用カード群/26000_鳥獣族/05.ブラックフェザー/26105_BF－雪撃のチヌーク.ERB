@@ -1,0 +1,120 @@
+﻿@CARDNAME_26105,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = BF－설격의 치누크
+	CASE "略称"
+RESULTS = BF 치누크
+	CASE "カテゴリ"
+RESULTS:0 = 블랙 페더
+RESULTS:1 = 블랙 페더 드래곤
+ENDSELECT
+
+
+@CARD_26105(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 700
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26105(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,フリー誘発)
+PRINTL ①: 패 / 필드의 이 카드를 묘지로 보내고, 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL (자신 필드에 어둠 속성 싱크로 몬스터가 존재할 경우, 이 효과는 상대 턴에도 발동할 수 있다)
+PRINTL 엑스트라 덱에서 "BF" 싱크로 몬스터 1장을 묘지로 보내고, 대상 몬스터는 턴 종료시까지,
+PRINTL 공격력이 700 다운하고, 효과는 무효화된다.
+
+@CARDCAN_26105(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26105)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	SIF !GROUPMATCH(ゾーン,"손패","필드")
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,26105)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 블랙 페더
+	효과条件종류 = 싱크로
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 싱크로
+	효과条件カテゴリ = 블랙 페더
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,26105)
+	IF RESULT != 1
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,26105)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26105(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 合計レベル
+
+IF 종류 == 손패起動 || 종류 == 필드起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26105,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 블랙 페더
+		효과条件종류 = 싱크로
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			효과추가종류 = 10
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"無効",700)
+		ENDIF
+	ENDIF
+ENDIF

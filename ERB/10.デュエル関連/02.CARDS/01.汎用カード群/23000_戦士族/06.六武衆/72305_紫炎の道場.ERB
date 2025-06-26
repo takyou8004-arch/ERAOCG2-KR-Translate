@@ -1,0 +1,135 @@
+﻿@CARDNAME_72305,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 자염의 도장
+	CASE "略称"
+RESULTS = 자염의 도장
+	CASE "カテゴリ"
+RESULTS:0 = 자염
+ENDSELECT
+
+
+@CARD_72305(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72305(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환強制誘発)
+PRINTL ①: 「여섯무사」 몬스터가 소환 / 특수 소환될 때마다 발동한다.
+PRINTL 이 카드에 개별 카운터를 1개 놓는다.
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ②: 개별 카운터가 놓여 있는 이 카드를 묘지로 보내고 발동할 수 있다.
+PRINTL 이 카드에 놓여 있던 개별 카운터 수 이하의 레벨을 가진,
+PRINTL 「여섯무사」 또는 「자염」 몬스터 1장을 덱에서 특수 소환한다.
+
+
+@CARDCAN_72305(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 소환レベル
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72305)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	SIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") < 1
+		RETURN 0
+	소환レベル = GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所")
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ:0 = 여섯무사
+	효과条件カテゴリ:1 = 자염
+	CALL 효과条件レベル_ADV(소환レベル, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 소환強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 最終소환決者 != 듀얼리스트
+		RETURN 0
+	SIF 最終소환타입 == ""
+		RETURN 0
+	CALLFORM CARDNAME_{最終소환ID}("カテゴリ") 
+	SIF !MATCH(RESULTS,"여섯무사")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72305(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 소환レベル
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72305)
+	IF RESULT == 0
+		소환レベル = GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所")
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)	
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ:0 = 여섯무사
+		효과条件カテゴリ:1 = 자염
+		CALL 효과条件レベル_ADV(소환レベル, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72305)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 소환強制誘発
+	PRINTFORML 자염の道場『{場所}』に카운터が乗りました。
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",1)
+ENDIF

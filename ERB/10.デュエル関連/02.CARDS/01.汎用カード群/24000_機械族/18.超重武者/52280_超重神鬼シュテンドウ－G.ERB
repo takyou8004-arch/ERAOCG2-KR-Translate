@@ -1,0 +1,127 @@
+﻿@CARDNAME_52280,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초중신귀 슈텐도-G
+	CASE "略称"
+RESULTS = 슈텐도G
+	CASE "カテゴリ"
+RESULTS:0 = 초중무사
+ENDSELECT
+
+
+@CARD_52280(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 싱크로
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 2500
+ENDSELECT
+RETURN 0
+
+
+@CARDSUMMON_52280(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 6
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件종족 = 기계족
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件カテゴリ = 초중무사
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52280) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_52280(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 기계족 튜너 1장 + 튜너 이외의 "초중무사" 몬스터 1장 이상
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 앞면 수비 표시 상태로 공격할 수 있다.
+PRINTL 그 경우, 이 카드는 수비력을 공격력으로 취급하여 데미지 계산을 실행한다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ②: 이 카드가 S 소환에 성공했을 때, 자신의 묘지에 마법 / 함정 카드가 존재하지 않을 경우 발동할 수 있다.
+PRINTL 상대 필드의 마법 / 함정 카드를 전부 파괴한다.
+
+
+
+@CARDCAN_52280(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52280)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == EX소환時
+    CALL FULLRESET
+    효과範囲상대마함 = 1
+    CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+    SIF RESULT != 1
+	    RETURN 0
+    RETURN 1
+
+ENDIF
+
+@CARDEFFECT_52280(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"守戦")
+
+ELSEIF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52280)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함全体",場所,"묘지")
+	ENDIF
+
+ENDIF

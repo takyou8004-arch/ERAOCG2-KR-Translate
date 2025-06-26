@@ -1,0 +1,110 @@
+﻿@CARDNAME_33254,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 정령수 페트루핀
+	CASE "略称"
+RESULTS = 페트루핀
+	CASE "カテゴリ"
+RESULTS:0 = 령수
+RESULTS:1 = 정령수
+ENDSELECT
+
+
+@CARD_33254(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2000
+	CASE "특수制限"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_33254(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신은 「정령수 페트루핀」을 1턴에 1번밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 패에서 「령수」 카드 1장을 제외하고, 상대 필드의 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 패로 되돌린다.
+
+
+@CARDCAN_33254(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,33254)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 령수
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_33254(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33254,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 령수
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"손패")
+		ENDIF
+	ENDIF
+ENDIF
+

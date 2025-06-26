@@ -1,0 +1,157 @@
+﻿@CARDNAME_4527,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 진언 성 관세음보살 토모에 고젠
+	CASE "略称"
+RESULTS = 토모에 고젠
+	CASE "カテゴリ"
+RESULTS:0 = 영령
+RESULTS:1 = 아처
+RESULTS:2 = 페이트
+ENDSELECT
+
+
+@CARD_4527(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250418
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4527(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 화염속성을 포함하는 몬스터 2체
+PRINTL 이 카드명의 ①③ 효과는 각각 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,EX소환時)
+;単体法具パンチ
+PRINTL ①: 이 카드가 특수 소환에 성공했을 경우, 상대 필드의 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드를 파괴하고, 상대 라이프 포인트에 1000 데미지를 준다.
+;延焼
+CALLFORM CARD_ABLE(2,발동強制誘発)
+PRINTL ②: 이 카드가 필드에 존재하는 한,
+PRINTL 상대가 카드의 효과를 발동할 때마다 상대에게 200 포인트의 데미지를 준다.
+;血脈励起
+PRINTL ③: 이 카드가 몬스터 존에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 이 카드를 자신 마법 / 함정 존에 앞면 표시로 놓는다.
+
+
+@CARDSUMMON_4527(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件속성 = 화염속성
+ELSEIF EX参照 >= 10
+	素材条件종류 = モン全般
+ENDIF
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,4527) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_4527(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+IF 종류 == 특수소환時 || 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,4527)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동強制誘発
+	SIF !GROUPMATCH(ゾーン,"필드","마함")
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(ゾーン,"필드")
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,4527)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4527(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+
+IF 종류 == 특수소환時 || 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4527,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 3
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지",1000)
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	SETCOLOR C_RED
+	PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+	PRINTL
+	PRINTFORML 「燃えろっ！」
+	PRINTL
+	CUSTOMDRAWLINE ―
+	RESETCOLOR
+	CALL LIFE_CHANGE(듀얼리스트,"減少","효과",200,1)
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4527,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 진언
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+	ENDIF
+ENDIF

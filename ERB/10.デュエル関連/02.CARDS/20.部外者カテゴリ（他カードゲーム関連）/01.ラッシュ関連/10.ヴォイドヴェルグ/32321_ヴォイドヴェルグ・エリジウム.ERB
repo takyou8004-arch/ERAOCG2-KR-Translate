@@ -1,0 +1,194 @@
+﻿@CARDNAME_32321,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 보이드베르그 엘리시움
+	CASE "略称"
+RESULTS = 보이드 엘리시움
+	CASE "カテゴリ"
+RESULTS:0 = 보이드베르그
+ENDSELECT
+
+
+@CARD_32321(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	CASE "추가日"
+		RETURN 250608
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_32321(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 방법에 의한 특수 소환은 1턴에 1번밖에 할 수 없으며, ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動, 묘지起動)
+PRINTL ①: 이 카드는 자신 패/필드의 이 카드 이외의 미확인족 / 어둠 속성 몬스터 1장을 묘지로 보내고, 패/묘지에서 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ①: 이 카드가 효과로 파괴될 경우, 대신 자신 묘지의 몬스터 1장을 덱으로 되돌릴 수 있다.
+CALLFORM CARD_ABLE(2,필드起動, フリー誘発)
+PRINTL ③: 자신 / 상대 메인 페이즈에 패를 1장 묘지로 보내고, 상대 필드의 앞면 표시 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터를 뒷면 수비 표시로 하고, 이 카드의 공격력을 턴 종료 시까지 500 올린다.
+
+@CARDCAN_32321(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,32321)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,32321)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,32321,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+	효과条件他所 = 1
+	효과条件속성 = 어둠속성
+	효과条件종족 = 미확인족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF 破壊종류 != "효과"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 1
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,32321)
+		RETURN 0
+	CALL FULLRESET
+
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_32321(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,32321, 1)
+	IF RESULT == 0
+		CALL FULLRESET
+
+		효과範囲손패 = 1
+		효과範囲필드 = 1
+		효과条件속성 = 어둠속성
+		효과条件종족 = 미확인족
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,32321)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+PRINTL 엘리시움의 대체 효과를 사용하시겠습니까?
+		CALL YN_CHOICE(듀얼리스트)
+		IF RESULT == はい
+			CALL FULLRESET
+			효과条件속성 = 어둠속성
+			효과条件종류 = モン全般
+			효과条件行先플래그 = 덱行き
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+			IF RESULT == 1
+				RETURN 1
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 0
+	
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,32321, 2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",500)
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과条件표시 = 表側표시
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"표시변경")
+		ENDIF
+	ENDIF
+ENDIF
+
+

@@ -1,0 +1,281 @@
+@CARDNAME_4065,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 금단기관 VV─8
+	CASE "略称"
+		RESULTS = 금단기관VV─8
+	CASE "カテゴリ"
+		RESULTS:0 = 금단
+		RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_4065(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 3400
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "소환불가"
+		RETURN 1
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4065(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 「금단기관 VV─8」は자신의 마법＆함정존에 １장 しか앞면 표시로 存在할 수 없다。
+PRINTL 이 카드명의 ①のP효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①：이 카드に封印카운터がのっていない경우에 패를 １장 버리고 발동할 수 있다。
+PRINTL 덱 위에서 ５장을 めくり、그 중에서 「커맨드」「침략자」 카드를 ２장까지 패에 넣을 수 있다。
+PRINTL 그 후、이 카드に封印카운터を３つ둔다。
+CALLFORM CARD_ABLE(0,소환強制誘発)
+PRINTL ②：자신의 물속성「커맨드」 몬스터가 일반 소환 / 특수 소환される度、
+PRINTL 자신 몬스터 존에 空きがあれば、이 카드의 封印카운터を１개 제거하고、덱 위에서  １장을 묘지로 보낸다。
+CALLFORM CARD_ABLE(0,소환強制誘発)
+PRINTL ③：『금단機動』
+PRINTL 이 카드의 封印카운터がすべてなくなった時に발동한다。
+PRINTL 이 카드를 마법＆함정ゾーンから특수 소환하고、次の상대メインフェイズ１をスキップする。
+PRINTL 상대 필드에 카드가 ３장 이상 존재하는 なら、次の상대ターンをスキップする。
+PRINTL 이 효과는 무효화되지 않는다。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 카드는 일반 소환할 수 없고、이 카드의 효과でのみ특수 소환할 수 있다。
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ①：モンスターゾーン의 이 카드가 EX덱에 送られた경우에 발동할 수 있다。
+PRINTL 이 카드를 마법＆함정존에 둔다。
+
+@CARDCAN_4065(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4065)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件표시 = 表側표시
+	효과条件名前 = 금단기관 VV─8
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,4065)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") > 0
+		RETURN 0
+	SIF 손패数(듀얼리스트) == 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") < 1
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	SIF 最終소환決者 != 듀얼리스트
+		RETURN 0
+	SIF 最終소환타입 == ""
+		RETURN 0
+	CALLFORM CARDNAME_{最終소환ID}("カテゴリ") 
+	SIF !MATCH(RESULTS, "커맨드")
+		RETURN 0
+	CALLFORM CARD_{最終소환ID}("속성") 
+	SIF !MATCH(RESULT, 물속성)
+		RETURN 0
+	;とりあえずチェックだけ
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊","リリース")
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"필드")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件표시 = 表側표시
+	효과条件名前 = 금단기관 VV─8
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 他효과起動
+	RETURN 1
+ELSEIF 종류 == チェーン可否
+	SIF !GROUPMATCH(チェーン可否종류, 他효과起動)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4065(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 카운터数
+#DIMS DYNAMIC 対面者
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4065)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4065,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ:0 = 커맨드
+		효과条件カテゴリ:1 = 침략자
+		효과条件カテゴリ:2 = Ｓ級침략자
+		효과条件任意 = 1
+		효과条件複数 = 98
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,5)
+		PRINTFORMW 금단기관 VV─8に封印카운터が３つ置かれました。
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",3)
+	ENDIF
+ELSEIF 종류 == 소환強制誘発
+	카운터数 = GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所")
+	PRINTFORML 禁断機関 VV─8の封印카운터が取り除かれました。
+	PRINTFORMW 封印카운터：{카운터数} → {카운터数 - 1}
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",-1)
+	CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",1)
+	IF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") < 1
+		CALLFORM CARD_STANBY(4065,듀얼리스트,他효과起動,"마함",場所)
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4065)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前 = 禁断機関 VV─8
+		CALL CARD_SET_BASIC(듀얼리스트,"EX덱",ゾーン,場所,"表側표시")
+	ENDIF
+ELSEIF 종류 == 他효과起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4065)
+	IF RESULT == 0
+		PRINTL 禁断機関 VV─8の封印が解かれました。
+		PRINTW 禁断機動!
+		PRINTL
+		SETCOLOR C_AQUA
+		IF 듀얼리스트 == "자신"
+			SELECTCASE RAND:3
+				CASE 0
+					PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+					PRINTL
+					PRINTFORMW 「あなたの時は……ここで終わる！！」
+					PRINTL
+					CUSTOMDRAWLINE ―
+				CASE 1
+					PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+					PRINTL
+					PRINTFORMW 「禁断………機動！！」
+					PRINTL
+					CUSTOMDRAWLINE ―
+				CASE 2
+					PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+					PRINTL
+					PRINTFORMW 「全部終わりにしてあげる……」
+					PRINTL
+					CUSTOMDRAWLINE ―
+			ENDSELECT
+			RESETCOLOR
+		ENDIF
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT >= 3
+			SETCOLOR C_YELLOW
+			PRINTFORMW
+			PRINTFORMW %듀얼리스트%는추가ターンを得ました。
+			RESETCOLOR
+			CALL SET_PLAYER_INFO(듀얼리스트,"ターンスキップ",1,1)
+		ELSE
+			SETCOLOR C_YELLOW
+			PRINTFORMW
+			PRINTFORMW %対面者%の次のメインフェイズ１がスキップされます。
+			RESETCOLOR
+			CALL SET_PLAYER_INFO(듀얼리스트,"メインスキップ", 1, 1)
+		ENDIF
+	ENDIF
+ENDIF
+

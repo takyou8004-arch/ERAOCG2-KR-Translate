@@ -1,0 +1,87 @@
+﻿@CARDNAME_23501,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 고블린 드버그
+	CASE "略称"
+RESULTS = 고블린 드버그
+	CASE "カテゴリ"
+RESULTS:0 = 고블린
+ENDSELECT
+
+
+@CARD_23501(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23501(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환에 성공했을 때 발동할 수 있다.
+PRINTL 패에서 레벨 4 이하의 몬스터 1장을 특수 소환한다.
+PRINTL 그 후, 이 카드는 수비 표시가 된다.
+PRINTL 
+
+@CARDCAN_23501(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23501)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲손패 = 1
+	CALL 효과条件レベル_ADV(4, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23501(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23501)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)	
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",2,1)
+	ENDIF
+ENDIF
+

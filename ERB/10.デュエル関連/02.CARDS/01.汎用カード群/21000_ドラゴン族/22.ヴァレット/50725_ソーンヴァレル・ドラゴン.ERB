@@ -1,0 +1,176 @@
+﻿@CARDNAME_50725,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 쏜 바렐 드래곤
+	CASE "略称"
+RESULTS = 쏜 비
+	CASE "カテゴリ"
+RESULTS:0 = 바렐
+ENDSELECT
+
+
+@CARD_50725(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50725(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件종족 = 드래곤족
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 바렐
+ENDIF
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,50725) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50725(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「바렐」 몬스터를 포함하는 드래곤족 몬스터 2체
+PRINTL 이 카드명의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 손패를 1장 버리고, 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 파괴한다.
+PRINTL 이 효과로 링크 몬스터를 파괴했을 경우,
+PRINTL 추가로 그 링크 수의 수만큼 자신의 패 / 묘지에서 「바렐」 몬스터를 특수 소환할 수 있다 (동명 카드는 1장까지).
+
+@CARDCAN_50725(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50725)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,50725)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件표시 = 10
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_50725(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択カードレベル
+#DIMS DYNAMIC 選択カード名前,4
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50725,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件표시 = 10
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"묘지")
+			IF RESULT == 1
+				PRINTFORMW {他参照選択カードID}
+				選択カード_ID = RESULT:1
+				TRYCALLFORM CARD_{他参照選択カードID},"종류"
+				SIF RESULT != 링크
+					RETURN 0
+				TRYCALLFORM CARD_{他参照選択カードID},"レベル"
+				選択カードレベル = RESULT
+				カウンタ = 0
+				REPEAT 選択カードレベル
+					CALL FULLRESET
+					효과範囲손패 = 1
+					효과範囲묘지 = 1
+					효과条件カテゴリ = 바렐
+					효과条件종류 = モン全般
+					SIF カウンタ >= 1
+						효과条件固名前:0 = %選択カード名前:0%
+					SIF カウンタ >= 2
+						효과条件固名前:1 = %選択カード名前:1%
+					SIF カウンタ >= 3
+						효과条件固名前:2 = %選択カード名前:2%
+					SIF カウンタ >= 4
+						효과条件固名前:3 = %選択カード名前:3%
+					효과条件任意 = 1
+					CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+					IF RESULT != 9999
+						選択カード_ID = RESULT:99
+						CALL CARD_SELECT(듀얼리스트,RESULT)
+						選択カード = RESULT
+						CALL CARD_SP_SUMMON(듀얼리스트,参照先（CS）,選択カード)
+
+						TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
+						SIF カウンタ == 0
+							選択カード名前:0 = %RESULTS%
+						SIF カウンタ == 1
+							選択カード名前:1 = %RESULTS%
+						SIF カウンタ == 2
+							選択カード名前:2 = %RESULTS%
+						SIF カウンタ == 3
+							選択カード名前:3 = %RESULTS%
+						カウンタ ++
+					ELSEIF RESULT == 9999
+						BREAK
+					ENDIF
+				REND
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

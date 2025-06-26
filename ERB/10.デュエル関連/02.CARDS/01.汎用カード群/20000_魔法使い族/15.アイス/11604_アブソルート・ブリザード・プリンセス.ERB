@@ -1,0 +1,187 @@
+﻿@CARDNAME_11604,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 앱솔루트 블리자드 프린세스
+	CASE "略称"
+RESULTS = 앱솔루트 B.P
+	CASE "カテゴリ"
+RESULTS:0 = 블리자드
+		RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_11604(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+	CASE "특수不可"
+		RETURN 1
+	CASE "単一存在"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 1604
+	CASE "추가日"
+		RETURN 250615
+ENDSELECT
+
+RETURN 0
+
+
+@CARDSUMMON_11604(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+
+IF EX参照 == 0 || EX参照 == 1
+素材条件名前 = 블리자드 프린세스
+ELSEIF EX参照 >= 10
+	素材条件속성 = 물속성
+	素材条件종류 = モン全般
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,11604) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_11604(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "블리자드 프린세스" + 물 속성 몬스터 2체
+PRINTL 이 카드는 융합 소환으로밖에 특수 소환할 수 없으며, 자신 필드에 1체밖에 앞면 표시로 존재할 수 없다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 연속 전투를 가지며, 필드에 앞면 표시로 존재하는 한,
+PRINTL 자신 필드의 물 속성 몬스터는 마법 / 함정 카드의 효과를 받지 않는다.
+CALL CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드의 공격력은, "앱솔루트 블리자드 프린세스" 이외의 필드의 물 속성 몬스터의 수× 500 올린다.
+CALL CARD_ABLE(0,バトル開始時強制)
+PRINTL ③: 배틀 페이즈 개시 시에 발동한다. 상대 필드의 모든 물 속성 몬스터는 공격력 0이 되며 공격 표시가 된다.
+
+;블리자드 프린세스の강화形態。마함封じが지속の물속성への마함耐性になり、마함での除去を受けずに戦うことが할 수 있다。
+;テーマ内では함정の묘지효과しか융합手段がないため狙いにくいが、出すのがムリというわけではないようなエース。
+;３素材の正規융합で必要素材数は重いが、高い攻撃力の全体攻撃で상대몬스터를 処理する能力は高い。
+;고드름 토큰やアイスドールを用いて블리자드 프린세스の複製を並べることができれば、更にフィニッシュ能力は高まる。
+;
+;その能力は「E・HERO アブソルートZERO」（余りにも格好いい）のイメージが多く含まれていて、カード名にもそれが現れている。
+;漫画版GXのプロデュエリスト響紅葉の切り札であるため、漫画版の世界では十代たちの世代のデュエリストなら誰もが知っている
+;最強のモンスターという印象が色濃く残っている想定で、블리자드 프린세스（明日香）もそのイメージを形にしたという感じ。
+;作るにあたり漫画版を再確認したが、特に明日香はE・HEROとか융합소환について何かを言及してる箇所は見当たらなかった。
+;これがARC-Vで出してたモンスターだったら융합体にするのは如何かと思うが、漫画版GXが出処なら융합体エースにするのが良いだろう。
+;（漫画版GXの本編終了後の世界で、いつか響紅葉を超えていく十代たち。というイメージの存在なので、意図的にレベルや攻守を高くしている）
+
+@CARDCAN_11604(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,11604)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == バトル開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件종류 = モン全般
+	효과条件속성 = 물속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_11604(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戦闘カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	;全体攻撃（連続戦闘）を付与
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦")
+	;마함耐性を付与
+	CALL FULLRESET
+	효과条件속성 = 물속성
+	효과条件종류 = モン全般
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"함정耐")
+ELSEIF 종류 == 攻守変動
+	;필드의 물속성몬스터의 数をカウントし攻撃力アップ
+	;参考「E・HERO アブソルートZERO」様
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件속성 = 물속성
+	효과条件他所 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 500
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+ELSEIF 종류 == バトル開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,11604,2)
+	IF RESULT == 0
+		;상대 필드의 물속성モンスター全部攻撃표시＆攻撃力０化
+		CALL FULLRESET
+		효과条件속성 = 물속성
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"表",1)
+		CALL FULLRESET
+		효과条件속성 = 물속성
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"永攻",-999999)
+		
+		PRINTFORML 앱솔루트 블리자드 프린세스が放つ威圧感に、
+		PRINTFORMW 상대 필드의 물속성モンスターはうろたえているようだ・・・
+	ENDIF
+ENDIF

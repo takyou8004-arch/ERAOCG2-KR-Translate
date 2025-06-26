@@ -1,0 +1,445 @@
+﻿@CARDNAME_21325,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 호루스의 흑염룡ＬＶ.X
+	CASE "略称"
+		RESULTS = 흑염룡Lv.X
+	CASE "カテゴリ"
+		RESULTS:0 = Lv
+		RESULTS:1 = 호루스
+ENDSELECT
+
+
+@CARD_21325(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21325(종류)
+#DIM DYNAMIC 종류
+CALL CARD_ABLE(0,ターン終了時)
+PRINTL ①：이 카드가 전투를 행한 엔드 페이즈에 발동할 수 있다。이 카드는 성장한다。
+CALL CARD_ABLE(0,소환時)
+PRINTL ②：이 카드가 소환에 성공했을 경우에 발동할 수 있다。
+PRINTL 덱에서 "왕의 관"카드나 "카노푸스의 수호자" １장을 패에 넣는다。
+PRINTL 이 효과는 １턴에 １번밖에 사용할 수 없다。
+
+
+@CARDCAN_21325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21325)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 지속효과
+	CALL CARD_RECONSTRUCT(듀얼리스트,"필드",場所,121325)
+	
+	IF 발동済_1(듀얼리스트,21325) == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 왕의 관
+		효과条件スーパー名前 = 카노푸스의 수호자
+		효과条件任意 = 1
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		SIF RESULT == 1
+			CALL CARD_EFFECT_USE(듀얼리스트,21325,1)
+	ENDIF
+ENDIF
+
+
+;---------------------------------------------------------------------
+
+
+@CARDNAME_121325,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 호루스의 흑염룡ＬＶ.４
+	CASE "略称"
+		RESULTS = 흑염룡Lv.４
+	CASE "カテゴリ"
+		RESULTS:0 = Lv
+		RESULTS:1 = 호루스
+ENDSELECT
+
+
+@CARD_121325(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_121325(종류)
+#DIM DYNAMIC 종류
+
+CALL CARD_ABLE(0,ターン終了時)
+PRINTL ①：이 카드가 전투에서 몬스터를 파괴한 엔드 페이즈에 발동할 수 있다。
+PRINTL 이 카드는 "호루스의 흑염룡ＬＶ.６"으로 성장한다。
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②：몬스터 존의 이 카드는 상대 효과의 대상이 되지 않는다。
+
+
+@CARDCAN_121325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,121325)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン終了時
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") != 0
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_121325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,121325)
+	IF RESULT == 0
+		CALL CARD_RECONSTRUCT(듀얼리스트,"필드",場所,221325)
+	ENDIF
+
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",1)
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"対耐")	
+ENDIF
+
+
+;-------------------------------------------------------------
+
+
+@CARDNAME_221325,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 호루스의 흑염룡ＬＶ.６
+	CASE "略称"
+		RESULTS = 흑염룡Lv.６
+	CASE "カテゴリ"
+		RESULTS:0 = Lv
+		RESULTS:1 = 호루스
+ENDSELECT
+
+
+@CARD_221325(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 雄性
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_221325(종류)
+#DIM DYNAMIC 종류
+
+CALL CARD_ABLE(0,ターン終了時)
+PRINTL ①：이 카드가 전투에서 몬스터를 파괴한 엔드 페이즈에 발동할 수 있다。
+PRINTL 이 카드는 "호루스의 흑염룡ＬＶ.８"로 성장한다。
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②：몬스터 존의 이 카드는 상대의 마법카드의 효과를 받지 않는다。
+PRINTL 
+
+
+@CARDCAN_221325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,221325)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン終了時
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") != 0
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_221325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,221325)
+	IF RESULT == 0
+		CALL CARD_RECONSTRUCT(듀얼리스트,"필드",場所,321325)
+	ENDIF
+
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",1)
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"魔耐")	
+ENDIF
+
+
+;-------------------------------------------------------------
+
+
+@CARDNAME_321325,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 호루스의 흑염룡ＬＶ.８
+	CASE "略称"
+		RESULTS = 흑염룡ＬＶ.８
+	CASE "カテゴリ"
+		RESULTS:0 = Lv
+		RESULTS:1 = 호루스
+ENDSELECT
+
+
+@CARD_321325(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 雄性
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_321325(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 성장하지 않는다。
+CALL CARD_ABLE(0,발동誘発)
+PRINTL ①：상대가 마법 카드의 효과를 발동했을 때에 발동할 수 있다。
+PRINTL 그 발동을 무효로하고 파괴한다。
+PRINTL 
+
+
+@CARDCAN_321325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,321325)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_321325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,321325)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

@@ -1,0 +1,113 @@
+﻿@CARDNAME_21600,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 용패 그렌몰트
+	CASE "略称"
+RESULTS = 용패 그렌몰트
+	CASE "カテゴリ"
+RESULTS:0 = 드래그너
+RESULTS:1 = 커맨드
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_21600(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RESULT:1 = 드래곤족
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21600(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환에 성공했을 경우, 또는 스탠바이 페이즈에 발동할 수 있다.
+PRINTL EX덱에서 화염 속성의 드라그 하트 웨폰 1장을 선택하여, 이 카드에 장비한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 1번의 배틀 페이즈 중에 2번 공격할 수 있다.
+PRINTL 
+
+@CARDCAN_21600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21600)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == ターン開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 마함数(듀얼리스트) == 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 초차원
+	효과条件カテゴリ = 웨폰
+	효과条件속성 = 화염속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21600)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 초차원
+		효과条件カテゴリ = 웨폰
+		효과条件속성 = 화염속성
+		CALL DIMSUMMON(듀얼리스트,ゾーン,場所,1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",1)
+ENDIF

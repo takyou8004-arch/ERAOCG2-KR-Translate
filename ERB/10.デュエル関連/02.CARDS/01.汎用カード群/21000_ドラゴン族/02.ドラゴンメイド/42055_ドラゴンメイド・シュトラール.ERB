@@ -1,0 +1,176 @@
+﻿@CARDNAME_42055,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 드래곤메이드 슈트럴
+	CASE "略称"
+		RESULTS = 슈트럴
+	CASE "カテゴリ"
+		RESULTS:0 = 드래곤메이드
+ENDSELECT
+
+
+@CARD_42055(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3500
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 2055
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_42055(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「드래곤메이드" 몬스터＋레벨 5 이상의 드래곤족 몬스터
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번 밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,ターン開始時)
+PRINTL ①：자신 / 상대의 스탠바이 페이즈에 발동할 수 있다.
+PRINTL 자신의 패 / 묘지에서 레벨 9 이하의「드래곤메이드" 몬스터 1장을 골라 특수 소환한다.
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ②：상대가 마법 / 함정 / 몬스터의 효과를 발동했을 때에 발동할 수 있다. 이하의 효과를 모두 적용한다.
+PRINTL ●그 발동을 무효로 하고 파괴한다.
+PRINTL ●이 카드를 EX덱으로 되돌리고, EX덱으로부터「드래곤메이드 하스키」1장을 특수 소환한다.
+
+
+
+
+@CARDSUMMON_42055(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 드래곤메이드
+ELSEIF EX参照 >= 10
+	素材条件종족 = 드래곤족
+	CALLFORM 素材条件レベル_ADV(5, "以上")
+	素材条件종류 = レベル持ち
+ENDIF
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,42055) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_42055(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,42055)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,42055)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 드래곤메이드
+	CALL 효과条件レベル_ADV(9, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,42055)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件名前 = 드래곤메이드 하스키
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,2055)
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_42055(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42055,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 드래곤메이드
+		CALL 효과条件レベル_ADV(9, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42055,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前 = 드래곤메이드 하스키
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+			CALL CARD_DISPOSE(듀얼리스트,"필드",場所,2)
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "EX덱",選択カード)
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ENDIF
+

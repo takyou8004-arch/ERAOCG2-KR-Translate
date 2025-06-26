@@ -1,0 +1,216 @@
+﻿@CARDNAME_59831,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 음마계극단－섹시 히로인
+	CASE "略称"
+RESULTS = 음마 히로인
+	CASE "カテゴリ"
+RESULTS:0 = 마계극단
+RESULTS:1 = 음마계극단
+RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59831(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "連動ID"
+		RETURN 1190
+	CASE "추가日"
+		RETURN 250522
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_59831(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 条件달성
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 4
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 음마계극단
+ENDIF
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,59831) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_59831(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 ②의 P효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(0,ライフ変強制誘発)
+PRINTL ①: 자신 또는 상대가 데미지를 받았을 때 발동한다.
+PRINTL 상대 필드의 몬스터의 공격력은, 그 데미지 수치만큼 다운한다.
+CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ②: 서로의 배틀 페이즈에 발동할 수 있다.
+PRINTL 자신의 묘지의 「음마계대본」 마법 / 함정 카드 1장을 덱으로 되돌리고,
+PRINTL 이 카드를 마법 & 함정 존에서 특수 소환한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 「음마계극단」 몬스터를 포함하는 몬스터 2체 이상
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 필드의 몬스터는 공격 표시가 되고, 전투로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(0,ライフ変強制誘発)
+PRINTL ②: 자신 또는 상대가 데미지를 받았을 때 발동한다.
+PRINTL ②: 자신의 마법 & 함정 존의 몬스터 카드 1장을 대상으로 발동할 수 있다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL 그 몬스터를 특수 소환하고, 이 카드를 자신의 마법 & 함정 존에 놓는다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_59831(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59831)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ライフ変強制誘発
+	SIF ゾーン != "마함" && ゾーン != "필드"
+		RETURN 0
+	SIF ダメージ増減 != "減少"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+	RETURN 0
+ELSEIF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,59831)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 음마계극단
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,59831,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,59831)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_59831(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 選択カード_ID
+
+IF 종류 == ライフ変強制誘発
+	CALL FULLRESET
+	효과条件표시 = 表側표시
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"永攻DOWN",ダメージ受値)
+	IF 듀얼리스트 == "자신"
+		PRINTFORML 섹시 히로인의 효과에 의해 상대 몬스터의 공격력이{ダメージ受値}내렸다！
+	ELSE
+		PRINTFORML 섹시 히로인의 효과에 의해 자신 몬스터의 공격력이{ダメージ受値}내렸다！
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59831,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 음마계극단
+		효과条件종류 = 마함全般
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン, 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59831,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件종류 = モン全般
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"表",1)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐")
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"表",1)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐")
+ENDIF

@@ -1,0 +1,146 @@
+﻿@CARDNAME_25071,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 흑룡의 닌자
+	CASE "略称"
+RESULTS = 흑룡의 닌자
+	CASE "カテゴリ"
+RESULTS:0 = 닌자
+ENDSELECT
+
+
+@CARD_25071(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_25071(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(10,필드起動 ,フリー誘発)
+PRINTL ①: 자신 상대 턴에 한 번, 자신의 패 / 필드에서 「닌자」 몬스터 1체와 「인법」 카드 1장을 묘지로 보내고,
+PRINTL 필드의 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 제외한다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②: 이 카드가 필드에서 벗어났을 경우에 발동한다.
+PRINTL 서로의 플레이어는 제외되어 있는 자신의 몬스터를 가능한 한 특수 소환한다.
+
+
+@CARDSUMMON_AA_25071
+
+
+@CARDCAN_25071(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25071)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	SIF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲손패 = 1
+	효과条件カテゴリ = 인법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25071(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25071,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과範囲손패 = 1
+		효과条件カテゴリ = 닌자
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과範囲손패 = 1
+			효과条件カテゴリ = 인법
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"제외")
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	PRINTL
+	PRINTW 흑룡の닌자の다크 空間からモンスターが放出される！
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件複数 = 任意の数
+	CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件複数 = 任意の数
+	CALL CARD_SP_SUMMON_ADV(対面者,ゾーン,場所)
+ENDIF

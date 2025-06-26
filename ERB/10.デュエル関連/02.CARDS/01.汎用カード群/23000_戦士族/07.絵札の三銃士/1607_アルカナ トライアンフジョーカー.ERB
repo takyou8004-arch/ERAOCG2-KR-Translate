@@ -1,0 +1,253 @@
+﻿@CARDNAME_1607,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아르카나 트라이엄프 조커
+	CASE "略称"
+RESULTS = 트라이엄프
+	CASE "カテゴリ"
+RESULTS:0 = 페이스 카드 삼총사
+ENDSELECT
+
+
+@CARD_1607(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1607(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,묘지起動,손패起動)
+PRINTL ①: 이 카드가 패 / 묘지에 존재할 경우, 손패 및 자신 필드 중에서,
+PRINTL "페이스 카드 삼총사" 몬스터 3장을 묘지로 보내고 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드의 공격력은, 서로의 패의 수× 500 올린다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ③: 손패 1장을 보여주고 발동할 수 있다.
+PRINTL 보여준 카드와 같은 종류(몬스터 / 마법 / 함정)의, 상대 필드의 앞면 표시 카드를 전부 파괴한다.
+
+
+@CARDCAN_1607(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1607)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,1607,ゾーン,1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+	효과条件カテゴリ = 페이스 카드 삼총사
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,1607)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件종류 = モン全般
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 1
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件종류 = 마법全般
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 1
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件종류 = 함정全般
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+@CARDEFFECT_1607(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성,10
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択종류
+
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1607)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲필드 = 1
+		효과条件カテゴリ = 페이스 카드 삼총사
+		효과条件종류 = モン全般
+		효과条件複数 = 3
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+효과条件名前 = 아르카나 트라이엄프 조커
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲상대손패 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 500
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1607,1)
+	IF RESULT == 0
+
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件종류 = モン全般
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성:0 = 1
+
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件종류 = 마함全般
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성:1 = 1
+
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件종류 = 함정全般
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성:2 = 1
+
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종류:0 = 9999
+
+		IF 条件달성:0 == 1
+			효과条件종류:1 = 효과モン
+			효과条件종류:2 = 通常モン
+			효과条件종류:3 = 의식
+		ENDIF
+		IF 条件달성:1 == 1
+			효과条件종류:4 = 通常마법
+			효과条件종류:5 = 装備마법
+			효과条件종류:6 = 지속마법
+			효과条件종류:7 = フィールド
+		ENDIF
+
+		IF 条件달성:2 == 1
+			효과条件종류:8 = 通常함정
+			효과条件종류:9 = 지속함정
+		ENDIF
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALLFORM CARD_{RESULT:99}("종류")
+			選択종류 = RESULT
+
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			IF INRANGE(選択종류,0,10)
+				효과条件종류 = モン全般
+			ELSEIF INRANGE(選択종류,20,30)
+				효과条件종류 = 마법全般
+			ELSEIF INRANGE(選択종류,30,40)
+				효과条件종류 = 함정全般
+			ENDIF
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"묘지")
+		ENDIF
+	ENDIF
+ENDIF
+

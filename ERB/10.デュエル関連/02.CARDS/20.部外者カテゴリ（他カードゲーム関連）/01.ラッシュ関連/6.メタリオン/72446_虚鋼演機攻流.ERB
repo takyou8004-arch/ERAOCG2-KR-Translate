@@ -1,0 +1,116 @@
+﻿@CARDNAME_72446,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 이매지너리 아크 터보
+	CASE "略称"
+RESULTS = 허강연기 공류
+	CASE "カテゴリ"
+RESULTS:0 = 이매지너리
+ENDSELECT
+
+
+@CARD_72446(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72446(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動 ,フリー誘発)
+PRINTL ①: 자신 필드의 몬스터 (빛 속성) 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터의 공격력은 턴 종료시까지 1000 상승한다.
+PRINTL 자신의 묘지에 「이매지너리 액터」 몬스터가 존재할 경우,
+PRINTL 추가로 대상으로 한 몬스터의 공격력 이하의 상대 필드의 몬스터 1장을 뒷면 수비 표시로 할 수 있다.
+
+
+@CARDCAN_72446(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72446)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72446)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 빛속성
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72446(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72446,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 빛속성
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",1000)
+			CALL FULLRESET
+			효과範囲묘지 = 1
+효과条件名前 = 이매지너리 배우
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 1
+				RETURN 0
+
+			CALL FULLRESET
+			효과条件攻撃力 = GETVAR(@"%듀얼리스트%_MZ_攻:選択カード")
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"표시변경")
+		ENDIF
+	ENDIF
+ENDIF

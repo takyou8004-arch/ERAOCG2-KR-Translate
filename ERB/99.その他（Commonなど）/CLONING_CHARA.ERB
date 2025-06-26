@@ -1,0 +1,199 @@
+﻿@CLONING_CHARA
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 설정캐릭터_ID
+#DIM DYNAMIC 選択캐릭터
+#DIM DYNAMIC 캐릭터価値
+#DIM DYNAMIC カード_ID
+#DIM DYNAMIC カードから복제
+#DIM DYNAMIC ID_存在
+설정캐릭터_ID = CHARANUM
+
+PRINTFORML [0] - 캐릭터를 토대로 복제한다
+PRINTFORML [1] - 카드 컬렉션에서 복제한다。
+PRINTFORML 
+BINPUT
+IF RESULT == 0
+	CALL MONSTER_LIST(4)
+	SIF RESULT == -1
+		RETURN 0
+	選択캐릭터 = RESULT
+ELSEIF RESULT == 1
+	CALL EDIT_DECK_COLLECTION
+	SIF RESULT == -1
+		RETURN 0
+	カード_ID = RESULT
+	CALL CARD_EROTICS(カード_ID,,1)
+	選択캐릭터 = RESULT
+	SIF 選択캐릭터 <= 0
+		選択캐릭터 = 9900
+
+ENDIF
+;PRINTFORML 선택 캐릭터: {選択캐릭터}
+
+IF 選択캐릭터 == 9900
+	ADDCHARA 9900
+	CALL SET_CHARA_RAND(설정캐릭터_ID)
+ELSE
+	CALL CHARA_KACHI(選択캐릭터,120)
+	캐릭터価値 = RESULT
+	CALL PRINT_STATE(選択캐릭터)
+	IF 캐릭터価値 > MONEY
+		PRINTFORML 돈이 부족합니다。
+		RESTART
+	ENDIF 
+	PRINTFORML 신규 캐릭터로서 복제하겠습니까？ （복제비:{캐릭터価値}）
+	PRINTFORML 
+	PRINTFORML [0] - 선택한 캐릭터의 카피로 복제（소질、능력、호감도등을 계승）
+	SIF EXISTCSV(NO:選択캐릭터)
+		PRINTFORML [1] - 신규 캐릭터로서 복제한다（선택 캐릭터의 초기상태로 생성한다）
+
+	PRINTFORML 
+	PRINTFORML [100] - 다시 생각한다
+	BINPUT
+	IF RESULT == 0
+		IF EXISTCSV(NO:選択캐릭터)
+			ADDCHARA NO:選択캐릭터
+			COPYCHARA 選択캐릭터,설정캐릭터_ID
+		ELSE
+			ADDCHARA 9900
+			COPYCHARA 選択캐릭터,설정캐릭터_ID
+		ENDIF
+	ELSEIF RESULT == 1
+		ADDCHARA NO:選択캐릭터
+	ELSE
+		RESTART
+	ENDIF
+	CALL MONEY_GET(-캐릭터価値)
+ENDIF
+
+IF カード_ID >= 1
+	PRINTFORML 설정카드_ID: {カード_ID}
+	FOR カウンタ,0,CHARANUM - 1
+		SIF カード_ID != NO:カウンタ
+			CONTINUE
+		ID_存在 = 1
+		BREAK
+	NEXT
+	IF ID_存在 == 1
+		NO:설정캐릭터_ID = 9200 + クローン数
+	ELSE
+		NO:설정캐릭터_ID = カード_ID
+	ENDIF
+ELSE
+	NO:설정캐릭터_ID = 9200 + クローン数
+ENDIF
+
+BASE:설정캐릭터_ID:사정 = 0
+BASE:설정캐릭터_ID:발기 = 0
+BASE:설정캐릭터_ID:무드 = 0
+BASE:설정캐릭터_ID:이성 = MAXBASE:설정캐릭터_ID:이성
+BASE:설정캐릭터_ID:분노 = 0
+BASE:설정캐릭터_ID:만족 = 1000
+BASE:설정캐릭터_ID:절정 = 0
+BASE:설정캐릭터_ID:쾌감 = 0
+
+CFLAG:설정캐릭터_ID:발기도 = 0
+CFLAG:설정캐릭터_ID:동행 = 0
+;성교플래그
+TEQUIP:설정캐릭터_ID:Ｖ섹스 = -1
+TEQUIP:설정캐릭터_ID:Ａ섹스 = -1
+TCVAR:설정캐릭터_ID:V삽입관리플래그 = -1
+TCVAR:설정캐릭터_ID:A삽입관리플래그 = -1
+;中出し표시용플래그
+TCVAR:설정캐릭터_ID:질내사정대상 = -1
+TCVAR:설정캐릭터_ID:애널사정대상 = -1
+CALL SET_BODYSIZE(설정캐릭터_ID,0,1)
+; CALL SHOP_BUST_RESET(설정캐릭터_ID)
+; CALL SHOP_BUTT_RESET(설정캐릭터_ID)
+CALL CLOTHES_SETTING(설정캐릭터_ID)
+
+
+CALL CUSTOM_CHARAMAKE(설정캐릭터_ID,カード_ID)
+IF RESULT == 9999
+	DELCHARA 설정캐릭터_ID
+	RETURN 0
+ENDIF
+PRINTFORML 작성한 캐릭터의 CSV（캐릭터데이터）를 작성하겠습니까？
+PRINTFORML 
+PRINTFORML [0] - 예
+PRINTFORML [2] - 아니오
+BINPUT
+SIF RESULT == 1
+	CALL CSV_CREATE(설정캐릭터_ID)
+
+
+PRINTFORML 작성한 캐릭터의 설정을 선택해주세요
+PRINTFORML 
+PRINTFORML [1] - 카드의 정령
+PRINTFORML [2] - 이세계의 주민
+PRINTFORML [3] - 똑닮은 사람
+PRINTFORML [4] - 클론
+PRINTFORML 
+PRINTFORML [10] - 딱히 설정을 정하지 않는다
+BINPUT
+TALENT:설정캐릭터_ID:복제 = RESULT
+PRINTFORMW 캐릭터번호:{설정캐릭터_ID}『%NAME:설정캐릭터_ID%』를 작성했습니다。
+;CFLAG:설정캐릭터_ID:현재위치 = CFLAG:MASTER:시작위치
+CFLAG:설정캐릭터_ID:소유함 = 1
+;元の캐릭터の画像を설정 レイ追記250611
+CFLAG:설정캐릭터_ID:グラ설정 = NO:選択캐릭터
+クローン数 += 1
+
+RETURN 1
+
+
+@CSV_CREATE(캐릭터_ID)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 選択캐릭터
+#DIM DYNAMIC 캐릭터価値
+#DIM DYNAMIC カード_ID
+#DIM DYNAMIC カードから복제
+#DIM DYNAMIC ID_存在
+
+CALL PRINT_STATE(캐릭터_ID)
+PRINTFORML %NAME:캐릭터_ID%의 헌재 능력을 가진 CSV를 출력하시겠습니까？
+PRINTL [0] - 예
+PRINTL [1] - 아니오
+BINPUT
+IF RESULT == 0
+	CLEARLINE LINECOUNT
+	PRINTFORML 번호,{NO:캐릭터_ID}
+	PRINTFORML 이름,%NAME:캐릭터_ID%
+	IF CALLNAME:캐릭터_ID == ""
+		PRINTFORML 호칭,%NAME:캐릭터_ID%
+	ELSE
+		PRINTFORML 호칭, %CALLNAME:캐릭터_ID%
+	ENDIF
+	SIF NICKNAME:캐릭터_ID != ""
+		PRINTFORML 별명,%NICKNAME:캐릭터_ID%
+	SIF MASTERNAME:캐릭터_ID != ""
+		PRINTFORML 주인을 부르는 법,%MASTERNAME:캐릭터_ID%
+	PRINTL 
+	PRINTFORML ;BASE
+	FOR カウンタ, 0, VARSIZE("MAXBASE")
+		SIF MAXBASE:캐릭터_ID:カウンタ != 0
+			PRINTFORML 기초,%BASENAME:カウンタ%,{MAXBASE:캐릭터_ID:カウンタ};%BASENAME:カウンタ%
+	NEXT
+	PRINTFORML ;Talent
+	FOR カウンタ, 0, VARSIZE("TALENT")
+		IF TALENT:캐릭터_ID:カウンタ != 0
+			PRINTFORML 소질,%TALENTNAME:カウンタ%,{TALENT:캐릭터_ID:カウンタ};%GET_TALENTNAME(カウンタ,TALENT:캐릭터_ID:カウンタ)%
+		ENDIF
+	NEXT
+	PRINTFORML ;ABL
+	FOR カウンタ, 0, VARSIZE("ABL")
+		SIF ABL:캐릭터_ID:カウンタ != 0
+			PRINTFORML 능력,%ABLNAME:カウンタ%,{ABL:캐릭터_ID:カウンタ};%ABLNAME:カウンタ%
+	NEXT
+	PRINTFORML ;EXP
+	FOR カウンタ, 0, VARSIZE("EXP")
+		SIF EXP:캐릭터_ID:カウンタ != 0
+			PRINTFORML 경험,%EXPNAME:カウンタ%,{EXP:캐릭터_ID:カウンタ};%EXPNAME:カウンタ%
+	NEXT
+	PRINTFORML ;FLAG
+	PRINTFORML 플래그,7,101;服装
+	PRINTFORML 플래그,311,100;시작위치
+	OUTPUTLOG @"Chara{NO:캐릭터_ID} %NAME:캐릭터_ID%.csv"
+	PRINTW 로그에 출력했습니다。CSV로서 이용하는 방법은 동봉된 read me를 봐주세요
+ENDIF

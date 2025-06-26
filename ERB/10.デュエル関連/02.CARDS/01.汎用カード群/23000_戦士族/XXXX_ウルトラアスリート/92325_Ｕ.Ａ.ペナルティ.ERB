@@ -1,0 +1,135 @@
+﻿@CARDNAME_92325,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = U.A. 페널티
+	CASE "略称"
+RESULTS = 페널티
+	CASE "カテゴリ"
+RESULTS:0 = 울트라 애슬리트
+ENDSELECT
+
+
+@CARD_92325(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+	CASE "추가日"
+		RETURN 250618
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_92325(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,攻撃時誘発)
+PRINTL ①: 자신의 "U.A." 몬스터가 상대 몬스터와 전투를 실행할 경우, 발동할 수 있다.
+PRINTL 그 상대 몬스터는 소멸한다.
+CALLFORM CARD_ABLE(0,묘지起動,フリー誘発)
+PRINTL ②: 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 덱에서 "U.A." 마법 카드 1장을 패에 넣는다.
+
+
+
+
+@CARDCAN_92325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件達成
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92325)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+    SIF 발동済_1(듀얼리스트,92325)
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+    IF MATCH(RESULTS, "울트라 애슬리트")
+	    条件達成 ++
+    ENDIF
+    SIF 条件達成 == 0
+	    RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱= 1
+효과条件カテゴリ = 울트라 애슬리트
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+	    RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_92325(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92325,1)
+	IF RESULT == 0
+	    CALL FULLRESET
+		효과추가종류 = 1
+	    CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘場所(듀얼리스트,1),"제외")
+	ENDIF
+
+ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92325)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = 마법全般
+효과条件カテゴリ = 울트라 애슬리트
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92325)
+	IF RESULT == 0
+	ENDIF
+ENDIF
+
+

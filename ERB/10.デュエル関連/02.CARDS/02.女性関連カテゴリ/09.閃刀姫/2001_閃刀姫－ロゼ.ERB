@@ -1,0 +1,129 @@
+﻿@CARDNAME_2001,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 섬도희－로제
+	CASE "略称"
+		RESULTS = 섬도희－로제
+	CASE "カテゴリ"
+		RESULTS:0 = 섬도희
+		RESULTS:1 = 섬도
+ENDSELECT
+
+
+@CARD_2001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2001(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①：필드에 "섬도희－로제」 이외의 "섬도희」 몬스터가 일반 일반 소환 / 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②：「섬도희－로제」 이외의 "섬도희」 몬스터가 필드에서 벗어났을 경우에 발동할 수 있다.
+PRINTL 이 카드를 묘지에서 특수 소환한다.
+PRINTL 그 후, 상대 필드의 앞면 표시 몬스터 1장을 골라, 그 효과를 턴 종료시까지 무효로 할 수 있다.
+PRINTL 
+
+@CARDCAN_2001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2001)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	IF ゾーン == "손패"
+		SIF 발동済_1(듀얼리스트,2001)
+			RETURN 0
+		SIF ゾーン != "손패"
+			RETURN 0
+		CALL CARD_SS_CHECK(듀얼리스트,2001,"손패")
+		SIF RESULT == 1
+			RETURN 0
+		CALL FULLRESET
+		효과条件カテゴリ = 섬도희
+		효과条件固名前 = 섬도희－로제
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
+		SIF RESULT != 1
+			RETURN 0
+	ELSEIF ゾーン == "묘지"
+		SIF 발동済_2(듀얼리스트,2001)
+			RETURN 0
+		CALL CARD_SS_CHECK(듀얼리스트,2001,"묘지")
+		SIF RESULT == 1
+			RETURN 0
+		CALL FULLRESET
+		효과条件カテゴリ = 섬도희
+		효과条件固名前 = 섬도희－로제
+		;CALL CARD_CHECK_FIN_DATA(듀얼리스트,"묘지送り全般")
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"필드離れ")
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 효과後誘発
+	IF ゾーン == "손패"
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2001,1)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		ENDIF
+	ELSEIF ゾーン == "묘지"
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2001,2)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "묘지", 場所)
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"無効")
+		ENDIF
+	ENDIF
+ENDIF
+

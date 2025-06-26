@@ -1,0 +1,120 @@
+﻿@CARDNAME_4621,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 페이스 레이어 - 네쥬
+	CASE "略称"
+RESULTS = 네쥬
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:1 = 무한의 프론티어
+ENDSELECT
+
+
+@CARD_4621(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250418
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4621(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번밖에 사용할 수 없으며.
+;ほぼほぼ신夜のサポ-ト
+CALLFORM CARD_ABLE(0,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환에 성공했을 때에 발동할 수 있다.
+PRINTL 패에서 공격력 1800 이상의 레벨 4 몬스터 1장을 공격 표시로 특수 소환한다.
+;シンデレラ要素/ド根性
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 1턴에 1번만, 전투 / 효과로는 파괴되지 않으며,
+PRINTL 이 카드가 몬스터 존에 존재하는 한, 이 카드 이외의 자신 필드의 몬스터는 대상 내성을 얻는다.
+
+
+@CARDCAN_4621(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4621)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件以攻撃力 = 1800
+	효과条件レベル = 4
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4621(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4621,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件以攻撃力 = 1800
+		효과条件レベル = 4
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"一破")
+	CALL FULLRESET
+	효과条件他所 = 1
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+ENDIF
+

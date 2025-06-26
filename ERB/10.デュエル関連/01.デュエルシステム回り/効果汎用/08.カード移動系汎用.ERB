@@ -1,0 +1,1675 @@
+﻿@CARD_ADD(듀얼리스트, 出処, 추가場所, 選択カード, 표시形式)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 듀얼리스트보존
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 保有者
+
+#DIMS DYNAMIC 出処;덱、손패、필드、마함のいずれかを渡す
+#DIMS DYNAMIC 実行出処;덱、손패、필드、마함のいずれかを渡す
+#DIMS DYNAMIC 추가場所;덱、손패、필드、마함のいずれかを渡す
+#DIMS DYNAMIC 표시形式
+#DIM DYNAMIC 所有先
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カード추가先
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 표시플래그
+#DIMS DYNAMIC 이동カード名
+#DIM DYNAMIC LRESULT
+LRESULT = RESULT
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 出処 == "필드"
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:カウンタ") == 3
+		표시플래그 = 1
+ELSEIF 出処 == "마함"
+	SIF GETVAR(@"%듀얼리스트%_魔_表:カウンタ") >= 2
+		표시플래그 = 1
+ENDIF
+
+IF 듀얼리스트 == "자신" && 추가場所 == "필드" && 표시形式 == ""
+	PRINTL 【표시 형식을 선택해주세요】
+	PRINTL 
+	PRINTL [0] 공격표시
+	PRINTL [1] 수비표시
+	PRINTL 
+	BINPUT
+	IF RESULT == 0
+		표시形式 = 攻撃표시
+	ELSE
+		표시形式 = 守備표시
+	ENDIF
+ENDIF
+
+
+IF 듀얼리스트 == "자신"
+	SELECTCASE 出処
+		CASE "상대필드", "상대묘지", "상대마함", "상대손패", "상대덱", "상대제외", "상대EX덱"
+			所有先 = 2
+			保有者 = 상대
+		CASEELSE
+			所有先 = 1
+			保有者 = 자신
+	ENDSELECT
+ELSEIF 듀얼리스트 == "상대"
+	SELECTCASE 出処
+		CASE  "상대필드", "상대묘지", "상대마함", "상대손패", "상대덱", "상대제외", "상대EX덱"
+			所有先 = 1
+			保有者 = 자신
+		CASEELSE
+			所有先 = 2
+			保有者 = 상대
+	ENDSELECT
+ENDIF
+
+;出た場所のデータを보존
+SELECTCASE 出処
+	CASE "필드", "상대필드"
+		実行出処 = 필드
+	CASE "손패", "상대손패"
+		実行出処 = 손패
+	CASE "마함", "상대마함"
+		実行出処 = 마함
+	CASE "덱", "상대덱"
+		実行出処 = 덱
+	CASE "EX덱", "상대EX덱"
+		実行出処 = EX덱
+	CASE "묘지", "상대묘지"
+		実行出処 = 묘지
+	CASE "제외", "상대제외"
+		実行出処 = 제외
+ENDSELECT
+
+IF 표시形式 != "完全묘지"
+	;EX덱送り
+	CALLFORM CARD_{GETVAR(@"%保有者%_%実行出処%:選択カード")},"종류"
+	IF RESULT >= 4 && RESULT <= 20 && RESULT != 8 && (추가場所 == "손패" || 추가場所 == "덱") 
+		추가場所 = EX덱
+	ENDIF
+	;EX덱送り
+	IF 実行出処 == "필드" || 実行出処 == "마함"
+		CALLFORM CARD_{GETVAR(@"%保有者%_%実行出処%:選択カード")},"分割"
+		IF RESULT == 지속마법 && 추가場所 == "묘지"
+			추가場所 = EX덱
+		ENDIF
+	ENDIF
+ENDIF
+
+;EX덱送り(초차원)
+IF 実行出処 == "필드" || 実行出処 == "마함"
+	CALLFORM CARD_{GETVAR(@"%保有者%_%実行出処%:選択カード")},"종류"
+	IF RESULT == 초차원 && GROUPMATCH(추가場所,"묘지","제외","손패","덱")
+		추가場所 = EX덱
+		IF GETVAR(@"%保有者%_%実行出処%:選択カード") >= 100000
+			VARSET RESULTS
+			TRYCALLFORM CARDNAME_{GETVAR(@"%保有者%_%実行出処%:選択カード") - 100000}, "名前"
+			SIF RESULTS != ""
+				SETVAR @"%保有者%_%実行出処%:選択カード", GETVAR(@"%保有者%_%実行出処%:選択カード") - 100000
+		ENDIF
+	ENDIF
+ENDIF
+
+;ヴァンガード초차원用
+IF 実行出処 == "필드"
+	TRYCALLFORM CARD_{GETVAR(@"%保有者%_필드:選択カード")},"종류"
+	IF RESULT == 초차원 && GROUPMATCH(추가場所,"묘지","제외","손패","덱","EX덱")
+		TRYCALLFORM CARDNAME_{GETVAR(@"%保有者%_필드:選択カード")},"カテゴリ"
+		IF MATCH(RESULTS,"ヴァンガード")
+			IF GETVAR(@"%保有者%_MZ_変化元ID:選択カード") > 0
+				カードID = GETVAR(@"%保有者%_MZ_変化元ID:選択カード")
+				カード추가先 = 現EX山札数(保有者)
+				CALLFORM CARDNAME_{GETVAR(@"%保有者%_필드:選択カード")},"名前"
+				이동カード名 = %RESULTS%
+				SETVAR @"%保有者%_EX덱:カード추가先", GETVAR(@"%保有者%_필드:選択カード")
+				PRINTFORM %保有者%의 %出処% 에서%이동カード名%가EX덱으로 돌아가、
+				SETVAR @"%保有者%_필드:選択カード", カードID
+				CALLFORM CARDNAME_{カードID},"名前"
+				이동カード名 = %RESULTS%
+				PRINTFORML 소재의%이동カード名%가 남았습니다。
+				PRINTFORMW
+				SETVAR @"%保有者%_MZ_変化元ID:選択カード",-1
+				CALL CARD_LOADUP
+				RETURN LRESULT
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+
+SELECTCASE 出処
+	CASE "필드"
+		IF GETVAR(@"%듀얼리스트%_MZ_所有:選択カード") == 1 && 듀얼리스트 == "상대"
+			듀얼리스트 = 자신
+		ELSEIF GETVAR(@"%듀얼리스트%_MZ_所有:選択カード") == 2 && 듀얼리스트 == "자신"
+			듀얼리스트 = 상대
+		ENDIF
+	CASE "마함"
+		IF GETVAR(@"%듀얼리스트%_魔_所有:選択カード") == 1 && 듀얼리스트 == "상대"
+			듀얼리스트 = 자신
+		ELSEIF GETVAR(@"%듀얼리스트%_魔_所有:選択カード") == 2 && 듀얼리스트 == "자신"
+			듀얼리스트 = 상대
+		ENDIF
+ENDSELECT
+
+
+SELECTCASE 추가場所
+	CASE "필드"
+		IF モンスター数(듀얼리스트) >= 5
+			추가場所 = 묘지
+		ELSE
+			カード추가先 = 現필드(듀얼리스트)
+		ENDIF
+	CASE "마함"
+		IF 마함数(듀얼리스트) >= 5
+			추가場所 = 묘지
+		ELSE
+			カード추가先 = 現마함(듀얼리스트)
+		ENDIF
+	CASE "손패"
+		カード추가先 = 現손패(듀얼리스트)
+	CASE "덱"
+		カード추가先 = 現山札数(듀얼리스트)
+	CASE "EX덱"
+		カード추가先 = 現EX山札数(듀얼리스트)
+	CASE "묘지"
+		カード추가先 = 現묘지数(듀얼리스트)
+	CASE "제외"
+		カード추가先 = 現제외数(듀얼리스트)
+ENDSELECT
+
+IF カード추가先 >= 99
+	PRINTFORMW OVERFLOW！！！
+	GOTO SKIP_ADD
+ENDIF
+SELECTCASE 추가場所
+	CASE "손패"
+		SETVAR @"%듀얼리스트%_손패:カード추가先", GETVAR(@"%保有者%_%実行出処%:選択カード")
+	CASE "필드"
+		カード소환先 = カード추가先
+		SETVAR @"%듀얼리스트%_MZ_戦:カード추가先", 1
+		SETVAR @"%듀얼리스트%_MZ_所有:カード추가先", 所有先
+		個IDカウンタ ++
+		SETVAR @"%듀얼리스트%_MZ_個ID:カード추가先", 個IDカウンタ
+
+		IF 표시形式 == "守備표시"
+			SETVAR @"%듀얼리스트%_MZ_表:カード추가先", 2
+		ELSEIF 표시形式 == "裏側표시"
+			SETVAR @"%듀얼리스트%_MZ_表:カード추가先", 3
+		ELSE 
+			SETVAR @"%듀얼리스트%_MZ_表:カード추가先", 1
+		ENDIF
+		SETVAR @"%듀얼리스트%_필드:カード추가先", GETVAR(@"%保有者%_%実行出処%:選択カード")
+		カードID = GETVAR(@"%듀얼리스트%_필드:カード추가先")
+		CALL CARD_ADDITIONAL_EFFECT(듀얼리스트)
+	CASE "마함"
+		カード설치先 = カード추가先
+		SETVAR @"%듀얼리스트%_魔_所有:カード추가先", 所有先
+		IF 표시形式 == "裏側표시"
+			SETVAR @"%듀얼리스트%_魔_表:カード추가先", 3
+		ELSEIF 표시形式 == "使化裏側표시"
+			SETVAR @"%듀얼리스트%_魔_表:カード추가先", 2
+		ELSEIF 표시形式 == "使用불가"
+			SETVAR @"%듀얼리스트%_魔_表:カード추가先", 3
+			SETVAR @"%듀얼리스트%_魔_無効:カード추가先", 2
+		ELSE 
+			SETVAR @"%듀얼리스트%_魔_表:カード추가先", 1
+		ENDIF
+		SETVAR @"%듀얼리스트%_마함:カード추가先", GETVAR(@"%保有者%_%実行出処%:選択カード")
+		CALL CARD_ADDITIONAL_EFFECT(듀얼리스트,1)
+	CASE "덱"
+		SETVAR @"%듀얼리스트%_덱:カード추가先", GETVAR(@"%保有者%_%実行出処%:選択カード")
+	CASE "EX덱"
+		SETVAR @"%듀얼리스트%_EX덱:カード추가先", GETVAR(@"%保有者%_%実行出処%:選択カード")
+	CASE "묘지"
+		SETVAR @"%듀얼리스트%_묘지:カード추가先", GETVAR(@"%保有者%_%実行出処%:選択カード")
+	CASE "제외"
+		IF 표시形式 == "帰還"
+			SETVAR @"%듀얼리스트%_除_帰還:カード추가先", 1
+		ELSEIF 표시形式 == "帰墓"
+			SETVAR @"%듀얼리스트%_除_帰還:カード추가先", 2
+		ELSEIF 표시形式 == "帰手"
+			SETVAR @"%듀얼리스트%_除_帰還:カード추가先", 3
+		ENDIF
+		SETVAR @"%듀얼리스트%_제외:カード추가先", GETVAR(@"%保有者%_%実行出処%:選択カード")
+ENDSELECT
+
+$SKIP_ADD
+CALLFORM CARDNAME_{GETVAR(@"%保有者%_%実行出処%:選択カード")}, "名前"
+이동カード名 = %RESULTS%
+
+SELECTCASE 保有者
+	CASE "자신"
+		SELECTCASE 実行出処
+			CASE "손패"
+				자신_손패:選択カード = -1
+			CASE "필드"
+				자신_필드:選択カード = -1
+			CASE "마함"
+				자신_마함:選択カード = -1
+			CASE "덱"
+				ARRAYREMOVE 자신_덱, 選択カード, 1
+				자신_덱:(VARSIZE("자신_덱")-1) = -1
+			CASE "EX덱"
+				ARRAYREMOVE 자신_EX덱, 選択カード, 1
+				자신_EX덱:(VARSIZE("자신_EX덱")-1) = -1
+			CASE "묘지"
+				자신_묘지:選択カード = -1
+			CASE "제외"
+				자신_제외:選択カード  = -1
+		ENDSELECT
+	CASE "상대"
+		SELECTCASE 実行出処
+			CASE "손패"
+				상대_손패:選択カード = -1
+			CASE "필드"
+				상대_필드:選択カード = -1
+			CASE "마함"
+				상대_마함:選択カード = -1
+			CASE "덱"
+				ARRAYREMOVE 상대_덱, 選択カード, 1
+				상대_덱:(VARSIZE("상대_덱")-1) = -1
+			CASE "EX덱"
+				ARRAYREMOVE 상대_EX덱, 選択カード, 1
+				상대_EX덱:(VARSIZE("상대_EX덱")-1) = -1
+			CASE "묘지"
+				상대_묘지:選択カード = -1
+			CASE "제외"
+				상대_제외:選択カード  = -1
+		ENDSELECT
+ENDSELECT
+
+IF カード추가先 >= 99
+	PRINTFORML %이동カード名%는 소멸했습니다。
+ELSEIF 추가場所 == "필드" 
+	PRINTFORML %듀얼리스트%는 %出処%에서%이동カード名%를 필드로 보냈습니다。
+ELSEIF 추가場所 == "손패"
+	SIF 표시形式 == "ドロー"
+		PRINT 드로우！！
+	IF 듀얼리스트 == "자신"
+		PRINTFORML %듀얼리스트%은 %出処%에서 %이동カード名%를 패에 넣었습니다。
+	ELSEIF (듀얼리스트 == "상대" && 出処 == "덱") || (듀얼리스트 == "상대" && 표시플래그 == 1)
+		PRINTFORML %듀얼리스트%는 %出処%에서 카드를 패에 넣었습니다。
+	ELSEIF 듀얼리스트 == "상대"
+		PRINTFORML %듀얼리스트%는 %出処%에서 %이동カード名%를 패에 넣었습니다。
+	ENDIF
+ELSEIF 추가場所 == "마함" 
+	IF 듀얼리스트 == "자신"
+		PRINTFORML %듀얼리스트%은 %出処%에서 %이동カード名%를 마법 / 함정존에 세트했습니다。
+	ELSE
+		IF 표시形式 == "裏側표시"
+			PRINTFORML %듀얼리스트%는 %出処%에서 카드를 마법 / 함정존에 세트했습니다。
+		ELSE
+			PRINTFORML %듀얼리스트%는 %出処%에서 %이동カード名%를 마법 / 함정존에 세트했습니다。
+		ENDIF
+	ENDIF
+ELSEIF 추가場所 == "덱" 
+	IF 표시플래그 == 1
+		PRINTFORML %듀얼리스트%는 %出処%에서 카드를 덱으로 되돌렸습니다。
+	ELSE
+		PRINTFORML %듀얼리스트%는 %出処%에서 %이동カード名%를 덱으로 되돌렸습니다。
+	ENDIF
+ELSEIF 추가場所 == "EX덱" 
+	PRINTFORML %듀얼리스트%는 %出処%에서 %이동カード名%를 EX덱으로 되돌렸습니다。
+ELSEIF 추가場所 == "묘지" 
+	PRINTFORML %듀얼리스트%는 %出処%에서 %이동カード名%를 묘지로 떨어뜨렸습니다。
+ELSEIF 추가場所 == "제외" 
+	PRINTFORML %듀얼리스트%는 %出処%에서 %이동カード名%를 제외했습니다。
+ENDIF
+
+;카드가 最召場所から이동している場合は、リセットされるように。
+IF 出処 == "필드" && GETVAR(@"%듀얼리스트%_最召場所") == 選択カード
+	SETVAR @"%듀얼리스트%_最召場所", -1
+ENDIF
+
+PRINTFORMW
+;0から4のまでのフィールドを확인하고、ステータス変動を確認する
+CALL CARD_LOADUP
+
+
+RESULT = LRESULT
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARD_ADD_DIRTY(듀얼리스트, 出処, 추가場所, 選択カード)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 出処
+#DIMS DYNAMIC 추가場所
+#DIM DYNAMIC 選択カード
+
+IF 듀얼리스트 == "자신"
+	IF 추가場所 == "손패"
+		자신_손패:現손패("자신") = 상대_덱:選択カード
+	ENDIF
+
+	IF 出処 == "상대덱"
+		ARRAYREMOVE 상대_덱, 選択カード, 1
+		상대_덱:(VARSIZE("상대_덱")-1) = -1
+	ENDIF
+ELSE
+	IF 추가場所 == "손패"
+		상대_손패:現손패("상대") = 자신_덱:選択カード
+	ENDIF
+	IF 出処 == "상대덱"
+		ARRAYREMOVE 자신_덱, 選択カード, 1
+		자신_덱:(VARSIZE("자신_덱")-1) = -1
+	ENDIF
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+
+@CARD_SUMMON(듀얼리스트, 選択カード,표시形式)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 표시形式
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC LRESULT
+#DIMS DYNAMIC 이동カード名
+#DIM DYNAMIC 소환先
+#DIM DYNAMIC 所有先
+LRESULT = RESULT
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 듀얼리스트 == "자신"
+	所有先 = 1
+ELSEIF 듀얼리스트 == "상대"
+	所有先 = 2
+ENDIF
+소환先 = 現필드(듀얼리스트)
+IF モンスター数(듀얼리스트) >= 5
+	소환先 = 現묘지数(듀얼리스트)
+	SETVAR @"%듀얼리스트%_묘지:소환先", GETVAR(@"%듀얼리스트%_손패:選択カード")
+ELSE
+	カード소환先 = 소환先
+	SETVAR @"%듀얼리스트%_MZ_戦:소환先", 1
+	SETVAR @"%듀얼리스트%_MZ_召種:소환先", 召種通常
+	SETVAR @"%듀얼리스트%_MZ_T1召種:소환先", 召種通常
+	SETVAR @"%듀얼리스트%_MZ_所有:소환先", 所有先
+	個IDカウンタ ++
+	SETVAR @"%듀얼리스트%_MZ_個ID:소환先", 個IDカウンタ
+	IF 표시形式 == "守備표시"
+		SETVAR @"%듀얼리스트%_MZ_表:소환先", 2
+	ELSEIF 표시形式 == "裏側표시"
+		SETVAR @"%듀얼리스트%_MZ_表:소환先", 3
+	ELSE 
+		SETVAR @"%듀얼리스트%_MZ_表:소환先", 1
+	ENDIF
+	SETVAR @"%듀얼리스트%_필드:소환先", GETVAR(@"%듀얼리스트%_손패:選択カード")
+	カードID = GETVAR(@"%듀얼리스트%_필드:カード소환先")
+ENDIF
+
+TRYCALLFORM CARD_FINISHER_SHOKO(듀얼리스트,カードID)
+TRYCALLFORM CARD_FINISHER(듀얼리스트,カードID)
+; スプライト画像(○○〇〇_DUEL.png)の표시
+
+
+SIF 듀얼리스트 == "상대"
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,1,カードID)
+
+CALLFORM CARDNAME_{カードID}, "名前"
+PRINTFORMW %듀얼리스트%는  %RESULTS%를 필드에 소환했습니다。
+CALL PRINT_STATE_DUEL(カードID)
+CALL KOJO_MESSAGE_SEND("CARD",カードID,0)
+
+SETVAR @"%듀얼리스트%_손패:選択カード", -1
+CALL CARD_LOADUP
+
+CALL CARD_SUMRESERV(듀얼리스트,"通常",カード소환先 ,カードID,"손패")
+
+CALL CARD_SUMACT(듀얼리스트,"通常",カード소환先,カードID,듀얼리스트,"손패")
+;PRINTFORML 카드ID:{カードID}/GETVAR:{GETVAR(@"%듀얼리스트%_필드:カード소환先")}
+IF カードID == GETVAR(@"%듀얼리스트%_필드:カード소환先")
+	CALLFORM CARD_STANBY(カードID,듀얼리스트,소환時,"필드",カード소환先)
+	VARSET RESULT
+	TRYCALLFORM CARDCAN_{カードID}(듀얼리스트,소환時強制,"필드",カード소환先)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{カードID}(듀얼리스트,소환時強制,"필드",カード소환先)
+ENDIF
+
+RESULT = LRESULT
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARD_SP_SUMMON(듀얼리스트, 出処, 選択カード,표시形式,反転플래그)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+#DIMS DYNAMIC 소환者
+#DIMS DYNAMIC 保有者
+
+
+#DIMS DYNAMIC 出処;덱、손패、필드、마함のいずれかを渡す
+#DIMS DYNAMIC 実行出処
+#DIMS DYNAMIC 표시形式
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 反転플래그
+#DIM DYNAMIC 所有先
+#DIM DYNAMIC LRESULT
+#DIMS DYNAMIC 이동カード名
+#DIM DYNAMIC 소환出処
+#DIM DYNAMIC 回復量
+#DIM DYNAMIC 상대攻撃力
+#DIM DYNAMIC 상대守備力
+LRESULT = RESULT
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 反転플래그 == 1
+	소환者 = %対面者%
+ELSE
+	소환者 = %듀얼리스트%
+ENDIF
+
+
+;オーナーの결정
+IF 듀얼리스트 == "자신"
+	SELECTCASE 出処
+		CASE "상대묘지", "상대마함", "상대손패", "상대덱", "상대제외", "상대EX덱"
+			所有先 = 2
+			保有者 = 상대
+		CASEELSE
+			所有先 = 1
+			保有者 = 자신
+	ENDSELECT
+ELSEIF 듀얼리스트 == "상대"
+	SELECTCASE 出処
+		CASE "상대묘지", "상대마함", "상대손패", "상대덱", "상대제외", "상대EX덱"
+			所有先 = 1
+			保有者 = 자신
+		CASEELSE
+			所有先 = 2
+			保有者 = 상대
+	ENDSELECT
+ENDIF
+
+;出た場所のデータを보존
+SELECTCASE 出処
+	CASE "손패", "상대손패"
+		소환出処 = 召種손패
+		実行出処 = 손패
+	CASE "마함", "상대마함"
+		소환出処 = 召種마함
+		実行出処 = 마함
+	CASE "덱", "상대덱"
+		소환出処 = 召種덱
+		実行出処 = 덱
+	CASE "EX덱", "상대EX덱"
+		소환出処 = 召種EX덱
+		実行出処 = EX덱
+	CASE "묘지", "상대묘지"
+		소환出処 = 召種묘지
+		実行出処 = 묘지
+	CASE "제외", "상대제외"
+		소환出処 = 召種제외
+		実行出処 = 제외
+ENDSELECT
+
+SIF GETVAR(@"%保有者%_%実行出処%:選択カード") == -1
+	RETURN 0
+
+
+SETVAR @"%듀얼리스트%_특수소환횟수", GETVAR(@"%듀얼리스트%_특수소환횟수") + 1
+
+IF 듀얼리스트 == "자신" && 표시形式 == ""
+	PRINTL
+	PRINTL 【표시형식을 선택해주세요】
+	PRINTL 
+	PRINTL [0] 공격표시
+	PRINTL [1] 수비표시
+	PRINTL 
+	BINPUT
+	IF RESULT == 0
+		표시形式 = 攻撃표시
+	ELSE
+		표시形式 = 守備표시
+	ENDIF
+ELSEIF 듀얼리스트 == "상대" && 표시形式 == ""
+	CALLFORM CARD_{GETVAR(@"%保有者%_%実行出処%:選択カード")}("攻撃力")
+	상대攻撃力 = RESULT
+	CALLFORM CARD_{GETVAR(@"%保有者%_%実行出処%:選択カード")}("守備力")
+	상대守備力 = RESULT
+	IF 상대守備力 > 상대攻撃力
+		표시形式 = 守備표시
+	ENDIF
+ENDIF
+
+カード소환先 = 現필드(소환者)
+SETVAR @"%소환者%_MZ_所有:現필드(소환者)", 所有先
+SETVAR @"%소환者%_MZ_召種:現필드(소환者)", 소환出処
+SETVAR @"%소환者%_MZ_T1召種:現필드(소환者)", 소환出処
+SETVAR @"%소환者%_MZ_戦:現필드(소환者)", 1
+個IDカウンタ ++
+SETVAR @"%소환者%_MZ_個ID:現필드(소환者)", 個IDカウンタ
+IF 표시形式 == "裏側守備표시"
+	SETVAR @"%소환者%_MZ_表:現필드(소환者)", 3
+ELSEIF 표시形式 == "守備표시"
+	SETVAR @"%소환者%_MZ_表:現필드(소환者)", 2
+ELSE
+	SETVAR @"%소환者%_MZ_表:現필드(소환者)", 1
+ENDIF
+
+
+IF モンスター数(소환者) >= 5
+	SETVAR @"%保有者%_묘지:現묘지数(소환者)", GETVAR(@"%保有者%_%実行出処%:選択カード")
+ELSE
+	SETVAR @"%소환者%_필드:現필드(소환者)", GETVAR(@"%保有者%_%実行出処%:選択カード")
+	カードID = GETVAR(@"%소환者%_필드:カード소환先")
+	CALL CARD_ADDITIONAL_EFFECT(소환者)
+ENDIF
+
+CALLFORM CARDNAME_{GETVAR(@"%保有者%_%実行出処%:選択カード")}, "名前"
+이동カード名 = %RESULTS%
+
+
+
+SELECTCASE 保有者
+	CASE "자신"
+		SELECTCASE 実行出処
+			CASE "손패"
+				자신_손패:選択カード = -1
+			CASE "마함"
+				자신_마함:選択カード = -1
+			CASE "덱"
+				ARRAYREMOVE 자신_덱, 選択カード, 1
+				자신_덱:(VARSIZE("자신_덱")-1) = -1
+			CASE "EX덱"
+				ARRAYREMOVE 자신_EX덱, 選択カード, 1
+				자신_EX덱:(VARSIZE("자신_EX덱")-1) = -1
+			CASE "묘지"
+				자신_묘지:選択カード = -1
+			CASE "제외"
+				자신_제외:選択カード  = -1
+		ENDSELECT
+	CASE "상대"
+		SELECTCASE 実行出処
+			CASE "손패"
+				상대_손패:選択カード = -1
+			CASE "마함"
+				상대_마함:選択カード = -1
+			CASE "덱"
+				ARRAYREMOVE 상대_덱, 選択カード, 1
+				상대_덱:(VARSIZE("상대_덱")-1) = -1
+			CASE "EX덱"
+				ARRAYREMOVE 상대_EX덱, 選択カード, 1
+				상대_EX덱:(VARSIZE("상대_EX덱")-1) = -1
+			CASE "묘지"
+				상대_묘지:選択カード = -1
+			CASE "제외"
+				상대_제외:選択カード = -1
+		ENDSELECT
+ENDSELECT
+IF カードID
+	TRYCALLFORM CARD_FINISHER_SHOKO(듀얼리스트,カードID)
+	TRYCALLFORM CARD_FINISHER(듀얼리스트,カードID)
+	IF 듀얼리스트 == "상대"
+		CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,2,カードID,소환出処)
+	ENDIF
+	PRINTFORML %듀얼리스트%는 %実行出処%에서 %이동カード名%를 특수소환 했습니다。
+	CALL PRINT_STATE_DUEL(カードID)
+
+	CALL KOJO_MESSAGE_SEND("CARD",カードID,0)
+ELSE
+	PRINTFORMW 필드의 카드는 가득찼습니다！
+	PRINTFORML %듀얼리스트%는 %実行出処%에서 %이동カード名%를 묘지로 보냈습니다。
+ENDIF
+
+CALL CARD_LOADUP
+IF カードID
+	CALL CARD_FIN_BIT_SET(듀얼리스트,実行出処)
+	CALLFORM CARD_SS_USE(듀얼리스트,カードID)
+	CALL CARD_SUMRESERV(듀얼리스트,"특수",カード소환先 ,カードID,出処)
+
+	SIF 反転플래그 >= 1
+		CALL CARD_SUMRESERV(対面者,"특수",カード소환先 ,カードID,出処)
+	;효과발동前に
+	CALL CARD_SUMACT(듀얼리스트,"특수",カード소환先,カードID,듀얼리스트,出処)
+	IF カードID == GETVAR(@"%듀얼리스트%_필드:カード소환先")
+		IF GETVAR(@"%対面者%_みずき효과")
+			回復量 = GETVAR(@"%소환者%_MZ_攻:カード소환先")
+			CALL LIFE_CHANGE(対面者,"増加","효과",回復量)
+		ENDIF
+				
+		IF GETVAR(@"%소환者%_MZ_無効:カード소환先") == 0
+			CALLFORM CARD_STANBY(カードID,소환者,특수소환時,"필드",カード소환先)
+
+			VARSET RESULT
+			TRYCALLFORM CARDCAN_{カードID}(소환者,특수소환時強制,"필드",カード소환先)
+			SIF RESULT == 1
+			TRYCALLFORM CARDEFFECT_{カードID}(소환者,특수소환時強制,"필드",カード소환先)
+		ENDIF
+	ELSE
+		RETURN 0
+	ENDIF
+ENDIF
+PRINTFORMW
+RETURN 1
+
+RESULT = LRESULT
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARD_EX_SUMMON(듀얼리스트, 出処, 選択カード,표시形式,素材数)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 出処;덱、손패、필드、마함のいずれかを渡す
+#DIMS DYNAMIC 표시形式
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC LRESULT
+#DIM DYNAMIC 所有先
+#DIM DYNAMIC 素材数
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 이동カード名
+#DIM DYNAMIC 소환出処
+#DIM DYNAMIC 回復量
+#DIM DYNAMIC 상대攻撃力
+#DIM DYNAMIC 상대守備力
+
+LRESULT = RESULT
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 듀얼리스트 == "자신"
+	所有先 = 1
+ELSE
+	所有先 = 2
+ENDIF
+
+;出た場所のデータを보존
+IF 出処 == "손패"
+	소환出処= 2
+ELSEIF 出処 == "마함"
+	소환出処= 3
+ELSEIF 出処 == "덱"
+	소환出処= 4
+ELSEIF 出処 == "EX덱"
+	소환出処= 5
+ELSEIF 出処 == "상대묘지" || 出処 == "묘지"
+	소환出処= 6
+ELSEIF 出処 == "제외"
+	소환出処= 7
+ENDIF
+
+
+IF モンスター数(듀얼리스트) >= 5
+	PRINTFORML 필드가 가득합니다、몬스터 １장을 묘지로 보내주세요。
+	PRINTFORML （이것으로 인한 묘지행 효과는 발동하지 않습니다）
+	CALL FULLRESET
+	효과条件行先플래그 = 完全묘지行き
+	CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드","특수")
+ENDIF
+
+
+SETVAR @"%듀얼리스트%_특수소환횟수", GETVAR(@"%対面者%_특수소환횟수") + 1
+
+IF 듀얼리스트 == "자신" && 표시形式 == ""
+	PRINTL 【표시형식을 선택해주세요】
+	PRINTL 
+	PRINTL [0] 공격표시
+	PRINTL [1] 수비표시
+	PRINTL 
+	BINPUT
+	IF RESULT == 0
+		표시形式 = 攻撃표시
+	ELSE
+		표시形式 = 守備표시
+	ENDIF
+ELSEIF 듀얼리스트 == "상대" && 표시形式 == ""
+	CALLFORM CARD_{GETVAR(@"상대_%出処%:選択カード")}("攻撃力")
+	상대攻撃力 = RESULT
+	CALLFORM CARD_{GETVAR(@"상대_%出処%:選択カード")}("守備力")
+	상대守備力 = RESULT
+	IF 상대守備力 > 상대攻撃力
+		표시形式 = 守備표시
+	ENDIF
+ENDIF
+
+カード소환先 = 現필드(듀얼리스트)
+SETVAR @"%듀얼리스트%_MZ_所有:現필드(듀얼리스트)", 所有先
+SETVAR @"%듀얼리스트%_MZ_召種:現필드(듀얼리스트)", 소환出処
+SETVAR @"%듀얼리스트%_MZ_T1召種:現필드(듀얼리스트)", 소환出処
+SETVAR @"%듀얼리스트%_MZ_戦:現필드(듀얼리스트)", 1	
+個IDカウンタ ++
+SETVAR @"%듀얼리스트%_MZ_個ID:現필드(듀얼리스트)", 個IDカウンタ
+
+IF 표시形式 == "守備표시"
+	SETVAR @"%듀얼리스트%_MZ_表:現필드(듀얼리스트)", 2
+ELSEIF 표시形式 == "裏側표시"
+	SETVAR @"%듀얼리스트%_MZ_表:現필드(듀얼리스트)", 3
+ELSE 
+	SETVAR @"%듀얼리스트%_MZ_表:現필드(듀얼리스트)", 1
+ENDIF
+
+SETVAR @"%듀얼리스트%_필드:現필드(듀얼리스트)", GETVAR(@"%듀얼리스트%_%出処%:選択カード")
+
+;자신_필드:現필드("자신") = GETVAR(@"자신_%出処%:選択カード")
+カードID = GETVAR(@"%듀얼리스트%_필드:カード소환先")
+
+
+IF 出処 == "상대묘지"
+	CALLFORM CARDNAME_{GETVAR(@"%対面者%_묘지:選択カード")}, "名前"
+ELSEIF 出処 == "상대EX덱"
+	CALLFORM CARDNAME_{GETVAR(@"%対面者%_EX덱:選択カード")}, "名前"
+ELSE
+	CALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%出処%:選択カード")}, "名前"
+ENDIF
+이동カード名 = %RESULTS%
+
+
+
+SELECTCASE 듀얼리스트
+	CASE "자신"
+		SELECTCASE 出処
+			CASE "손패"
+				자신_손패:選択カード = -1
+			CASE "마함"
+				자신_마함:選択カード = -1
+			CASE "덱"
+				ARRAYREMOVE 자신_덱, 選択カード, 1
+				자신_덱:(VARSIZE("자신_덱")-1) = -1
+			CASE "EX덱"
+				ARRAYREMOVE 자신_EX덱, 選択カード, 1
+				자신_EX덱:(VARSIZE("자신_EX덱")-1) = -1
+			CASE "묘지"
+				자신_묘지:選択カード = -1
+			CASE "상대묘지"
+				상대_묘지:選択カード = -1
+			CASE "제외"
+				자신_제외:選択カード = -1
+		ENDSELECT
+	CASE "상대"
+		SELECTCASE 出処
+			CASE "손패"
+				상대_손패:選択カード = -1
+			CASE "마함"
+				상대_마함:選択カード = -1
+			CASE "덱"
+				ARRAYREMOVE 상대_덱, 選択カード, 1
+				상대_덱:(VARSIZE("상대_덱")-1) = -1
+			CASE "EX덱"
+				ARRAYREMOVE 상대_EX덱, 選択カード, 1
+				상대_EX덱:(VARSIZE("상대_EX덱")-1) = -1
+			CASE "묘지"
+				상대_묘지:選択カード = -1
+			CASE "상대묘지"
+				자신_묘지:選択カード = -1
+			CASE "제외"
+				상대_제외:選択カード = -1
+		ENDSELECT
+ENDSELECT
+
+TRYCALLFORM CARD_FINISHER(듀얼리스트,カードID)
+; スプライト画像(○○〇〇_DUEL.png)の표시
+IF 듀얼리스트 == "상대"
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,3,カードID)
+ENDIF
+
+
+
+PRINTFORML %듀얼리스트%는 %出処%에서 %이동カード名%를 특수소환 했습니다。
+CALL PRINT_STATE_DUEL(カードID)
+PRINTFORMW
+CALL KOJO_MESSAGE_SEND("CARD",カードID,0)
+
+CALL CARD_ADDITIONAL_EFFECT(듀얼리스트)
+
+;0から4のまでのフィールドを확인하고、ステータス変動を確認する
+CALL CARD_LOADUP
+IF カードID
+	CALL CARD_FIN_BIT_SET(듀얼리스트,出処)
+	CALLFORM CARD_SS_USE(듀얼리스트,カードID)
+
+	CALL CARD_SUMRESERV(듀얼리스트,"EX특수",カード소환先 ,カードID,出処)
+	;효과발동前に
+	CALL CARD_SUMACT(듀얼리스트,"EX특수",カード소환先,カードID,듀얼리스트,出処)
+	IF カードID == GETVAR(@"%듀얼리스트%_필드:カード소환先")
+		IF GETVAR(@"%対面者%_みずき효과")
+			回復量 = GETVAR(@"%듀얼리스트%_MZ_攻:カード소환先")
+			CALL LIFE_CHANGE(対面者,"増加","효과",回復量)
+		ENDIF
+		CALLFORM CARD_STANBY(カードID,듀얼리스트,EX소환時,"필드",カード소환先)
+		VARSET RESULT
+		TRYCALLFORM CARDCAN_{カードID}(듀얼리스트,EX소환時強制,"필드",カード소환先)
+		SIF RESULT == 1
+			TRYCALLFORM CARDEFFECT_{カードID}(듀얼리스트,EX소환時強制,"필드",カード소환先)
+	ELSE
+		RETURN 0
+	ENDIF
+ENDIF
+RETURN 1
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+
+
+@CARD_GENERATE(듀얼리스트,カードID,표시形式,反転플래그,횟수플래그)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 표시形式
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 反転플래그
+#DIM DYNAMIC 所有先
+#DIM DYNAMIC LRESULT
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 이동カード名
+#DIM DYNAMIC 횟수플래그
+#DIM DYNAMIC 回復量
+
+LRESULT = RESULT
+
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 듀얼리스트 == "자신"
+	所有先 = 1
+ELSE
+	所有先 = 2
+ENDIF
+IF 反転플래그 == 1
+	듀얼리스트 = %対面者%
+ENDIF
+
+$INPUT_LOOP
+SIF モンスター数(듀얼리스트) >= 5
+	RETURN 0
+
+TRYCALLFORM CARD_UI(カードID);　カード生成からくるUI（受け渡し必要：듀얼리스트情報のみ）
+WAIT
+
+SETVAR @"%듀얼리스트%_특수소환횟수", GETVAR(@"%対面者%_특수소환횟수") + 1
+SETVAR @"%듀얼리스트%_モン出現数", GETVAR(@"%듀얼리스트%_モン出現数") + 1
+
+IF 듀얼리스트 == "자신" && 표시形式 == ""
+	PRINTL 【표시형식을 선택해주세요】
+	PRINTL 
+	PRINTL [0] 공격표시
+	PRINTL [1] 수비표시
+	PRINTL 
+	BINPUT
+	IF RESULT == 0
+		표시形式 = 攻撃표시
+	ELSE
+		표시形式 = 守備표시
+	ENDIF
+ELSEIF 듀얼리스트 == "상대" && 표시形式 == ""
+	표시形式 = 守備표시
+ENDIF
+
+カード소환先 = 現필드(듀얼리스트)
+SETVAR @"%듀얼리스트%_MZ_所有:カード소환先 ", 所有先
+SETVAR @"%듀얼리스트%_MZ_戦:カード소환先 ", 1
+個IDカウンタ ++
+SETVAR @"%듀얼리스트%_MZ_個ID:カード소환先", 個IDカウンタ
+IF 표시形式 == "守備표시"
+	SETVAR @"%듀얼리스트%_MZ_表:カード소환先 ", 2
+ELSEIF 표시形式 == "裏側표시"
+	SETVAR @"%듀얼리스트%_MZ_表:カード소환先 ", 3
+ELSE 
+	SETVAR @"%듀얼리스트%_MZ_表:カード소환先 ", 1
+ENDIF
+
+SETVAR @"%듀얼리스트%_필드:カード소환先 ", カードID
+
+
+IF 듀얼리스트 == "상대"
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,2,カードID,10)
+ENDIF
+CALLFORM CARDNAME_{カードID}, "名前"
+PRINTFORML %듀얼리스트%는 %RESULTS%를 특수소환 했습니다。
+PRINTFORMW
+
+
+CALL CARD_ADDITIONAL_EFFECT(듀얼리스트)
+
+
+;0から4のまでのフィールドを확인하고、ステータス変動を確認する
+CALL CARD_LOADUP
+
+CALL CARD_SUMACT(듀얼리스트,"특수",カード소환先,カードID,듀얼리스트,"生産")
+
+IF カードID == GETVAR(@"%듀얼리스트%_필드:カード소환先")
+	IF GETVAR(@"%対面者%_みずき효과")
+		回復量 = GETVAR(@"%듀얼리스트%_MZ_攻:カード소환先")
+		CALL LIFE_CHANGE(対面者,"増加","효과",回復量)
+	ENDIF
+	CALLFORM CARD_STANBY(カードID,듀얼리스트,특수소환時,"필드",カード소환先)
+
+	VARSET RESULT
+	TRYCALLFORM CARDCAN_{カードID}(듀얼리스트,특수소환時強制,"필드",カード소환先)
+	SIF RESULT == 1
+		TRYCALLFORM CARDEFFECT_{カードID}(듀얼리스트,특수소환時強制,"필드",カード소환先)
+ENDIF
+
+
+CALL CARD_SUMRESERV(듀얼리스트,"특수",カード소환先 ,カードID,"生産")
+
+;制限付きの確認
+CALLFORM CARD_SS_USE(듀얼리스트,カードID)
+
+횟수플래그 --
+IF 횟수플래그 >= 1
+	GOTO INPUT_LOOP
+ENDIF
+RESULT = LRESULT
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARD_GENERATE_MAGIC(듀얼리스트,カードID,표시形式,装備先=-1,反転플래그)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 표시形式
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 反転플래그
+#DIM DYNAMIC 所有先
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC LRESULT
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 이동カード名
+#DIM DYNAMIC 回復量
+
+
+LRESULT = RESULT
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 듀얼리스트 == "자신"
+	所有先 = 1
+ELSE
+	所有先 = 2
+ENDIF
+
+SIF 反転플래그
+	듀얼리스트 = %対面者%
+
+IF 듀얼리스트 == "자신"
+	カード설치先 = 現마함("자신")
+ELSE
+	カード설치先 = 現마함("상대")
+ENDIF
+
+SIF カード설치先 >= 5
+	RETURN 0
+
+SETVAR @"%듀얼리스트%_魔_所有:カード설치先", 所有先
+SIF 装備先 != -1
+	SETVAR @"%듀얼리스트%_魔_装:カード설치先", 装備先
+SETVAR @"%듀얼리스트%_魔_表:カード설치先", 표시形式
+SETVAR @"%듀얼리스트%_마함:カード설치先",カードID
+IF 듀얼리스트 == "상대"
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,2,カードID,10)
+ENDIF
+
+
+
+RESULT = LRESULT
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARD_GET_CONTROL(듀얼리스트, 選択カード, 終了플래그,反転플래그)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 出処;덱、손패、필드、마함のいずれかを渡す
+#DIMS DYNAMIC 표시形式
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC カード名
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 反転플래그
+#DIM DYNAMIC 終了플래그
+#DIM DYNAMIC LRESULT
+#DIMS DYNAMIC 対面者
+
+
+IF 反転플래그 == 1
+	IF 듀얼리스트 == "자신"
+		듀얼리스트 = 상대
+	ELSE
+		듀얼리스트 = 자신
+	ENDIF
+ENDIF
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+SIF GETVAR(@"%対面者%_필드:選択カード") == -1
+	RETURN 0
+
+VARSET コントロール先
+コントロール先 = 現필드(듀얼리스트)
+カード소환先 = 現필드(듀얼리스트)
+
+CALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:選択カード")}, "名前"
+カード名 = %RESULTS%
+
+SETVAR @"%듀얼리스트%_MZ_戦:現필드(듀얼리스트)", 1
+SETVAR @"%듀얼리스트%_MZ_表変:現필드(듀얼리스트)", 1
+
+SETVAR @"%듀얼리스트%_MZ_表:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_表:選択カード")
+SETVAR @"%듀얼리스트%_MZ_Ｘ:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_Ｘ:選択カード")
+SETVAR @"%듀얼리스트%_MZ_破耐:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_破耐:選択カード")
+SETVAR @"%듀얼리스트%_MZ_戦耐:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_戦耐:選択カード")
+SETVAR @"%듀얼리스트%_MZ_対耐:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_対耐:選択カード")
+SETVAR @"%듀얼리스트%_MZ_無差耐:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_無差耐:選択カード")
+SETVAR @"%듀얼리스트%_MZ_貫通:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_貫通:選択カード")
+SETVAR @"%듀얼리스트%_MZ_直攻:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_直攻:選択カード")
+SETVAR @"%듀얼리스트%_MZ_直無:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_直無:選択カード")
+
+SETVAR @"%듀얼리스트%_MZ_戦阻:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_戦阻:選択カード")
+
+SETVAR @"%듀얼리스트%_MZ_召種:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_召種:選択カード")
+SETVAR @"%듀얼리스트%_MZ_所有:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_所有:選択カード")
+SETVAR @"%듀얼리스트%_MZ_除処:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_除処:選択カード")
+
+SETVAR @"%듀얼리스트%_MZ_魔耐:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_魔耐:選択カード")
+SETVAR @"%듀얼리스트%_MZ_함정耐:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_함정耐:選択カード")
+SETVAR @"%듀얼리스트%_MZ_モ耐:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_モ耐:選択カード")
+SETVAR @"%듀얼리스트%_MZ_無効:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_無効:選択カード")
+SETVAR @"%듀얼리스트%_MZ_発無:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_発無:選択カード")
+
+SETVAR @"%듀얼리스트%_MZ_永攻:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_永攻:選択カード")
+SETVAR @"%듀얼리스트%_MZ_永守:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_永守:選択カード")
+
+SETVAR @"%듀얼리스트%_MZ_魔Ｃ:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_魔Ｃ:選択カード")
+SETVAR @"%듀얼리스트%_MZ_個Ｃ:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_個Ｃ:選択カード")
+SETVAR @"%듀얼리스트%_MZ_悪Ｃ:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_悪Ｃ:選択カード")
+
+SETVAR @"%듀얼리스트%_MZ_接可:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_接可:選択カード")
+SETVAR @"%듀얼리스트%_MZ_조교:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_조교:選択カード")
+SETVAR @"%듀얼리스트%_MZ_薬Ｃ:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_薬Ｃ:選択カード")
+SETVAR @"%듀얼리스트%_MZ_発情:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_発情:選択カード")
+
+SETVAR @"%듀얼리스트%_MZ_変化元ID:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_変化元ID:選択カード")
+SETVAR @"%듀얼리스트%_MZ_追カテ:現필드(듀얼리스트)", GETVARS(@"%対面者%_MZ_追カテ:選択カード")
+SETVAR @"%듀얼리스트%_MZ_追カテ2:現필드(듀얼리스트)", GETVARS(@"%対面者%_MZ_追カテ2:選択カード")
+SETVAR @"%듀얼리스트%_MZ_改名:現필드(듀얼리스트)", GETVARS(@"%対面者%_MZ_改名:選択カード")
+
+SETVAR @"%듀얼리스트%_MZ_条達:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_条達:選択カード")
+SETVAR @"%듀얼리스트%_MZ_특수状態:現필드(듀얼리스트)", GETVAR(@"%対面者%_MZ_특수状態:選択カード")
+
+SETVAR @"%듀얼리스트%_MZ_束縛:現필드(듀얼리스트)",-1
+
+
+IF INRANGE(終了플래그, 1, 10)
+	SETVAR @"%듀얼리스트%_MZ_終処:現필드(듀얼리스트)", 終了플래그
+ELSEIF INRANGE(終了플래그, 20, 60)
+	SETVAR @"%듀얼리스트%_MZ_束縛:現필드(듀얼리스트)", 終了플래그 - 20
+ENDIF
+
+;存在추가
+SETVAR @"%듀얼리스트%_필드:現필드(듀얼리스트)", GETVAR(@"%対面者%_필드:選択カード")
+SETVAR @"%対面者%_필드:選択カード", -1
+
+SIF 효과추가종류 >= 1
+	효과추가종류 = 0
+CALL CARD_ADDITIONAL_EFFECT(듀얼리스트)
+
+PRINTFORML %듀얼리스트%는 %カード名%의 컨트롤을 얻었습니다。
+PRINTFORMW
+RETURN 1
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARD_ADDITIONAL_EFFECT(듀얼리스트,마함플래그)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 마함플래그
+
+
+;PRINTFORML 에디셔널 이펙트 통과：추가효과종류:{효과추가종류}
+
+IF 마함플래그 == 0
+	FOR カウンタ,0,10
+		IF 효과추가종류:カウンタ == 1
+			SETVAR @"%듀얼리스트%_MZ_無効:カード소환先", 2
+		ELSEIF 효과추가종류:カウンタ == 2
+			SETVAR @"%듀얼리스트%_MZ_除処:カード소환先", 1
+
+		ELSEIF 효과추가종류:カウンタ == 3
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カード소환先")}, "攻撃力"
+			SETVAR @"%듀얼리스트%_MZ_永攻:カード소환先", RESULT
+
+		ELSEIF 효과추가종류:カウンタ == 4
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カード소환先")}, "攻撃力"
+			SETVAR @"%듀얼리스트%_MZ_永攻:カード소환先", -RESULT
+
+		ELSEIF 효과추가종류:カウンタ == 5
+			SETVAR @"%듀얼리스트%_MZ_直無:カード소환先", 2
+
+		ELSEIF 효과추가종류:カウンタ == 6
+			SETVAR @"%듀얼리스트%_MZ_戦無:カード소환先", 2
+
+		ELSEIF 효과추가종류:カウンタ == 7
+			SETVAR @"%듀얼리스트%_MZ_永Ｔ:カード소환先", 1
+
+		ELSEIF 효과추가종류:カウンタ == 8
+			SETVAR @"%듀얼리스트%_MZ_表固:カード소환先", 2
+
+		ELSEIF 효과추가종류:カウンタ == 9
+			SETVAR @"%듀얼리스트%_MZ_条達:カード소환先", 2
+
+		ELSEIF 효과추가종류:カウンタ == 10
+			SETVAR @"%듀얼리스트%_MZ_汎数:カード소환先", 1
+
+		ELSEIF 효과추가종류:カウンタ == 11
+			SETVAR @"%듀얼리스트%_MZ_終処:カード소환先", 제외行き
+		ELSEIF 효과추가종류:カウンタ == 12
+			SETVAR @"%듀얼리스트%_MZ_終処:カード소환先", 덱行き
+		ELSEIF 효과추가종류:カウンタ == 13
+			SETVAR @"%듀얼리스트%_MZ_終処:カード소환先", 손패行き
+		ELSEIF 효과추가종류:カウンタ == 15
+			SETVAR @"%듀얼리스트%_MZ_終処:カード소환先", 返却行き
+		ELSEIF 효과추가종류:カウンタ == 20
+			SETVAR @"%듀얼리스트%_MZ_終処:カード소환先", 破壊行き
+		ELSEIF 효과추가종류:カウンタ == 16
+			SETVAR @"%듀얼리스트%_MZ_終処:カード소환先", 遅返却行き
+		ELSEIF 효과추가종류:カウンタ == 17
+			SETVAR @"%듀얼리스트%_MZ_終処:カード소환先", 遅손패行き
+
+		ELSEIF 효과추가종류:カウンタ == 21
+			SETVAR @"%듀얼리스트%_MZ_不材:カード소환先", 1
+		ELSEIF 효과추가종류:カウンタ == 22
+			SETVAR @"%듀얼리스트%_MZ_無効:カード소환先", 1
+
+		ELSEIF 효과추가종류:カウンタ == 23
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カード소환先")}, "攻撃力"
+			SETVAR @"%듀얼리스트%_MZ_一攻:カード소환先", RESULT
+		ELSEIF 효과추가종류:カウンタ == 24
+			SETVAR @"%듀얼리스트%_MZ_不材:カード소환先", 2
+		ELSEIF 효과추가종류:カウンタ == 26
+			SETVAR @"%듀얼리스트%_MZ_戦無:カード소환先", 1
+		ELSEIF 효과추가종류:カウンタ == 27
+			SETVAR @"%듀얼리스트%_MZ_単攻:カード소환先", 2
+
+		ELSEIF 효과추가종류:カウンタ == 28
+			SETVAR @"%듀얼리스트%_MZ_表:カード소환先", 3
+
+		ELSEIF 효과추가종류:カウンタ == 31
+			SETVAR @"%듀얼리스트%_MZ_戦耐:カード소환先", 1
+		ELSEIF 효과추가종류:カウンタ == 32
+			SETVAR @"%듀얼리스트%_MZ_破耐:カード소환先", 1
+		ELSEIF 효과추가종류:カウンタ == 33
+			SETVAR @"%듀얼리스트%_MZ_対耐:カード소환先", 1
+		ELSEIF 효과추가종류:カウンタ == 34
+			SETVAR @"%듀얼리스트%_MZ_モ耐:カード소환先", 1
+		ELSEIF 효과추가종류:カウンタ == 35
+			SETVAR @"%듀얼리스트%_MZ_魔耐:カード소환先", 1
+		ELSEIF 효과추가종류:カウンタ == 36
+			SETVAR @"%듀얼리스트%_MZ_함정耐:カード소환先", 1
+
+
+		ELSEIF 효과추가종류:カウンタ == 40
+			SETVAR @"%듀얼리스트%_MZ_戦狂:カード소환先", 1
+
+
+		ELSEIF 효과추가종류:カウンタ == 51
+			SETVAR @"%듀얼리스트%_MZ_戦耐:カード소환先", 2
+		ELSEIF 효과추가종류:カウンタ == 52
+			SETVAR @"%듀얼리스트%_MZ_破耐:カード소환先", 2
+		ELSEIF 효과추가종류:カウンタ == 53
+			SETVAR @"%듀얼리스트%_MZ_対耐:カード소환先", 2
+		ELSEIF 효과추가종류:カウンタ == 54
+			SETVAR @"%듀얼리스트%_MZ_モ耐:カード소환先", 2
+		ELSEIF 효과추가종류:カウンタ == 55
+			SETVAR @"%듀얼리스트%_MZ_魔耐:カード소환先", 2
+		ELSEIF 효과추가종류:カウンタ == 56
+			SETVAR @"%듀얼리스트%_MZ_함정耐:カード소환先", 2
+		ELSEIF 효과추가종류:カウンタ == 57
+			SETVAR @"%듀얼리스트%_MZ_一破:カード소환先", 2
+
+		ELSEIF 효과추가종류:カウンタ == 58
+			SETVAR @"%듀얼리스트%_MZ_直攻:カード소환先", 2
+
+
+
+
+
+		ELSEIF INRANGE (효과추가종류:カウンタ , 100, 120)
+			SETVAR @"%듀얼리스트%_MZ_永種:カード소환先", 효과추가종류:カウンタ - 100
+		ELSEIF INRANGE (효과추가종류:カウンタ , 120, 130)
+			SETVAR @"%듀얼리스트%_MZ_永属:カード소환先", 효과추가종류:カウンタ - 120
+
+		ELSEIF INRANGE (효과추가종류:カウンタ , 140, 154)
+			SETVAR @"%듀얼리스트%_MZ_永星:カード소환先", 효과추가종류:カウンタ - 140
+		ELSEIF INRANGE (효과추가종류:カウンタ , 155, 167)
+			SETVAR @"%듀얼리스트%_MZ_一星:カード소환先", 효과추가종류:カウンタ - 155
+		ELSEIF 효과추가종류:カウンタ == 効追永星M1
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カード소환先")}, "レベル"
+			SETVAR @"%듀얼리스트%_MZ_永星:カード소환先", RESULT - 1
+		ELSEIF 효과추가종류:カウンタ == 効追永星P1
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カード소환先")}, "レベル"
+			SETVAR @"%듀얼리스트%_MZ_永星:カード소환先", RESULT + 1
+
+		ELSEIF 효과추가종류:カウンタ == 190
+			SETVAR @"%듀얼리스트%_MZ_永攻:カード소환先", -99999
+			SETVAR @"%듀얼리스트%_MZ_永守:カード소환先", -99999
+
+		ELSEIF INRANGE (효과추가종류:カウンタ , 200, 210)
+			SETVAR @"%듀얼리스트%_MZ_魔Ｃ:カード소환先", 효과추가종류:カウンタ - 200
+
+		ELSEIF 효과추가종류:カウンタ == 690
+			SETVAR @"%듀얼리스트%_MZ_服状:カード소환先", 1
+		ELSEIF 효과추가종류:カウンタ == 691
+			SETVAR @"%듀얼리스트%_MZ_服状:カード소환先", 2
+
+		ELSEIF 효과추가종류:カウンタ == 695
+			SETVAR @"%듀얼리스트%_MZ_接可:カード소환先", 2
+
+		ELSEIF INRANGE (효과추가종류:カウンタ , 40000, 40100)
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カード소환先")}, "종류"
+			SIF RESULT == 엑시즈
+				SETVAR @"%듀얼리스트%_MZ_Ｘ:カード소환先", 효과추가종류:カウンタ - 40000
+
+		ELSEIF INRANGE (효과추가종류:カウンタ , 100000, 149999)
+			SETVAR @"%듀얼리스트%_MZ_永攻:カード소환先", 효과추가종류:カウンタ - 100000  
+		ELSEIF INRANGE (효과추가종류:カウンタ , 150000, 199999)
+			SETVAR @"%듀얼리스트%_MZ_永守:カード소환先", 효과추가종류:カウンタ - 150000
+
+
+
+		ELSEIF INRANGE (효과추가종류:カウンタ , 200000, 249999)
+			SETVAR @"%듀얼리스트%_MZ_永攻:カード소환先", -(효과추가종류:カウンタ - 200000)  
+		ELSEIF INRANGE (효과추가종류:カウンタ , 250000, 299999)
+			SETVAR @"%듀얼리스트%_MZ_永守:カード소환先", -(효과추가종류:カウンタ - 250000)
+
+		ELSEIF INRANGE (효과추가종류:カウンタ , 300000, 349999)
+			SETVAR @"%듀얼리스트%_MZ_一攻:カード소환先", 효과추가종류:カウンタ - 300000  
+		ELSEIF INRANGE (효과추가종류:カウンタ , 350000, 399999)
+			SETVAR @"%듀얼리스트%_MZ_一守:カード소환先", 효과추가종류:カウンタ - 350000
+
+
+		ELSEIF INRANGE (효과추가종류:カウンタ , 1000000, 2000000)
+			SETVAR @"%듀얼리스트%_MZ_変化元ID:カード소환先", 효과추가종류:カウンタ - 1000000
+		ENDIF
+	NEXT
+	IF 효과추가カテ != ""
+		SETVAR @"%듀얼리스트%_MZ_追カテ:カード소환先", 효과추가カテ
+	ENDIF
+	IF 효과설정改名 != ""
+		SETVAR @"%듀얼리스트%_MZ_改名:カード소환先", 효과설정改名
+	ENDIF
+
+
+ELSEIF 마함플래그 == 1
+	FOR カウンタ,0,10
+		IF 효과추가종류:カウンタ == 500
+			SETVAR @"%듀얼리스트%_魔_除処:カード설치先", 1
+		ENDIF
+		IF 효과추가종류:カウンタ == 510
+			SETVAR @"%듀얼리스트%_魔_除処:カード설치先", 1
+		ENDIF
+
+	NEXT
+	IF 효과추가カテ != ""
+		SETVAR @"%듀얼리스트%_魔_追カテ:カード설치先", 효과추가カテ
+	ENDIF
+
+ENDIF
+ 
+VARSET 효과추가カテ
+VARSET 효과추가종류, -1
+
+
+
+
+@CARD_FINISHER(듀얼리스트,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カードID
+
+IF カードID == GETVAR(@"%듀얼리스트%_切り札")
+	TRYCALLFORM CARDNAME_{カードID}, "名前"
+	CALLFORM CHARA_CUTIN("THE FINISHER",RESULTS,"",,,,1)
+ELSEIF カードID == GETVAR(@"%듀얼리스트%_エース")
+	TRYCALLFORM CARDNAME_{カードID}, "名前"
+	CALLFORM CHARA_CUTIN("THE ACE",RESULTS,"",,,,1)
+ELSEIF カードID == GETVAR(@"%듀얼리스트%_アイドル")
+	TRYCALLFORM CARDNAME_{カードID}, "名前"
+	CALLFORM CHARA_CUTIN("THE IDOL",RESULTS,"",,,,1)
+ENDIF
+
+
+;ザポルグ追記20250309
+@CARD_FINISHER_SHOKO(듀얼리스트,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カードID
+
+IF カードID == GETVAR(@"%듀얼리스트%_切り札")
+	IF 자신_切り札_소환구상 != "" && 듀얼리스트 == "자신"
+		PRINTL
+		PRINTFORMW %자신_切り札_소환구상%
+		PRINTL
+	ENDIF
+ELSEIF カードID == GETVAR(@"%듀얼리스트%_エース")
+	IF 자신_エース_소환구상 != "" && 듀얼리스트 == "자신"
+		PRINTL
+		PRINTFORMW %자신_エース_소환구상%
+		PRINTL
+	ENDIF
+ELSEIF カードID == GETVAR(@"%듀얼리스트%_アイドル")
+	IF 자신_アイドル_소환구상 != "" && 듀얼리스트 == "자신"
+		PRINTL
+		PRINTFORMW %자신_アイドル_소환구상%
+		PRINTL
+	ENDIF
+ENDIF
+
+
+
+@CARD_EXDECK(듀얼리스트,ルーチン状態)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC スタッツ合計
+#DIM DYNAMIC 最大スタッツ合計
+#DIM DYNAMIC ルーチン状態
+#DIM DYNAMIC 現攻撃力
+#DIM DYNAMIC 現守備力
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 소환可能
+
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+$INPUT_LOOP_EXDECK
+IF 듀얼리스트 == "자신"
+	CUSTOMDRAWLINE =
+	PRINTFORML 「EX덱 확인 화면」
+	CUSTOMDRAWLINE =
+	PRINTL
+ENDIF
+VARSET 選択カード, -1
+VARSET 最大スタッツ合計, -1
+FOR カウンタ,0,紙束最大値
+	VARSET 소환可能
+	SIF GETVAR(@"%듀얼리스트%_EX덱:カウンタ") == -1
+		CONTINUE
+	TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_EX덱:カウンタ")}, "종류"
+	IF GROUPMATCH(RESULT, 싱크로, 엑시즈, 링크, 초차원)
+		TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:カウンタ")}(듀얼리스트,カウンタ,1)
+		IF RESULT == 1 && 듀얼리스트 == "자신" && バトルフェイズ == 0
+			소환可能 = 1
+		ELSEIF RESULT == 0 && 듀얼리스트 == "자신" && バトルフェイズ == 0
+			CALL CARD_SETCOLOR("자신","EX덱",カウンタ)
+		ELSEIF RESULT == 1 && 듀얼리스트 == "상대"
+			VARSET スタッツ合計 
+			VARSET カードID		
+			カードID = GETVAR(@"%듀얼리스트%_EX덱:カウンタ")
+
+			TRYCALLFORM CARD_{カードID}, "攻撃力"
+			現攻撃力 = RESULT
+			TRYCALLFORM CARD_{カードID}, "守備力"
+			現守備力 = RESULT
+			IF ルーチン状態 == 0
+				CALL ENEMY_RUTIN_PRIORITY(カードID)
+				スタッツ合計 = 現攻撃力 + 現守備力 + RESULT
+				IF スタッツ合計 > 最大スタッツ合計
+					最大スタッツ合計 = スタッツ合計
+					選択カード = カウンタ
+				ENDIF
+			ELSEIF ルーチン状態 == 1
+				CALL ENEMY_RUTIN_PRIORITY(カードID)
+				スタッツ合計 = 現攻撃力 + 現守備力 + RESULT
+				IF スタッツ合計 > 最大スタッツ合計 && スタッツ合計 > 19999
+					最大スタッツ合計 = スタッツ合計
+					選択カード = カウンタ
+				ENDIF
+			ENDIF	
+		ENDIF
+	ENDIF
+	IF 듀얼리스트 == "자신"
+		VARSET RESULT
+		TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_EX덱:カウンタ")}("자신",EX덱起動,"EX덱",カウンタ)
+		IF RESULT == 1
+			SETCOLOR C_G_YELLOW
+			PRINT (발)
+		ELSEIF 소환可能 == 1
+			SETCOLOR C_G_YELLOW
+			PRINT (소)
+		ELSE
+			SETCOLOR C_GRAY
+			PRINT (　)
+		ENDIF
+		CALLFORM CARD_KANPRINT("EX덱",カウンタ,자신_EX덱:カウンタ)
+
+		RESETCOLOR
+	ENDIF
+NEXT
+
+IF 듀얼리스트 == "자신"
+	CUSTOMDRAWLINE —
+	PRINTL
+	PRINTL [100] - 돌아간다
+	BINPUT
+	選択カード = RESULT
+ELSEIF 듀얼리스트 == "상대"
+	SIF 選択カード == -1
+		RETURN 0
+	CUSTOMDRAWLINE —
+	PRINTL
+	PRINTL 【엑스트라덱에서 특수소환 될 카드를 확인해주세요】
+	PRINTL
+	CUSTOMDRAWLINE —
+	WAIT
+ENDIF
+
+;돌아간다
+IF 選択カード== 100
+	PRINTFORMW 돌아갑니다。
+	RETURN 0
+ELSEIF INRANGE(選択カード, 0,紙束最大値)
+	選択カード_ID = GETVAR(@"%듀얼리스트%_EX덱:選択カード")	
+	CALL CARD_UI_RESET
+	確認듀얼리스트 = %듀얼리스트%
+	確認場所 = 選択カード
+	確認ゾーン = EX덱
+	TRYCALLFORM CARD_UI(選択カード_ID,2);　カード生成からくるUI（受け渡し必要：듀얼리스트情報のみ）
+
+	TRYCALLFORM CARD_{選択カード_ID}("종류")
+	SELECTCASE RESULT
+	CASE 싱크로
+		IF 듀얼리스트 == "자신"
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:選択カード")}(듀얼리스트,選択カード,1)
+			SIF RESULT == 1 && ターンプレイヤー == 듀얼리스트 && バトルフェイズ == 0
+				PRINTL [0] - 싱크로소환 한다
+			TRYCALLFORM CARDCAN_{選択カード_ID}("자신",EX덱起動,"EX덱",選択カード)
+			IF RESULT == 1 
+				SETCOLOR C_G_YELLOW
+				PRINTL [3] - 효과발동
+				RESETCOLOR
+			ENDIF
+			PRINTL [1] - 돌아간다
+			BINPUT
+		ELSE
+			RESULT = 0
+		ENDIF
+	CASE 엑시즈
+		IF 듀얼리스트 == "자신"
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:選択カード")}(듀얼리스트,選択カード,1)
+			SIF RESULT == 1 && ターンプレイヤー == 듀얼리스트 && バトルフェイズ == 0
+				PRINTL [0] - 엑시즈소환 한다
+			TRYCALLFORM CARDCAN_{選択カード_ID}("자신",EX덱起動,"EX덱",選択カード)
+			IF RESULT == 1 
+				SETCOLOR C_G_YELLOW
+				PRINTL [3] - 효과발동
+				RESETCOLOR
+			ENDIF
+			PRINTL [1] - 돌아간다
+			BINPUT
+		ELSE
+			RESULT = 0
+		ENDIF
+	CASE 링크
+		IF 듀얼리스트 == "자신"
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:選択カード")}(듀얼리스트,選択カード,1)
+			SIF RESULT == 1 && ターンプレイヤー == 듀얼리스트 && バトルフェイズ == 0
+				PRINTL [0] - 링크소환 한다
+			TRYCALLFORM CARDCAN_{選択カード_ID}("자신",EX덱起動,"EX덱",選択カード)
+			IF RESULT == 1 
+				SETCOLOR C_G_YELLOW
+				PRINTL [3] - 효과발동
+				RESETCOLOR
+			ENDIF
+			PRINTL [1] - 돌아간다
+			BINPUT
+		ELSE
+			RESULT = 0
+		ENDIF
+	CASE 초차원
+		IF 듀얼리스트 == "자신"
+			TRYCALLFORM CARDSUMMON_{選択カード_ID}(듀얼리스트,選択カード,1)
+			IF RESULT == 1 && ターンプレイヤー == 듀얼리스트 && バトルフェイズ == 0
+				TRYCALLFORM CARDNAME_{選択カード_ID},"カテゴリ"
+				SIF MATCH(RESULTS,"ヴァンガード")
+					PRINTL [0] - 초월한다
+			ENDIF
+			TRYCALLFORM CARDCAN_{選択カード_ID}("자신",EX덱起動,"EX덱",選択カード)
+			IF RESULT == 1 
+				SETCOLOR C_G_YELLOW
+				PRINTL [3] - 효과발동
+				RESETCOLOR
+			ENDIF
+			PRINTL [1] - 돌아간다
+			BINPUT
+		ELSE
+			RESULT = 0
+		ENDIF
+	;융합とその他いろいろ
+	CASEELSE
+		IF 듀얼리스트 == "자신"
+			TRYCALLFORM CARDCAN_{選択カード_ID}("자신",EX덱起動,"EX덱",選択カード)
+			IF RESULT == 1 
+				SETCOLOR C_G_YELLOW
+				PRINTL [3] - 효과발동
+				RESETCOLOR
+			ENDIF
+			PRINTL [1] - 돌아간다
+			BINPUT
+		ELSE
+			RESULT = 0
+		ENDIF
+	ENDSELECT
+ENDIF
+
+IF RESULT == 1
+	PRINTFORMW 돌아갑니다。
+	GOTO INPUT_LOOP_EXDECK
+ELSEIF RESULT == 3
+	TRYCALLFORM CARDEFFECT_{選択カード_ID}("자신",EX덱起動,"EX덱",選択カード)
+	CALL CARD_FINAL(ターンプレイヤー);EX덱효과起動後
+	RETURN 1
+ELSEIF RESULT == 0
+	TRYCALLFORM CARD_{選択カード_ID}("종류")
+	SELECTCASE RESULT
+	CASE 싱크로
+		TRYCALLFORM CARDSUMMON_{選択カード_ID}(듀얼리스트,選択カード)
+		TRYCALLFORM SYNSUMMON(듀얼리스트,選択カード)
+	CASE 엑시즈
+		TRYCALLFORM CARDSUMMON_{選択カード_ID}(듀얼리스트,選択カード)
+		TRYCALLFORM XYZSUMMON(듀얼리스트,選択カード)
+	CASE 링크
+		TRYCALLFORM CARDSUMMON_{選択カード_ID}(듀얼리스트,選択カード)
+		TRYCALLFORM LINSUMMON(듀얼리스트,選択カード)
+	CASE 초차원
+		TRYCALLFORM CARDSUMMON_{選択カード_ID}(듀얼리스트,選択カード)
+		TRYCALLFORM CARDNAME_{選択カード_ID},"カテゴリ"
+		IF MATCH(RESULTS,"ヴァンガード")
+			TRYCALLFORM STRIDE(듀얼리스트,"EX덱",選択カード,選択カード_ID)
+		ENDIF
+	ENDSELECT
+	IF RESULT == 1
+		CALL CARD_FINAL(ターンプレイヤー);EX소환後のチェック
+		RETURN 1
+	ENDIF
+ENDIF
+
+
+@CARD_MAKE_FIELD(듀얼리스트,カードID,표시形式)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 표시形式
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 反転플래그
+#DIM DYNAMIC 所有先
+#DIM DYNAMIC LRESULT
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 이동カード名
+#DIM DYNAMIC 回復量
+
+LRESULT = RESULT
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL FULLRESET
+IF 듀얼리스트 == "자신"
+	所有先 = 1
+ELSE
+	所有先 = 2
+ENDIF
+カード소환先 = 現필드(듀얼리스트)
+SETVAR @"%듀얼리스트%_MZ_所有:カード소환先 ", 所有先
+SETVAR @"%듀얼리스트%_MZ_戦:カード소환先 ", 1
+IF 표시形式 == "守備표시"
+	SETVAR @"%듀얼리스트%_MZ_表:カード소환先 ", 2
+ELSEIF 표시形式 == "裏側표시"
+	SETVAR @"%듀얼리스트%_MZ_表:カード소환先 ", 3
+ELSE 
+	SETVAR @"%듀얼리스트%_MZ_表:カード소환先 ", 1
+ENDIF
+SETVAR @"%듀얼리스트%_필드:カード소환先 ", カードID
+CALL CARD_LOADUP
+
+RESULT = LRESULT
+
+
+@CARD_BANISH(듀얼리스트,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード_ID
+
+選択カード_ID = GETVAR(@"%듀얼리스트%_%ゾーン%:場所")
+SIF 選択カード_ID <= 0
+	RETURN 0
+TRYCALLFORM CARDNAME_{選択カード_ID}("名前")
+PRINTFORMW [{場所}] %RESULTS%가 게임에서 완전히 제외되었습니다。
+
+IF ゾーン == "덱"
+	IF 듀얼리스트 == "자신"
+		ARRAYREMOVE 자신_덱, 場所, 1
+		자신_덱:(VARSIZE("자신_덱")-1) = -1
+	ELSEIF 듀얼리스트 == "상대"
+		ARRAYREMOVE 상대_덱, 場所, 1
+		상대_덱:(VARSIZE("상대_덱")-1) = -1
+	ENDIF
+ELSEIF ゾーン == "EX덱"
+	IF 듀얼리스트 == "자신"
+		ARRAYREMOVE 자신_EX덱, 場所, 1
+		자신_EX덱:(VARSIZE("자신_EX덱")-1) = -1
+	ELSEIF 듀얼리스트 == "상대"
+		ARRAYREMOVE 상대_EX덱, 場所, 1
+		상대_EX덱:(VARSIZE("상대_EX덱")-1) = -1
+	ENDIF
+ELSE
+	SETVAR @"%듀얼리스트%_%ゾーン%:場所", -1
+ENDIF
+

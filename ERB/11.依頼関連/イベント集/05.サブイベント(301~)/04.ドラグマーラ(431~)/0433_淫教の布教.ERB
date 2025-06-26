@@ -1,0 +1,245 @@
+@IRAI_EVENT_433(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP-DMR3)음교의 포교
+	CASE "이벤트種"
+;		RETURN 이벤트_ＲＥ
+		RETURN 이벤트_施設
+	CASE "依頼先"
+		RETURN 場所_教会
+	CASE "詳細"
+		PRINTL 40000円の費用があれば、新しい信徒を勧誘할 수 있다。
+		PRINTL 準備が出来たら、教会に行こう。
+		PRINTL 
+		PRINTL 
+	CASE "条件"
+		SIF 依頼_完了횟수:432 == 0
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_433(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC 이벤트主ID
+#DIM DYNAMIC 信徒数
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(1883);クエム
+
+IF MONEY < 40000
+	PRINTFORMW 新しい信徒の勧誘には40000円の費用が必要だ。
+	PRINTFORMW 金が貯まったら出直そう。
+	RETURN 1
+ENDIF
+PRINTFORMW 金が貯まったので、教会でクエムを呼び出した。
+PRINTFORMW 「はい、あなた様。すぐに新しい信徒候補を手配いたします」
+SETCOLOR C_YELLOW
+PRINTFORMW 40000円を支払いました。
+CALL MONEY_GET(-40000)
+RESETCOLOR
+
+
+CALL COUNT_EVENT433
+信徒数 = RESULT
+
+$INPUTLOOP1
+이벤트主:1 = RAND:CHARANUM
+IF 信徒数 >= 12
+	PRINTFORMW 「誰を勧誘しますか？」
+	CALL MONSTER_LIST(19)
+	IF RESULT >= 0
+		이벤트主:1 = RESULT
+		이벤트主ID = NO:(이벤트主:1)
+		TRYCALLFORM CARDNAME_{이벤트主ID},"名前"
+		IF RESULTS == ""
+			PRINTFORMW 「申し訳ありません。その人はこちらの都合에 의해 勧誘できないようです
+			PRINTFORMW 　다른 상대をお選びください」
+			VARSET RESULT
+			VARSET RESULTS
+			GOTO INPUTLOOP1
+		ELSE
+			IF TALENT:(이벤트主:1):성별 != 1
+				CALL PRINT_STATE(이벤트主:1)
+				PRINTFORMW 「男性ですか……。女性の信徒を使えば勧誘できなくはありませんが、よろしいのですか？」
+				PRINTFORML
+				PRINTFORML [0] - 構わない
+				PRINTFORML [1] - それは良くない
+				BINPUT
+				IF RESULT == 0
+					PRINTFORMW 「かしこまりました。すぐに手配いたします」
+					SETCOLOR C_YELLOW
+					PRINTFORMW 40000円を支払いました。
+					CALL MONEY_GET(-40000)
+					RESETCOLOR
+					CALL IRAI_ACT_434(이벤트主:1)
+					RETURN RESULT
+
+				ELSEIF RESULT == 1
+					PRINTFORMW 勧誘のためとは言え、女性の信徒を使いたくはない。
+					PRINTFORMW 「分かりました。では다른 候補をお選びください」
+					VARSET RESULT
+					VARSET RESULTS
+					GOTO INPUTLOOP1
+				ENDIF
+			ENDIF
+			CALL PRINT_STATE(이벤트主:1)
+			PRINTFORMW 「《%NAME:(이벤트主:1)%》ですね？」
+			PRINTFORML
+			PRINTFORML [0] - 決める
+			PRINTFORML [1] - 考え直す
+			BINPUT
+			IF RESULT == 0
+				PRINTFORMW 「かしこまりました。少々お待ちください」
+				GOTO INPUTLOOPEND
+			ELSEIF RESULT == 1
+				PRINTFORMW いや、別の子にしようか……？
+				PRINTFORML [0] - 別の候補を選ぶ
+				PRINTFORML [1] - 무작위로 お任せする
+				BINPUT
+				IF RESULT == 0
+					VARSET RESULT
+					VARSET RESULTS
+					GOTO INPUTLOOP1
+				ELSEIF RESULT == 1
+					이벤트主:1 = RAND:CHARANUM
+					GOTO INPUTLOOP5
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 信徒数 >= 9
+	GOTO INPUTLOOP5
+ELSEIF 信徒数 >= 6
+	GOTO INPUTLOOP4
+ELSEIF 信徒数 >= 3
+	GOTO INPUTLOOP3
+ENDIF
+
+$INPUTLOOP2
+IF TALENT:(이벤트主:1):속성 == 1 && TALENT:(이벤트主:1):성별 == 1 && 이벤트主:1 != 0
+ELSE
+	VARSET RESULT
+	VARSET RESULTS
+	GOTO INPUTLOOP1
+ENDIF
+
+$INPUTLOOP3
+IF TALENT:(이벤트主:1):종족 == 1 && TALENT:(이벤트主:1):성별 == 1 && 이벤트主:1 != 0
+ELSE
+	VARSET RESULT
+	VARSET RESULTS
+	GOTO INPUTLOOP1
+ENDIF
+
+$INPUTLOOP4
+IF TALENT:(이벤트主:1):듀얼리스트 == 0 && TALENT:(이벤트主:1):성별 == 1 && 이벤트主:1 != 0
+ELSE
+	VARSET RESULT
+	VARSET RESULTS
+	GOTO INPUTLOOP1
+ENDIF
+
+$INPUTLOOP5
+IF TALENT:(이벤트主:1):음교의신도 == 0 && TALENT:(이벤트主:1):성별 == 1 && 이벤트主:1 != 0
+ELSE
+	IF 信徒数 >= 12
+		이벤트主:1 = RAND:CHARANUM
+		GOTO INPUTLOOP5
+	ELSE
+		VARSET RESULT
+		VARSET RESULTS
+		GOTO INPUTLOOP1
+	ENDIF
+ENDIF
+
+$INPUTLOOPEND
+
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+PRINTFORMW 「あなた様、お待たせしました」
+PRINTFORMW 땅下の교육部屋でしばらく待つと、クエムが%NAME:(이벤트主:1)%を連れて部屋に入って来た。
+CALL SYOTAIMEN(이벤트主:1)
+PRINTFORMW どうやら %CALLNAME:(이벤트主:1)%는信徒に言い包められて訳の分からないまま連れて来られたようだ。
+PRINTFORMW しかしどんな理由であれここに来たからにはもう逃がさない。
+PRINTFORMW %NAME:MASTER%는デュエルディスクを構えた。
+TARGET = 이벤트主:1
+CALL DUEL_SYSTEM(1,432,,2)
+
+IF RESULT == 1
+	PRINTFORMW 勝った。
+ELSE
+	PRINTFORMW 負けた……
+	PRINTFORMW %CALLNAME:(이벤트主:1)%는その隙を突いて部屋から逃げ出してしまった。
+	PRINTFORMW 次は失敗しないように気を付けよう……
+	RETURN 3
+ENDIF
+PRINTFORMW 교육が完了した %CALLNAME:(이벤트主:1)%는음교の忠実な信徒となった。
+CFLAG:(이벤트主:1):소유함 = 1
+TALENT:(이벤트主:1):음교의신도 = 1
+TALENT:(이벤트主:1):굴복됨 = 1
+MARK:(이벤트主:1):반발각인 = 0
+IF CFLAG:(이벤트主:1):호감도 < 2000
+	CFLAG:(이벤트主:1):호감도 = 2000
+ELSE
+	CALL EVENT_FAVUP(이벤트主:1,1000)
+ENDIF
+SIF TALENT:(이벤트主:1):임신 == 0 && TALENT:MASTER:매지컬자지 == 1
+	TALENT:(이벤트主:1):임신가능 = 1
+IF ABL:(이벤트主:1):순종 < 3
+	ABL:(이벤트主:1):순종 += 2
+ELSE
+	ABL:(이벤트主:1):순종 += 1
+ENDIF
+CFLAG:(이벤트主:1):아르바이트 = 433
+
+
+CALL COUNT_EVENT433
+信徒数 = RESULT
+
+IF 信徒数 == 3
+	PRINTFORMW 「お疲れ様です。信徒の数が増えた事で、今後は 속성의 制限なく勧誘できるようになりました」
+ELSEIF 信徒数 == 6
+	PRINTFORMW 「お疲れ様です。信徒の数が増えた事で、今後は종족の制限なく勧誘できるようになりました」
+ELSEIF 信徒数 == 9
+	PRINTFORMW 「お疲れ様です。信徒の数が増えた事で、今後は듀얼리스트の人も勧誘できるようになりました」
+ELSEIF 信徒数 == 12
+	PRINTFORMW 「お疲れ様です。信徒の数が増えた事で、今後はお望みの상대を勧誘できるようになりました」
+	IF TALENT:MASTER:매지컬자지 == 0
+		PRINTFORMW 「それだけでなく、あなた様に신の化身が宿ったようです」
+		TALENT:MASTER:매지컬자지 = 1
+	ENDIF
+ENDIF
+PRINTFORMW 「それでは本日の교육はこれで終了になります」
+PRINTFORMW ここで出来る事はもう無さそうなので、教会から出た。
+PRINTFORMW 勧誘費用が用意できたら、また来よう。
+TIME += 60
+RETURN 2
+
+
+
+
+@COUNT_EVENT433(플래그)
+#DIM DYNAMIC 플래그
+#DIM 캐릭터_ID
+#DIM DYNAMIC 信徒数
+
+
+FOR 캐릭터_ID,1,CHARANUM
+	SIF TALENT:캐릭터_ID:음교의신도 == 1
+		信徒数 += 1
+NEXT
+
+RETURN 信徒数
+

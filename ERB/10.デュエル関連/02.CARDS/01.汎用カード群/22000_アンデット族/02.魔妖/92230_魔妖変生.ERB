@@ -1,0 +1,164 @@
+﻿@CARDNAME_92230,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마요괴변생
+	CASE "略称"
+RESULTS = 마요괴변생
+	CASE "カテゴリ"
+RESULTS:0 = 마요괴
+ENDSELECT
+
+
+@CARD_92230(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92230(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 어느 한쪽밖에 사용할 수 없으며,
+PRINTL 이 카드를 발동한 턴, 자신은 '마요괴' 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①: 패를 1장 버리고 발동할 수 있다.
+PRINTL 자신 묘지/제외 존의 '마요괴' 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터는 상대 효과의 대상이 되지 않는다.
+CALLFORM CARD_ABLE(1,묘지起動,フリー誘発)
+PRINTL ②: 묘지의 이 카드를 제외하고, 자신 묘지의 언데드족 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 대상으로 한 몬스터와 카드명이 다르고, 속성이 같은 자신 묘지/제외 존의 '마요괴' 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터는 엔드 페이즈에 파괴된다.
+
+
+@CARDCAN_92230(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92230)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,92230)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 1
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 마요괴
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	SIF 발동済_1(듀얼리스트,92230)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 언데드족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 마요괴
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_92230(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 속성条件
+#DIMS DYNAMIC 選択カード名前
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92230,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲제외 = 1
+			효과条件カテゴリ = 마요괴
+			효과추가종류 = 効追永対耐
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+		CALL CARD_EX_RESTRICTION(듀얼리스트,"마요괴")
+	ENDIF
+
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92230,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 언데드족
+		효과条件종류 = モン全般
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			選択カード = RESULT
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:選択カード")},"속성"
+			속성条件 = RESULT
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_묘지:選択カード")},"名前"
+			選択カード名前 = %RESULTS%
+
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲제외 = 1
+			효과条件속성 = 속성条件
+			효과条件カテゴリ = 마요괴
+			효과条件固名前 = %選択カード名前%
+			효과추가종류 = 10 + 破壊行き
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+		CALL CARD_EX_RESTRICTION(듀얼리스트,"마요괴")
+	ENDIF
+ENDIF
+

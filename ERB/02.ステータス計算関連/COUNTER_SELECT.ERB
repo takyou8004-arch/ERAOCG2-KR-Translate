@@ -1,0 +1,299 @@
+﻿@POSITION_OCCUPATION(ARG)
+#FUNCTION
+#DIM DYNAMIC カウンタ
+FOR カウンタ,1,CHARANUM
+	SIF TARGET:カウンタ <= 0
+		CONTINUE
+	SIF TCVAR:(TARGET:カウンタ):위치관계 == ARG
+		RETURNF 1
+NEXT
+
+@EVENT_COUNTER(캐릭터_ID,행동順)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 캐릭터_ID_2
+#DIM DYNAMIC 행동順
+#DIM DYNAMIC 羞恥成分
+#DIM DYNAMIC 유혹成分
+#DIM DYNAMIC 積極性分
+#DIM DYNAMIC タチ成分
+#DIM DYNAMIC 탈의강요
+
+#DIM DYNAMIC 軟質CT
+#DIM DYNAMIC 착의CT
+#DIM DYNAMIC 脱愛CT
+#DIM DYNAMIC 脱強CT
+#DIM DYNAMIC 性行CT
+#DIM DYNAMIC 現在最大강도
+#DIM DYNAMIC 결정CT
+#DIM DYNAMIC CT종류,999
+;----------------------------------------------------
+;キャンセル
+;・選択COMが이동であるとき:SELECTCOM == 351
+;・캐릭터番号が0以下であるとき
+;・該当캐릭터が수면状態であるとき
+;・TCVAR値が2以上であるとき（同じ캐릭터）を読み込むとき↑のこうどうなどで　同じ캐릭터が読み込まれるとき
+;　同じメッセージや処理を返すように
+;----------------------------------------------------
+SIF SELECTCOM == 351 || SELECTCOM == 400 || SELECTCOM == 490 || SELECTCOM == 456
+	RETURN 0
+SIF 캐릭터_ID <= 0
+	RETURN 0
+SIF CFLAG:캐릭터_ID:수면
+	RETURN 0
+TCVAR:캐릭터_ID:30 ++
+SIF TCVAR:캐릭터_ID:30 > 1
+	RETURN 0
+
+;----------------------------------------------------
+;특수な処理
+;・IF CFLAG:캐릭터_ID:우후후 == 1
+;＞プレイヤー主導エッチモード행동中
+;・IF 행동順 == 1 && CFLAG:캐릭터_ID:우후후 == 2 && BASE:캐릭터_ID:만족 == MAXBASE:캐릭터_ID:만족
+;＞상대主導エッチモード終了
+;----------------------------------------------------
+;우후후中
+IF CFLAG:캐릭터_ID:우후후 == 1
+	CALL EVENT_COUNTER_REACTION(캐릭터_ID,행동順)
+	RETURN 0
+ENDIF
+;만족したら放す
+IF 全力押倒モード == 0
+	IF 행동順 == 1 && CFLAG:캐릭터_ID:우후후 == 2 && BASE:캐릭터_ID:만족 == MAXBASE:캐릭터_ID:만족
+		RESETCOLOR
+		PRINTFORMW %CALLNAME:캐릭터_ID%는 만족한 것 같다。
+		IF !GETBIT(CFLAG:캐릭터_ID:기정사실 , 0)
+			SETCOLOR C_PINK
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 %CALLNAME:MASTER%의 상대를 마음에 들어하고、앞으로도 부탁하면 시켜 줄 것 같다。
+			PRINTFORMW %CALLNAME:캐릭터_ID%는【섹프】를 얻다
+			RESETCOLOR
+			TALENT:캐릭터_ID:섹프 = 1
+			SETBIT CFLAG:기정사실 , 0
+		ENDIF
+		VARSET RESULT
+		IF CFLAG:캐릭터_ID:호감도 >= 2000 && 全力押倒モード != 3
+			PRINTFORML [0] - 해방시키다
+			PRINTFORML [1] - 한계까지 시험해주다
+			PRINTL
+			BINPUT
+			CLEARLINE 5
+		ELSE
+			RESULT = 0
+		ENDIF
+		IF RESULT == 0
+			SIF CFLAG:캐릭터_ID:약점취득 && RAND:10 == 0
+				CALL EVENT_COUNTER_PUNISHMENT(캐릭터_ID,행동順)
+			FOR 캐릭터_ID_2,0,CHARANUM
+				CALL RESET_SEXCON(캐릭터_ID_2)
+			NEXT
+			CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 10, 2, 1)
+			CALL TOUCH_SET(0,0,0,1)
+			PRINTL
+			RETURN 0
+		ELSE
+			全力押倒モード = 1
+		ENDIF
+	ENDIF
+ENDIF
+;----------------------------------------------------
+;通常
+;----------------------------------------------------
+;ソフトな카운터
+SIF TFLAG:COMABLE관리 == 1
+	軟質CT = 100
+SIF TCVAR:캐릭터_ID:친밀감 < 1
+	軟質CT = 0
+;ガチセクハラ
+IF TFLAG:COMABLE관리 == 3
+	軟質CT = 0
+	착의CT = 100
+	脱愛CT = 80
+	;탈의에 의해 착의セクハラは制限される
+	SIF TEQUIP:MASTER:0 < 2
+		착의CT -= 10
+	SIF TEQUIP:MASTER:1 < 1
+		착의CT -= 10
+	;이성と무드에 의해 ガチセクハラが増える
+	IF BASE:캐릭터_ID:무드 > 1000
+		脱愛CT += 15	
+	ELSEIF BASE:캐릭터_ID:무드 > 500
+		脱愛CT += 10
+	ENDIF
+	IF BASE:캐릭터_ID:이성 <= 0
+		脱愛CT += 15
+	ELSEIF BASE:캐릭터_ID:이성 <= 500
+		脱愛CT += 10
+	ENDIF
+ENDIF
+
+脱強CT = 脱愛CT
+性行CT = 脱愛CT
+
+羞恥成分 = TALENT:캐릭터_ID:자기과시욕 + TALENT:캐릭터_ID:자기애 - TALENT:캐릭터_ID:자제심 - TALENT:캐릭터_ID:정조 - 2 * TALENT:캐릭터_ID:수치심
+유혹成分 = TALENT:캐릭터_ID:매력 + TALENT:캐릭터_ID:매혹 + TALENT:캐릭터_ID:수수께끼의매력 + BUST_SIZE(캐릭터_ID) + TALENT:캐릭터_ID:체형 - TALENT:캐릭터_ID:정조 + TALENT:캐릭터_ID:소악마 - TALENT:캐릭터_ID:유치
+積極性分 = TALENT:캐릭터_ID:배짱 + TALENT:캐릭터_ID:양기／음기 - TALENT:캐릭터_ID:무관심 - TALENT:캐릭터_ID:감정부족함 + TALENT:캐릭터_ID:성적흥미 - TALENT:캐릭터_ID:일선넘지않음 + TALENT:캐릭터_ID:헌신적
+タチ成分 = TALENT:캐릭터_ID:반응 + TALENT:캐릭터_ID:프라이드 + TALENT:캐릭터_ID:헌신적 + 2 * (TALENT:캐릭터_ID:새드 - TALENT:캐릭터_ID:마조)
+
+SIF 脱愛CT >= 1
+	脱愛CT += 2 * (タチ成分 + 積極性分)
+SIF 脱強CT >= 1
+	脱強CT += 2 * (유혹成分 - 積極性分)
+SIF 性行CT >= 1
+	性行CT += 2 * (タチ成分 + 積極性分)
+
+;------------------------------------------
+;10～29 ソフト
+;------------------------------------------
+;色っぽい仕草
+CT종류:10 = 10 + 유혹成分 - 羞恥成分
+;見つめる
+CT종류:11 = 10 + 羞恥成分
+;体を摺り寄せる
+CT종류:12 = 10 + 유혹成分 + 積極性分
+;치마を捲る
+CT종류:13 = 10 + 積極性分 + タチ成分 - 羞恥成分
+;耳元に息を吹きかける
+CT종류:14 = 10 + 유혹成分 + 積極性分
+;엉덩이를 쓰다듬는다
+CT종류:15 = 10 + 積極性分 + タチ成分
+;耳舐め
+CT종류:16 = 10 + 積極性分 + タチ成分*2
+;발기の上からすりすり
+CT종류:17 = 10 + 積極性分 + タチ成分*2
+
+
+FOR カウンタ,10,30
+	CT종류:カウンタ *= 軟質CT
+NEXT
+;------------------------------------------
+;30～49 착의セクハラ
+;------------------------------------------
+;키스
+CT종류:30 = 10 + 積極性分 + 2 * TALENT:캐릭터_ID:키스마
+;後ろから抱きつく
+CT종류:31 = 10 + 羞恥成分 - 積極性分
+;前から抱きつく
+CT종류:32 = 10 + 유혹成分 + 積極性分
+;가슴を揉ませる
+CT종류:33 = 10 + 유혹成分 - 積極性分
+;股間をまさぐる
+CT종류:34 = 10 + 積極性分 + タチ成分
+;치마の中を見せる
+CT종류:35 = 10 + 羞恥成分 + 유혹成分
+;後ろから가슴もみもみ
+CT종류:36 = 10 + 積極性分 + タチ成分
+
+FOR カウンタ,30,50
+	CT종류:カウンタ *= 착의CT
+NEXT
+
+;------------------------------------------
+;50～69 탈의セクハラ(애무)
+;------------------------------------------
+;수음
+CT종류:50 = 10 + 2 * TALENT:캐릭터_ID:솜씨좋은손가락 + ABL:캐릭터_ID:손가락 + BASE:MASTER:발기 / 500
+;펠라치오、커닐링구스
+CT종류:51 = 10 + TALENT:캐릭터_ID:악취내성 + 2 * TALENT:캐릭터_ID:혀사용자 + ABL:캐릭터_ID:혀 + BASE:MASTER:발기 / 500
+;스마타,조개 맞대기
+CT종류:52 = 10 + ABL:캐릭터_ID:허리 + 2 * TALENT:캐릭터_ID:젖기쉬움정도 + BASE:MASTER:발기 / 500
+;파이즈리
+CT종류:53 = 10 + BUST_SIZE(캐릭터_ID) + 2 * TALENT:캐릭터_ID:음유 + ABL:캐릭터_ID:가슴 + BASE:MASTER:발기 / 500
+;풋잡
+CT종류:54 = 10 + 2 * TALENT:캐릭터_ID:새드 + MIN(ABL:캐릭터_ID:새드끼 , 5) + BASE:MASTER:발기 / 500
+;애널애무
+CT종류:55 = 10 + 2 * TALENT:캐릭터_ID:솜씨좋은손가락 + ABL:캐릭터_ID:손가락
+;애널舐め
+CT종류:56 = 10 + 2 * TALENT:캐릭터_ID:혀사용자 + ABL:캐릭터_ID:혀 + MIN(TALENT:캐릭터_ID:악취내성, 0)
+;손가락삽입
+CT종류:57 = 10 + 2 * TALENT:캐릭터_ID:솜씨좋은손가락 + ABL:캐릭터_ID:손가락
+;가슴애무
+CT종류:58 = 10 + 2 * TALENT:캐릭터_ID:솜씨좋은손가락 + ABL:캐릭터_ID:손가락
+;유두빨기
+CT종류:59 = 10 + 2 * TALENT:캐릭터_ID:혀사용자 + ABL:캐릭터_ID:혀 + 2 * TALENT:캐릭터_ID:유치
+;ディープ키스
+CT종류:60 = 10 + 2 * TALENT:캐릭터_ID:혀사용자 + ABL:캐릭터_ID:혀  + 2 * TALENT:캐릭터_ID:키스마
+;역 레이프
+SIF CFLAG:캐릭터_ID:현재냉정 == 0
+	CT종류:61 = 10 + TALENT:캐릭터_ID:Ｖ감도 * TALENT:캐릭터_ID:음호 + ABL:캐릭터_ID:질 + BASE:MASTER:발기 / 200
+;耳舐め
+CT종류:62 = 10 + 2 * TALENT:캐릭터_ID:혀사용자 + ABL:캐릭터_ID:혀  + 2 * TALENT:캐릭터_ID:키스마
+
+
+
+FOR カウンタ,50,70
+	CT종류:カウンタ = CT종류:カウンタ * 脱愛CT * (90 + RAND:21) / 100
+NEXT
+;------------------------------------------
+;70～79 탈의セクハラ(강요)
+;------------------------------------------
+;커닐링구스
+CT종류:70 = 10 + ABL:캐릭터_ID:Ｃ감각
+;펠라치오
+CT종류:71 = 10 + ABL:캐릭터_ID:Ｃ감각
+;애널봉사
+CT종류:72 = 10 + ABL:캐릭터_ID:Ａ감각
+;ぱふぱふ
+CT종류:73 = 10 + ABL:캐릭터_ID:Ｂ감각
+;乳合わせ
+CT종류:74 = 10 + ABL:캐릭터_ID:Ｂ감각
+;タワシ洗い
+CT종류:75 = 10 + ABL:캐릭터_ID:Ｃ감각
+
+FOR カウンタ,70,80
+	CT종류:カウンタ = CT종류:カウンタ * 脱強CT * (90 + RAND:21) / 100
+NEXT
+
+;------------------------------------------
+;80～99 성교
+;------------------------------------------
+性行CT = 0
+;정상위
+FOR カウンタ,80,99
+	CT종류:カウンタ = CT종류:カウンタ * 性行CT * (90 + RAND:21) / 100
+NEXT
+
+
+
+
+
+;ランダマイズ
+FOR カウンタ,1,100
+	CT종류:カウンタ = RAND:(MAX(CT종류:カウンタ,1))
+NEXT
+
+;実行판정
+FOR カウンタ,1,100
+	CT종류:カウンタ *= ACTABLE(캐릭터_ID,カウンタ)
+NEXT
+
+
+現在最大강도 = 0
+
+FOR カウンタ,1,100
+	IF CT종류:カウンタ > 現在最大강도
+		現在最大강도 = CT종류:カウンタ
+		결정CT = カウンタ
+	ENDIF
+NEXT
+
+
+
+
+SIF 現在最大강도 > 0
+	TCVAR:캐릭터_ID:CT행동 = 결정CT
+
+
+@RESET_SEXCON(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+
+
+CFLAG:캐릭터_ID:우후후 = 0
+CFLAG:캐릭터_ID:접촉조교중 = 0
+CFLAG:캐릭터_ID:발정중 = 0
+CFLAG:캐릭터_ID:현재냉정 = 0
+CFLAG:캐릭터_ID:막대구현화 = 0
+CFLAG:캐릭터_ID:질구현화 = 0
+CFLAG:캐릭터_ID:추가가슴사이즈 = 0
+CFLAG:캐릭터_ID:최면상태 = 0
+CALL CLOTHES_RESET(캐릭터_ID)
+CALL CLOTHES_SETTING_TRAIN(캐릭터_ID)

@@ -1,0 +1,143 @@
+﻿@CARDNAME_72230,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 왕가의 골짜기-네크로밸리
+	CASE "略称"
+RESULTS = 네크로밸리
+	CASE "カテゴリ"
+RESULTS:0 = 네크로밸리
+ENDSELECT
+
+
+@CARD_72230(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+	CASE "レア度"
+		RETURN ULR
+	CASE "추가日"
+		RETURN 250409
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72230(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「왕가의 골짜기-네크로밸리」가 된다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 필드의 「묘지기」 몬스터의 공격력, 수비력은 500 업한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 필드 존에 앞면 표시로 존재하는 한,
+PRINTL 레벨 5 이상의 「묘지기」 몬스터를 컨트롤하고 있지 않은 플레이어는,
+PRINTL 묘지의 카드의 효과를 발동할 수 없으며, 묘지에서 몬스터를 특수 소환할 수 없다.
+PRINTL 
+
+;メタビでおなじみの悪名高いフィールド마법。これと里にはいつも苦しめられる。
+;本来의 효과と比べて묘지ロック性能は抑えられており、他の카드 효과での묘지제외やサルベ-ジは止めない。
+;とはいえ낙인や죄보など묘지발동의 효과も多用する타입の덱で対面しちゃうとそれなりに苦労するので、
+;根本的に「묘지기」はレ-ト戦などランダム対戦の상대に出るのはちょっと止めた方がよさそう。
+;「묘지기」に最も簡単に対応できるのは엑소시스터。대상耐性と제외耐性が完全に穴で네크로벨리제외しただけでほぼ瓦解する。
+;もしも「묘지기」を使うCPUと戦う상황になったら、コズミックサイクロンを刺しておくだけでも大分楽になる。
+;伏せカード対策として날개や大嵐などの破壊효과は通りが悪いので注意。
+
+
+@CARDCAN_72230(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72230)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72230(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72230,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ = 묘지기
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,500,500)
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,500,500)
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "王家の眠る谷－네크로벨리")
+	
+	;상대 필드에 レベル５以上の묘지기がいない場合、상대は묘지발동 묘지からの특수소환を制限される。
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件カテゴリ = 묘지기
+	CALL 효과条件レベル_ADV(5, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		;묘지封印
+		CALL SET_PLAYER_INFO(듀얼리스트,"SS소환禁止묘지",1,1)
+		CALL SET_PLAYER_INFO(듀얼리스트,"묘지_無効",1,1)
+	ELSE
+		;묘지封印解除
+		CALL SET_PLAYER_INFO(듀얼리스트,"SS소환禁止묘지",0,1)
+		CALL SET_PLAYER_INFO(듀얼리스트,"묘지_無効",0,1)
+	ENDIF
+	
+	;;자신 필드에 レベル５以上の묘지기がいない場合、자신も묘지발동 묘지からの특수소환を制限される。
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 묘지기
+	CALL 효과条件レベル_ADV(5, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		;묘지封印
+		CALL SET_PLAYER_INFO(듀얼리스트,"SS소환禁止묘지",1,0)
+		CALL SET_PLAYER_INFO(듀얼리스트,"묘지_無効",1,0)
+	ELSE
+		;묘지封印解除
+		CALL SET_PLAYER_INFO(듀얼리스트,"SS소환禁止묘지",0,0)
+		CALL SET_PLAYER_INFO(듀얼리스트,"묘지_無効",0,0)
+	ENDIF
+ENDIF

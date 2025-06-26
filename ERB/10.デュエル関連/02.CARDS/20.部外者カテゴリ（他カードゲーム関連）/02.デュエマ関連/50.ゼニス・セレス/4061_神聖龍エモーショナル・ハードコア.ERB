@@ -1,0 +1,135 @@
+﻿@CARDNAME_4061,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신성룡 이모셔널 하드코어
+	CASE "略称"
+RESULTS = E 하드코어
+	CASE "カテゴリ"
+RESULTS:0 = 오라클리온
+RESULTS:1 = 오라클
+RESULTS:2 = 커맨드
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_4061(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2650
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_4061(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드 이름의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,ターン開始時)
+PRINTL ①: 이 카드가 소환 / 특수 소환에 성공했을 때 발동할 수 있다.
+PRINTL 상대의 공개되어 있는 정보, 또는 자신의 덱 리스트에서 이 카드 이름 이외의 몬스터의 이름을 1개 고른다.
+PRINTL 고른 이름을 가진 몬스터의 능력은 모두 무효화된다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신의 몬스터 존에 이 카드 이외의 "오라클" 몬스터가 존재할 경우,
+PRINTL 이 카드는 대상 내성을 가진다.
+PRINTL 
+
+@CARDSUMMON_AA_4061
+
+
+@CARDCAN_4061(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4061)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,4061)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4061(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード_ID
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4061,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과範囲덱 = 1
+		효과範囲EX덱 = 1
+		효과範囲제외 = 1
+
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과範囲상대묘지 = 1
+		효과範囲상대제외 = 1
+		효과条件固名前 = 신성룡 이모셔널 하드코어
+		효과条件종류 = モン全般
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		SIF RESULT == 9999
+			RETURN 0
+		選択カード_ID = RESULT:99
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",選択カード_ID,1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	選択カード_ID = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+	IF 選択カード_ID != -1
+		CALL CARD_EFFECT_PROHIB(듀얼리스트,選択カード_ID,2)
+		TRYCALLFORM CARDNAME_{選択カード_ID}("名前")
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件他所 = 1
+	효과条件カテゴリ = 오라클
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	ENDIF
+ENDIF

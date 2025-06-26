@@ -1,0 +1,181 @@
+﻿@CARDNAME_92755,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 세피라의 성선사
+	CASE "略称"
+RESULTS = 세피라의 성선사
+	CASE "カテゴリ"
+RESULTS:0 = 세피라
+ENDSELECT
+
+
+@CARD_92755(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92755(종류)
+#DIM DYNAMIC 종류
+
+PRINTL ①: 자신 필드/EX덱의 앞면 표시 "세피라" P 카드 종류에 따라, 이하의 효과를 얻는다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ●3종류 이상: 자신 필드의 몬스터의 공격력은,
+PRINTL 서로의 EX덱의 EX 이외의 P 카드 수× 100 올린다.
+CALLFORM CARD_ABLE(1,지속효과)
+PRINTL ●5종류 이상: 자신 필드의 몬스터는 파괴 내성을 얻는다.
+CALLFORM CARD_ABLE(2,지속효과)
+PRINTL ●8종류 이상: 자신 필드의 몬스터는 대상 내성을 얻는다.
+CALLFORM CARD_ABLE(3,마함起動)
+PRINTL ●10종류 이상: 마법 & 함정 존의 앞면 표시 이 카드를 묘지로 보내고 발동할 수 있다.
+PRINTL 상대의 패 / 필드의 카드를 전부 주인의 덱으로 되돌린다.
+
+@CARDCAN_92755(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92755)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	IF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 세피라
+		효과条件分割 = 펜듈럼
+		효과条件固名前起動 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT < 10
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 세피라
+	효과条件分割 = 펜듈럼
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 세피라
+	효과条件分割 = 펜듈럼
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_92755(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択肢
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	IF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92755)
+		IF RESULT == 0
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"덱")
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"%対面者%_손패:カウンタ") == -1
+					CONTINUE
+				CALL CARD_DISPOSE(対面者,"손패",カウンタ,덱行き)
+			NEXT
+		ENDIF
+	ELSE
+		;カード발동＆설치まで
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92755)
+		IF RESULT == 0
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과範囲상대EX덱 = 1
+	효과条件종류 = EX以外全般
+	효과条件分割 = 펜듈럼
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 100
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻撃力修正)
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 세피라
+	효과条件分割 = 펜듈럼
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT > 7
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+	ENDIF
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+ENDIF

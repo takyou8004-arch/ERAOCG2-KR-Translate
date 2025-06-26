@@ -1,0 +1,184 @@
+﻿@CARDNAME_21203,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 오드아이즈 페르소나 드래곤
+	CASE "略称"
+RESULTS = ОЕPer드래곤
+	CASE "カテゴリ"
+RESULTS:0 = 오드아이즈
+ENDSELECT
+
+
+@CARD_21203(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 雄性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_21203(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 ①의 P효과는, 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신의 메인 페이즈에 발동할 수 있다.
+PRINTL 패 / EX덱에서 EX 이외의 레벨 7 이하의 몬스터 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(0,ターン終了時)
+PRINTL ②: 서로의 엔드 페이즈에 발동할 수 있다.
+PRINTL 마법 / 함정 존에 존재하는 이 카드를 특수 소환하고, EX덱에서 EX 몬스터 이외의 「오드아이즈」 P 몬스터를 마법 / 함정 존에 앞면 표시로 세트한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+CALLFORM CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ①: 자신 / 상대 턴에 1번, EX덱에서 특수 소환된 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 효과를 턴 종료시까지 무효로 한다.
+
+@CARDSUMMON_AA_21203
+
+
+@CARDCAN_21203(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21203)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_2(듀얼리스트,21203)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	CALL 효과条件レベル_ADV(7, "以下")
+	효과条件종류 = EX以外全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,21203,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 오드아이즈
+	효과条件종류 = EX以外全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	효과条件召種 = 召種EX덱
+
+	효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21203(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カード名前
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21203)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21203,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲EX덱 = 1
+		CALL 효과条件レベル_ADV(7, "以下")
+		효과条件종류 = EX以外全般
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21203)
+	IF RESULT == 0
+		CALL FULLRESET		
+		CALL CARD_SP_SUMMON(듀얼리스트, "마함", 場所)
+
+		CALL FULLRESET
+		효과条件カテゴリ = 오드아이즈
+		효과条件종류 = EX以外全般
+		CALL CARD_SET_BASIC(듀얼리스트,"EX덱",ゾーン,場所,"表側표시")
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21203,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과条件召種 = 召種EX덱
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"無効")
+	ENDIF
+ENDIF

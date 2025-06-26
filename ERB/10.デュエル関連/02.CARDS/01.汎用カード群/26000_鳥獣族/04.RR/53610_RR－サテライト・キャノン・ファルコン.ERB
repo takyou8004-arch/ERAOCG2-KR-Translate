@@ -1,0 +1,147 @@
+﻿@CARDNAME_53610,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = RR－위성 캐논 팔콘
+	CASE "略称"
+RESULTS = RR S C F
+	CASE "カテゴリ"
+RESULTS:0 = 레이드 랩터즈
+ENDSELECT
+
+
+@CARD_53610(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2000
+	CASE "C불가"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_53610(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 8
+素材条件종족 = 비행야수족
+;추가효과用
+지정素材カテゴリ = 레이드 랩터즈
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,53610) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_53610(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 비행야수족 레벨 8 몬스터 2장
+PRINTL 「RR」 몬스터를 엑시즈 소재로 하고 있는 이 카드는 각성 상태가 된다.
+PRINTL 이 카드의 효과의 발동에 대해서, 상대는 카드의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 각성 상태의 이 카드가 엑시즈 소환했을 경우에 발동할 수 있다.
+PRINTL 상대 필드의 마법 / 함정 카드를 전부 파괴한다.
+CALLFORM CARD_ABLE(0,필드起動,フリー誘発)
+PRINTL ②: 자신 / 상대 턴에, 이 카드의 엑시즈 소재를 1개 제거하고,
+PRINTL 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 공격력은 자신의 묘지의 「RR」 몬스터의 수 x 800 내린다.
+
+@CARDCAN_53610(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,53610)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX소환時 
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	SIF 마함数(対面者) <= 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 레이드 랩터즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_53610(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53610)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함全体",場所,"묘지",53610)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53610,10,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 레이드 랩터즈
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		攻撃力修正 = 800 * RESULT
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"永攻DOWN",攻撃力修正)
+	ENDIF
+ENDIF

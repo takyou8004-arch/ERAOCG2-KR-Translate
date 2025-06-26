@@ -1,0 +1,189 @@
+﻿@CARDNAME_81935,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아자미나 하마르티아
+	CASE "略称"
+RESULTS = 하마르티아
+	CASE "カテゴリ"
+RESULTS:0 = 아자미나
+ENDSELECT
+
+
+@CARD_81935(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_81935(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 둘 중 1개만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①: EX덱의 "아자미나" 융합 몬스터 1장을 상대에게 보여주고,
+PRINTL 그 레벨 4마다 1장, 자신 묘지에서 제외되어 있는 "죄보" 카드를 덱으로 되돌린다.
+PRINTL 그 후, 보여준 몬스터를 융합 소환 취급으로 특수 소환한다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 자신 묘지의 "죄보" 마법 / 함정 카드 1장을 자신 필드에 세트한다.
+PRINTL 이 턴, 이 효과로 세트한 카드와 동명 카드의 효과는 발동할 수 없다.
+
+
+
+@CARDCAN_81935(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,81935)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,81935)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,81935)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 아자미나
+	효과条件종류 = 융합
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 죄보
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,81935)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,81935)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 죄보
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_81935(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC カード추가先
+#DIM DYNAMIC 条件달성
+
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81935,1)
+	;カード발동確認
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 죄보
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		条件달성 = RESULT
+
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 아자미나
+		효과条件종류 = 융합
+		IF 条件달성 == 1
+			CALL 효과条件レベル_ADV(7,"以下")
+		ELSEIF 条件달성 == 2
+			CALL 효과条件レベル_ADV(11,"以下")
+		ELSEIF 条件달성 >= 3
+		ENDIF
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = RESULT
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_EX덱:選択カード")},"レベル"
+			IF RESULT < 8
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과範囲제외 = 1
+				효과条件カテゴリ = 죄보
+				효과条件行先플래그 = 덱行き
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ELSEIF RESULT >= 8 && RESULT < 12
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과範囲제외 = 1
+				효과条件カテゴリ = 죄보
+				효과条件行先플래그 = 덱行き
+				효과条件複数 = 2
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ELSEIF RESULT >= 12
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과範囲제외 = 1
+				효과条件カテゴリ = 죄보
+				효과条件行先플래그 = 덱行き
+				효과条件複数 = 3
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",選択カード)
+				SIF 듀얼리스트 == "자신"
+					リザルト：FUS소환 = 1
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81935,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 죄보
+		효과条件종류 = 마함全般
+		CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"裏側표시")
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			CALL CARD_EFFECT_PROHIB(듀얼리스트,選択カード_ID,0,1)
+		ENDIF
+	ENDIF
+ENDIF

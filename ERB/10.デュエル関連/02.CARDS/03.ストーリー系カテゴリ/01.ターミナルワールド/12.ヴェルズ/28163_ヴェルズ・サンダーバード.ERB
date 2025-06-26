@@ -1,0 +1,123 @@
+﻿@CARDNAME_28163,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 벨즈 썬더버드
+	CASE "略称"
+RESULTS = 벨즈 썬더버드
+	CASE "カテゴリ"
+RESULTS:0 = 벨즈
+ENDSELECT
+
+
+@CARD_28163(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1650
+	CASE "守備力"
+		RETURN 1050
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28163(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ①: 자신 상대 턴에 발동할 수 있다.
+PRINTL 이 카드는 소멸한다.
+PRINTL (소멸한 몬스터는 제외되며, 필드에 빈 공간이 있을 경우 엔드 페이즈 시에 특수 소환된다)
+PRINTL 그 후, 덱에서 "벨즈 썬더버드" 이외의 "벨즈" 몬스터 1장을 특수 소환할 수 있다.
+PRINTL 이 효과로 일반 몬스터를 특수 소환했을 경우, 추가로 덱에서 "벨즈" 몬스터 1장을 특수 소환할 수 있다.
+PRINTL 이 효과로 몬스터를 특수 소환했을 경우, 이 턴 자신은 어둠 속성 몬스터밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드가 제외 상태에서 특수 소환되어 있을 경우,
+PRINTL 이 카드의 공격력은 300 상승한다.
+
+@CARDCAN_28163(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28163)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,28163)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件任意 = 1
+	효과条件カテゴリ = 벨즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種제외
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_28163(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC カード名
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28163,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件任意 = 1
+		효과条件カテゴリ = 벨즈
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)	
+		IF RESULT == 1
+			CALLFORM CARD_{RESULT:1}("종류")
+			IF RESULT == 通常モン && モンスター数(듀얼리스트) < 5
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과条件任意 = 1
+				효과条件カテゴリ = 벨즈
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)	
+			ENDIF
+			SS소환可能속성 = 어둠속성
+			CALL CARD_SS_RESTRICTION(듀얼리스트)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,300)	
+ENDIF

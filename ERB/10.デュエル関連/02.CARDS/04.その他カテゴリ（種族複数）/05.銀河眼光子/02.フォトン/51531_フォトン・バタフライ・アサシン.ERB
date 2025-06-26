@@ -1,0 +1,125 @@
+@CARDNAME_51531,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 포톤 버터플라이 어새신
+	CASE "略称"
+RESULTS = Pt 환접의 암살자
+	CASE "カテゴリ"
+RESULTS:0 = 포톤
+ENDSELECT
+
+
+@CARD_51531(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2100
+	CASE "守備力"
+		RETURN 1800
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_51531(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51531) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_51531(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 몬스터 2체
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 자신의 메인 페이즈에 이 카드의 엑시즈 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 상대 필드의 몬스터 1장을 앞면 공격 표시로 하고, 그 공격력을 0으로 한다.
+
+
+@CARDCAN_51531(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51531)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,51531)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51531(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51531,1,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(対面者,"필드",選択カード,"表",1,上書きモード)
+			CALL SET_FIELD_INFO(対面者,"필드",選択カード,"永攻",- GETVAR(@"%対面者%_MZ_攻:選択カード"))
+		ENDIF
+	ENDIF
+ENDIF

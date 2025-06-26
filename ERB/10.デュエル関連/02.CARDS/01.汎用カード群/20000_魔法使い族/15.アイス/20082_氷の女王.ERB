@@ -1,0 +1,310 @@
+﻿@CARDNAME_20082,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 얼음의 여왕
+	CASE "略称"
+RESULTS = 얼음의 여왕
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_20082(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 2100
+	CASE "특수不可"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+	CASE "レア度"
+		RETURN ULR
+	CASE "추가日"
+		RETURN 250615
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20082(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 특수 소환할 수 없다.
+PRINTL 이 카드명의 ①②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 패의 이 카드를 상대에게 보여주고 발동할 수 있다. 덱에서 레벨 4 이하의 마법사족 / 물 속성 몬스터 1장을 패에 넣는다.
+PRINTL 그 후, 자신의 패 1장을 고르고 덱의 맨 위로 되돌린다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 상대 필드의 물 속성 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL (자신 필드가 '절대빙벽'일 경우, 대상이 되는 몬스터를 물 속성 이외에서도 고를 수 있다.)
+PRINTL 그 몬스터를 파괴하고, 자신 필드에 '빙주 토큰'(마법사족 / 물 / 레벨 4 / 공격력 1900 / 수비력 1200) 1장을 특수 소환한다.
+PRINTL (이 효과로 생성된 '빙주 토큰'은, 턴 종료시에 소멸한다.)
+CALLFORM CARD_ABLE(3,戦破壊→묘지,손패→묘지)
+PRINTL ③: 이 카드가 덱 이외에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지의 마법사족 효과 몬스터 3장을 고르고 덱으로 되돌리고, 자신의 묘지의 마법 카드 1장을 패에 넣는다.
+
+;氷の女王は、テーマの初動をサーチして패를 １장덱に戻すという、イリュージョン・オブ・카오스的な손패효과를 추가し、
+;さらに漫画版で披露できなかった상대 몬스터의 コントロール奪取を、고드름 토큰に変化させたうえで奪うという
+;雪の女王っぽいフレーバーを感じさせる효과にして추가している。フィールド마법があれば물속성 이외의 モンスターも氷柱にしてしまえる。
+;ただし、氷柱になったというのはフレーバー的なイメージで、実際は元になったカードは효과破壊されて묘지へ送られている。
+;（카드를 変化させてコントロール奪取して実質消滅させてしまえるのは非ERA카드가 持つ효과としてどうなんだ？　というところがあるため。）
+;現代ならフリーチェーンでも良さそうな효과だが起動효과にしている。そのほうが最上級몬스터의 趣（おもむき）が出るためである。
+;
+;③が、本来の氷の女王が持っている효과。さすがに元의 효과は貧弱すぎるので、こ의 효과も덱以外から送られればOKにしている。
+;덱에서 の묘지送りを明確に발동条件から外しているのは、ティアラなどの묘지肥やしGSで마법カード回収手段として使われることを避けるため。
+;특수소환不可の制限もつけているので、普通の묘지肥やしGSでは１度蘇生してから묘지へ送って발동条件を満たすという方法も取れなくなっている。
+;【블리자드 프린세스】では、クリスタル・ガールでターン終了時にサーチしつつ、①で물속성を손패に集めて융합素材として使うと효과를 無駄なく使える。
+;묘지の「아이스 돌」などの마법사족몬스터를 덱に戻せるようにもなっていて、少しだけ近代的なリソース循環もできるようにしている。
+
+;ちなみに、サーチ先は"わざと"水遣いやセレトリーチェ、エリア、東雲も含まれるようにしていて、このカード自体は縛りがつかない汎用カードである。
+
+
+@CARDCAN_20082(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成 = 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20082)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,20082)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 마법사족
+	효과条件속성 = 물속성
+	CALLFORM 효과条件レベル_ADV(4, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,20082)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVARS(@"%듀얼리스트%_フィールド名") !=  "絶対氷壁"
+		条件達成 += 1
+	
+	;물속성モンスターが상대 필드에 いるか確認（フィールド条件満たしたら속성条件はつかない）
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	SIF 条件達成 == 0
+		효과条件속성 = 물속성
+	효과条件除去種 = 破壊
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;자신의 필드에 고드름 토큰を出せるか確認（出せない時は발동できない：フレーバー的には敵を氷柱に変えて奪ってるので）
+	CALL CARD_SS_CHECK(듀얼리스트,120082,"")
+	SIF RESULT == 1
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지 || 종류 == 손패→묘지
+	SIF 발동済_3(듀얼리스트,20082)
+		RETURN 0
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件종족 = 마법사족
+	효과条件종류 = 효과全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20082(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成 = 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20082,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종족 = 마법사족
+		효과条件속성 = 물속성
+		CALLFORM 효과条件レベル_ADV(4, "以下")
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		IF RESULT == 1
+			;選択した손패の카드를 덱トップに置く処理
+			CALL FULLRESET
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			選択カード = RESULT
+			SIF 選択カード != 9999
+				CALL CARD_ADD_DECK_SPC(듀얼리스트,"손패",選択カード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20082,2)
+	IF RESULT == 0
+		SIF GETVARS(@"%듀얼리스트%_フィールド名") !=  "絶対氷壁"
+			条件達成 += 1
+		CALL FULLRESET
+		SIF 条件達成 == 0
+			효과条件속성 = 물속성
+		효과条件除去種 = 破壊
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+		IF RESULT == 1
+			;추가효과でトークンを生成する処理
+			CALL FULLRESET
+			CALL CARD_GENERATE(듀얼리스트,120082)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지 || 종류 == 손패→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20082,3)
+	IF RESULT == 0
+		;묘지 / 제외の마법사족モンスター３体を덱に戻す
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件종족 = 마법사족
+		효과条件종류 = 효과全般
+		효과条件複数 = 3
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			;묘지の마법カード１장을 손패に加える
+			CALL FULLRESET
+			효과条件종류 = 마법全般
+			CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+;---------------------------------------------------------------------------------------
+;고드름 토큰のカードデータ部分
+;---------------------------------------------------------------------------------------
+
+@CARDNAME_120082,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 빙주 토큰
+	CASE "略称"
+RESULTS = 빙주 토큰
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_120082(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 1200
+ENDSELECT
+
+
+@CARD_EXPLANATION_120082(종류)
+#DIM DYNAMIC 종류
+PRINTL 잘 닦여진 거울처럼 흐림 하나 없는 빙주. '얼음의 여왕'이 만든 그것은,
+PRINTL 불순물 없는 순수한 물로 이루어져 있으며, 그 아름다움에는 감탄이 절로 나올 정도이다.
+PRINTL 
+;PRINTL 氷の精霊たちにとっては、美麗な氷の彫像を創り出せることが一種のステータスなのだが、
+;PRINTL 「블리자드 프린세스」は繊細な技術と芸術センスが必要な彫像づくりがとても苦手で、
+;PRINTL いつも作ってる途中でイヤになって鈍器で粉砕してしまうのが家臣たちの悩みのタネになっている。
+
+@CARDCAN_120082(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20082)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン終了時強制
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_120082(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+IF 종류 == ターン終了時強制
+	;「고드름 토큰」は溶けて消えてしまいました・・・あーあ
+	CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+ENDIF
+

@@ -1,0 +1,148 @@
+﻿@CARDNAME_54300,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 카오스 앙헬－혼돈의 쌍익－
+	CASE "略称"
+RESULTS = 카오스 앙헬
+	CASE "カテゴリ"
+RESULTS:0 = 카오스
+ENDSELECT
+
+
+@CARD_54300(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 싱크로
+	CASE "속성"
+		RESULT:1 = 어둠속성
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 악마족 
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3500
+	CASE "守備力"
+		RETURN 2800
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_54300(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너＋튜너 이외의 빛 어둠속성 몬스터 1체 이상
+PRINTL 이 카드를 S소환하는 경우, 자신 필드의 빛 어둠속성 몬스터 1장을 튜너로 취급할 수 있다.
+CALLFORM CARD_ABLE(0,EX소환時 ,특수소환時)
+PRINTL ①：이 카드가 특수소환한 경우, 필드의 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드를 제외한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드는 이 카드의 S소재로 한 몬스터의 원래 속성에 따라 이하의 효과를 얻는다.
+PRINTL ●빛: 자신 필드의 S 몬스터는 몬스터 효과 내성을 얻는다.
+PRINTL ●어둠: 자신의 몬스터는 전투 내성을 얻는다.
+
+
+
+@CARDSUMMON_54300(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+지정素材속성:0 = 어둠속성
+지정素材속성:1 = 빛속성
+지정素材汎数 = 1
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件スーパー속성:0 = 어둠속성
+	素材条件スーパー속성:1 = 빛속성
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件속성:0 = 어둠속성
+	素材条件속성:1 = 빛속성
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,54300) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_54300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54300)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種EX덱
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 捨てる枚数
+#DIM DYNAMIC 与ダメージ
+#DIM DYNAMIC 消費カウンタ
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54300)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"제외")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_条達:場所"),0) == 1
+		CALL FULLRESET
+		효과条件종류 = 싱크로
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"モ耐")
+	ENDIF
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_条達:場所"),1) == 1
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐")
+	ENDIF
+ENDIF
+
+
+

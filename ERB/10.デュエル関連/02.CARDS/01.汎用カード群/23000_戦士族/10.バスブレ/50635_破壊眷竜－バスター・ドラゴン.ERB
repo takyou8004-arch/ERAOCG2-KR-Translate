@@ -1,0 +1,234 @@
+﻿@CARDNAME_50635,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 파계만룡-버스터드래곤
+	CASE "略称"
+RESULTS = 파계만룡-BD
+	CASE "カテゴリ"
+RESULTS:0 = 파괴검
+ENDSELECT
+
+
+@CARD_50635(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 2800
+	CASE "성별"
+		RETURN 牝性
+	CASE "レア度"
+		RETURN SPR
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50635(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50635) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50635(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1기 이상
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한, 상대 필드의 몬스터는 드래곤족이 된다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 자신 필드에 「버스터 블레이더」 몬스터가 존재하지 않을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지에서 「버스터 블레이더」 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ③: 상대 턴에 1번, 자신 필드의 「버스터 블레이더」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 자신의 묘지의 「파괴검」 몬스터 1장을 장착 카드로서 대상의 몬스터에게 장착한다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ④: 자신 필드의 「버스터 블레이더」 몬스터가 파괴될 경우,
+PRINTL 대신에 필드 / 묘지의 이 카드를 장착할 수 있다.
+;分かりにくくなるしこのままでいいや
+PRINTL ⑤: 이 카드를 장착하고 있는 몬스터는 파괴 내성, 전투 제외 내성을 얻는다.
+
+
+@CARDCAN_50635(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50635)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF !GROUPMATCH(ゾーン,"마함")
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF !GROUPMATCH(ゾーン,"필드")
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	IF ターンプレイヤー == 듀얼리스트
+		SIF 종류 == フリー誘発
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+		CALL CARD_SS_CHECK(듀얼리스트,21025,"묘지")
+	
+			RETURN 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 버스터 블레이더
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 버스터 블레이더
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+
+	ELSEIF ターンプレイヤー != 듀얼리스트
+		SIF 마함数(듀얼리스트) >= 5
+			RETURN 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 버스터 블레이더
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 파괴검
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF !GROUPMATCH(ゾーン,"필드","묘지")
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	TRYCALLFORM CARDNAME_{破壊대상ID},"カテゴリ"
+	SIF !MATCH(RESULTS,"버스터 블레이더")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_50635(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"戦除")
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_OTHER(듀얼리스트,"상대필드",場所,"種",드래곤족,50635)
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50635,10)
+	IF RESULT == 0
+		IF ターンプレイヤー == 듀얼리스트
+			CALL FULLRESET
+			효과範囲묘지 = 1
+효과条件名前 = 버스터 블레이더
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		ELSEIF ターンプレイヤー != 듀얼리스트
+			CALL FULLRESET
+			효과条件カテゴリ = 버스터 블레이더
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			IF RESULT != 9999
+				選択カード = RESULT
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 파괴검
+				효과条件종류 = モン全般
+				CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,"필드",選択カード,,50635)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50635)
+	IF RESULT == 0
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件固定 = 破壊대상場所
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+		SIF RESULT
+			RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

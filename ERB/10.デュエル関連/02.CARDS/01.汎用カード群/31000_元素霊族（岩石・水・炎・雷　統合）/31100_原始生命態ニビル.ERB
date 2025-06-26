@@ -1,0 +1,168 @@
+﻿@CARDNAME_31100,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 원시생명체 니비루
+	CASE "略称"
+RESULTS = 원시생명체니비루
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+@CARD_31100(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 11
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 600
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_31100(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,손패起動,フリー誘発)
+PRINTL ①: 상대가 5체 이상의 몬스터를 소환 / 특수 소환한 자신 / 상대 턴의 메인 페이즈에 발동할 수 있다.
+PRINTL 자신 / 상대 필드의 앞면 표시 몬스터를 가능한 한 릴리스하고, 이 카드를 패에서 특수 소환한다.
+PRINTL 그 후, 상대 필드에 "원시생명체 토큰"(암석족 / 빛 / 레벨 11 / 공격력 ? / 수비력 ?) 1장을 특수 소환한다.
+PRINTL 이 토큰의 공격력 / 수비력은, 이 효과로 파괴한 몬스터의 공격력을 합계한 수치가 된다.
+
+
+
+@CARDCAN_31100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 戦闘カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31100)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,31100)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,31100,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	SIF GETVAR(@"%対面者%_モン出現数") < 5
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_31100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 攻撃力手渡
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31100,2)
+	IF RESULT == 0
+
+		CALL FULLRESET
+		효과추가종류 = 40
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드全体",場所,"リリース")
+		攻撃力手渡 = RESULT:2
+
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+
+		CALL FULLRESET
+		효과추가종류:0 = 攻撃力手渡 + 100000
+		효과추가종류:1 = 攻撃力手渡 + 150000
+		CALL CARD_GENERATE(対面者,131100)
+	ENDIF
+ENDIF
+
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+
+@CARDNAME_131100,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 원시생명체 토큰
+	CASE "略称"
+RESULTS = 원시생명체
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_131100(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 11
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+
+@CARDCAN_131100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+RETURN 0
+

@@ -1,0 +1,131 @@
+﻿@CARDNAME_4033,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 뜨거운 침략 레드존Z
+	CASE "略称"
+RESULTS = 레드존Z
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:1 = 침략자
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_4033(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_4033(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("INVASION")
+PRINTL 이 카드 이름의 ②의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①: 『침략』
+PRINTL 자신의 화염 속성 몬스터가 공격할 경우에 발동할 수 있다.
+PRINTL 자신의 패에 있는 이 카드를 그 위에 겹쳐도 좋다.
+CALLFORM CARD_ABLE(1,특수소환時)
+PRINTL ②: 이 카드가 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 상대에게 1500 데미지를 준다.
+CALL TEXT_DECORATION("INVASION")
+
+@CARDSUMMON_4033(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+RETURN 0
+
+
+@CARDCAN_4033(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4033)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	CALLFORM ATTACK_CARD(듀얼리스트,"속성")
+	SIF !MATCH(RESULT,화염속성)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,4033)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4033(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC ダメージ量
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4033)
+	IF RESULT == 0
+		CALL INVASION(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4033,1)
+	IF RESULT == 0
+		ダメージ量 = 1500
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+	ENDIF
+ENDIF

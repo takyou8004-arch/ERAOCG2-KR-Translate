@@ -1,0 +1,74 @@
+﻿;-------------------------------------------------
+;커닐링구스
+;애무계커맨드　レベル1
+;-------------------------------------------------
+@COM1
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 5
+DOWNBASE:기력 += 50
+
+LOCAL = 150
+;혀を使う조교では、조교者の혀사용자에 따라、쾌락のソース増加
+SIF TALENT:MASTER:혀사용자
+	TIMES LOCAL , 1.50
+;고양이혀では減少
+SIF TALENT:MASTER:고양이혀
+	TIMES LOCAL , 0.75
+CALL SOURCE_CALC_쾌Ｃ(TARGET, MASTER, LOCAL)
+
+CALL SOURCE_CALC_액체(TARGET, MASTER, 60)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 80)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 100)
+
+IF TALENT:TARGET:스위트바디
+	CALL RECOVER_PERMIL(MASTER,50,"체력",1)
+	CALL RECOVER_PERMIL(MASTER,100,"기력",1)
+ENDIF
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;奴隷のＶ⇔조교者の口の汚れが이동
+STAIN:3 |= STAIN:MASTER:0
+STAIN:MASTER:0 |= STAIN:3
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 3
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 3
+ENDIF
+
+
+;조교者が고양이혀持ちの場合は、조교者に가학쾌락경험を추가
+SIF TALENT:MASTER:고양이혀
+	EXP:MASTER:가학쾌락경험 += 1
+;펠라경험
+EXP:MASTER:펠라경험 ++
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+
+@COM_ABLE1
+;커닐링구스実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(1)
+	RETURN RESULT
+;性器が汚れているとMASTER의場合커닐링구스はできない（조교者が汚れ無視か愛液、모유のよごれならＯＫ）
+SIF STAIN:3 >= 2 && (STAIN:3 != 16 && STAIN:3 != 17) && TALENT:MASTER:악취내성 < 2
+	RETURN 0
+;하반신착의
+SIF TEQUIP:0 & 4
+	RETURN 0
+;女か후타나리じゃないとダメ
+SIF !(TALENT:2 & 1)
+	RETURN 0
+RETURN 1

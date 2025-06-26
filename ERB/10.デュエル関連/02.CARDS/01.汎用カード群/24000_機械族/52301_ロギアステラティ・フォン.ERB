@@ -1,0 +1,175 @@
+﻿@CARDNAME_52301,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 로기아스텔라 티 폰
+	CASE "略称"
+RESULTS = 액재성 티폰
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_52301(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 2900
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_52301(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 12
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,52301) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_52301(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 12 몬스터 × 2
+CALLFORM CARD_ABLE(0,EX덱起動)
+PRINTL ①: 이 카드는 상대가 EX덱에서 2장 이상의 몬스터를 특수 소환한 턴 및 그 다음 턴에 발동할 수 있다.
+PRINTL 자신 필드의 몬스터 위에 겹쳐서 X 소환한다.
+PRINTL 이 방법으로 특수 소환한 턴, 자신은 몬스터를 특수 소환할 수 없다.
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: X 소환한 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 서로 공격력 3000 이상의 몬스터의 효과를 발동할 수 없다.
+
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ③: 1턴에 1번, 이 카드의 X 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 상대 필드의 몬스터 1장을 패로 되돌린다.
+
+
+@CARDCAN_52301(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52301)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,52301)
+	SIF RESULT == 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_TYPHON") == 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種EX덱
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52301(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52301)
+	IF RESULT == 0
+		CALL RESETCONDITION_MAT
+		必要素材数 = 1
+		重ねてＸ = 1
+		TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+		CALL SET_PLAYER_INFO(듀얼리스트,"SS制限", 2)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52301,10,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"손패")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件以攻撃力 = 3000
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"発無")
+	CALL FULLRESET
+	효과条件以攻撃力 = 3000
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"発無")
+ENDIF
+
+
+
+@CARDSUMMON_AA_52301
+WAIT
+CALLFORM CHARA_CUTIN("ロギアステラティ フォン","厄　災　の　星　テ　ィ　 　フ　ォ　ン","Super Starslayer TY-PHON - Sky Crisis",,,,1)
+WAIT

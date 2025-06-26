@@ -1,0 +1,159 @@
+﻿@CARDNAME_57132,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 리브로맨서 - 파이어버스트
+	CASE "略称"
+RESULTS = 파이어버스트
+	CASE "カテゴリ"
+RESULTS:0 = 리브로맨서
+ENDSELECT
+
+
+@CARD_57132(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 의식
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2800	
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_57132(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 出処
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 7
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,57132) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_57132(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「리브로맨서」 카드에 의해 강림.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 전투 내성을 가지고, 상대에게 주는 전투 데미지는 배가 된다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 1번의 배틀 페이즈 중에 2번까지 몬스터에게 공격할 수 있다.
+CALL CARD_ABLE(0,발동強制誘発)
+PRINTL ③: 카드의 효과가 발동할 때마다, 또는 몬스터가 공격 선언을 할 때마다,
+PRINTL 이 카드의 공격력 수비력은 200 올라간다.
+
+
+@CARDCAN_57132(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57132)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == バトル開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF モンスター数(対面者) != 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+ 
+@CARDEFFECT_57132(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+
+ELSEIF 종류 == バトル開始時強制 || 종류 == 특수소환時
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",2,1)
+
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",0,1)
+	
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",200)
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",200)
+
+	IF 戦闘場所(듀얼리스트) == 場所
+		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ倍化",3,1)
+	ENDIF
+
+ELSEIF 종류 == 발동強制誘発
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",200)
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",200)
+ENDIF

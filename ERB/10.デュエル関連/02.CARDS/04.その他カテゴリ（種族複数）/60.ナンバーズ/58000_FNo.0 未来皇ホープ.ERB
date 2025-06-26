@@ -1,0 +1,159 @@
+﻿@CARDNAME_58000,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = FNo.0 미래황 호프
+	CASE "略称"
+RESULTS = F#0 미래황 호프
+	CASE "カテゴリ"
+RESULTS:0 = 넘버즈
+ENDSELECT
+
+
+@CARD_58000(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족 
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_58000(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件종류 = 엑시즈
+反素材条件カテゴリ = 넘버즈
+素材条件同レベル起動 = 2
+なんでもＸ = 1
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,58000) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_58000(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 'No.' 몬스터 이외의 같은 랭크의 엑시즈 몬스터 2장
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 전투 내성을 가지고, 이 카드의 전투로 발생하는 서로의 전투 데미지는 0이 된다.
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ②: 이 카드가 상대 몬스터와 전투를 실행한 데미지 스텝 종료 시에 발동할 수 있다.
+PRINTL 그 상대 몬스터의 컨트롤을 턴 종료 시까지 얻는다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ③: 필드의 이 카드가 효과로 파괴될 경우, 대신에 이 카드의 엑시즈 소재를 1개 제거할 수 있다.
+
+
+@CARDCAN_58000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58000)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_58000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ無効",3,2)
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58000)
+	IF RESULT == 0
+		選択カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		효과추가종류 = 5
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"強奪")
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58000,0,X消費1)
+	IF RESULT == 0
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

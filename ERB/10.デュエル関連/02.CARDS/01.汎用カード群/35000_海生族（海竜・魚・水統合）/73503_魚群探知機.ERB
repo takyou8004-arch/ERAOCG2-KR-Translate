@@ -1,0 +1,106 @@
+﻿@CARDNAME_73503,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 어군 탐지기
+	CASE "略称"
+RESULTS = 어군 탐지기
+	CASE "カテゴリ"
+RESULTS:0 = 바다
+ENDSELECT
+
+
+@CARD_73503(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73503(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드 명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALL CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①: 덱에서 레벨 7 이하의 "바다" 몬스터 또는 물속성의 일반 몬스터 1장을 패에 추가한다.
+PRINTL 자신 필드가 "바다"인 경우, 추가로 덱에서 물속성의 일반 몬스터 1장을 특수 소환할 수 있다.
+PRINTL 
+
+@CARDCAN_73503(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성,5
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73503)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 바다
+	CALL 효과条件レベル_ADV(7, "以下")
+	효과条件スーパー종류 = 通常モン
+	효과条件スーパー속성 = 물속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73503(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성,5
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73503)
+	IF RESULT == 0
+		;通常마법汎用발동後묘지送り処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 바다
+		CALL 효과条件レベル_ADV(7, "以下")
+		효과条件スーパー종류 = 通常モン
+		효과条件スーパー속성 = 물속성	
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+		IF GETVARS(@"%듀얼리스트%_フィールド名") == "바다" && モンスター数(듀얼리스트) < 5
+PRINTL 덱에서 물속성의 일반 몬스터를 특수 소환하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+			IF RESULT == 0
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과条件종류 = 通常モン
+				효과条件속성 = 물속성
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

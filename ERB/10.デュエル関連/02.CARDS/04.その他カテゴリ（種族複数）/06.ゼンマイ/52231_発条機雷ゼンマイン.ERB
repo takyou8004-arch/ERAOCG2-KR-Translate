@@ -1,0 +1,120 @@
+﻿@CARDNAME_52231,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 태엽 지뢰 젠마인
+	CASE "略称"
+RESULTS = 젠마인
+	CASE "カテゴリ"
+RESULTS:0 = 젠마이
+ENDSELECT
+
+
+@CARD_52231(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 2100
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52231(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 3
+
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,52231) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52231(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 레벨 3 몬스터 2장
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ①: 필드 위의 이 카드가 파괴될 경우,
+PRINTL 대신 이 카드의 엑시즈 소재 1개를 제거할 수 있다.
+PRINTL 제거했을 경우, 추가로 상대 필드 위의 카드 1장을 선택하여 파괴한다.
+
+
+
+@CARDCAN_52231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52231)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"戦闘","효과")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52231,0,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+
+

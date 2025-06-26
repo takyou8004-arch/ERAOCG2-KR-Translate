@@ -1,0 +1,122 @@
+﻿@EVENTTRAIN0
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 경험표시
+VARSET TARGET
+
+;初期化
+MASTER = 0
+SIF CFLAG:MASTER:현재위치 == 100
+	CFLAG:MASTER:현재위치 = CFLAG:MASTER:시작위치
+
+FOR 캐릭터_ID,0,CHARANUM
+	;衣装설정
+	CALL CLOTHES_SETTING(캐릭터_ID)
+	CALL CLOTHES_SETTING_TRAIN(캐릭터_ID)
+	;사정、발기、무드、이성、분노
+	BASE:캐릭터_ID:사정 = 0
+	BASE:캐릭터_ID:발기 = 0
+	BASE:캐릭터_ID:무드 = 0
+	BASE:캐릭터_ID:이성 = MAXBASE:캐릭터_ID:이성
+	BASE:캐릭터_ID:분노 = 0
+	BASE:캐릭터_ID:술기운 = 0
+	BASE:캐릭터_ID:만족 = 1000
+	BASE:캐릭터_ID:절정 = 0
+	BASE:캐릭터_ID:쾌감 = 0
+	CFLAG:캐릭터_ID:발기도 = 0
+	CFLAG:캐릭터_ID:동행 = 0
+	;경험표시용
+	FOR 경험표시,0,100
+		TCVAR:캐릭터_ID:(400 + 경험표시) = EXP:캐릭터_ID:경험표시
+	NEXT
+	;성교플래그
+	TEQUIP:캐릭터_ID:Ｖ섹스 = -1
+	TEQUIP:캐릭터_ID:Ａ섹스 = -1
+	TCVAR:캐릭터_ID:V삽입관리플래그 = -1
+	TCVAR:캐릭터_ID:A삽입관리플래그 = -1
+	;中出し표시용플래그
+	TCVAR:캐릭터_ID:질내사정대상 = -1
+	TCVAR:캐릭터_ID:애널사정대상 = -1
+	;사정処理用文字列変数
+	CSTR:캐릭터_ID:10 = /
+	CSTR:캐릭터_ID:11 = /
+NEXT
+SIF SAVESTR:10 == ""
+	SAVESTR:10 = /
+;요리
+FLAG:20 = 0
+
+;時間
+IF TIME >= CFLAG:MASTER:312
+	DAY ++
+	DAY:3 ++
+	IF DAY:3 == 31
+		DAY:3 -= 30
+		DAY:2 += 1
+		IF DAY:2 == 5
+			DAY:2 -= 4
+		ENDIF
+	ENDIF
+	TIME -= 1440
+ENDIF
+
+
+
+;30分毎に캐릭터を이동させる
+LOCAL = 1
+WHILE LOCAL
+	IF TIME + 30 < CFLAG:MASTER:312
+		TFLAG:시간경과 = TIME + 1440 * DAY
+		TIME += 30
+		CALL CHARA_MOVEMENT("B4TRAIN前")
+	ELSE
+		FOR 캐릭터_ID,0,CHARANUM
+			;캐릭터_IDの보존
+			CFLAG:캐릭터_ID:전턴위치 = CFLAG:캐릭터_ID:현재위치
+		NEXT
+		TIME =  CFLAG:MASTER:312
+		TFLAG:시간경과 = TIME + 1440 * DAY
+		CALL CHARA_MOVEMENT("B4TRAIN後")
+		BREAK
+	ENDIF
+WEND
+;기상시간の기록
+CFLAG:MASTER:기상시간 = 1440 * DAY + TIME
+
+;체력기력の回復
+BASE:MASTER:체력 += MAXBASE:MASTER:체력 * (CFLAG:MASTER:기상시간 - CFLAG:MASTER:취침시간 ) / (2 * (480 -120 * TALENT:MASTER:회복속도))
+BASE:MASTER:기력 += MAXBASE:MASTER:기력 * (CFLAG:MASTER:기상시간 - CFLAG:MASTER:취침시간 ) / (480 -120 * TALENT:MASTER:회복속도)
+BASE:MASTER:체력 = MIN(MAXBASE:MASTER:체력,BASE:MASTER:체력)
+BASE:MASTER:기력 = MIN(MAXBASE:MASTER:기력,BASE:MASTER:기력)
+BASE:MASTER:발기 = MIN(1000 * BASE:MASTER:체력 / MAXBASE:MASTER:체력,1500)
+
+CALL GOOD_MORNING
+
+VARSET 日々_特価品
+FOR カウンタ,0,100
+	SIF カウンタB >= 10
+		BREAK
+	캐릭터_ID = RAND:CHARANUM
+	SIF MATCH(日々_特価品,캐릭터_ID)
+		CONTINUE
+	SIF TALENT:캐릭터_ID:외부자 >= 1
+		CONTINUE
+	SIF TALENT:캐릭터_ID:듀얼리스트 >= 1
+		CONTINUE
+	日々_特価品:カウンタB = 캐릭터_ID
+	カウンタB ++
+NEXT
+IF CFLAG:MASTER:감기플래그 >= 1
+	CFLAG:MASTER:감기플래그 -= 1
+	IF CFLAG:MASTER:감기플래그 >= 1
+		PRINTFORMW 엣……취、감기 기운이 있다……오늘은 느긋하게 있는 편이 좋을 것 같다。
+	ELSE
+		PRINTFORMW 좋아、감기가 나았다！！
+	ENDIF
+ENDIF
+MASTER = 0
+
+CALL MORNING_COMMUNICATION
+
+CALL MORNING_EVENT

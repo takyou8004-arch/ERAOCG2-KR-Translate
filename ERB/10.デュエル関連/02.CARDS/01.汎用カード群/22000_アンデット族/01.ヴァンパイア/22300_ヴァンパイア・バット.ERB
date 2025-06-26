@@ -1,0 +1,113 @@
+﻿@CARDNAME_22300,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 뱀파이어 박쥐
+	CASE "略称"
+RESULTS = Vmp 박쥐
+	CASE "カテゴリ"
+RESULTS:0 = 뱀파이어
+ENDSELECT
+
+
+@CARD_22300(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 1200
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_22300(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 자신 필드의 언데드족 몬스터의 공격력은 200 올린다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ②: 필드의 이 카드가 전투 / 효과로 파괴될 경우,
+PRINTL 대신에 덱에서 「뱀파이어」 몬스터 1장을 묘지로 보낼 수 있다.
+PRINTL 
+
+@CARDCAN_22300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,22300)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 뱀파이어
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_22300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF  종류 == 攻守変動
+	CALL FULLRESET
+	효과条件종족 = 언데드족
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,200)
+
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,22300)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 뱀파이어
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+

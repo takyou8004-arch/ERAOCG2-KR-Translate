@@ -1,0 +1,167 @@
+﻿@CARDNAME_173631,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 단죄의 멸룡 저지먼트 드라고니스 Lv4
+	CASE "略称"
+RESULTS = 단죄의 멸룡 Lv4
+	CASE "カテゴリ"
+RESULTS:0 = 멸룡
+		RESULTS:4 = 배틀 스피릿
+ENDSELECT
+
+
+@CARD_173631(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 11
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+	CASE "특수不可"
+		RETURN 1
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_173631(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 특수 소환할 수 없다.
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없으며, ①의 효과는 듀얼 중에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(20,소환時)
+PRINTL ①: 이 카드가 소환했을 경우에 발동할 수 있다.
+PRINTL 다음 상대 턴을 스킵한다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 완전 내성과 단일 공격을 가진다.
+CALLFORM CARD_ABLE(3,バトル開始時)
+PRINTL ③: 서로의 배틀 페이즈 시작 시에, 이 카드 이외의 턴 플레이어의 필드의 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드를 파괴하고, 이 카드의 공격력을 1000 올리고, 턴 종료 시까지 공격 횟수를 1회 늘린다.
+
+@CARDCAN_173631(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,173631)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	SIF 발동済_D1(듀얼리스트,173631)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == バトル開始時
+	SIF 발동済_3(듀얼리스트,173631)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	IF ターンプレイヤー != 듀얼리스트
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件除去種 = 묘지
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		CALL FULLRESET
+		효과条件他所 = 1
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0	
+	ENDIF	
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_173631(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択レベル
+#DIM DYNAMIC 選択カード_ID
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,173631,20)
+	IF RESULT == 0
+		SETCOLOR C_RED
+		PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+		PRINTL
+		PRINTFORML 光も闇も食らう無の滅龍が、咎人の時をも断罪する……！
+		PRINTL
+		PRINTFORML %듀얼리스트%는추가ターンを得ました。
+		PRINTL
+		CUSTOMDRAWLINE ―
+		RESETCOLOR
+		PRINTFORMW 
+		CALL FULLRESET
+		CALL SET_PLAYER_INFO(듀얼리스트,"ターンスキップ",1,1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"単攻")
+ELSEIF 종류 == バトル開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,173631,3)
+	IF RESULT == 0
+		IF ターンプレイヤー == 듀얼리스트
+			CALL FULLRESET
+			효과条件他所 = 1
+			효과範囲마함 = 1
+			효과範囲필드 = 1
+			효과条件行先플래그 = 破壊行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",1000)
+			ENDIF
+		ELSE
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+			IF RESULT == 1
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",1000)
+			ENDIF		
+		ENDIF
+	ENDIF
+ENDIF

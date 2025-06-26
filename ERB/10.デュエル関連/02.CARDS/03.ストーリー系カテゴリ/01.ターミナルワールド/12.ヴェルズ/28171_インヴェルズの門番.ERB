@@ -1,0 +1,125 @@
+﻿@CARDNAME_28171,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 인벨즈의 문지기
+	CASE "略称"
+RESULTS = 침략자의 문지기
+	CASE "カテゴリ"
+RESULTS:0 = 인벨즈
+RESULTS:1 = 벨즈
+ENDSELECT
+
+
+@CARD_28171(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족 
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28171(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 수비력은 1900 올라간다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ②: 패의 「벨즈」 몬스터 1장을 보여주고 발동할 수 있다.
+PRINTL 이 턴의 일반 소환권을 1개 늘린다.
+PRINTL 레벨 5 이상의 몬스터를 보여주고 이 효과를 발동했을 경우,
+PRINTL 추가로 덱에서 레벨 3 이하의 「인벨즈」 몬스터 1장을 묘지로 보내도 된다.
+
+
+@CARDCAN_28171(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28171)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,28171)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 벨즈
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1 
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28171(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 설정レベル
+#DIM DYNAMIC 選択レベル
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28171,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 벨즈
+		효과条件종류 = モン全般
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			소환権 ++
+
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_손패:選択カード")}, "レベル"
+			選択レベル = RESULT
+			IF 選択レベル >= 5
+				CALL FULLRESET
+				효과条件カテゴリ = 인벨즈
+				효과条件종류 = モン全般
+				효과条件任意 = 1
+				CALL 효과条件レベル_ADV(3, "以下")
+				CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,0,1900)
+ENDIF

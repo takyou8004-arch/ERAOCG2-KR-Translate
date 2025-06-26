@@ -1,0 +1,151 @@
+@CARDNAME_59823,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 사바트리스의 마법소녀 시트리
+	CASE "略称"
+		RESULTS = SB 마법소녀
+	CASE "カテゴリ"
+		RESULTS:0 = 사바트리스
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59823(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 500
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性	
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_59823(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 3
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件カテゴリ = 사바트리스
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,59823)
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_59823(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①：자신 메인 페이즈에、상대 필드에 성별을 가진 몬스터가 존재할 경우 발동할 수 있다.。
+PRINTL 상대 몬스터 1장에 악성카운터를 놓고、발정시킨다。
+CALL CARD_ABLE(2,지속효과)
+PRINTL ②：이 카드가 필드에 존재하는 한、
+PRINTL 상대 필드의 악성카운터가 놓인 몬스터는 공격선언 할 수 없으며、
+PRINTL 효과를 발동할 수 없고、전투파괴내성 표시변경불가를 얻는다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_59823(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59823)
+SIF RESULT == 1
+    RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,59823)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 성별在
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 常在無効
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59823(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59823,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"選択")
+		IF RESULT == 1
+			CALL CARD_SELECT(듀얼리스트,他参照選択カード + 2000)
+			CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"悪Ｃ",1)
+			CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"発情",2,1)
+			CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"接可",2,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件悪Ｃ所持 = 1
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"戦耐",2,1)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"表固",2,1)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"戦無")
+ELSEIF  종류 == 常在無効
+	CALL FULLRESET
+	효과条件悪Ｃ所持 = 1
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+ENDIF

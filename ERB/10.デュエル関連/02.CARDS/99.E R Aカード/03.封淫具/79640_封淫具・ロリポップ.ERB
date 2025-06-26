@@ -1,0 +1,194 @@
+﻿@CARDNAME_79640,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 봉음구 롤리팝
+	CASE "略称"
+		RESULTS = 봉음 목사탕
+	CASE "カテゴリ"
+		RESULTS:0 = 봉음구
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79640(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 装備마법
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	;CASE "分割"
+	;	RETURN 효과なし
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79640(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：이 카드는 발동 후、상대 플레이어에게 장착된다。
+CALL CARD_ABLE(2,마함起動,필드起動)
+PRINTL ②：자신 / 상대턴에 자신 필드에 "봉음구」장착마법카드가 ５종류이상 존재할 경우에 발동할 수 있다。
+PRINTL 상대 플레이어를 파괴한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79640(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79640)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || 종류 == 필드起動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 봉음구
+	효과条件종류 = 装備마법
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == リアクション효과
+	SIF !GROUPMATCH(ゾーン,"마함","필드")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79640(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 조교강도
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79640)
+	IF RESULT == 0
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상 = RESULT
+
+			PRINTFORML %CALLNAME:조교대상%은 버튼을 눈앞에 슬쩍 보여져、등줄기가 오싹오싹하며 떨렸다。
+			PRINTFORML 그것이 어떤것인지 알고있으면서도……제대로 된 저항은 불가능하고 목을 좌우로 계속 저었다。
+			PRINTFORMW 마치 목숨구걸을 하는것처럼 %CALLNAME:조교대상%는 쳐다보지만……。
+			PRINTFORMW 딸깍………
+			PRINTFORMW ……
+			PRINTFORMW …
+
+			CALL EROTIC_MOVE("Ｍ単発",조교대상,-1,3000)
+			CALL EROTIC_MOVE("Ｃ単発",조교대상,-1,3000)
+			CALL EROTIC_MOVE("Ｖ単発",조교대상,-1,3000)
+			CALL EROTIC_MOVE("Ｂ単発",조교대상,-1,3000)
+			CALL EROTIC_MOVE("Ａ単発",조교대상,-1,3000)
+		ELSE
+
+			PRINTFORML %CALLNAME:조교대상%은 버튼을 눈앞에 슬쩍 보여져、등줄기가 오싹오싹하며 떨렸다。
+			PRINTFORML 그것이 어떤것인지 알고있으면서도……제대로 된 저항은 불가능하고 목을 좌우로 계속 저었다。
+			PRINTFORMW 마치 목숨구걸을 하는것처럼 %CALLNAME:조교대상%는 쳐다보지만……。
+			PRINTFORMW 딸깍………
+			PRINTFORMW ……
+			PRINTFORMW …
+		ENDIF
+		CALL SET_PLAYER_INFO(듀얼리스트,"듀얼패배플래그",4,1)
+		SETCOLOR C_RED
+		PRINTFORML 
+		PRINTFORMW 상대 플레이어는 파괴되어버렸습니다。
+		RESETCOLOR
+		実績_進行보존:54 = 1
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79640)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상 = RESULT
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과条件カテゴリ = 봉음구
+			효과条件종류 = 装備마법
+			효과条件固名前起動 = 1
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			조교강도 = RESULT
+			IF 조교대상 >= 0
+				SETCOLOR C_PINK
+				PRINTFORML 
+				PRINTFORML %CALLNAME:조교대상%의 목에 봉음구 롤리팝이 장착되었다。
+				RESETCOLOR
+				CALL EROTIC_MOVE("Ｍ単発",조교대상,-1,50 * 조교강도)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == リアクション효과
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	IF RESULT != -1
+		조교대상 = RESULT
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = 봉음구
+		효과条件종류 = 装備마법
+		효과条件固名前起動 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		조교강도 = RESULT
+		IF 조교대상 >= 0
+			SETCOLOR C_PINK
+			PRINTFORML 
+			PRINTFORML %CALLNAME:조교대상%은 목을 달콤한 진동으로 간지럽혀졌다。
+			RESETCOLOR
+			CALL EROTIC_MOVE("Ｍ単発",조교대상,-1,50 * 조교강도)
+		ENDIF
+	ENDIF
+ENDIF

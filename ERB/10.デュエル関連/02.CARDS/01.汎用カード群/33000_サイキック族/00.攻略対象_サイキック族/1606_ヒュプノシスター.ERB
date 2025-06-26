@@ -1,0 +1,149 @@
+﻿@CARDNAME_1606,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 흔들리는 눈의 최면술사-
+	CASE "略称"
+RESULTS = 최면술사-
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1606(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+			RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1300
+	CASE "守備力"
+		RETURN 1400
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1606(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 필드의 앞면 표시의 마법 / 함정 카드의 수에 따라 이하의 효과를 적용한다.
+PRINTL ●1장 이상일 경우: 이 카드의 공격력 / 수비력은 800 올린다.
+PRINTL ●2장 이상일 경우: 덱에서 「흔들리는 눈빛」 1장을 패에 추가할 수 있다.
+PRINTL ●3장 이상일 경우: 이 카드는 공격 유도와,
+PRINTL 「이 카드가 특수소환된 몬스터와 전투를 실행할 경우 발동할 수 있다. 그 몬스터를 파괴한다」를 얻는다.
+PRINTL ●4장 이상일 경우: 상대 필드에 존재하는 몬스터 1장의 컨트롤을 얻는다.
+
+@CARDCAN_1606(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1606)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,1606)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF GETVAR(@"%対面者%_MZ_召種:%対面者%_戦闘カード") == 召種通常
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1606(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 全마법함정
+#DIM DYNAMIC 破壊カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1606,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과範囲상대마함 = 1
+		효과条件표시 = 表側표시
+		효과条件CNT = 1		
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		全마법함정 = RESULT
+		IF 全마법함정 >= 1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",800)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",800)
+		ENDIF
+		IF 全마법함정 >= 2
+			CALL FULLRESET
+효과条件名前 = 흔들리는 눈빛
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+		IF 全마법함정 >= 3
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"攻誘",2,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+		ENDIF
+		IF 全마법함정 >= 4
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1606)
+	IF RESULT == 0
+		破壊カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",破壊カード,"묘지")
+	ENDIF
+ENDIF
+

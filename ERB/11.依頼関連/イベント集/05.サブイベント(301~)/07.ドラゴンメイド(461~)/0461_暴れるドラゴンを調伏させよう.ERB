@@ -1,0 +1,453 @@
+@IRAI_EVENT_461(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+;こちらで462番、8462番などの番号を使用してますので、
+;もし462番の依頼を作成する場合には、デュエル이벤트を挟まないでください
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP-LDM)날뛰는 드래곤을 조복시키자
+	CASE "이벤트種"
+		RETURN 이벤트_通常
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL ある日、カードの정령たちが暴れるドラゴンを退治して欲しいとお願いして来た。
+		PRINTL 
+		PRINTL 
+		PRINTL 報酬：？
+	CASE "条件"
+		;천년도어の解放が必要
+		SIF ITEM:천년도어 == 0
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_461(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC 분기플래그
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = -1
+
+IF 依頼_달성상황 == 0
+	PRINTFORMW 「助けてユーシャー様！ドラゴンが暴れて村がメチャクチャにされてるの！」
+	PRINTFORMW ある日、部屋でのんびりしていたら見た事もない小さなカードの정령たちがクローゼットから押し掛けてそうお願いして来た。
+	PRINTFORMW 助けた所で、この정령たちから報酬を貰えるとは思えないが……
+	PRINTFORMW たまには용사として人助けならぬ정령助けをしてもいいかも知れない。
+	PRINTFORMW 気が向いたら、정령世界にあるドラゴンの밧줄張りに行って暴れるドラゴンを退治するとしよう。
+	TIME += 10
+	依頼_場所 = 場所_밧줄張り
+	依頼_달성상황 ++
+
+ELSEIF 依頼_달성상황 == 1
+	PRINTFORMW ドラゴンの밧줄張りに来ると、話に聞いていた通り色んな드래곤족の정령が暴れていた。
+	PRINTFORMW 様子を見るに、드래곤족の정령同士が밧줄張り争いをしていて、周辺の小さな村がそのとばっちりに遭ってるみたいだった。
+	PRINTFORMW 話し合いが出来そうな様子でもない。
+	PRINTFORMW デュエルを仕掛ければ、드래곤족の정령たちを몬스터로서 倒せそうだが、一斉にヘイトを買って袋叩きされる可能性が高い。
+	PRINTFORMW ここまで来たからには戦わない選択肢は無いが、使う덱は良く考えて戦おう。
+	TARGET = -1
+	CALL DUEL_SYSTEM(1,461,,1)
+	
+	IF RESULT == 1
+		PRINTFORMW 勝った。
+		PRINTFORMW しかし、드래곤족の정령はまだまだ残っている。
+		PRINTFORMW この数を全部倒すのは骨が折れそうだが……
+		IF FLAG:악랄치 >= 30
+			PRINTFORMW 何か閃きそうな気がする。
+			PRINTFORMW 例えば、ルール無用で드래곤족の정령を굴복させて配下にするとか……
+			PRINTFORMW そんな事を考えている間に、次の드래곤족の정령が群れで襲い掛かって来た。
+			PRINTFORMW 今は目の前の敵に集中しよう。
+			PRINTFORML 
+			분기플래그 = 1
+		ELSE
+			PRINTFORMW それでも倒しきるしかない。
+			PRINTFORMW 今は目の前の敵に集中しよう。
+			PRINTFORML 
+		ENDIF
+	ELSE
+		PRINTFORMW 負けた……
+		PRINTFORMW なんとか逃げようにも、回り込まれてしまった。
+		PRINTFORMW この包囲を突破するのは骨が折れそうだが……
+		PRINTFORMW 何か閃きそうな気がする。
+		PRINTFORMW 例えば、ルール無用で드래곤족の정령を굴복させて配下にするとか……
+		PRINTFORMW そんな事を考えている間に、次の드래곤족の정령が群れで襲い掛かって来た。
+		PRINTFORMW 今は目の前の敵に集中しよう。
+		PRINTFORML 
+		분기플래그 = 1
+	ENDIF
+	TARGET = -1
+	IF 분기플래그 == 1
+		CALL DUEL_SYSTEM(1,462,,1)
+	ELSE
+		CALL DUEL_SYSTEM(1,461,,1)
+	ENDIF
+
+	IF RESULT == 1
+		PRINTFORMW 勝った。
+	ELSE
+		PRINTFORMW 負けた……
+		PRINTFORMW しかし、なんとか命辛々に逃げ帰って来る事ができた。
+		PRINTFORMW 次はもっと念入りに準備をして戦いを挑むとしよう……。
+		CFLAG:MASTER:현재위치 = 場所_寝室
+		CALL RECOVER_PERMIL(MASTER,-500,"체력")
+		CALL RECOVER_PERMIL(MASTER,-2000,"기력")
+		TIME += 300
+		RETURN 3
+	ENDIF
+	IF 분기플래그 == 1
+		PRINTFORMW 思わぬやり方で드래곤족の정령を굴복させれた。
+		PRINTFORMW せっかくなので、굴복させたドラゴンたちを踏み付けながら、お前はハウスキーパーメイドの『ハスキー』、
+		PRINTFORMW お前はスティルルームメイドの『ティルル』、お前はパーラーメイドの『パルラ』、
+		PRINTFORMW お前はチェインバーメイドの『チェイム』、お前はナースメイドの『ナサリー』、
+		PRINTFORMW お前はランドリーメイドの『ラドリー』……と名前を付けてやった。
+		PRINTFORMW 복종したばかりのドラゴンたちは屈辱そうにしながらも、渋々受け入れた。
+		CALL CARD_GET_CHARA(NO_TO_CHARANUM(2055))
+		TALENT:NO_TO_CHARANUM(2055):굴복됨 = 1
+		CALL CARD_GET_SINGLE(39785)
+		ITEM:39785 += 2
+		CALL CARD_GET_CHARA(NO_TO_CHARANUM(2056))
+		TALENT:NO_TO_CHARANUM(2056):굴복됨 = 1
+		CALL CARD_GET_SINGLE(39786)
+		ITEM:39786 += 2
+		CALL CARD_GET_CHARA(NO_TO_CHARANUM(2057))
+		TALENT:NO_TO_CHARANUM(2057):굴복됨 = 1
+		CALL CARD_GET_SINGLE(39787)
+		ITEM:39787 += 2
+		CALL CARD_GET_CHARA(NO_TO_CHARANUM(2058))
+		TALENT:NO_TO_CHARANUM(2058):굴복됨 = 1
+		CALL CARD_GET_SINGLE(39788)
+		ITEM:39788 += 2
+		CALL CARD_GET_CHARA(NO_TO_CHARANUM(2059))
+		TALENT:NO_TO_CHARANUM(2059):굴복됨 = 1
+		CALL CARD_GET_SINGLE(39789)
+		ITEM:39789 += 2
+		CALL CARD_GET_CHARA(NO_TO_CHARANUM(2060))
+		TALENT:NO_TO_CHARANUM(2060):굴복됨 = 1
+		CALL CARD_GET_SINGLE(39790)
+		PRINTFORML
+		PRINTFORMW ついでに、このカードたちで楽しむ方法も色々と考えよう……。
+		ITEM:39790 += 2
+		CALL CARD_GET_SINGLE(79690)
+		ITEM:79690 += 2
+		CALL CARD_GET_SINGLE(79691)
+		ITEM:79691 += 2
+		CALL CARD_GET_SINGLE(99690)
+		ITEM:99690 += 2
+	ELSE
+		PRINTFORMW 倒したドラゴンたちは、首を垂れてこちらに순종する姿勢を見せている。
+		PRINTFORMW 力で上回った자신を主と認めたようだ。
+		PRINTFORMW それなら遠慮なく、ドラゴンたちをカードにした。
+		CALL CARD_GET_SINGLE(12056)
+		CALL CARD_GET_SINGLE(12057)
+		CALL CARD_GET_SINGLE(12058)
+		CALL CARD_GET_SINGLE(12059)
+		CALL CARD_GET_SINGLE(12060)
+		CALL CARD_GET_SINGLE(42055)
+	ENDIF
+	PRINTFORML
+	PRINTFORMW これでもう、周辺の정령が被害を受ける事は無いだろう。
+	PRINTFORMW 자신としても新しい카드를 手に入れて만족したので、浮かれた気持ちのまま家路についた。
+	PRINTFORMW 
+	CFLAG:MASTER:현재위치 = 場所_寝室
+	TIME += 60
+	RETURN 2
+ENDIF
+
+
+@IRAI_DUEL_INTRO_461
+
+SETVAR @"상대_魔_所有:2", 1
+SETVAR @"상대_魔_表:2", 1
+SETVAR @"상대_마함:2",272140
+SETVAR @"상대_魔_破耐:2",2
+SETVAR @"상대_魔_対耐:2",2
+SETVAR @"상대_モン효과無効",2
+
+@IRAI_DUEL_INTRO_462
+#DIM DYNAMIC カード추가先
+
+
+PRINTFORMW ……ん？
+PRINTFORMW エクストラ덱에 違和感があるような……
+
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39785
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39785
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39786
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39786
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39787
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39787
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39788
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39788
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39789
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39789
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39790
+カード추가先 = 現EX山札数("자신")
+SETVAR @"자신_EX덱:カード추가先", 39790
+
+SETVAR @"상대_魔_所有:2", 1
+SETVAR @"상대_魔_表:2", 1
+SETVAR @"상대_마함:2",272140
+SETVAR @"상대_魔_破耐:2",2
+SETVAR @"상대_魔_対耐:2",2
+SETVAR @"상대_モン효과無効",2
+
+@IRAI_DECK_461(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+SIF 듀얼리스트 == "상대"
+	RETURN 20461
+RETURN 0
+
+@IRAI_DECK_462(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+SIF 듀얼리스트 == "상대"
+	RETURN 20461
+RETURN 0
+
+
+;교육用자신덱
+@DUELDECK_20461(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(1)", 12056
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12056
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12056
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12056
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12056
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12056
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12057
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12057
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12057
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12057
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12057
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12057
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12058
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12058
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12058
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12058
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12058
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12058
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12059
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12059
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12059
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12059
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12059
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12059
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12060
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12060
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12060
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12060
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12060
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 12060
+
+
+
+
+
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(1)", 42055
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 42055
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 42055
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 42055
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 42055
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 42055
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+
+
+
+
+
+
+;이벤트用カード
+@CARDNAME_272140,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 룡が争う밧줄張り
+	CASE "略称"
+		RESULTS = 룡が争う밧줄張り
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+ENDSELECT
+
+
+@CARD_272140(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_272140(종류)
+#DIM DYNAMIC 종류
+
+SETCOLOR C_YELLOW
+PRINTL ―――――――――――――――――――――――――――이벤트用――――――――――――――――――――――――――――
+RESETCOLOR
+PRINTL ①：패 / 덱 / EX덱에서 드래곤족 몬스터 が現れる。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_272140(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,272140)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件종족 = 드래곤족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_272140(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 光불가
+#DIM DYNAMIC 어둠불가
+#DIM DYNAMIC 화염불가
+#DIM DYNAMIC 바람불가
+#DIM DYNAMIC 땅불가
+#DIM DYNAMIC 물불가
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,272140)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 빛속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			光불가 = 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 어둠속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			어둠불가 = 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 화염속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			화염불가 = 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 물속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			물불가 = 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 땅속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			땅불가 = 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 바람속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			바람불가 = 1
+
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과範囲EX덱 = 1
+		효과条件特不無視 = 1
+		효과条件종족 = 드래곤족
+		효과条件속성:0 = 7
+		SIF 光불가 != 1
+			효과条件속성:0 = 빛속성
+		SIF 어둠불가 != 1
+			효과条件속성:1 = 어둠속성
+		SIF 화염불가 != 1
+			효과条件속성:2 = 화염속성
+		SIF 바람불가 != 1
+			효과条件속성:3 = 바람속성
+		SIF 땅불가 != 1
+			효과条件속성:4 = 땅속성
+		SIF 물불가 != 1
+			효과条件속성:5 = 물속성
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+

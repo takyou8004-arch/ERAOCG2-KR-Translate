@@ -1,0 +1,109 @@
+﻿@CARDNAME_23800,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 이차원 에스퍼 스타 로빈
+	CASE "略称"
+RESULTS = 스타 로빈
+	CASE "カテゴリ"
+RESULTS:0 = 로빈 패밀리
+ENDSELECT
+
+
+@CARD_23800(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 雄性
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23800(종류)
+#DIM DYNAMIC 종류
+
+PRINTL ①：「이차원 에스퍼 스타 로빈」은 자신 필드에 1장만 앞면 표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：상대는 자신 필드의 다른 카드를 공격 및 효과의 대상으로 할 수 없다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ③：상대 몬스터의 직접 공격 선언 시에 발동할 수 있다.
+PRINTL 이 카드를 묘지에서 수비 표시로 특수 소환하고, 이 카드로 공격 대상을 옮긴다.
+PRINTL 이 효과로 특수 소환된 이 카드는, 필드에서 벗어났을 경우에 제외된다.
+
+@CARDCAN_23800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23800)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 5
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,23800,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻誘")
+	CALL FULLRESET
+	효과条件他所 = 1
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"対耐")
+ELSEIF 종류 == 攻撃時誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23800)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 2
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所,"守備표시")
+		CALL COVER_ATTACK(듀얼리스트,カード소환先)
+	ENDIF
+ENDIF
+

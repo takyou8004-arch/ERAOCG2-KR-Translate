@@ -1,0 +1,140 @@
+﻿@CARDNAME_41827,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 라바리추어 체인
+	CASE "略称"
+RESULTS = 염호반의 쇄희녀
+	CASE "カテゴリ"
+RESULTS:0 = 리추어
+RESULTS:1 = 라바르
+RESULTS:2 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_41827(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_41827(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,41827) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_41827(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 몬스터 × 2
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 이 카드의 엑시즈 소재를 1개 제거하고, 다음 효과 중에서 1개를 선택하여 발동할 수 있다.
+PRINTL ● 덱에서 마법 카드 1장을 선택하여 묘지로 보낸다.
+PRINTL ● 덱에서 화염 속성 원소정령족 몬스터 1장을 패에 넣는다.
+
+
+@CARDCAN_41827(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,41827)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,41827)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件속성 = 화염속성
+	효과条件종족 = 원소정령족
+	효과条件スーパー종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_41827(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41827,1,X消費1)
+	IF RESULT == 0
+		CALL YN_CHOICE(듀얼리스트,"●덱에서 마법カード１장을 選んで묘지へ送る。","●덱에서 화염속성 원소정령족モンスター１体손패に加える。")
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = 마법全般
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ELSE
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件속성 = 화염속성
+			효과条件종족 = 원소정령족
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

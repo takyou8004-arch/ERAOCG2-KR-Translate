@@ -1,0 +1,278 @@
+﻿@CARDNAME_50081,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아이스 블리자드 마스터
+	CASE "略称"
+RESULTS = Ice.B.M
+	CASE "カテゴリ"
+RESULTS:0 = 블리자드
+ENDSELECT
+
+
+@CARD_50081(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	;CASE "성별"
+	;	RETURN 雄性
+	CASE "특수不可"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250615
+ENDSELECT
+
+RETURN 0
+
+
+
+@CARDSUMMON_50081(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件종족 = 마법사족
+	素材条件속성 = 물속성
+ELSEIF EX参照 >= 10
+	素材条件속성 = 물속성
+ENDIF
+
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,50081) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50081(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 마법사족/물 속성 몬스터 ＋ 물 속성 몬스터
+PRINTL 「아이스 블리자드 마스터」는 융합 소환 및 이하의 방법으로만 특수 소환할 수 있다.
+PRINTL ●자신 필드의 「아이스 돌」을 포함하는, 자신 필드의 물 속성 몬스터 2장을
+PRINTL 융합 소재로서 릴리스했을 경우에 EX덱에서 특수 소환할 수 있다.
+PRINTL 이 방법에 의한 특수 소환은 1턴에 1번밖에 실행할 수 없으며, 이 방법으로 특수 소환했을 경우,
+PRINTL 턴 종료시까지 자신은 융합/싱크로 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,EX소환時強制)
+PRINTL ①: 이 카드가 융합 소환했을 경우에 발동한다.
+PRINTL 상대 필드의 몬스터는 턴 종료시까지 물 속성이 된다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신 메인 페이즈에, 이하의 효과에서 1개를 선택하여 발동할 수 있다.
+PRINTL ●이 카드를 릴리스하고, 상대 필드의 물 속성 몬스터를 전부 파괴한다.
+PRINTL ●자신의 패, 및 자신 / 상대의 묘지의 레벨 4 이하의 물 속성 몬스터 1장을 수비 표시로 특수 소환한다.
+
+;【블리자드 프린세스】で展開の要になりつつ、エースモンスターとしても活用できる융합モンスター。
+;テーマ内で動かすとフィールドにアイスドール含めた２体を並べやすいので、条件の割りにはかなり出しやすい。
+;융합カードも소환権の余りも不要で出せる最上級モンスターとして、一旦상대盤面の몬스터를 殴って一妨害減らす使い方も見込める。
+;クリスタルガ-ルの自己蘇生효과를 誘発できるので、효과를 ２～３回使うことが無理なく実現할 수 있다。
+;ただし、この方法で出した場合は엑시즈・링크が使えなくなるので、展開を伸ばす予定なら出すタイミングには注意が必要。
+;漫画版GXは連載時期にはまだ엑시즈・링크がなかったので、純構築で動かした時にEXに混ぜにくいようにしている。
+;
+;余談だが、성별が不確定すぎたので未설정としている。
+
+
+@CARDCAN_50081(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成 = 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50081)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,50081)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,50081)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件名前 = 아이스 돌
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 물속성
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 1
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 종류 == EX소환時強制
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,50081)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件속성 = 물속성
+	효과条件종류 = モン全般
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件達成 |= 1
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과範囲상대묘지 = 1
+	효과条件속성 = 물속성
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALLFORM 효과条件レベル_ADV(4, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件達成 |= 2
+	SIF 条件達成 < 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50081(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戦闘カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 選択結果
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50081,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+효과条件名前 = 아이스 돌
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件속성 = 물속성
+			효과条件종류 = モン全般
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트,"EX덱",場所)
+			ENDIF
+		ENDIF
+		;EX덱縛り（융합・싱크로縛り）
+		CALL FULLRESET
+		EX소환可能종류:0 = 융합
+		EX소환可能종류:1 = 싱크로
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+		
+	ENDIF
+ELSEIF 종류 == EX소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50081)
+	IF RESULT == 0
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"一属",물속성)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50081,2)
+	IF RESULT == 0
+		;상대 필드에 물속성が存在するか確認
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件속성 = 물속성
+		효과条件종류 = モン全般
+		효과条件除去種 = 묘지
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件達成 |= 1
+		
+		;자신의 패 / 묘지にレベル４이하의 물속성がいるか確認
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과条件속성 = 물속성
+		효과条件종류 = モン全般
+		효과条件소환可 = 1
+		CALLFORM 효과条件レベル_ADV(4, "以下")
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件達成 |= 2
+		
+		IF 条件達成 & 1 && 条件達成 & 2
+			;両方의 효과를 使える場合。CPUはリリースして除去を狙ってくる。
+			IF 듀얼리스트 == "상대"
+				選択結果 = はい
+			ELSE
+				;효과の用途を聞く
+PRINTL 어느 효과를 사용하시겠습니까?
+				CALL YN_CHOICE(듀얼리스트,"●この카드를 リリースして、상대 필드의 물속성몬스터를 全て破壊する。","●자신의 손패、および자신 / 상대の묘지のレベル４이하의 물속성モンスター１体を守備표시で특수소환する。")
+				選択結果 = RESULT
+			ENDIF
+		ELSEIF 条件達成 & 1
+			選択結果 = はい
+		ELSE
+			選択結果 = いいえ
+		ENDIF
+		
+		IF 選択結果 == はい
+			;はい의 효과：リリースして상대 필드의 물속성を全破壊
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+			효과条件속성 = 물속성
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+		ELSE
+			;いいえ의 효과：패 / お互いの묘지のレベル４이하의 물속성モンスター１体を특수소환。
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과範囲상대묘지 = 1
+			효과条件속성 = 물속성
+			효과条件종류 = モン全般
+			CALLFORM 효과条件レベル_ADV(4, "以下")
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		ENDIF
+	ENDIF
+ENDIF

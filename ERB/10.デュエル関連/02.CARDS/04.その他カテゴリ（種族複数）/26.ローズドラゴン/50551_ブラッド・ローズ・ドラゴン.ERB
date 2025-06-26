@@ -1,0 +1,182 @@
+﻿@CARDNAME_50551,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 블러드 로즈 드래곤
+	CASE "略称"
+RESULTS = 블러드 로즈
+	CASE "カテゴリ"
+RESULTS:0 = 로즈
+ENDSELECT
+
+
+@CARD_50551(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3200
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50551(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 S소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 서로의 묘지의 카드를 전부 제외한다.
+PRINTL 또한 제외 상태의 자신 필드의 "블랙 로즈 드래곤" 또는 식물족 S 몬스터가 존재할 경우,
+PRINTL 이 카드 이외의 서로의 필드의 카드를 전부 파괴할 수 있다.
+
+CALL CARD_ABLE(1,발동誘発)
+PRINTL ②: 상대가 효과를 발동했을 때, 이 카드를 릴리스하고 발동할 수 있다.
+PRINTL 자신 필드의 몬스터는 턴 종료시까지 파괴 내성을 얻는다.
+PRINTL 그 후, 자신의 EX덱 / 묘지 / 제외된 곳에서 "블랙 로즈 드래곤" 1장을 고르고 특수 소환할 수 있다.
+
+
+@CARDSUMMON_50551(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50551) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50551)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,50551)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+효과条件名前 = 블랙 로즈 드래곤
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50551)
+	IF RESULT == 0
+		FOR カウンタ, 98, -1, -1
+			SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"묘지",カウンタ,1)
+		NEXT
+		FOR カウンタ, 98, -1, -1
+			SIF GETVAR(@"%対面者%_묘지:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(対面者,"묘지",カウンタ,1)
+		NEXT
+
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件スーパー名前 = ブラック 로즈 드래곤
+		효과条件종류 = 싱크로
+		효과条件종족 = 식물족
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+PRINTL 이 카드 이외의 서로의 필드의 카드를 전부 파괴하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+		ELSE
+			RESULT = いいえ
+		ENDIF
+		IF RESULT == はい
+			CALL FULLRESET
+			효과条件他所 = 1
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場全体",場所,"묘지")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50551,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,"필드",場所)
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐",1)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+효과条件名前 = 블랙 로즈 드래곤
+		효과条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+	RETURN 0
+ENDIF
+
+
+

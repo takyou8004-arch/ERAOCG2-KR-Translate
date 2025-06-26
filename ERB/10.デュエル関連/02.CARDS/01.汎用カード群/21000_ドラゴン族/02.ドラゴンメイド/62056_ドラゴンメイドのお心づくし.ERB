@@ -1,0 +1,109 @@
+﻿@CARDNAME_62056,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 드래곤메이드의 환대
+	CASE "略称"
+		RESULTS = 드메 환대
+	CASE "カテゴリ"
+		RESULTS:0 = 드래곤메이드
+ENDSELECT
+
+
+@CARD_62056(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62056(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  카드는 1턴에 1장 밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：자신의 패 / 묘지에서「드래곤메이드" 몬스터 1장을 골라 수비 표시로 특수 소환한다.
+PRINTL 이후, 특수 소환한 몬스터와 동일한 속성으로 레벨이 다른「드래곤메이드" 몬스터 1장을 덱에서 묘지로 보낼 수 있다.
+
+@CARDCAN_62056(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,62056)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,62056)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 드래곤메이드
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_62056(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 条件속성
+#DIM DYNAMIC 条件レベル
+#DIM DYNAMIC 選択カード_ID
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62056,1)
+	IF RESULT == 0
+		;通常마법汎用발동後묘지送り処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 드래곤메이드
+		효과条件종류 = モン全般
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			CALLFORM CARD_{選択カード_ID}, "속성"
+			条件속성 = RESULT
+			CALLFORM CARD_{選択カード_ID}, "レベル"
+			条件レベル = RESULT
+
+			CALL FULLRESET
+			효과条件カテゴリ = 드래곤메이드
+			효과条件종류 = モン全般
+			효과条件속성 = 条件속성
+			CALL 효과条件レベル_ADV(条件レベル, "以外")
+			효과条件任意 = 1
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF	
+	ENDIF
+ENDIF

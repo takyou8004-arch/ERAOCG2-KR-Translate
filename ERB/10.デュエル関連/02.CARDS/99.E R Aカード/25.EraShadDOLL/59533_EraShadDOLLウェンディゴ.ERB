@@ -1,0 +1,188 @@
+﻿@CARDNAME_59533, 参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = E.R.A.ShadDOLL.Wendigo
+	CASE "略称"
+		RESULTS = ERA 웬디고
+	CASE "カテゴリ"
+		RESULTS:0 = 섀도르
+		RESULTS:1 = ShadDOLL
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59533(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 융합
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 200
+	CASE "守備力"
+		RETURN 2800
+	CASE "튜너"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+	CASE "C불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_59533(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 「섀도르" 몬스터 ＋ 융합 몬스터
+;PRINTL 이 카드는 융합 소환으로만 엑스트라 덱에서 특수 소환할 수 있다。
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없고,
+PRINTL 이 카드의 효과 발동에 대해 상대는 효과를 발동할 수 없다。
+CALL CARD_ABLE(1, EX덱起動)
+;엑스트라 덱 기동 효과는 상대 플레이어가 MASTER가 아닌 경우 또한, 굴복 각인 Lv1 이상을 가지고 있는 경우에 발동 가능
+;상대 플레이어의 굴복 각인 Lv의 매수, 덱에서 "E.R.A」카드를 검색할 수 있다(최대 3장)
+PRINTL ①：상대 플레이어가 ■■■■■■■■■■■■■인 한
+PRINTL 자신 메인 페이즈에 이 카드를 엑스트라 덱에서 묘지에 보내 발동할 수 있다。
+;PRINTL 덱에서「E.R.A」마법 / 함정 카드 ■장을 패에 넣는다。
+PRINTL 덱에서「E.R.A」카드 ■장을 패에 넣는다。
+CALL CARD_ABLE(2, EX소환時 , 특수소환時)
+PRINTL ②：이 카드가 특수 소환했을 경우에 상대 필드의 카드 1장을 대상으로 하여 발동할 수 있다.。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_59533(듀얼리스트, 소환カード, EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 섀도르
+ELSEIF EX参照 >= 10
+	素材条件종류 = 융합
+ENDIF
+
+IF EX参照 == 1
+	;PRINTL 분명 소환되는 장면까지 보고 있었다
+	CALL FUSCAN(듀얼리스트, 소환カード, 59533) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_59533(듀얼리스트, 종류, ゾーン, 場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 상대굴복각인レベル
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트, 종류, ゾーン, 場所, 59533)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트, 59533)
+		RETURN 0
+	SIF メインフェイズ != 1
+			RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー, 듀얼리스트)
+	IF RESULT != -1
+		조교대상 = RESULT
+		;상대가 あなた（＝MASTER）の場合は발동불가（対NPC専用효과）
+		SIF 조교대상 == MASTER
+				RETURN 0
+		상대굴복각인レベル = MARK:조교대상:굴복각인
+		;상대プレイヤーの굴복각인Lv1以上でないと발동불가
+		SIF 상대굴복각인レベル >= 1
+			RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트, 59533)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트, 종류, ゾーン, 場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59533(듀얼리스트, 종류, ゾーン, 場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 상대굴복각인レベル
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트, 종류, ゾーン, 場所, 59533, 1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트, ゾーン, 場所)
+		
+		CALL CARD_EROTICS(상대プレイヤー, 듀얼리스트)
+		IF RESULT != -1
+			조교대상 = RESULT
+			상대굴복각인レベル = MARK:조교대상:굴복각인
+			SIF 상대굴복각인レベル <= 0
+				RETURN 1
+		ENDIF
+		
+		FOR カウンタ,0, 상대굴복각인レベル
+			CALL FULLRESET
+			효과条件カテゴリ = E.R.A
+			;테스트 단계이므로 「E.R.A」카드는 몬스터 포함해 전부 검색할 수 버린다
+			;마법함정에 한정할 때는 아래의 코멘트행으로부터 「;」를 지워 유효하게 한다
+			;효과 조건 종류 = 마함 전반
+			CALL CARD_ADD_BASIC(듀얼리스트, "덱", ゾーン, 場所)
+		NEXT
+	ENDIF
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트, 종류, ゾーン, 場所, 59533, 2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트, "全場単体", 場所, "제외")
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

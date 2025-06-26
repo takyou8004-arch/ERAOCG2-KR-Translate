@@ -1,0 +1,153 @@
+﻿@CARDNAME_93901,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 그레이트 유성탄
+	CASE "略称"
+RESULTS = 그레이트 유성탄
+	CASE "カテゴリ"
+RESULTS:0 = 제니스
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_93901(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93901(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL 이 카드는 패에서 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신 패의 몬스터 1장을 버리고 발동할 수 있다.
+PRINTL 자신은 덱에서 2장 드로우하고, 코스트(레벨 랭크 링크)의 합계가
+PRINTL 그 버린 몬스터의 레벨 이하가 되도록, 상대 몬스터를 2장까지 고르고 파괴할 수 있다.
+
+PRINTL 그 후, 자신 필드에 '제니스' 몬스터가 존재할 경우,
+PRINTL 자신 묘지의 화염 속성 몬스터 1장을 고르고 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ②: 자신 필드에 '제니스' 몬스터가 존재할 경우에 발동할 수 있다.
+PRINTL 묘지의 이 카드를 세트한다.
+PRINTL 이 효과로 세트한 이 카드는 발동할 수 없으며, 필드에서 벗어났을 경우에 제외된다.
+PRINTL 
+
+@CARDCAN_93901(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,93901)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,93901)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 마함数(듀얼리스트) == 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 제니스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_93901(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC レベル数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93901,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)	
+		IF RESULT == 1
+			CALLFORM CARD_{RESULT:1}("レベル")
+			レベル数 = RESULT
+
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		
+			CALL FULLRESET
+			CALL 효과条件レベル_ADV(レベル数, "以下")
+			효과条件종류 = 링크以外
+			효과条件任意 = 1
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+			IF RESULT == 1
+				TRYCALLFORM CARD_{他参照選択カードID}("レベル")
+				レベル数 = レベル数 - RESULT
+				IF レベル数 > 0
+					CALL FULLRESET
+					CALL 효과条件レベル_ADV(レベル数, "以下")
+					효과条件종류 = 링크以外
+					효과条件任意 = 1
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+				ENDIF
+			ENDIF
+		ENDIF
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 제니스
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)		
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件속성 = 화염속성
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93901)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 2
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き,4)
+	ENDIF
+ENDIF
+

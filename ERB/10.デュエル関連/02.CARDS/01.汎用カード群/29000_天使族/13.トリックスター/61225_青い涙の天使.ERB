@@ -1,0 +1,173 @@
+@CARDNAME_61225,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 푸른 눈물의 천사
+	CASE "略称"
+RESULTS = 푸른 눈물의 천사
+	CASE "カテゴリ"
+RESULTS:0 = 푸른 눈의물
+ENDSELECT
+
+
+@CARD_61225(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61225(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 그 중 어느 하나만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 컨트롤러의 상대는, 그 상대의 패의 수× 200 데미지를 받는다.
+PRINTL 그 후, 대상 몬스터의 효과를 턴 종료시까지 무효로 한다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 자신 또는 상대가 효과 데미지를 받았을 경우, 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 패 / 덱에서 일반 함정 카드 1장을 자신 필드에 세트한다.
+PRINTL 패에서 세트했을 경우, 그 카드는 세트한 턴에도 발동할 수 있다.
+
+
+
+@CARDCAN_61225(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61225)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,61225)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,61225)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件표시 = 10
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,61225)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,61225)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"被弾種",3,2)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件종류 = 通常함정
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_61225(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61225,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과条件표시 = 10
+		효과条件除去種 = 選択
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			選択カード = RESULT
+			IF 대상者（CS） == "자신"
+				CALL FULLRESET
+				효과範囲상대손패 = 1
+				효과条件CNT = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				ダメージ量 = 200 * RESULT
+				CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"無効",1,1)
+			ELSEIF 대상者（CS） == "상대"
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과条件CNT = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				ダメージ量 = 200 * RESULT
+				CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"無効",1,1,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61225)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		; CALL FULLRESET
+		; 효과範囲묘지 = 1
+		; 효과条件名前 = 푸른눈물の天使
+		; CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		; IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲덱 = 1
+			효과条件종류 = 通常함정
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_SELECT(듀얼리스트,RESULT)
+				選択カード = RESULT
+				IF 参照先（CS） == "손패"
+					CALL FULLRESET
+					CALL CARD_ADD(듀얼리스트,参照先（CS）,"마함",選択カード,"使化裏側표시")
+				ELSEIF 参照先（CS） == "덱"
+					CALL FULLRESET
+					CALL CARD_ADD(듀얼리스트,参照先（CS）,"마함",選択カード,"裏側표시")
+				ENDIF
+			ENDIF
+		;ENDIF
+	ENDIF
+ENDIF

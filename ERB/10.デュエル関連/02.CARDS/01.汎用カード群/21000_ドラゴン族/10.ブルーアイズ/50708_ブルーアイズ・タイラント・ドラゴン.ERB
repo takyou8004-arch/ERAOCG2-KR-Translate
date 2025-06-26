@@ -1,0 +1,206 @@
+﻿@CARDNAME_50708,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 푸른 눈의 타이런트 드래곤
+	CASE "略称"
+RESULTS = BE 타이런트
+	CASE "カテゴリ"
+RESULTS:0 = 푸른 눈의
+ENDSELECT
+
+
+@CARD_50708(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3400
+	CASE "守備力"
+		RETURN 2900
+	CASE "성별"
+		RETURN 牝性
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50708(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「푸른 눈의 백룡」＋드래곤족 몬스터
+PRINTL 이 카드는 융합 소환 및 이하의 방법으로만 특수 소환할 수 있다.
+PRINTL ● 융합 몬스터를 장착한 자신의 「푸른 눈의 백룡」 1장을 릴리스했을 경우에 EX덱에서 특수 소환할 수 있다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 함정 내성과 연속 전투를 가진다.
+CALL CARD_ABLE(0,攻撃後誘発)
+PRINTL ②: 이 카드가 전투를 실행했을 경우, 자신의 묘지의 함정 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 패에 넣거나 자신 필드에 세트한다.
+
+
+
+@CARDSUMMON_50708(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件スーパーカテゴリ = 푸른 눈의 백룡
+	素材条件スーパー종류 = モン全般
+素材条件名前 = 푸른 눈의 화이트 드래곤
+ELSEIF EX参照 >= 10
+	素材条件종족 = 드래곤족
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,50708) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_50708(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50708)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,50708)
+	SIF RESULT == 1
+		RETURN 0
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		IF GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ") != 21000
+			IF GETVAR(@"%듀얼리스트%_MZ_変化元ID:カウンタ") != 21000
+				IF GETVARS(@"%듀얼리스트%_MZ_追カテ:カウンタ") != "푸른 눈의 백룡"
+					CONTINUE
+				ENDIF
+			ENDIF
+		ENDIF
+		CALL FULLRESET
+		효과条件종류 = 융합
+		CALL CARD_EQUIP_CHECK(듀얼리스트,カウンタ,"필드")
+		SIF RESULT == 1
+			条件달성++
+	NEXT
+	SIF 条件달성 == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50708(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50708)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+				CONTINUE
+			IF GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ") != 21000
+				IF GETVAR(@"%듀얼리스트%_MZ_変化元ID:カウンタ") != 21000
+					IF GETVARS(@"%듀얼리스트%_MZ_追カテ:カウンタ") != "푸른 눈의 백룡"
+						CONTINUE
+					ENDIF
+				ENDIF
+			ENDIF
+			CALL FULLRESET
+			효과条件종류 = 융합
+			CALL CARD_EQUIP_CHECK(듀얼리스트,カウンタ,"필드")
+			SIF RESULT == 1
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"個Ｃ",1)
+		NEXT
+		CALL FULLRESET
+효과条件名前 = 푸른 눈의 화이트 드래곤
+		효과条件종류 = モン全般
+		효과条件スーパーカテゴリ = 푸른 눈의 백룡
+		효과条件スーパー종류 = モン全般
+		효과条件個Ｃ所持 = 1
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件特不無視 = 1
+			CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦")
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50708)
+	IF RESULT == 0
+		IF 마함数(듀얼리스트) < 5
+			CALL YN_CHOICE(듀얼리스트," 함정 카드 １장을 자신 필드에 セットする。"," 함정 카드 １장을 손패に加える。")
+		ELSE
+			RESULT = いいえ
+		ENDIF
+		IF RESULT == はい
+			CALL FULLRESET
+			효과条件종류 = 함정全般
+			CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"裏側표시")
+		ELSEIF RESULT == いいえ
+			CALL FULLRESET
+			효과条件종류 = 함정全般
+			CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

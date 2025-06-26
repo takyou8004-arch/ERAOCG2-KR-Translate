@@ -1,0 +1,154 @@
+﻿@CARDNAME_50502,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 원석룡 네더 베르세리우스
+	CASE "略称"
+RESULTS = N 베르세리우스
+	CASE "カテゴリ"
+RESULTS:0 = 원석
+ENDSELECT
+
+
+@CARD_50502(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250527
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_50502(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "원석" 몬스터 + 일반 몬스터 1체 이상
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 공격력은, 이 카드의 융합 소재로 한 2번째 이후의 몬스터 수× 1000 올린다.
+CALLFORM CARD_ABLE(0,발동強制誘発)
+PRINTL ②: 레벨・랭크・링크의 수치가, 필드・묘지의 일반 몬스터의 수 이하인,
+PRINTL 상대 필드의 몬스터의 효과가 발동했을 때에 발동한다.
+PRINTL 그 효과는 무효화된다.
+CALLFORM CARD_ABLE(0,필드→묘지,戦闘→묘지,戦破壊→묘지)
+PRINTL ③: 이 카드가 필드에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 덱에서 일반 몬스터 1장을 수비 표시로 특수 소환한다.
+
+@CARDSUMMON_AA_50502
+
+
+@CARDSUMMON_50502(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 99
+素材条件数自由 = 1
+素材条件素材数起動 = 1
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 原石
+ELSEIF EX参照 >= 10
+	素材条件종류 = 通常モン
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,50502) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50502(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件合致数
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50502)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") <= 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동強制誘発 ;발동した효과를 無効にするので
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = 通常モン
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	条件合致数 = RESULT
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALLFORM 효과条件レベル_ADV(条件合致数,"以下")
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드→묘지 || 종류 == 戦闘→묘지 || 종류 == 戦破壊→묘지
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = 通常モン
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_50502(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 攻守変動
+	素材数 = GETVAR(@"%듀얼리스트%_MZ_汎数:場所") - 1
+	CALL STATCHANGE_BASIC(듀얼리스트,"자신",場所,素材数*1000)
+ELSEIF 종류 == 발동強制誘発
+	CALL FULLRESET
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効2",場所,"無効")
+ELSEIF 종류 == 필드→묘지 || 종류 == 戦闘→묘지 || 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50502)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종류 = 通常モン
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+ENDIF
+

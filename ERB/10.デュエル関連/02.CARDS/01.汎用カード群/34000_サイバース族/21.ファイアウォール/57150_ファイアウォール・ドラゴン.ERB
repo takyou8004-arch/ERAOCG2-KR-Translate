@@ -1,0 +1,168 @@
+﻿@CARDNAME_57150,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 파이어월 드래곤
+	CASE "略称"
+RESULTS = FWD
+	CASE "カテゴリ"
+RESULTS:0 = 파이어월
+ENDSELECT
+
+
+@CARD_57150(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_57150(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要링크数 = 4
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,57150) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_57150(종류)
+#DIM DYNAMIC 종류
+
+;PRINTL 속성が異なる사이버스족モンスター２体以上
+PRINTL 몬스터 2장 이상
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,필드起動 ,フリー誘発)
+PRINTL ①: 이 카드가 필드에 앞면표시로 존재하는 한 1번만,
+PRINTL 자신 / 상대 턴에, 이 카드 이외의 자신 필드 위의 링크 몬스터의 수까지(최대 3),
+PRINTL 서로의 필드 / 묘지의 몬스터를 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 패로 되돌린다.
+CALL CARD_ABLE(2,효과後誘発)
+PRINTL ②: 이 카드 이외의 자신의 몬스터가 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 패에서 사이버스족 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_57150(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57150)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,57150)
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 링크
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,57150)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"묘지送り全般")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종족 = 사이버스족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_57150(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択レベル
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC リピート数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57150,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"効済",2,1)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 링크
+		효과条件他所 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		リピート数 = RESULT
+		SIF リピート数 >= 3
+			リピート数 = 3
+		FOR カウンタ,0,リピート数
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲상대필드 = 1
+			효과範囲묘지 = 1
+			효과範囲상대묘지 = 1
+			효과条件行先플래그 = 손패行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			SIF RESULT != 1
+				BREAK
+		NEXT
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57150,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종족 = 사이버스족
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

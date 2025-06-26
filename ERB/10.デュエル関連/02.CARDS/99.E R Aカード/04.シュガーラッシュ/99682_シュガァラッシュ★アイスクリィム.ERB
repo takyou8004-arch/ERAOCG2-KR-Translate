@@ -1,0 +1,179 @@
+﻿@CARDNAME_99682,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 슈가러쉬★아이스크리임
+	CASE "略称"
+		RESULTS =  아이스크리임
+	CASE "カテゴリ"
+		RESULTS:0 = 슈가러쉬
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99682(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99682(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  카드는 １턴에 １장밖에 발동할 수 없다。
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：상대플레이어、또는 상대필드의 몬스터를 １장 고르고 발동할 수 있다。
+PRINT 고른 대상에게
+FONTSTYLE 4
+PRINT 드러그
+FONTSTYLE 0
+PRINTL 해피카운터를 놓아、상대는 자신과 필드위의 해피카운터의 합계×１００ＬＰ 회복한다。
+PRINTL 그 후、고른 대상에 따라 이하의 효과를 적용할 수 있다。
+PRINTL ●상대플레이어：상대의 패를 전부 덱으로 넣고 셔플하고、그 수만큼 상대는 덱에서 드로우한다。
+PRINTL 그 후、상대에게 해피카운터가 ７개 이상 놓여져 있다면、
+PRINTL 상대는 턴 종료시까지 등장시 효과를 사용 할 수 없다。（그 몬스터의 일반 소환 / 특수 소환할때 유발하는 효과）
+PRINTL ●상대 몬스터：EX덱에서「슈가러쉬" 몬스터１장을 특수 소환한다。
+PRINTL 그 후、해피카운터가 놓여진 상대필드의 몬스터는 공격불가가 된다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_99682(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99682)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		IF GETVARS(@"%듀얼리스트%_フィールド名") != "트립 트리트 トラック！"
+			RETURN 0
+		ENDIF
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+
+	SIF 발동済_1(듀얼리스트,99682)
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99682(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 回復量
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウント数
+#DIM DYNAMIC ドロー枚数
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99682,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1	
+			PRINTL 어느쪽에게 효과를 사용하시겠습니까？
+			CALL YN_CHOICE(듀얼리스트,"●상대플레이어","●상대 몬스터")
+		ELSE
+			RESULT = 0
+		ENDIF
+
+		IF RESULT == 0
+			CALL SET_PLAYER_INFO(듀얼리스트,"薬Ｃ",1,1,1)
+			
+			CALL FIELD_INFO_COUNT(듀얼리스트,"薬Ｃ",1,2)
+			回復量 += RESULT + GETVAR(@"%対面者%_薬Ｃ")
+			CALL LIFE_CHANGE(対面者,"増加","효과", 回復量 * 100)
+
+			SIF 듀얼리스트 == "자신"
+				PRINTL 상대에게 드로우 시키시겠습니까？
+			CALL YN_CHOICE(듀얼리스트)
+			SIF RESULT == いいえ
+				RETURN 0
+			
+			VARSET ドロー枚数
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"%対面者%_손패:カウンタ") == -1
+					CONTINUE
+				CALL CARD_DISPOSE(対面者,"손패",カウンタ,덱行き)
+				ドロー枚数 ++
+			NEXT
+			CALL CARDDRAW_BASIC(対面者,ドロー枚数)
+
+			IF GETVAR(@"%対面者%_薬Ｃ") >= 7
+				CALL SET_PLAYER_INFO(듀얼리스트,"登場時無効",1)
+			ENDIF
+
+		ELSEIF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"選択")
+			IF RESULT == 1
+				選択カード = RESULT:1
+				CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",選択カード,1)
+				IF RESULT != -1
+					조교대상 = RESULT
+					PRINTFORML %CALLNAME:조교대상%는 과자가 가져다주는 고양에 저항하지 못하고、자위를 시작해버렸다。
+					CALL EROTIC_MOVE("麻薬자위",조교대상)
+				ENDIF
+				CALL SET_FIELD_INFO(対面者,"필드",選択カード,"薬Ｃ",1) 
+
+				CALL FIELD_INFO_COUNT(듀얼리스트,"薬Ｃ",1,2)
+				回復量 += RESULT + GETVAR(@"%対面者%_薬Ｃ")
+				CALL LIFE_CHANGE(対面者,"増加","효과", 回復量 * 100)
+
+				CALL FULLRESET
+				효과範囲EX덱 = 1
+				효과条件カテゴリ = 슈가러쉬
+				효과条件任意 = 1
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+				SIF RESULT != 1
+					RETURN 0
+
+				FOR カウンタ,0,5
+					SIF GETVAR(@"%対面者%_필드:{カウンタ}") == -1
+						CONTINUE
+					SIF GETVAR(@"%対面者%_MZ_薬Ｃ:カウンタ") <= 0
+						CONTINUE
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",カウンタ,"戦不")
+						条件달성 = 1
+					NEXT
+				IF 条件달성 && 듀얼리스트 == "자신"
+					PRINTL 상대 필드의 하수인은 과자에 뇌가 녹아、주인의 공격명령에 반응하지 못하게 되어버렸다！
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

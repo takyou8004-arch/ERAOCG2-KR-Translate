@@ -1,0 +1,91 @@
+﻿@CARDNAME_1000,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 블랙 매지션 걸
+	CASE "略称"
+		RESULTS = Ｂ Ｍ Ｇ
+	CASE "カテゴリ"
+		RESULTS:0 = 블랙 매지션 걸
+		RESULTS:1 = 매지션 걸
+		RESULTS:2 = 블랙 매지션
+ENDSELECT
+
+
+@CARD_1000(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1700
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1000(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(1,攻守変動)
+PRINTL ①：이 카드의 공격력은、묘지의 마법사족 몬스터의 수×３００ 올린다。
+PRINTL 
+PRINTL 
+PRINTL 
+
+@CARDSUMMON_AA_1000
+
+
+@CARDCAN_1000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1000)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 마법사족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 300
+	CALL STATCHANGE_BASIC(듀얼리스트,"자신",場所,攻撃力修正)	
+ENDIF
+
+

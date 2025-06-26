@@ -1,0 +1,102 @@
+﻿@CARDNAME_20301,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마도화사 매트
+	CASE "略称"
+RESULTS = 마도화사 매트
+	CASE "カテゴリ"
+RESULTS:0 = 마도
+ENDSELECT
+
+
+@CARD_20301(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 900
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20301(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 덱에서 마법 카드 1장을 묘지로 보내고 발동할 수 있다.
+PRINTL 이 턴에, 자신은 통상 소환에 더해 1번만, 마법사족 몬스터 1장을 소환할 수 있다.
+PRINTL 
+
+@CARDCAN_20301(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20301)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,20301)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = 마법全般
+	효과条件カテゴリ = 마도서
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 短紋章起動
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20301(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20301)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 마법全般
+		효과条件カテゴリ = 마도서
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		SIF RESULT 
+			CALL CARD_RESERV(듀얼리스트,20301,短紋章予約)
+	ENDIF
+ELSEIF 종류 == 短紋章起動
+	CALL FULLRESET
+	효과条件종족 = 마법사족
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+ENDIF
+

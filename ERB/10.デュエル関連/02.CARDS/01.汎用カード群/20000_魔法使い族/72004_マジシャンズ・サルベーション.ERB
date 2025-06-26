@@ -1,0 +1,131 @@
+﻿@CARDNAME_72004,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마술사의 살베이션
+	CASE "略称"
+RESULTS = 살베이션
+	CASE "カテゴリ"
+RESULTS:0 = 블랙 매지션
+ENDSELECT
+
+
+@CARD_72004(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72004(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드 명의 카드는 1턴에 1장밖에 발동할 수 없으며,
+PRINTL 이 카드 명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 이 카드의 발동 시의 효과 처리로서, 덱에서 「영원의 혼」 1장을 골라 자신 필드에 세트할 수 있다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 자신이 「블랙 매지션」 또는 「블랙 매지션 걸」 몬스터의 소환 / 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 「블랙 매지션」 또는 「블랙 매지션 걸」 1장을 자신의 묘지에서 골라 특수 소환한다.
+PRINTL 
+
+
+@CARDCAN_72004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72004)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72004)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件名前 = 영원의 영혼
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+
+
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,72004)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前:0 = 블랙 매지션
+	효과条件名前:1 = 블랙 매지션 걸
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ:0 = 블랙 매지션
+	효과条件カテゴリ:1 = 블랙 매지션 걸
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72004,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+효과条件名前 = 영원의 영혼
+		CALL CARD_SET_BASIC(듀얼리스트,"덱",ゾーン,場所,"裏側표시")
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72004,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前:0 = 블랙 매지션
+		효과条件名前:1 = 블랙 매지션 걸
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

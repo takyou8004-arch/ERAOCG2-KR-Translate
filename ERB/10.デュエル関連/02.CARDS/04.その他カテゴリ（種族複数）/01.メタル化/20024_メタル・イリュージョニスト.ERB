@@ -1,0 +1,127 @@
+﻿@CARDNAME_20024,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 메탈 일루셔니스트
+	CASE "略称"
+RESULTS = 강철의 환상사
+	CASE "カテゴリ"
+RESULTS:0 = 메탈화 강화반사장갑
+ENDSELECT
+
+
+@CARD_20024(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20024(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환되었을 경우에 발동할 수 있다. 덱에서 '메탈화' 함정 카드 1장을 자신 필드에 세트한다.
+PRINTL 자신 묘지에 '메탈화 강화반사장갑'이 존재할 경우, 또한 자신은 1장 드로우할 수 있다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드가 몬스터 존에 존재하는 한, 이 카드의 레벨은 상대 턴 동안 4개 올라간다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 이 카드가 '메탈화 강화반사장갑'에 의해 릴리스되었을 경우,
+PRINTL 이 카드의 종족을 원하는 종족으로 취급한다.
+
+
+@CARDCAN_20024(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20024)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,20024)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 메탈화
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20024(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20024,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 메탈화
+		효과条件종류 = 함정全般
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 메탈화 강화반사 장갑
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			SIF 듀얼리스트 == "자신"
+PRINTL 드로우하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+			SIF RESULT == はい
+				CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_OTHER(듀얼리스트,"自身",場所,"星",3)
+ENDIF
+

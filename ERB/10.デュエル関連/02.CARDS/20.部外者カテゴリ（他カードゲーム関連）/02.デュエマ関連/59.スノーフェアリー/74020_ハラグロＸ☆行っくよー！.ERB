@@ -1,0 +1,94 @@
+﻿@CARDNAME_74020,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 하라고로 엑스☆ 간다-!
+	CASE "略称"
+RESULTS = 하라고로 엑스☆
+	CASE "カテゴリ"
+RESULTS:0 = 스노우 페어리
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_74020(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250418
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_74020(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 사용할 수 없으며,
+PRINTL 이 카드를 발동한 턴, 자신은 "스노우 페어리" 몬스터밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 이하의 효과를 2번 반복한다.
+PRINTL ●덱 위에서 카드를 6장 넘긴다.
+PRINTL 그 중에서 레벨 5 이하의 "스노우 페어리" 몬스터 1장을 선택하여 특수 소환할 수 있다.
+PRINTL 그 후, 덱을 셔플한다.
+
+@CARDCAN_74020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,74020)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,74020)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_74020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,74020,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		REPEAT 2
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 스노우 페어리
+			CALLFORM 효과条件レベル_ADV(5,"以下")
+			효과条件任意 = 1
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"",6)
+			CALL SHUFFLE(듀얼리스트)
+		REND
+		CALL CARD_SS_RESTRICTION(듀얼리스트,"스노우 페어리")
+	ENDIF
+ENDIF

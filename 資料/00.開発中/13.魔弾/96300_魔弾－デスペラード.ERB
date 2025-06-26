@@ -1,0 +1,107 @@
+@CARDNAME_96300,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마탄환－デスペラード
+	CASE "略称"
+		RESULTS = デスペラード
+	CASE "カテゴリ"
+		RESULTS:0 = 마탄환
+ENDSELECT
+
+
+@CARD_96300(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250428
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_96300(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  카드는 １턴에 １장밖에 발동할 수 없다。
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신 필드에 앞면 표시인 「마탄환」카드가 存在する경우、
+PRINTL 상대 필드의 카드 １장을 대상として발동할 수 있다。
+PRINTL その카드를 破壊する。
+
+@CARDCAN_96300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,96300)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,96300)
+		RETURN 0
+	IF ゾーン == "손패"
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 마탄환の射手
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 마탄환
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 破壊
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,96300)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_96300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,96300,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+ENDIF

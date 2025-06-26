@@ -1,0 +1,148 @@
+﻿@CARDNAME_38057,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = D-HERO Bloo-D
+	CASE "略称"
+		RESULTS = Bloo-D
+	CASE "カテゴリ"
+		RESULTS:0 = HERO
+		RESULTS:1 = D-HERO
+
+ENDSELECT
+
+
+@CARD_38057(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 600
+	CASE "성별"
+		RETURN 雄性
+	CASE "소환불가"
+		RETURN 1
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_38057(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 通常소환할 수 없다。
+PRINTL 자신 필드의 몬스터 ３장을 リリース했을 경우에 패에서 특수 소환할 수 있다。
+CALL CARD_ABLE(0,常在無効)
+PRINTL ①：이 카드가 몬스터 존에 존재하는 한、상대 필드의 表側표시몬스터의 효과는 無効化される。
+CALL CARD_ABLE(10,필드起動)
+PRINTL ②：１턴에 １번、상대 필드의 몬스터 １장을 대상으로 하고 발동할 수 있다。
+PRINTL その상대 몬스터를 이 카드に装備する（１장의 み装備可能）。
+PRINTL ③：이 카드의 공격력은、이 카드의 효과로 장착한 몬스터의 元々の攻撃力分올린다。
+
+
+@CARDSUMMON_AA_38057
+
+
+@CARDCAN_38057(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38057)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) < 3
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,38057,"손패",1)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 常在無効
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_38057(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38057,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件複数 = 3
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 常在無効
+	CALL FULLRESET
+;	효과元カードID = 38057
+	효과条件표시 = 表側표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効",0,38057)
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38057,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,場所,1,38057)
+	ENDIF
+ENDIF

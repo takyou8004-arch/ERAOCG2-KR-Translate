@@ -1,0 +1,205 @@
+﻿@CARDNAME_23312,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 용성인사－세피라 츠바반
+	CASE "略称"
+RESULTS = 세피라 츠바반
+	CASE "カテゴリ"
+		;룡성ではないぞ！
+RESULTS:0 = 테라나이트
+RESULTS:1 = 스텔라나이트
+RESULTS:2 = 세피라
+ENDSELECT
+
+
+@CARD_23312(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2100
+	CASE "성별"
+		RETURN 雄性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+
+@CARD_EXPLANATION_23312(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL 이 카드명의 P효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL ①: 자신의 마법 & 함정 존에 이 카드명 이외의 P 몬스터 카드가 존재할 경우, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 패 / EX덱에서 EX 몬스터 이외의 「테라나이트」 또는 「세피라」 몬스터 1장을 특수 소환한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 카드명의 몬스터 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(2,특수소환時,소환時)
+PRINTL ①: 자신의 마법 & 함정 존에 「세피라」 P 몬스터 카드가 존재하고, 이 카드가 특수 소환되었을 경우,
+PRINTL 또는 이 카드가 소환되었을 때에 발동할 수 있다.
+PRINTL 이 카드 이외의 자신 필드의 「테라나이트」 카드 또는 「세피라」 카드 1장과,
+PRINTL 상대 필드의 앞면 표시 카드 1장을 파괴한다.
+
+
+@CARDCAN_23312(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23312)
+SIF RESULT == 1
+	RETURN 0
+;P
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件名前 = 용성인사－세피라 츠바반
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,23312)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件固名前 = 용성인사－세피라 츠바반
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ:0 = 테라나이트
+	효과条件カテゴリ:1 = 세피라
+	효과条件종류 = 효과モン
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+;M
+ELSEIF 종류 == 특수소환時 || 종류 == 소환時
+	SIF 발동済_2(듀얼리스트,23312)
+		RETURN 0
+	IF 종류 == 특수소환時
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件分割 = 펜듈럼
+		효과条件カテゴリ = 세피라
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 세피라
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_23312(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;P
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23312)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23312,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ:0 = 테라나이트
+		효과条件カテゴリ:1 = 세피라
+		효과条件종류 = 효과モン
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+;モンスター효과-------------------------
+ELSEIF 종류 == 특수소환時 || 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23312)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = 세피라
+		효과条件他所 = 1
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+ENDIF

@@ -1,0 +1,155 @@
+﻿@CARDNAME_2156,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 육화성 스트레나에
+	CASE "略称"
+RESULTS = 스트레나에
+	CASE "カテゴリ"
+RESULTS:0 = 육화
+ENDSELECT
+
+
+@CARD_2156(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_2156(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,2156) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_2156(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 몬스터 2개
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①: 이 카드의 엑시즈 소재를 1개 제거하고,
+PRINTL 자신의 묘지의 식물족 몬스터 1장 또는 '육화' 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드를 패에 넣는다.
+CALL CARD_ABLE(2,필드→묘지)
+PRINTL ②: 이 카드가 릴리스되었을 경우에 발동할 수 있다.
+PRINTL 자신의 EX덱 / 묘지에서 랭크 5 이상의 식물족 엑시즈 몬스터 1장을 골라 특수 소환한다.
+PRINTL 그 몬스터는 엑시즈 소재를 1개 가진다.
+
+@CARDCAN_2156(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2156)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,2156)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件スーパーカテゴリ = 육화
+	효과条件종족 = 식물족
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드→묘지
+	SIF 발동済_2(듀얼리스트,2156)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲EX덱 = 1
+	효과条件종족 = 식물족
+	효과条件종류 = 엑시즈
+	CALL 효과条件レベル_ADV(5, "以上")
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2156(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2156,1,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件スーパーカテゴリ = 육화
+		효과条件종류 = モン全般
+		효과条件종족 = 식물족
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2156,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과範囲묘지 = 1
+		효과条件종족 = 식물족 
+		효과条件종류 = 엑시즈
+		효과추가종류 = 効追Ｘ素
+		CALL 효과条件レベル_ADV(5, "以上")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

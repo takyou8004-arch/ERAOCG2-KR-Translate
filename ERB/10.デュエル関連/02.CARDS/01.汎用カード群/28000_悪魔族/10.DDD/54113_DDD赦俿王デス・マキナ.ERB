@@ -1,0 +1,260 @@
+@CARDNAME_54113,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = DDD사치왕 데스 마키나
+	CASE "略称"
+RESULTS = DDD사치왕 마키나
+	CASE "カテゴリ"
+RESULTS:0 = DD
+RESULTS:1 = DDD
+ENDSELECT
+
+
+@CARD_54113(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_54113(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 10
+素材条件종족 = 악마족
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,54113) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_54113(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 악마족 레벨 10 몬스터 x2
+PRINTL 이 카드는 자신 필드의 "DDD" 몬스터 위에 겹쳐서 X소환할 수도 있다.
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 P효과는 1턴에 1번만 발동할 수 있다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신 필드 / 묘지에서 P몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 마법 / 함정 존에서 P몬스터 1장을 특수 소환하고, 대상의 P몬스터를 자신의 마법 & 함정 존에 놓는다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+
+
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①: "DDD사치왕 데스 마키나"는 자신의 몬스터 존에 1장밖에 앞면 표시로 존재할 수 없다.
+PRINTL 이 카드의 X소재를 1개 늘린다.
+CALLFORM CARD_ABLE(10,발동誘発)
+PRINTL ②: 상대 필드의 몬스터 카드의 효과가 발동했을 때 발동할 수 있다(동일 체인상에서는 1번까지).
+PRINTL 이 카드의 X소재를 2개 제거하거나 자신 필드의 "계약서" 카드 1장을 파괴하고,
+PRINTL 그 상대의 카드를 제외하고, 이 카드의 X소재를 1개 늘린다.
+CALLFORM CARD_ABLE(0,ターン開始時)
+PRINTL ③: 자신 스탠바이 페이즈에 발동할 수 있다. 이 카드를 자신의 마법 / 함정 존에 놓는다.
+
+
+@CARDCAN_54113(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 발동불가,10
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54113)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,54113)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = DDD
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,54113)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	효과条件分割 = 펜듈럼
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF !GROUPMATCH(ゾーン,"필드")
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	효과範囲필드 = 1
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") >= 1
+		발동불가:1 = 1
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件カテゴリ = 계약서
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		발동불가:2 = 1
+	SIF 발동불가:1 == 0 && 발동불가:2 == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF !GROUPMATCH(ゾーン,"필드")
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54113(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 발동불가,10
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54113,1)
+	IF RESULT == 0
+		CALL RESETCONDITION_MAT
+		必要素材数 = 1
+		素材条件カテゴリ = DDD
+		重ねてＸ = 1
+		TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54113)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件分割 = 펜듈럼
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲묘지 = 1
+		효과条件分割 = 펜듈럼
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件カテゴリ = 계약서
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:1 = 1
+	
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= 0
+		발동불가:2 = 1
+
+	IF 발동불가:1 == 0 && 발동불가:2 == 0
+PRINTL 자신 필드의 계약서 카드 1장을 파괴하시겠습니까?
+		CALL YN_CHOICE(듀얼리스트)
+	ELSEIF 발동불가:1 == 1
+		RESULT = いいえ
+	ELSEIF 발동불가:2 == 1
+		RESULT = はい
+	ENDIF
+
+	IF RESULT == はい
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54113)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과条件カテゴリ = 계약서
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"마함",ゾーン,場所)
+			IF RESULT == 1
+				選択カード = 効後_設場所:(処理中番号 - 1) 
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"제외")
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+			ENDIF
+		ENDIF
+	ELSE
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54113,0,X消費2)
+		IF RESULT == 0
+			選択カード = 効後_設場所:(処理中番号 - 1) 
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"제외")
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54113)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ENDIF

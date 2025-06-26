@@ -1,0 +1,132 @@
+﻿@CARDNAME_55604,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 젬나이트 레이디 라피스라즐리
+	CASE "略称"
+RESULTS = GemKL 라피스
+	CASE "カテゴリ"
+RESULTS:0 = 젬나이트
+ENDSELECT
+
+
+@CARD_55604(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 원소정령족 
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_55604(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「젬나이트 라피스」＋「젬나이트」 몬스터
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 덱 / EX덱에서 「젬나이트」 몬스터 1장을 묘지로 보내고,
+PRINTL 필드의 특수 소환된 몬스터의 수× 500 데미지를 상대에게 준다.
+
+@CARDSUMMON_55604(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件カテゴリ = 젬나이트
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件名前 = 젬나이트 라피스
+ELSEIF EX参照 >= 10
+	素材条件カテゴリ = 젬나이트
+ENDIF
+
+@CARDCAN_55604(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,55604)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,55604)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 젬나이트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_55604(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55604,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 젬나이트
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)	
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲상대필드 = 1
+			효과条件종류 = モン全般
+			효과条件召種 = 20
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",(RESULT * 500),1)
+		ENDIF
+	ENDIF
+ENDIF

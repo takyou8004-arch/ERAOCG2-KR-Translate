@@ -1,0 +1,119 @@
+﻿@CARDNAME_92016,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 번개의 천후모양
+	CASE "略称"
+RESULTS = 번개의 천후모양
+	CASE "カテゴリ"
+RESULTS:0 = 천후
+ENDSELECT
+
+
+@CARD_92016(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 지속함정
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92016(종류)
+#DIM DYNAMIC 종류
+
+PRINTL ①：「번개의 천후모양」은 자신 필드에 1장밖에 앞면 표시로 존재할 수 없다.
+CALL CARD_ABLE(0,攻撃時誘発)
+PRINTL ②：자신 필드의 「천후」 몬스터가 전투를 실행하는 공격 선언 시에,
+PRINTL 그 자신 몬스터를 제외하여 발동할 수 있다.
+PRINTL 전투를 실행하는 상대 몬스터를 패로 되돌린다.
+
+
+@CARDCAN_92016(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92016)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件표시 = 表側표시
+효과条件名前 = 천둥의 천후 모양
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	SIF RESULTS != "천후"
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+
+
+@CARDEFFECT_92016(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 戦闘カード,2
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92016)
+	IF RESULT == 0
+		CALL FULLRESET
+		戦闘カード:0 = 戦闘場所(듀얼리스트)
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,戦闘カード:0,제외行き)
+		IF RESULT == 1
+			戦闘カード:1 = 戦闘場所(듀얼리스트,1)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘カード:1,"손패")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92016)
+	IF RESULT == 0
+	ENDIF
+ENDIF

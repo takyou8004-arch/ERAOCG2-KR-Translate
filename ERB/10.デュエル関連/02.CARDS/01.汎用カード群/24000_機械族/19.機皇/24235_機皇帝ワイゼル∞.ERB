@@ -1,0 +1,162 @@
+﻿@CARDNAME_24235,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 기황제 와이젤∞
+	CASE "略称"
+RESULTS = 와이젤∞
+	CASE "カテゴリ"
+RESULTS:0 = 기황
+		RESULTS:1 = 기황제
+		RESULTS:2 = 와이젤
+ENDSELECT
+
+
+@CARD_24235(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2500
+	CASE "소환不可"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250602
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24235(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 일반 소환할 수 없다.
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(0,효과後誘発)
+PRINTL ①: 자신 몬스터가 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 패의 이 카드를 특수 소환한다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ②: 자신 / 상대 턴에, 상대 필드의 싱크로 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 상대 싱크로 몬스터를 이 카드에 장착한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 이 카드는 관통 공격을 가지며, 이 카드의 공격력은 자신의 효과로 장착한 몬스터의 공격력만큼 올린다.
+CALLFORM CARD_ABLE(10,발동誘発)
+PRINTL ④: 1턴에 1번, 상대가 마법 / 함정 카드의 효과를 발동했을 때에 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 파괴한다.
+
+@CARDCAN_24235(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24235)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24235,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과破壊")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,24235)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 싱크로
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_24235(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24235)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24235,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件종류 = 싱크로
+		효과条件표시 = 表側표시
+		CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,場所,1,24235)
+	ENDIF
+
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24235,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"貫通")
+ENDIF
+
+

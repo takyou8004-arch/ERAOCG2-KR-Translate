@@ -1,0 +1,168 @@
+﻿@CARDNAME_52151,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 세이크리드 벌집
+	CASE "略称"
+RESULTS = 세이 벌집
+	CASE "カテゴリ"
+RESULTS:0 = 세이크리드
+ENDSELECT
+
+
+@CARD_52151(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 800
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52151(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+素材条件カテゴリ = 세이크리드
+지정素材名前 = 세이크리드 カドケウス
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,52151) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_52151(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 「세이크리드」 몬스터 2장
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 자신의 「세이크리드」 몬스터가 전투를 실행할 경우, 이 카드의 엑시즈 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 그 몬스터의 공격력은 턴 종료시까지 1000 상승한다.
+PRINTL
+
+@CARDCAN_52151(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52151)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		条件달성:1 ++
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		条件달성:1 ++
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		条件달성:1 ++
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		条件달성:1 ++
+	SIF GETVAR(@"%対面者%_MZ_属:戦闘場所(듀얼리스트,1)") != 어둠속성 && GETVAR(@"%対面者%_MZ_属:戦闘場所(듀얼리스트,1)") != 빛속성
+		条件달성:1 ++
+
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		条件달성:0 ++
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF !MATCH(RESULTS,"세이크리드")
+		条件달성:0 ++
+	
+	SIF 条件달성:0 != 0 && 条件달성:1 != 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52151(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	SIF 戦闘場所(듀얼리스트) != 場所
+		条件달성:1 ++
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		条件달성:1 ++
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		条件달성:1 ++
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		条件달성:1 ++
+	SIF GETVAR(@"%対面者%_MZ_属:戦闘場所(듀얼리스트,1)") != 어둠속성 && GETVAR(@"%対面者%_MZ_属:戦闘場所(듀얼리스트,1)") != 빛속성
+		条件달성:1 ++
+
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		条件달성:0 ++
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF !MATCH(RESULTS,"세이크리드")
+		条件달성:0 ++
+
+	IF 条件달성:0 == 0 && 条件달성:1 == 0
+		IF 듀얼리스트 == "자신"
+			CALL YN_CHOICE(듀얼리스트,"●ビ-ハイブ의 효과（자신 몬스터의 攻撃力１０００アップ）","●カドケウス의 효과（상대モンスター제외）")
+		ELSE
+			RESULT = 1
+		ENDIF
+	ELSEIF 条件달성:0 == 0
+		RESULT = 0
+	ELSEIF 条件달성:1 == 0
+		RESULT = 1
+	ENDIF
+
+	IF RESULT == 0
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52151,,X消費1)
+		IF RESULT == 0
+			選択カード = 戦闘場所(듀얼리스트)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"一攻",1000)
+		ENDIF
+	ELSEIF RESULT == 1
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52151)
+		IF RESULT == 0
+			選択カード = 戦闘場所(듀얼리스트,1)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"제외")
+		ENDIF
+	ENDIF
+ENDIF

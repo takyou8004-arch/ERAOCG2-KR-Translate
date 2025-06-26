@@ -1,0 +1,158 @@
+﻿@CARDNAME_62378,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 플라즈마틱 모델 유지보수
+	CASE "略称"
+RESULTS = 플라즈마유지보수
+	CASE "カテゴリ"
+RESULTS:0 = 플라즈마틱 모델
+ENDSELECT
+
+
+@CARD_62378(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 装備마법
+	CASE "추가日"
+		RETURN 250531
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62378(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 필드의 몬스터(빛 속성/원소정령족) 1체에 장착할 수 있다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 장착 몬스터의 공격력은 500 증가하고, 레벨은 4 올라간다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 장착 몬스터가 의식 몬스터일 경우, 장착 몬스터의 공격은 관통한다.
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ③: 필드에 「플라즈마틱 모델」 의식 몬스터가 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 필드의 「플라즈마틱 모델」 몬스터 1장을 고르고, 묘지의 이 카드를 장착한다.
+
+@CARDCAN_62378(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,62378)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 빛속성
+	효과条件종족 = 원소정령족
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+효과条件カテゴリ = 플라즈마틱 모델
+	효과条件종류 = 초차원
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_62378(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62378)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 빛속성
+		효과条件종족 = 원소정령족
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62378)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件名前 = 플라즈마틱 모델 유지보수
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			CALL FULLRESET
+			효과範囲필드 = 1
+효과条件カテゴリ = 플라즈마틱 모델
+			CALLFORM CARD_EQUIP_ADV(듀얼리스트,選択カード,ゾーン)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,500)
+	CALL STATCHANGE_OTHER(듀얼리스트,"装備",場所,"星",4)
+
+ELSEIF 종류 == 지속효과
+	TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:装備先")},"カテゴリ"
+	SIF MATCH(RESULTS,"리추어")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"装備",装備先,"貫通")
+ENDIF
+

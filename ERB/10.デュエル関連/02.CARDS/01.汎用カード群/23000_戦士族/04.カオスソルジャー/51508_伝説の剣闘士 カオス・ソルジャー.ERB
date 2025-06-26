@@ -1,0 +1,292 @@
+﻿@CARDNAME_51508	,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 전설의 검투사 카오스 솔저
+	CASE "略称"
+RESULTS = 전설의 검투사
+	CASE "カテゴリ"
+RESULTS:0 = 카오스 솔저
+RESULTS:1 = 카오스
+ENDSELECT
+
+
+@CARD_51508	(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 의식
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족 
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_51508	(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 出処
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,51508	) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_51508	(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「카오스 폼」「초전사의 의식」에 의해 강림.
+PRINTL 이 카드는 의식 소환으로만 특수 소환할 수 없다.
+PRINTL 자신의 묘지 / 제외 상태에 일반 몬스터가 존재하는 상태에서 의식 소환한 이 카드는 「각성」한다.
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,ターン開始時)
+PRINTL ①: 2턴째 이후의 자신 턴 개시 시에, 패의 이 카드를 상대에게 보여주고 발동할 수 있다.
+PRINTL 자신의 다른 손패 1장을 덱으로 되돌리고, 덱에서 의식 마법 카드 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 몬스터 존에 존재하는 한, 자신 배틀 페이즈 중에 상대는 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ③: 각성 상태의 이 카드의 공격으로 상대 몬스터를 파괴했을 경우에 발동할 수 있다.
+PRINTL 상대 필드의 카드를 전부 덱으로 되돌린다.
+
+@CARDCAN_51508	(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIM DYNAMIC 효과使用불가,5
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51508)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン開始時
+	SIF 발동済_1(듀얼리스트,51508)
+		RETURN 0
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ターン数 < 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 의식마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時強制
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件종류 = 通常モン
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	IF ターンプレイヤー != 듀얼리스트 || バトルフェイズ != 1
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	RETURN 1
+
+
+ELSEIF 종류 == バトル開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) != 1
+		효과使用불가:0 = 1
+	SIF 발동済_1(듀얼리스트,51508)
+		효과使用불가:0 = 1
+	SIF モンスター数(対面者) == 0
+		효과使用불가:0 = 1
+
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) != 1
+		효과使用불가:1 = 1
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		효과使用불가:1 = 1
+	SIF 손패数(対面者) == 0
+		효과使用불가:1 = 1
+
+	SIF 효과使用불가:0 == 1 && 효과使用불가:1 == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) != 1
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,51508)
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(対面者) == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51508	(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류　
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 손패選択
+#DIM 選択カード
+#DIM 選択カード_ID
+#DIM 소환カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 효과使用불가,5
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50103,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件他所 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_DISPOSE(듀얼리스트,"손패",選択カード,덱行き)
+			CALL FULLRESET
+			효과条件カテゴリ = 의식마법
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX소환時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+ELSEIF 종류 == 지속효과
+	IF ターンプレイヤー == 듀얼리스트 && バトルフェイズ == 1
+		CALL SET_PLAYER_INFO(対面者,"モン효과無効",3)
+		CALL SET_PLAYER_INFO(対面者,"마함無効",3)
+	ENDIF
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) == 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+	ENDIF
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50103)
+	IF RESULT == 0
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"덱")
+	ENDIF
+
+
+ELSEIF 종류 == バトル開始時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",2,1)
+
+ELSEIF 종류 == 필드起動
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) != 1
+		효과使用불가:0 = 1
+	SIF 발동済_1(듀얼리스트,51508)
+		효과使用불가:0 = 1
+	SIF モンスター数(対面者) == 0
+		효과使用불가:0 = 1
+
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) != 1
+		효과使用불가:1 = 1
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		효과使用불가:1 = 1
+	SIF 손패数(対面者) == 0
+		효과使用불가:1 = 1
+
+	IF 효과使用불가:0 != 1 && 효과使用불가:1 != 1
+PRINTL 어느 쪽의 효과를 사용하시겠습니까?
+		CALL YN_CHOICE(듀얼리스트,"開闢の力","宵어둠의 力")
+	ELSEIF 효과使用불가:0 != 1 && 효과使用불가:1 == 1
+		RESULT = 0
+	ELSE
+		RESULT = 1
+	ENDIF
+	IF RESULT == 0
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51508,1)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"제외")
+		ENDIF
+	ELSEIF RESULT == 1
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51508,11)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"상대손패",ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51508,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"제외")
+	ENDIF
+ENDIF

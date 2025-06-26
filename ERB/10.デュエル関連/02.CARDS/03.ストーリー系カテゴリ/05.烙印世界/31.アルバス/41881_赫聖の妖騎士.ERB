@@ -1,0 +1,162 @@
+﻿@CARDNAME_41881,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 데스피아 루루와릴리스
+	CASE "略称"
+RESULTS = 혁성의 요기사
+	CASE "カテゴリ"
+RESULTS:0 = 데스피아
+RESULTS:1 = 플뢰르드리스
+ENDSELECT
+
+
+@CARD_41881(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_41881(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 튜너 ＋ 튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(10,효과後誘発)
+PRINTL ①: 1턴에 1번, 자신 / 상대의 카드가 EX덱에서 벗어났을 경우에 발동할 수 있다.
+PRINTL 자신 필드의 모든 몬스터의 공격력은 500 올린다.
+PRINTL 그 후, 상대 필드의 앞면 표시의 카드 1장의 효과를 턴 종료시까지 무효로 할 수 있다.
+CALLFORM CARD_ABLE(2,ターン終了時予約)
+PRINTL ②: 이 카드가 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 이 턴의 엔드 페이즈에, 패/덱에서 「플뢰르드리스」 또는 「에클레시아」 몬스터 1장을 특수 소환한다.
+
+
+@CARDSUMMON_41881(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 12
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件レベル = 4
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,41881) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_41881(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,41881)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"離이동元",5,2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_2(듀얼리스트,41881)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲손패 = 1
+	효과条件カテゴリ:0 = 에클레시아
+	효과条件カテゴリ:1 = 플뢰르드리스
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_41881(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF  종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41881,10)
+	IF RESULT == 0
+		CALL FULLRESET	
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"無効")
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+				CONTINUE
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"永攻",500)
+		NEXT
+	ENDIF
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41881,2)
+	IF RESULT == 0
+		CALL CARD_RESERV(듀얼리스트,41881)
+	ENDIF
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲손패 = 1
+	효과条件カテゴリ:0 = 에클레시아
+	효과条件カテゴリ:1 = 플뢰르드리스
+
+	CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+ENDIF
+
+
+
+

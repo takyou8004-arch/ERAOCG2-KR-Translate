@@ -1,0 +1,120 @@
+﻿@CARDNAME_71640,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초신성 이종 격투
+	CASE "略称"
+RESULTS = 노바 그래플
+	CASE "カテゴリ"
+RESULTS:0 = 노바 그래플러
+RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_71640(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 지속마법
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71640(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없으며, 자신 필드에 1장밖에 앞면 표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 이 카드의 발동 시의 효과 처리로서, 「노바 그래플러」 몬스터 1장을 덱에서 패에 추가할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 마법 & 함정 존에 존재하는 한, 일반 소환에 더해 1번만,
+PRINTL 기계족 땅 속성 몬스터 1장을 소환할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 자신 메인 페이즈 1 동안, 자신 필드의 기계족 땅 속성 몬스터는 완전 내성을 얻는다.
+
+
+
+@CARDCAN_71640(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71640)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,71640)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_71640(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71640,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 노바 그래플러
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件종족 = 기계족
+	효과条件속성 = 땅속성
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+	IF メインフェイズ == 1 && ターンプレイヤー == 듀얼리스트
+		CALL FULLRESET
+		효과条件종족 = 기계족
+		효과条件속성 = 땅속성
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"モ耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"魔耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"함정耐")
+	ENDIF
+ENDIF
+

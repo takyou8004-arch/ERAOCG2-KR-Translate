@@ -1,0 +1,181 @@
+﻿@CARDNAME_99650,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 감각차단의 함정 속으로
+	CASE "略称"
+	
+		RESULTS = 감각차단
+	CASE "カテゴリ"
+		RESULTS:0 =함정 속으로
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99650(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99650(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,효과後誘発)
+PRINTL ①：상대가 암컷 몬스터의 소환 또는 특수 소환에 성공했을 때 발동할 수 있다.
+PRINTL 그 몬스터는 수비 표시가 되어 표시 형태를 변경할 수 없고, 효과는 무효화되며, 소재로 릴리스할 수 없다.
+CALL CARD_ABLE(2,付与효과)
+PRINTL ②： 그 몬스터가 필드에 존재하는 한, 메인 페이즈 시작 시마다 자신은 1000 라이프를 회복한다.
+PRINTL 이 효과를 5회 적용받은 몬스터는 “소멸”한다. 함정 내성을 가진 경우 3회 적용 후 “소멸”한다.
+PRINTL 이 효과는 함정 내성을 관통한다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99650(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99650)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	IF ゾーン == "손패"
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件名前 = 아트라의 충혹마
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF FINAL_SUMMON_TARGET(듀얼리스트,1) == 5 
+		RETURN 0	
+
+	효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+	SIF GETVAR(@"%対面者%_MZ_性:효과先") == 雄性
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 付与효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:場所")},"성별"
+	SIF RESULT != 牝性
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_99650(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウントダウン
+#DIM DYNAMIC 효과先
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99650)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+		IF 효과先 != 5
+			IF GETVAR(@"%対面者%_MZ_함정耐:효과先") == 0
+				TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:효과先")}, "名前"
+				PRINTFORMW %RESULTS%는 가슴까지 구멍에 빠져버려, 꼴사납게 빠져나오려 허우적거렸다.
+				CALL SET_FIELD_INFO(対面者,"필드",효과先,"無効",2)
+				CALL SET_FIELD_INFO(対面者,"필드",효과先,"表固",2)
+				CALL SET_FIELD_INFO(対面者,"필드",효과先,"不材",2)
+				CALL SET_FIELD_INFO(対面者,"필드",효과先,"表",2)
+				CALL CARD_GRANT_SPECIAL(対面者,효과先,99650)
+			ELSE
+				TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:효과先")}, "名前"
+				PRINTFORMW %RESULTS%는 가슴까지 구멍에 빠졌지만, 함정 내성으로 자만하고 있습니다.
+				CALL CARD_GRANT_SPECIAL(対面者,효과先,99650)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 付与효과
+	CALL LIFE_CHANGE(対面者,"増加","효과",1000)
+	TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:場所")}, "名前"
+	PRINTFORMW 가슴까지 구멍에 빠진 %RESULTS%는 매우 지루해 보인다.
+	IF 듀얼리스트 == "상대"
+		PRINTFORMW %CALLNAME:MASTER%는 흘러들어온 달콤한 흰 액체를 맛있게 삼키며,
+		PRINTFORMW %RESULTS%는 의아한 표정으로 그것을 바라보고 있었다.
+	ENDIF
+
+
+	CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",場所)
+	조교대상 = RESULT
+	IF RESULT != -1
+		PRINTFORML %CALLNAME:조교대상%의 인식 밖에서 구멍 아래에서는 끔찍한 조교가 계속되고 있었다……
+		PRINTFORML %CALLNAME:조교대상%는 조교의 영향을 받았습니다.
+		CALL EROTIC_MOVE("バスト凌辱",조교대상)
+	ENDIF
+	IF GETVAR(@"%듀얼리스트%_MZ_함정耐:場所") >= 1
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"조교",40)
+		カウントダウン = ( 120 - GETVAR(@"%듀얼리스트%_MZ_조교:場所") ) / 40
+		SETCOLOR C_RED
+		PRINTFORML 
+		PRINTFORMW …………………남은 턴：{カウントダウン}
+	ELSE
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"조교",20)
+		カウントダウン = ( 100 - GETVAR(@"%듀얼리스트%_MZ_조교:場所") ) / 20
+		SETCOLOR C_RED
+		PRINTFORML 
+		PRINTFORML 
+		PRINTFORML …………………남은 턴：{カウントダウン}
+		PRINTFORML 
+		PRINTFORMW
+	ENDIF
+
+	CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",場所)
+	IF 조교대상 != -1
+		IF GETVAR(@"%듀얼리스트%_MZ_조교:場所") >= 100
+			PRINTFORML 촉수들의 모체로 완성된 %CALLNAME:조교대상%는 갑자기 구멍 속으로 끌려가기 시작합니다.
+			PRINTFORML %CALLNAME:조교대상%는 삼켜지지 않으려 필사적으로 저항하지만 어깨 아래는 이미 묘상으로 완성되어버렸고……
+			PRINTFORML 눈치채지 못하게 주사된 마취제의 효과도…… 이미 사라져버렸습니다.
+			PRINTFORML %CALLNAME:조교대상%는 갑자기 들이닥치는 강렬한 쾌락에 비명을 지르며 촉수에게 끌려들어갔습니다.
+			REPEAT GETVAR(@"%듀얼리스트%_MZ_조교:場所")/10
+				CALL EROTIC_MOVE("묘상捕縛",조교대상, -1,3000)
+			REND
+			PRINTFORMW 그 후 비명은 멈췄고, 격렬한 물소리만 울려 퍼졌다.
+
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+		ENDIF
+	ENDIF
+	RESETCOLOR
+ENDIF

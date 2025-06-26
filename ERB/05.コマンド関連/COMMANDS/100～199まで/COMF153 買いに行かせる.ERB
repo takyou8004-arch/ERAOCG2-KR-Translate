@@ -1,0 +1,99 @@
+﻿;-------------------------------------------------
+;쇼핑 보낸다
+;SM계커맨드、レベル2
+;-------------------------------------------------
+@COM153
+#DIM DYNAMIC 노출강도
+#DIM DYNAMIC 정복강도
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 10
+DOWNBASE:기력 += 100
+
+IF MONEY < 1000
+	PRINTFORML 최저한의 남자다움（돈）이 부족합니다！
+	TFLAG:SELECTCOM분기 = -1
+	RETURN 0
+ENDIF
+
+노출강도 = 1
+정복강도 = 1
+
+IF GET_MONTH() == "冬の月"
+	노출강도 = 2
+ENDIF
+
+TFLAG:SELECTCOM분기 = 0
+IF !EQUIP:TARGET:0
+	PRINTFORML %CALLNAME:TARGET%는 전라입니다만、옷을 입혀주시겠습니까？
+	PRINTFORML 
+	PRINTFORML [0] - 네
+	PRINTFORML [1] - 코트만
+	SIF TALENT:TARGET:새드 && TALENT:TARGET:펫
+		PRINTFORML [2] - 전라로 가게한다
+	BINPUT
+	IF RESULT == 0
+		CALL CLOTHES_RESET(TARGET)
+		노출강도 += 0
+		정복강도 += 0
+	ELSEIF RESULT == 1
+		FOR LOCAL,0,20
+			EQUIP:TARGET:LOCAL = 0
+		NEXT
+		EQUIP:TARGET:외투 = 5
+		CALL CLOTHES_SETTING_TRAIN(TARGET)
+		노출강도 += 2
+		정복강도 += 1
+		TFLAG:SELECTCOM분기 = 1
+	ELSEIF RESULT == 2
+		CALL CLOTHES_ZENRA(TARGET)
+		노출강도 += 5
+		정복강도 += 5
+		TFLAG:SELECTCOM분기 = 2
+	ENDIF
+ELSE
+	CALL CLOTHES_RESET(TARGET)
+ENDIF
+
+CALL SOURCE_CALC_고통(TARGET, MASTER, 300)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 노출강도 * 100)
+CALL SOURCE_CALC_정복(TARGET, MASTER, 정복강도 * 150)
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 2
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 2
+ENDIF
+
+SIF TALENT:TARGET:마조
+	EXP:TARGET:봉사쾌락경험 += 1
+;20分使用
+CALL MONEY_GET(-1000)
+ITEM:콘돔 += 10
+TIME += 20
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE153
+;土下座実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(153)
+	RETURN RESULT
+;1000円は자신持ち
+SIF MONEY < 1000
+	RETURN 0
+SIF TALENT:TARGET:마조
+	RETURN 1
+SIF TALENT:TARGET:즉시타락
+	RETURN 1
+SIF ABL:TARGET:마조끼 <= 3
+	RETURN 0
+RETURN 1

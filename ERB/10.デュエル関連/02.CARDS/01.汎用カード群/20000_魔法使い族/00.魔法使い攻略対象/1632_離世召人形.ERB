@@ -1,0 +1,206 @@
+﻿@CARDNAME_1632,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신부 인형
+	CASE "略称"
+RESULTS = 이세 소환 인형
+	CASE "カテゴリ"
+RESULTS:0 = 인형
+ENDSELECT
+
+
+@CARD_1632(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2100
+	CASE "성별"
+		RETURN 牝性
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1632(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①: 이 카드를 드로우했을 때, 이 카드를 상대에게 보여 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+CALLFORM CARD_ABLE(0,バトル開始時強制)
+PRINTL ②: 자신 및 상대의 배틀 페이즈 개시시에 발동한다.
+PRINTL 자신의 덱의 매수가 상대보다 많을 경우, 이 카드의 공격력은 턴 종료시까지, 그 차이의 수치 × 300 올린다.
+CALLFORM CARD_ABLE(0,필드→묘지,손패→묘지,덱→묘지,破壊→묘지,戦闘→묘지)
+PRINTL ③: 이 카드가 묘지로 보내졌을 경우 발동한다.
+PRINTL 이 턴의 엔드 페이즈에, 이 카드를 덱의 가장 위로 되돌린다.
+;PRINTL ④：この카드가 フィールドに存在する場合、엔드 페이즈에 발동する。
+;PRINTL 자신의 덱に「ハナヨメトークン」１장을 増やす。
+;PRINTL その後、자신의 덱が６０장より많을 경우、次の자신의 ドローフェイズをスキップする。
+
+@CARDSUMMON_AA_1632
+
+
+@CARDCAN_1632(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1632)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,1632,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+효과条件名前 = 신부 인형
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"Ｃドロー")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == バトル開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 現山札数(듀얼리스트) <= 現山札数(対面者)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_RESERV(듀얼리스트,1632)
+	RETURN 0
+
+ELSEIF 종류 == ターン終了時予約
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1632(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1632)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+	ENDIF
+
+ELSEIF 종류 == バトル開始時強制
+	攻撃力修正 = 現山札数(듀얼리스트) - 現山札数(対面者)
+	攻撃力修正 = 攻撃力修正 * 300
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",攻撃力修正)
+
+ELSEIF 종류 == ターン終了時強制
+	SETCOLOR 0,0,0
+	CALL FULLRESET
+	CALL CARD_GENERATE_DECK(듀얼리스트,101632)
+	RESETCOLOR
+	IF 現山札数(듀얼리스트) > 60
+		PRINTW 덱에서 黒い何かがはみ出している……
+		CALL SET_PLAYER_INFO(듀얼리스트,"ドロースキップ", 1)
+	ENDIF
+
+;ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+;	CALL CARD_RESERV(듀얼리스트,1632)
+
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+효과条件名前 = 신부 인형
+	CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	選択カード = RESULT
+	IF 選択カード != 9999
+		CALL CARD_ADD_DECK_SPC(듀얼리스트,"묘지",選択カード)
+	ENDIF
+ENDIF
+
+
+@CARDNAME_101632,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신부 토큰
+	CASE "略称"
+RESULTS = 신부 토큰
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_101632(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+
+@CARDCAN_101632(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+RETURN 0

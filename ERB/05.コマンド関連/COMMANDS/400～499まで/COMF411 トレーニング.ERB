@@ -1,0 +1,96 @@
+﻿;-------------------------------------------------
+;몸을 단련한다
+;-------------------------------------------------
+@COM411
+FOR LOCAL,0,CHARANUM
+	SIF CFLAG:LOCAL:현재위치 != CFLAG:MASTER:현재위치
+		CONTINUE
+	SIF CFLAG:LOCAL:수면
+		CONTINUE
+	CALL SOURCE_CALC_환락(LOCAL, MASTER, 200)
+	EXP:LOCAL:운동경험 ++
+
+	IF GROUPMATCH(CFLAG:MASTER:현재위치,場所_ベランダ,場所_寝室)
+		DOWNBASE:LOCAL:체력 = 100
+		DOWNBASE:LOCAL:기력 = 50
+		CFLAG:LOCAL:지방 -= 1
+	ELSEIF CFLAG:MASTER:현재위치 == 場所_公園
+		DOWNBASE:LOCAL:체력 = 150
+		DOWNBASE:LOCAL:기력 = 100
+		CFLAG:LOCAL:지방 -= 2
+	ELSEIF CFLAG:MASTER:현재위치 == 場所_ジム
+		DOWNBASE:LOCAL:체력 = 300
+		DOWNBASE:LOCAL:기력 = 200
+		CFLAG:LOCAL:지방 -= 5
+	ELSEIF CFLAG:MASTER:현재위치 == 場所_川沿い
+		DOWNBASE:LOCAL:체력 = 100
+		DOWNBASE:LOCAL:기력 = 150
+		CFLAG:LOCAL:지방 -= 2
+	ENDIF
+
+	;근육질なら효과UP
+	;適度に지방もあれば효과UP
+	IF オプション_체력기력상승 == 1
+		IF GROUPMATCH(CFLAG:MASTER:현재위치,場所_ベランダ,場所_寝室)
+			CFLAG:LOCAL:체력기력AWS += 1
+			IF TALENT:LOCAL:근육질
+				CFLAG:LOCAL:체력기력AWS += 1
+			ENDIF
+			IF CFLAG:LOCAL:지방 >= 120
+				CFLAG:LOCAL:체력기력AWS += 1
+			ENDIF
+		ELSEIF CFLAG:MASTER:현재위치 == 場所_公園
+			CFLAG:LOCAL:체력기력AWS += 2
+			IF TALENT:LOCAL:근육질
+				CFLAG:LOCAL:체력기력AWS += 2
+			ENDIF
+			IF CFLAG:LOCAL:지방 >= 120
+				CFLAG:LOCAL:체력기력AWS += 2
+			ENDIF
+		ELSEIF CFLAG:MASTER:현재위치 == 場所_川沿い
+			CFLAG:LOCAL:체력기력AWS += 2
+			IF TALENT:LOCAL:근육질
+				CFLAG:LOCAL:체력기력AWS += 2
+			ENDIF
+			IF CFLAG:LOCAL:지방 >= 120
+				CFLAG:LOCAL:체력기력AWS += 2
+			ENDIF
+		ELSEIF CFLAG:MASTER:현재위치 == 場所_ジム
+			CFLAG:LOCAL:체력기력AWS += 10
+			IF TALENT:LOCAL:근육질
+				CFLAG:LOCAL:체력기력AWS += 10
+			ENDIF
+			IF CFLAG:LOCAL:지방 >= 120
+				CFLAG:LOCAL:체력기력AWS += 10
+			ENDIF
+		ENDIF
+	ENDIF
+NEXT
+	;さすがに１時間身体を鍛え続けるのはきつそう。
+	;TIME += 60
+	TIME += 20
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;몸을 단련한다
+@COM_ABLE411
+;청소実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(411)
+	RETURN RESULT
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+SIF CFLAG:MASTER:감기플래그 >= 1
+	RETURN 0
+SIF CFLAG:MASTER:현재위치 == 場所_寝室 && ITEM:덤벨 == 1
+	RETURN 1
+SIF !GROUPMATCH(CFLAG:MASTER:현재위치,場所_ベランダ, 場所_公園, 場所_ジム, 場所_川沿い, 場所_サイクル, 場所_散歩道)
+	RETURN 0
+;기력0
+RETURN 1

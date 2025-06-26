@@ -1,0 +1,194 @@
+﻿@CARDNAME_50992,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 패왕권룡 스타브 베놈
+	CASE "略称"
+RESULTS = 패왕권룡 스타브
+	CASE "カテゴリ"
+RESULTS:0 = 패왕권룡
+RESULTS:1 = 베놈
+ENDSELECT
+
+
+@CARD_50992(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2000
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50992(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 어둠속성P몬스터×２
+PRINTL 이 카드는 융합 소환 및 이하의 방법으로만 특수 소환할 수 있다.
+PRINTL ●자신 필드의 상기의 카드를 릴리스했을 경우에 EX덱에서 특수 소환할 수 있다.
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①：자신 / 상대의 필드 / 묘지의 「패왕권룡 스타브 베놈」 이외의 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드의 『필드 기동효과』를 발동한다. (필드에 존재할 경우, 기동할 수 있는 효과)
+PRINTL 그 후, 자신 필드의 몬스터 전부에 턴 종료시까지 관통 공격을 부여한다.
+
+
+@CARDSUMMON_50992(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件分割 = 펜듈럼
+素材条件속성 = 어둠속성
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,50992) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_50992(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50992)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,50992)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 어둠속성
+	효과条件分割 = 펜듈럼
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,50992)
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대묘지 = 1
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	효과条件종류:0 = 효과モン
+	효과条件종류:1 = 의식
+	효과条件종류:2 = 융합
+	효과条件종류:3 = 싱크로
+	효과条件종류:4 = 엑시즈
+	효과条件종류:5 = 링크
+	효과条件종류:6 = 초차원
+	효과条件固名前 = 패왕권룡 스타브 베놈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_50992(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50992)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 어둠속성
+		효과条件分割 = 펜듈럼
+		효과条件複数 = 2
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "EX덱", 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50992,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대묘지 = 1
+		효과範囲필드 = 1
+		효과範囲묘지 = 1
+		효과条件종류:0 = 효과モン
+		효과条件종류:1 = 의식
+		효과条件종류:2 = 융합
+		효과条件종류:3 = 싱크로
+		효과条件종류:4 = 엑시즈
+		효과条件종류:5 = 링크
+		효과条件종류:6 = 초차원
+		효과条件固名前 = 패왕권룡 스타브 베놈
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALLFORM CARDEFFECT_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:選択カード（CS）")}(듀얼리스트,필드起動,"효과処理")
+		ENDIF
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"貫通",1)
+	ENDIF
+ENDIF
+
+
+
+

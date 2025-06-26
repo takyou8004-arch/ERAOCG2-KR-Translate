@@ -1,0 +1,146 @@
+﻿@CARDNAME_74121,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 시간의 침묵－턴 사일런스
+	CASE "略称"
+RESULTS = 시간의 침묵
+	CASE "カテゴリ"
+RESULTS:0 = 사일런트
+RESULTS:1 = 빛의 황금궤
+ENDSELECT
+
+
+@CARD_74121(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_74121(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発,발동誘発)
+PRINTL ①: 자신 필드의 앞면 표시 "빛의 황금궤" 몬스터 1체의 레벨을 3개 올린다.
+PRINTL 자신 필드에 "빛의 황금궤" 및 "빛의 황금궤" 몬스터가 존재하는 상태에서,
+PRINTL 상대 몬스터의 효과 발동에 체인하여 이 카드를 발동했을 경우, 그 상대의 효과를 무효로 한다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ②: "빛의 황금궤" 몬스터가 전투를 실행할 때,
+PRINTL 묘지에서 이 카드를 제외하고 발동할 수 있다. 그 배틀 페이즈를 종료한다.
+
+@CARDCAN_74121(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,74121)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発 || 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,74121)
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	IF 종류 == 발동誘発
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 빛의 황금궤
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件名前 = 빛의 황금궤
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	SIF !MATCH(RESULTS,"빛의 황금궤")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_74121(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,74121,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件표시 = 10
+		효과条件カテゴリ = 빛의 황금궤
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永星",3)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,74121,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件표시 = 10
+		효과条件カテゴリ = 빛의 황금궤
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永星",3)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,74121)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL EVADE_ATTACK(듀얼리스트)
+		バトル強制終了 = 1
+	ENDIF
+ENDIF

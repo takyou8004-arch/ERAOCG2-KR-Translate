@@ -1,0 +1,86 @@
+﻿;-------------------------------------------------
+;자위한다
+;애무계커맨드、レベル3
+;-------------------------------------------------
+@COM10
+#DIM DYNAMIC 選択ケース
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:MASTER:체력 += 5
+DOWNBASE:MASTER:기력 += 50
+
+選択ケース = RAND:4
+
+SIF TALENT:MASTER:성별 == 2
+	選択ケース -= 1
+	IF 選択ケース <= 0
+		選択ケース = 0
+ENDIF
+
+CALL SOURCE_CALC_노출(MASTER, TARGET, 400)
+SELECTCASE 選択ケース 
+	CASE 0
+		IF TALENT:MASTER:성별 != 1
+			TCVAR:MASTER:사정쾌락강도 = 1000
+			TCVAR:MASTER:사정대상캐릭터_1 = MASTER
+			TCVAR:MASTER:사정부위플래그 = 3
+		ENDIF
+		CALL SOURCE_CALC_쾌Ｃ(MASTER, MASTER, 100)
+		;奴隷の손가락⇔奴隷のＣの汚れが이동
+		STAIN:MASTER:1 |= STAIN:MASTER:2
+		STAIN:MASTER:2 |= STAIN:MASTER:1
+	CASE 1
+		CALL SOURCE_CALC_쾌Ｂ(MASTER, MASTER, 100)
+		;奴隷の손가락⇔奴隷のＢの汚れが이동
+		STAIN:MASTER:1 |= STAIN:MASTER:5
+		STAIN:MASTER:5 |= STAIN:MASTER:1
+	CASE 2
+		CALL SOURCE_CALC_쾌Ａ(MASTER, MASTER, 100)
+		;奴隷の손가락⇔奴隷のＡの汚れが이동
+		STAIN:MASTER:1 |= STAIN:MASTER:4
+		STAIN:MASTER:4 |= STAIN:MASTER:1
+	CASE 3
+		CALL SOURCE_CALC_쾌Ｖ(MASTER, MASTER, 100)
+		;奴隷の손가락⇔奴隷のＶの汚れが이동
+		STAIN:MASTER:1 |= STAIN:MASTER:3
+		STAIN:MASTER:3 |= STAIN:MASTER:1
+ENDSELECT
+
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;비디오촬영時は경험にプラス
+IF TEQUIP:비디오촬영
+	EXP:MASTER:자위경험 += 2
+	EXP:MASTER:조교자위경험 += 2
+ELSE
+	EXP:MASTER:자위경험 += 1
+	EXP:MASTER:조교자위경험 += 1
+ENDIF
+;公開オナニー時は이상경험付加
+IF TEQUIP:비디오촬영 && !GETBIT(CFLAG:3,0)
+	EXP:이상경험 ++
+	SETBIT CFLAG:3,0
+ENDIF
+RETURN 1
+
+
+@COM_ABLE10
+;자위実行판정
+SIF !TFLAG:100
+	RETURN 0
+SIF CFLAG:MASTER:현재위치 != 場所_寝室
+	RETURN 0
+
+SIF CFLAG:MASTER:현재위치 == 場所_寝室 && TARGET <= 0
+	RETURN 1
+;一括관리
+SIF GLOBAL_COMABLE(10)
+	RETURN RESULT
+;밧줄사용중/手足が使えないと불가
+SIF TEQUIP:MASTER:밧줄 || TEQUIP:MASTER:사지없음
+	RETURN 0
+RETURN 1

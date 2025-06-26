@@ -1,0 +1,127 @@
+﻿@CARDNAME_72430,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스피드 리버스
+	CASE "略称"
+RESULTS = 스피드 리버스
+	CASE "カテゴリ"
+RESULTS:0 = 스피드 로이드
+ENDSELECT
+
+
+@CARD_72430(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_72430(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 어느 한 가지밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 자신의 묘지의 「스피드 로이드」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 특수 소환한다.
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ②: 묘지의 이 카드를 제외하고, 자신의 묘지의 「스피드 로이드」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 패에 더한다.
+
+
+@CARDCAN_72430(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72430)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,52032)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 스피드 로이드
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,52032)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 스피드 로이드
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72430(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 묘지送カード,10
+#DIM DYNAMIC 손패묘지送カード,10
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択済カード
+;융합소환
+VARSET 묘지送カード, 35
+VARSET 손패묘지送カード, 35
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72430,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 스피드 로이드
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF		
+
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72430,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 스피드 로이드
+		효과条件종류 = モン全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ENDIF

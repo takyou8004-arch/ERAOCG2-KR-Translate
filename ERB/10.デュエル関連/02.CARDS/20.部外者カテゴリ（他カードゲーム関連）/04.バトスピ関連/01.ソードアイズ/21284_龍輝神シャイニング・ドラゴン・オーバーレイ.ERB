@@ -1,0 +1,239 @@
+@CARDNAME_21284,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 용휘신 샤이닝 드래곤 오버레이
+	CASE "略称"
+RESULTS = 오버레이
+	CASE "カテゴリ"
+RESULTS:0 = 샤이닝 드래곤
+		RESULTS:1 = 성룡
+		RESULTS:2 = 강화
+		RESULTS:4 = 배틀 스피릿
+ENDSELECT
+
+
+@CARD_21284(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+	CASE "レア度"
+		RETURN ULR
+	CASE "連動ID"
+		RETURN 4122
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21284(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①③의 효과는 각각 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 이 카드를 패에서 버리고 발동할 수 있다.
+PRINTL 패에서 "샤이닝 드래곤" 몬스터 1장을 소환한다 (릴리스는 필요로 하지 않는다).
+PRINTL 그 후, 자신 필드의 "샤이닝 드래곤" 몬스터 1장을 고르고,
+PRINTL 자신의 패 / 덱 / 묘지에서 "검날" 지속 마법 카드 1장을 골라 그 몬스터에게 장착한다.
+PRINTL 그렇게 했을 경우, 그 카드의 패에서 발동했을 때의 능력을 발동할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는, 이 카드에 장착하고 있는 "검날" 지속 마법 카드의 수까지 추가 공격할 수 있다.
+CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
+PRINTL ③: 자신 필드의 "검날" 지속 마법 카드의 수 +1까지 이하의 효과를 반복할 수 있다.
+PRINTL ●상대 필드의 공격력 2000 이하의 몬스터 1장을 파괴한다.
+PRINTL 이 효과로 파괴하는 몬스터의 공격력의 상한은 자신 필드의 "강화" 카드 1장당 300 상승한다.
+PRINTL 이 카드가 장착 카드를 장착하고 있을 경우, 이 효과는 상대 턴에도 발동할 수 있다.
+
+@CARDCAN_21284(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21284)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,21284)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+효과条件カテゴリ = 샤이닝 드래곤
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_3(듀얼리스트,21284)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+효과条件カテゴリ = 강화
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = (RESULT * 300) + 2000
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件攻撃力 = 攻撃力修正
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	IF RESULT != 1
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		SIF 종류 == フリー誘発
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21284(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 攻撃횟수
+#DIM DYNAMIC レベル修正
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 대상枚数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21284,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과条件종류 = モン全般
+효과条件カテゴリ = 샤이닝 드래곤
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",1)
+			ENDIF
+
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲덱 = 1
+			효과範囲묘지 = 1
+효과条件カテゴリ = 검날
+			효과条件종류 = 지속마법
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)	
+			選択カード = RESULT
+			IF 選択カード != 9999
+				選択カード_ID = RESULT:99
+				CALL CARD_SELECT(듀얼리스트,選択カード)
+				CALL FULLRESET
+				효과範囲필드 = 1
+효과条件カテゴリ = 샤이닝 드래곤
+				CALLFORM CARD_EQUIP_ADV(듀얼리스트,選択カード（CS）,参照先（CS）)
+				CALLFORM CARDEFFECT_{選択カード_ID}(듀얼리스트,손패起動,"효과処理")
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21284,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+효과条件カテゴリ = 강화
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		攻撃力修正 = (RESULT * 300) + 2000
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+효과条件カテゴリ = 검날
+		효과条件종류 = 지속마법
+		효과条件CNT = 1
+		효과条件限界値 = 5
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		대상枚数 = RESULT+1
+
+		CALL FULLRESET
+		효과条件攻撃力 = 攻撃力修正
+		효과条件任意 = 1
+		효과条件複数 = 100 - 대상枚数
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+효과条件カテゴリ = 검날
+	효과条件종류 = 지속마법
+	효과条件CNT = 1
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	攻撃횟수 = RESULT
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",攻撃횟수)
+
+	SIF GETVARS(@"%듀얼리스트%_フィールド名") != "聖剣連山"
+		RETURN 0
+	CALL FULLRESET
+효과条件カテゴリ = 검날
+	효과条件종류 = 지속마법
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT < 1
+		RETURN 0
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+ENDIF
+

@@ -1,0 +1,162 @@
+﻿@CARDNAME_50556,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 슈팅 스타 드래곤
+	CASE "略称"
+RESULTS = 슈스타 D
+	CASE "カテゴリ"
+RESULTS:0 = 스타더스트
+ENDSELECT
+
+
+@CARD_50556(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3300
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50556(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件종류 = 싱크로
+ELSEIF EX参照 >= 10
+素材条件名前 = 스타더스트 드래곤
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50556) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50556(종류)
+#DIM DYNAMIC 종류
+
+PRINTL S 몬스터의 튜너 + 「스타더스트 드래곤」
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 자신 덱 위에서 5장을 넘겨 덱으로 되돌린다.
+PRINTL 이 턴, 이 카드는 넘긴 카드 중의 튜너의 수까지 공격할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신 필드의 카드는 파괴 내성을 얻는다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ③: 상대 몬스터의 공격 선언 시에 발동할 수 있다.
+PRINTL 이 카드를 소멸시키고, 그 공격을 무효로 한다.
+PRINTL (소멸한 몬스터는 제외되고, 필드에 빈 공간이 있을 경우 엔드 페이즈 시에 특수 소환된다)
+
+
+
+
+@CARDCAN_50556(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50556)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50556(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 攻撃횟수
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50556,10)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_덱:カウンタ"))
+			PRINTW
+			CALLFORM CARD_{GETVAR(@"%対面者%_덱:カウンタ")}, "튜너"
+			IF RESULT != 0
+				PRINTFORML 튜너モンスター！
+				攻撃횟수 ++
+			ENDIF
+		NEXT
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",攻撃횟수,1)
+
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐")
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50556)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+		CALL EVADE_ATTACK(듀얼리스트)
+	ENDIF
+ENDIF

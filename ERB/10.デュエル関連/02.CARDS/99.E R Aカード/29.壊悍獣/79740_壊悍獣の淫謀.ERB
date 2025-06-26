@@ -1,0 +1,158 @@
+@CARDNAME_79740,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 괴한수의 음모
+	CASE "略称"
+		RESULTS = 괴한수의 음모
+	CASE "カテゴリ"
+		RESULTS:0 = 괴한수
+		RESULTS:1 = 괴한에 물든 경계의 날개
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+@CARD_79740(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250420
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_79740(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_79740(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL 이 카드명의  ①②의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+PRINTL ①：덱에서 이 카드 이외의 "괴한수"마법 / 함정 카드 또는 "계한전희의 정환수"를 １장 골라 패에 넣는다。
+CALL CARD_ABLE(2,묘지起動)
+PRINTL ②：자신 메인 페이즈에 패에서 "괴한수" 카드 １장을 버리고、묘지의 이 카드를 제외하고 발동할 수 있다。
+PRINTL 상대는 덱에서 암컷 몬스터 １장을 고르고 특수 소환하며、자신은 덱에서 １장 드로우한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79740(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79740)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79740)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件固名前 = 괴한수의 음모
+	효과条件カテゴリ = 괴한수
+	효과条件スーパー名前 = 계한전희의 정환수
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79740)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 괴한수
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79740(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 変身カードID
+#DIM DYNAMIC 修正値
+#DIM DYNAMIC 元괴한플랜트위치
+#DIMS DYNAMIC ヒロインネーム
+#DIMS DYNAMIC 元ヒロインネーム
+#DIMS DYNAMIC 無効대상ID
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79740,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 괴한수
+		효과条件スーパー名前 = 계한전희의 정환수
+		효과条件固名前 = 괴한수의 음모
+		효과条件종류 = 마함全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79740,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 괴한수
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件성별 = 牝性 
+			CALL CARD_SP_SUMMON_ADV(対面者,ゾーン,場所)
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,167 @@
+﻿@CARDNAME_4526,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 이야기꾼『무라사키 시키부』 후지와라노 쿄코
+	CASE "略称"
+RESULTS = 무라사키 시키부
+	CASE "カテゴリ"
+RESULTS:0 = 영령
+RESULTS:1 = 캐스터
+RESULTS:2 = FATE
+ENDSELECT
+
+@CARD_4526(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 2200
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250418
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4526(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 마법사족 몬스터×２
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,常在無効)
+PRINTL ①: 자신 묘지에 마법 카드가 3장 이상 존재하고, 이 카드가 몬스터 존에 수비 표시로 존재하는 한,
+PRINTL 이 카드보다 공격력이 낮은 필드의 몬스터의 효과는 발동할 수 없다.
+CALLFORM CARD_ABLE(2,ターン終了時)
+PRINTL ②: 자신 / 상대 턴 종료 시에 패에서 마법 카드를 최대 3장까지 보여주고 이하의 효과를 적용한다.
+PRINTL ● 1장 이상: 자신 필드의 몬스터의 공격력을 400 올린다.
+PRINTL ● 2장 이상: 상대 필드의 몬스터 1체의 공격력을 0으로 한다.
+PRINTL ● 3장 이상: 덱에서 1장 드로우한다.
+
+@CARDSUMMON_4526(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件종족 = 마법사족
+ENDIF
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,4526) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_4526(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4526)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 常在無効
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") != 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,4526)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4526(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 見せた枚数
+
+IF 종류 == 常在無効
+	IF GETVAR(@"%듀얼리스트%_MZ_攻:場所") >= 2
+		CALL FULLRESET
+		효과条件攻撃力 = GETVAR(@"%듀얼리스트%_MZ_攻:場所") - 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"発無")
+
+		CALL FULLRESET
+		효과条件攻撃力 = GETVAR(@"%듀얼리스트%_MZ_攻:場所") - 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"発無",0,4526)
+	ENDIF
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4526,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件複数 = 97
+		효과条件종류 = 마법全般
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF 選択カード != 9999
+			見せた枚数 = RESULT:100
+			IF 見せた枚数 >= 1
+				CALL FULLRESET
+				CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"永攻",400)
+			ENDIF
+			IF 見せた枚数 >= 2
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"永攻DOWN",99999)
+			ENDIF
+			IF 見せた枚数 >= 3
+				CALL CARDDRAW_BASIC(듀얼리스트,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

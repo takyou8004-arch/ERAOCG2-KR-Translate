@@ -1,0 +1,148 @@
+﻿@CARDNAME_23059,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 역전의 커스 오브 드래곤
+	CASE "略称"
+RESULTS = 역전의 C.o.D.
+	CASE "カテゴリ"
+RESULTS:0 = 기사 가이아
+ENDSELECT
+
+
+@CARD_23059(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1500
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23059(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①：자신 필드에 몬스터가 존재하지 않는 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：덱의 가장 위에 있는 카드를 묘지로 보내고 발동할 수 있다.
+PRINTL 융합 소재 몬스터를 자신 필드 묘지에서 원하는 순서대로 주인의 덱 맨 아래로 되돌리고,
+PRINTL 그 융합 몬스터 1장을 EX덱에서 융합 소환한다.
+
+
+@CARDCAN_23059(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과使用불가,5
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23059)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	CALL CARD_SS_CHECK(듀얼리스트,23059,"손패")
+	SIF RESULT == 1
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,23059)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF 現山札数(듀얼리스트) < 1
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲묘지 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23059(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23059,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23059,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",0)
+		CALL FULLRESET
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲묘지 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL FUSSUMMON(듀얼리스트, 選択カード,덱行き)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,266 @@
+﻿@IRAI_EVENT_304(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE  "名前"
+		IF 依頼_完了횟수:304 == 0
+			RESULTS = 목장、팝니다！
+		ELSE
+			RESULTS = 젖짜기를 하자
+		ENDIF
+	CASE "이벤트種"
+		RETURN 이벤트_施設
+	CASE "依頼先"
+		RETURN 場所_牧場
+	CASE "詳細"
+		IF 依頼_完了횟수:304 == 0
+			PRINTL 牧場を見に来たのは良かったが、牧場には何も無くて……
+			PRINTL 
+			PRINTL 
+			PRINTL 
+			PRINTL 費用：1,000,000円
+		ELSE
+			PRINTL たまには자신의 手で働いてみよう
+			PRINTL 
+			PRINTL 
+			PRINTL 
+			PRINTL 
+		ENDIF
+	CASE "条件"
+	;悪辣値35以上(普通)も条件
+		SIF FLAG:악랄치 < 35
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_304(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 대상상대
+#DIM DYNAMIC パック_종류
+#DIM DYNAMIC カウンタ
+
+
+IF 依頼_完了횟수:304 == 0
+	PRINTFORMW ここは만족牧場……らしいが、家畜の一匹も見当たらない。
+	PRINTFORMW 少し周りを見て回ると、こんな立札があった。
+	PRINTFORMW 【牧場の経営者を募集中！】
+	PRINTFORMW 【1,000,000円で経営権や建物、土땅諸々をお譲りします！】
+	PRINTFORMW 【興味のある方は이하의 전화번호まで！】
+	IF MONEY < 1000000
+		PRINTFORMW 気になる内容ではあったが、お金が足りなかった……
+		RETURN 0
+	ENDIF
+	PRINTFORMW 気になる内容だったので、早速電話を掛けてみた。
+	PRINTFORMW 『はい、牧場についてですね！』
+	PRINTFORMW 電話の人は早速色々説明してくれた。
+	PRINTFORMW 役所を通してお金を支払えば、立札に書いてあった通り経営権や建物、土땅諸々の権利を買えるとの事。
+	PRINTFORMW 買った牧場については好きにして構わないらしいが、出来れば牧場らしい使い方をして欲しいらしい。
+	PRINTFORMW どうする？この話を受けて牧場の経営権を買おうか？
+	PRINTFORML 　소지금:{MONEY}円
+	PRINTFORML 必要金額:1000000円
+	PRINTL
+	PRINTFORML [0] - 金を出す
+	PRINTFORML [1] - 金を出さない
+	BINPUT
+	IF RESULT == 0
+		PRINTFORMW 金を出す事にした。
+		PRINTFORMW 『ありがとうございます！では詳しい手続きのため役所までどうぞ』
+		PRINTFORMW それから役所で手続きを済ませた。
+		CALL MONEY_GET(-1000000)
+		PRINTFORMW 所で牧場で飼う家畜が無いが……
+		SETCOLOR C_YELLOW
+		PRINTFORMW いっそのこと、バイトと紹介して몬스터와 かを家畜にしてみるか……？
+		RESETCOLOR
+		TIME += 20
+		依頼_完了횟수:304 += 1
+		RETURN 2
+	ELSEIF RESULT == 1
+		PRINTFORMW 流石にそんな大金をポンと出すのは無理だった。
+		PRINTFORMW 気が変わったらまた電話しよう。
+		RETURN 0
+	ENDIF
+ELSE
+	IF 依頼_完了횟수:394 == 0
+		PRINTFORMW たまには자신で働いてみようか……と思ったが、生憎その手の技術が無い。
+		SETCOLOR C_YELLOW
+		PRINTFORMW そういう事に特化したカードでもあればいけるかも知れないか……？
+		RESETCOLOR
+		RETURN 0
+	ENDIF
+	CALL COUNT_EVENT_304()
+	IF RESULT < 4
+		PRINTFORMW たまには자신で働いてみようか……と思ったが、암소が足りない。
+		SETCOLOR C_YELLOW
+		PRINTFORMW 착유のバイトをしているのが4人以上ならいけるかも知れない。
+		RESETCOLOR
+		RETURN 0
+	ENDIF
+
+	IF TIME > KANTAN_TIME(23,30) || TIME < KANTAN_TIME(17,00)
+		PRINTFORMW この時間だと암소がいない。
+		SETCOLOR C_YELLOW
+		PRINTFORMW 17:00時～23:30時の間に来よう。
+		RESETCOLOR
+		RETURN 0
+	ENDIF
+
+	PRINTL
+	PRINTFORML 암소たちは元気だ。
+	PRINTFORMW たまには자신で働いてみようか？
+	PRINTL
+	PRINTFORML [0] - 牧場で働く
+	PRINTFORML [1] - また今度
+	BINPUT
+	IF RESULT == 0
+		TARGET = -1
+		詰め플래그 = 1
+		CALL DUEL_SYSTEM(1,304)
+		PRINTL
+		PRINTL
+		PRINTFORMW 今日はこの位にしておこう……
+		TARGET = LOCAL
+		RETURN 2
+	ELSE
+		RETURN 0
+	ENDIF
+
+ENDIF
+
+
+
+@IRAI_DUEL_INTRO_304
+#DIM カウンタ,10
+
+IF RAND:10
+	PRINTFORML 고블린が牛を盗みに来てる！
+	PRINTFORMW 고블린を追い払いながら乳を絞ろう！
+
+	SETVAR @"상대_손패:0",39650
+	SETVAR @"상대_손패:1",39651
+	SETVAR @"상대_손패:2",39652
+
+	FOR カウンタ,0,10
+		SETVAR @"상대_덱:カウンタ", 39650
+	NEXT
+	FOR カウンタ,10,20
+		SETVAR @"상대_덱:カウンタ", 39651
+	NEXT
+	FOR カウンタ,20,30
+		SETVAR @"상대_덱:カウンタ", 39652
+	NEXT
+ELSE
+	PRINTFORML おジャマが仕事を邪魔しに来てる！
+	PRINTFORMW おジャマ共を追い払いながら乳を絞ろう！
+
+	SETVAR @"상대_손패:0",72571
+	SETVAR @"상대_손패:1",72570
+	SETVAR @"상대_손패:2",25653
+	SETVAR @"상대_손패:3",92570
+	SETVAR @"상대_손패:4",92571
+
+	SETVAR @"상대_덱:0",92572
+	SETVAR @"상대_덱:1",92572
+	SETVAR @"상대_덱:2",92572
+	SETVAR @"상대_덱:3",92571
+	SETVAR @"상대_덱:4",92571
+	SETVAR @"상대_덱:5",92571
+	SETVAR @"상대_덱:6",92570
+	SETVAR @"상대_덱:7",92570
+	SETVAR @"상대_덱:8",92570
+	SETVAR @"상대_덱:9",72570
+	SETVAR @"상대_덱:10",72570
+	SETVAR @"상대_덱:11",72571
+	SETVAR @"상대_덱:12",72571
+	SETVAR @"상대_덱:13",25653
+	SETVAR @"상대_덱:14",25653
+	SETVAR @"상대_덱:15",25654
+	SETVAR @"상대_덱:16",25654
+	SETVAR @"상대_덱:17",25654
+	SETVAR @"상대_덱:18",25655
+	SETVAR @"상대_덱:19",25655
+	SETVAR @"상대_덱:20",25655
+	SETVAR @"상대_덱:21",25650
+	SETVAR @"상대_덱:22",25650
+	SETVAR @"상대_덱:23",25651
+	SETVAR @"상대_덱:24",25651
+	SETVAR @"상대_덱:25",25652
+	SETVAR @"상대_덱:26",25652
+
+	SETVAR @"상대_EX덱:0",52810
+	SETVAR @"상대_EX덱:1",52810
+	SETVAR @"상대_EX덱:2",52810
+	SETVAR @"상대_EX덱:3",52811
+	SETVAR @"상대_EX덱:4",52811
+	SETVAR @"상대_EX덱:5",52811
+	SETVAR @"상대_EX덱:6",52812
+	SETVAR @"상대_EX덱:7",52812
+	SETVAR @"상대_EX덱:8",52812
+ENDIF
+
+
+@IRAI_DUEL_INTERMISSION_304
+#DIM 캐릭터_NO
+#DIM 캐릭터_ID
+#DIM 암소,10
+#DIM カウンタ,10
+#DIM カウンタB,10
+
+CALL CARD_GENERATE_MAGIC("자신",79555,1,-1,)
+
+SETVAR @"자신_손패:0",79556
+SETVAR @"자신_손패:1",79557
+SETVAR @"자신_손패:2",79558
+SETVAR @"자신_손패:3",79559
+SETVAR @"자신_손패:4",99555
+
+SETVAR @"자신_덱:0", 99553
+SETVAR @"자신_덱:1", 99553
+SETVAR @"자신_덱:2", 99554
+SETVAR @"자신_덱:3", 99554
+SETVAR @"자신_덱:4", 99555
+SETVAR @"자신_덱:5", 99556
+SETVAR @"자신_덱:6", 99556
+
+カウンタB = 7
+FOR 캐릭터_NO,0,CHARANUM
+	SIF CFLAG:캐릭터_NO:소유함 != 1
+		CONTINUE
+	SIF CFLAG:캐릭터_NO:아르바이트 != PT_착유
+		CONTINUE
+	캐릭터_ID = NO:(캐릭터_NO)
+	TRYCALLFORM CARDNAME_{캐릭터_ID},"名前"
+	SIF RESULTS == ""
+		CONTINUE
+	SIF MATCH(암소,캐릭터_NO)
+		CONTINUE
+	SETVAR @"자신_덱:カウンタB", 캐릭터_ID
+	カウンタB ++
+	SETVAR @"자신_덱:カウンタB", 캐릭터_ID
+	カウンタB ++
+	SETVAR @"자신_덱:カウンタB", 캐릭터_ID
+	カウンタB ++
+	SIF カウンタB >= 紙束最大値 - 2
+		BREAK
+NEXT
+
+
+
+
+@COUNT_EVENT_304(플래그)
+#DIM DYNAMIC 플래그
+#DIM 캐릭터_ID
+#DIM DYNAMIC 암소数
+
+
+FOR 캐릭터_ID,1,CHARANUM
+	SIF CFLAG:캐릭터_ID:아르바이트 == PT_착유
+		암소数 += 1
+NEXT
+
+RETURN 암소数

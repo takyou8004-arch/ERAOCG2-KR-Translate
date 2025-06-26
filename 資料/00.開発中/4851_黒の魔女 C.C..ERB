@@ -1,0 +1,132 @@
+﻿@CARDNAME_4851,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 黒の魔女 C.C.
+	CASE "略称"
+		RESULTS = カレン
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+		RESULTS:2 = 코드ギアス
+ENDSELECT
+
+
+@CARD_4851(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 900
+	CASE "守備力"
+		RETURN 700
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250418
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_4851(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 デュエル中１번밖에 발동할 수 없다。
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：この카드가 소환에 성공했을 경우、ギアスを授かる。その後、この 카드는 제외される。
+;패가 １장以下：２ドローしつつ毎ターン２ドロー。
+;상대필드의 몬스터 が３体以上：EX덱에서 好きな몬스터를 出し、毎ターン２回특수소환。
+;상대とのライフ差が３０００以上：戦闘ダメージ倍化、全体の攻撃力１０００UP
+;상대에게 攻撃力３０００以上：コントロール強奪＋패의 モンスターレベル-8。
+
+
+@CARDSUMMON_AA_4851
+
+
+@CARDCAN_4851(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4851)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,4851)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 엑시즈
+	효과条件종족 = 기계족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4851(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 속성チェック,5
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4851,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件종류 = 엑시즈
+			효과条件종족 = 기계족
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL RESETCONDITION_MAT
+				代替素材数 = 1
+				素材条件名前 = 紅のエース カレン
+				CALL XYZSUMMON(듀얼리스트, 選択カード)
+				SETVAR @"%듀얼리스트%_MZ_発無:カード소환先", 2
+				SETVAR @"%듀얼리스트%_MZ_永攻:カード소환先", 500
+				SETVAR @"%듀얼리스트%_MZ_改名:カード소환先", 紅蓮
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

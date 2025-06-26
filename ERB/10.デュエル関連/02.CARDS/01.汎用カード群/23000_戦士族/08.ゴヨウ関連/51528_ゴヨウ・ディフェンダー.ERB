@@ -1,0 +1,180 @@
+﻿@CARDNAME_51528,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 고요우 디펜더
+	CASE "略称"
+RESULTS = 고요우 수호자
+	CASE "カテゴリ"
+RESULTS:0 = 고요우
+ENDSELECT
+
+
+@CARD_51528(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_51528(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 3
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,51528) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_51528(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1체 이상
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 자신 필드의 몬스터가 전사족 땅 속성 싱크로 몬스터뿐일 경우에 발동할 수 있다.
+PRINTL EX덱에서 「고요우 디펜더」 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ②: 이 카드가 공격 대상으로 선택되었을 때 발동할 수 있다.
+PRINTL 이 카드의 공격력은 그 데미지 스텝 종료시까지,
+PRINTL 이 카드 이외의 자신 필드의 전사족 땅 속성 싱크로 몬스터의 수× 1000 올린다.
+
+@CARDCAN_51528(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件カード数
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51528)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_戦闘カード") != 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 땅속성
+	효과条件종족 = 전사족
+	효과条件종류 = 싱크로
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,51528,"EX덱")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+효과条件名前 = 고요우 디펜더
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;全モンスターチェック
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	条件カード数 = RESULT
+
+	;땅속성Sチェック
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 땅속성
+	효과条件종족 = 전사족
+	효과条件종류 = 싱크로
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	;同値じゃないとダメ
+	SIF RESULT != 条件カード数
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51528(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 戦闘カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51528)
+	IF RESULT == 0
+		戦闘カード = GETVAR(@"%듀얼리스트%_戦闘カード")
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 땅속성
+		효과条件종족 = 전사족
+		효과条件종류 = 싱크로
+		효과条件他所 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		攻撃力修正 = RESULT * 1000
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘カード,"一時",攻撃力修正)
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51528,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+효과条件名前 = 고요우 디펜더
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

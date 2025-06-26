@@ -1,0 +1,112 @@
+﻿@CARDNAME_38121,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 라이트로도 어새신 라이덴
+	CASE "略称"
+RESULTS = 광도 라이덴
+	CASE "カテゴリ"
+RESULTS:0 = 라이트로도
+ENDSELECT
+
+
+@CARD_38121(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 1000
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_38121(종류)
+#DIM DYNAMIC 종류
+
+CALL CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 자신의 덱 위에서 카드를 2장 묘지로 보낸다.
+PRINTL 그 후, 이 카드의 공격력은 상대 턴 종료 시까지 200 올린다.
+CALL CARD_ABLE(0,ターン終了時強制)
+PRINTL ②: 자신 엔드 페이즈에 발동한다.
+PRINTL 자신의 덱 위에서 카드를 2장 묘지로 보낸다.
+
+@CARDCAN_38121(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38121)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_38121(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38121,10)
+	IF RESULT == 0
+		CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",2)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",200)
+	ENDIF
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",2)
+ENDIF
+

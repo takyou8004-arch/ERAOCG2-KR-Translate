@@ -1,0 +1,136 @@
+﻿@CARDNAME_21062,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 드래그니티-쿠제
+	CASE "略称"
+RESULTS = 쿠제
+	CASE "カテゴリ"
+RESULTS:0 = 드래그니티
+ENDSELECT
+
+
+@CARD_21062(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 200
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21062(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 자신은 드래곤족 몬스터밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(10,손패起動)
+PRINTL ②: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드의 레벨을 턴 종료시까지 4로 변경한다.
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ③: 이 카드가 마법 & 함정 존에 존재할 경우에 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+
+@CARDCAN_21062(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21062)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,21062,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21062(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 지속효과
+	CALL SET_TMP_SS_RST(듀얼리스트,"종족",드래곤족)
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21062,10)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一星",4,1)
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21062)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "마함", 場所)
+	ENDIF
+ENDIF

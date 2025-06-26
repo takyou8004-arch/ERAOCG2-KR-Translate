@@ -1,0 +1,236 @@
+﻿@CARDNAME_72425,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 분보그 베이스
+	CASE "略称"
+RESULTS = 분보그 BS
+	CASE "カテゴリ"
+RESULTS:0 = 분보그
+ENDSELECT
+
+
+@CARD_72425(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72425(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「분보그 베이스」가 된다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 필드의 「분보그」 몬스터의 공격력 / 수비력은 500 올린다.
+CALLFORM CARD_ABLE(10,마함起動)
+PRINTL ②: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 덱에서 「분보그」 몬스터 1장을 패에 더하고, 손패를 1장 덱으로 되돌린다.
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ③: 이 카드 이외의 자신 필드 / 묘지에서 「분보그」 카드 9종류를 1장씩 제외하고 발동할 수 있다.
+PRINTL 상대의 패 / 필드 / 묘지에 있는 카드를 전부 주인의 덱으로 되돌린다.
+
+@CARDCAN_72425(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 발동불가,2
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72425)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		발동불가:0 ++
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 분보그
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:0 ++
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 분보그
+	효과条件固名前起動 = 1
+	효과条件他所 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 9
+		발동불가:1 ++
+	CALL FULLRESET
+	효과範囲상대손패 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과範囲상대묘지 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:1 ++
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		발동불가:1 ++
+	
+	SIF 발동불가:0 != 0 && 발동불가:1 != 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72425(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 발동불가,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		발동불가:0 = 1
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 분보그
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:0 = 1
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 분보그
+	효과条件固名前起動 = 1
+	효과条件他所 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 9
+		발동불가:1 = 1
+	CALL FULLRESET
+	효과範囲상대손패 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과範囲상대묘지 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:1 = 1
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		발동불가:1 = 1
+
+	IF 발동불가:0 != 1 && 발동불가:1 != 1
+		CALL YN_CHOICE(듀얼리스트,"②：덱에서 「분보그」モンスター１体を손패に加える","③：상대の카드를 全て덱に戻す")
+	ELSEIF 발동불가:0 != 1
+		RESULT = 0
+	ELSEIF 발동불가:1 != 1
+		RESULT = 1
+	ENDIF
+
+	IF RESULT == 0
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72425,10)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 분보그
+			효과条件종류 = モン全般
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과条件行先플래그 = 덱行き
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+
+	ELSEIF RESULT == 1
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72425)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 분보그
+			효과条件종류 = モン全般
+			효과条件行先플래그 = 제외行き
+			효과条件複数 = 9
+			효과条件固名前選択 = 1
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"덱")
+				FOR カウンタ,0,紙束最大値
+					SIF GETVAR(@"%対面者%_손패:カウンタ") == -1
+						CONTINUE
+					CALL CARD_DISPOSE(対面者,"손패",カウンタ,덱行き)
+				NEXT
+				FOR カウンタ,0,紙束最大値
+					SIF GETVAR(@"%対面者%_묘지:カウンタ") == -1
+						CONTINUE
+					CALL CARD_DISPOSE(対面者,"묘지",カウンタ,덱行き)
+				NEXT
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72425,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ = 분보그
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,500,500)
+	CALL STATCHANGE_BASIC(対面者,"필드",場所,500,500)
+
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "분보그 ベ-ス")
+ENDIF

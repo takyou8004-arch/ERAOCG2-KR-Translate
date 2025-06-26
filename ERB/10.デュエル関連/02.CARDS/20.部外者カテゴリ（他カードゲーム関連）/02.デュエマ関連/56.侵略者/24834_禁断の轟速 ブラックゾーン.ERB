@@ -1,0 +1,148 @@
+﻿@CARDNAME_24834,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 금단의 굉속 블랙 존
+	CASE "略称"
+RESULTS = 블랙 존
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:1 = 침략자
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_24834(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RESULT:1 = 어둠속성
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 1200
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_24834(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("INVASION")
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①: 『S급 침략［굉속］』
+PRINTL 자신의 화염 어둠속성 「커맨드」 몬스터가 공격할 때에 발동할 수 있다.
+PRINTL 자신의 손패, 묘지, 필드에 있는 이 카드를 그 위에 겹친다.
+PRINTL 필드에서 침략했을 경우, 묘지에서 화염 어둠속성 「커맨드」 몬스터 1장을 수비 표시로 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터의 효과는 이 턴 무효화된다.
+CALLFORM CARD_ABLE(0,특수소환時)
+PRINTL ②: 이 카드가 특수 소환에 성공했을 경우, 상대 필드의 몬스터 1장을 선택한다.
+PRINTL 그 카드를 완전 제외한다.
+CALL TEXT_DECORATION("INVASION")
+
+@CARDSUMMON_24834(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+RETURN 0
+
+
+@CARDCAN_24834(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24834)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패" && ゾーン != "필드" && ゾーン != "묘지"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24834,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF !MATCH(RESULTS, "커맨드")
+		RETURN 0
+	CALLFORM ATTACK_CARD(듀얼리스트,"속성")
+	SIF !GROUPMATCH(RESULT,화염속성,어둠속성)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24834(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カードID
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24834,1)
+	IF RESULT == 0
+		CALL INVASION(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1 && ゾーン == "필드" && モンスター数(듀얼리스트) < 5
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件속성:0 = 화염속성
+			효과条件속성:1 = 어둠속성
+			효과条件カテゴリ = 커맨드
+			효과추가종류 = 効追一無
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24834,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"完全제외")
+	ENDIF
+ENDIF

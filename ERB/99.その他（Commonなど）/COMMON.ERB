@@ -1,0 +1,1014 @@
+﻿;関数置き場
+;売却可、助手可の奴隷がいるかどうか
+@ISSALE(ARG)
+#FUNCTION
+FOR LOCAL,0,CHARANUM
+	SIF GETBIT(CFLAG:LOCAL:1,ARG)
+		RETURNF 1
+NEXT
+;-------------------------------------------------
+;아이템販売상황@ITEMSTOCK
+;戻り値1 아이템が存在しない
+;戻り値2 売切
+;戻り値3 お金が足りない
+;戻り値4 条件を満たしていない
+;戻り値5 すでに99個所持している
+;-------------------------------------------------
+@ITEMSTOCK(ARG)
+#FUNCTION
+SIF !STRLENS(ITEMNAME:ARG)
+	RETURNF 1
+SIF ITEMSALES:ARG == -2
+	RETURNF 4
+SIF ITEMSALES:ARG == -1
+	RETURNF 2
+SIF MONEY < ITEMPRICE:ARG
+	RETURNF 3
+SIF ITEM:ARG >= 99
+	RETURNF 5
+RETURNF 0
+
+;-------------------------------------------------
+;関数名:CHOICE
+;概　要:２～４択関数
+;引　数:ARGS:0…質問内容
+;      :ARGS:1～4…選択肢の文字列(3,4は省略可)
+;戻り値:ユーザ入力結果(0～3)
+;選択条件の無い、シンプルな選択肢作成関数
+;구상とかでも使えるかもしれない
+;とりあえず4択まで。増やしてもいいけど
+;-------------------------------------------------
+@CHOICE(ARGS:0, ARGS:1, ARGS:2, ARGS:3, ARGS:4)
+
+PRINTSL ARGS:0
+FOR LOCAL, 0, 4
+	PRINTFORML [{LOCAL}] - %ARGS:(1 + LOCAL)%
+	SIF LOCAL && !STRLENS(ARGS:(2 + LOCAL))
+		BREAK
+NEXT
+$INPUT_LOOP
+INPUT
+SELECTCASE RESULT
+	CASE 0 TO LOCAL - 1
+	CASEELSE
+		CLEARLINE 1
+		GOTO INPUT_LOOP
+ENDSELECT
+RETURN RESULT
+
+;-------------------------------------------------
+;악마でメイドから流用させていただきました。多謝。
+;単語1/単語2/…/単語n の書式で書かれたARGS:0～の単語のどれかを等確率で返す
+;(ARGSが複数あるのは関数などが突っ込まれることを想定しているため)
+;＿は何も출력しない選択とする
+;選択肢の数を100まで확장、RESULT退避処理추가
+;抽選処理が等確率ならFOR-NEXT使わなくてよいと思ったのでRANDで済ませる
+;-------------------------------------------------
+@TEXTR(ARGS, ARGS:1, ARGS:2, ARGS:3, ARGS:4, ARGS:5, ARGS:6)
+#FUNCTIONS
+#DIM  L_RESULT               ;RESULT退避用
+#DIMS DYNAMIC CHOICES        ;結果
+#DIMS DYNAMIC STR_ARRAY, 100 ;選択肢格納用の一時変数
+L_RESULT = RESULT
+;まず一つにまとめる
+ARGS = %ARGS%\/%ARGS:1%\/%ARGS:2%\/%ARGS:3%\/%ARGS:4%\/%ARGS:5%\/%ARGS:6%
+;不要な"/"を削る作業
+;空のARGSがあると//がたくさん出来て판정の邪魔になるので
+;1.//は置換で削る
+;2.最末尾が/なら削る（SPLITとRANDを그대로 使う都合上）
+ARGS '= REPLACE(ARGS, "\/+", "/")
+SIF CHARATU(ARGS, STRLENSU(ARGS) - 1) == "/"
+	ARGS '= SUBSTRINGU(ARGS, 0, STRLENSU(ARGS) - 1)
+SPLIT ARGS, "/", STR_ARRAY
+CHOICES '= STR_ARRAY:(RAND:RESULT)
+SIF CHOICES == "＿"
+	CHOICES =
+RESULT = L_RESULT
+RETURNF CHOICES
+
+;-------------------------------------------------
+;関数名:RECOVER
+;概　要:BASE回復処理
+;		표시文字列が空の場合かつ回復量が100未満非표시
+;		표시文字列がある場合は표시
+;引　数:ARG:0	参照する캐릭터番号
+;		回復量	ARGSに対応するBASEに加算する値（負数の場合は減らす）
+;       ARGS	ベース名
+;		ARGS:1	표시文字列
+;-------------------------------------------------
+@RECOVER(ARG,回復量,ARGS,ARGS:1)
+#DIM BASE_ID
+#DIM 回復量
+
+
+SIF 回復量 == 0 || !CHECKE_BASE(ARG, ARGS)
+	RETURN
+;回復処理
+BASE:ARG:(ARGS) = LIMIT(BASE:ARG:(ARGS) + 回復量, 0, MAXBASE:ARG:(ARGS))
+;표시処理
+IF 回復量 > 0 && 回復量 < 100 && ARGS:1 == ""
+	RETURN
+ENDIF
+;IF CFLAG:ARG:현재위치 == CFLAG:MASTER:현재위치
+	BASE_ID = FINDELEMENT(BASENAME, ARGS)
+	LOCALS = \@ ARGS:1 != "" ? （%ARGS:1%） # \@
+	IF 回復量 > 0
+		CALL COLORMESSAGE(@"%BASENAME:BASE_ID%＋{回復量} （ %CALLNAME:ARG%）%LOCALS%",C_GREEN,1)
+	ELSEIF 回復量 < 0
+		CALL COLORMESSAGE(@"%BASENAME:BASE_ID%－{ABS(回復量)} （ %CALLNAME:ARG%）%LOCALS%",C_RED,1)
+	ENDIF
+;ENDIF
+
+;-------------------------------------------------
+;関数名:RECOVER_PERMIL
+;概　要:BASE割合回復処理
+;引　数:ARG:0		参照する캐릭터番号
+;		回復割合	MAXBASE対して算出する値（負数の場合は減らす）
+;       ARGS		ベース名
+;       회복속도の影響
+;		ARGS:1		표시文字列
+;回復割合は0.1%単位
+;-------------------------------------------------
+@RECOVER_PERMIL(ARG,回復割合,ARGS,회복속도の影響,ARGS:1="")
+#DIM 回復割合
+#DIM 회복속도の影響
+#DIM 回復量
+SIF !CHECKE_BASE(ARG, ARGS)
+	RETURN
+;回復量 = MAXBASE:ARG:(ARGS) * 回復割合 / 1000
+回復量 = 回復割合
+SIF 회복속도の影響
+	回復量 = 回復量 * (TALENT:ARG:회복속도 + 4) / 4
+CALL RECOVER(ARG, 回復量, ARGS, ARGS:1)
+
+;-------------------------------------------------
+;関数名:RECOVER_PERMIL_BOTH
+;概　要:RECOVER_PERMILをあなたと대상캐릭터両方やる
+;-------------------------------------------------
+@RECOVER_PERMIL_BOTH(ARG,回復割合,ARGS,회복속도の影響,ARGS:1="")
+#DIM 回復割合
+#DIM 회복속도の影響
+CALL RECOVER_PERMIL(ARG,回復割合,ARGS,회복속도の影響,ARGS:1)
+SIF ARG != MASTER
+	CALL RECOVER_PERMIL(MASTER,回復割合,ARGS,회복속도の影響,ARGS:1)
+
+
+;-------------------------------------------------
+;関数名:CHECKE_BASE
+;概　要:ARGが使えるBASEか판정
+;戻り値:0：使用불가
+;		1：使用可能
+;-------------------------------------------------
+@CHECKE_BASE(ARG, ARGS)
+#FUNCTION
+SELECTCASE ARGS
+	CASE "체력", "기력"
+	;竿なしならスキップ
+	CASE "정력", "발기", "사정"
+		SIF !HAS_PENIS(ARG)
+			RETURNF 0
+	;あなた以外TSPスキップ
+	CASE "TSP"
+		SIF ARG != MASTER
+			RETURNF 0
+	CASE "모유"
+		SIF !TALENT:ARG:모유체질
+			RETURNF 0
+ENDSELECT
+RETURNF 1
+
+
+;-------------------------------------------------
+;関数名:GET_REVISION
+;概　要:汎用보정値취득関数
+;引　数:ARG:0…参照する数値
+;       ARG:1…上限
+;       ARG:2…상승率
+;戻り値:보정後の値
+;備　考:式中関数
+;ある数値を、上限値に漸近していく数値に変換したいときに
+;ARG:2が小さいとすぐに上限に達する、大きいと逆になかなか上限まで近づかない
+;-------------------------------------------------
+@GET_REVISION(ARG:0, ARG:1, ARG:2)
+#FUNCTION
+SIF ARG:0 < 0
+	ARG:0 = 0
+RETURNF ARG:1 - ARG:2 * ARG:1 / (ARG:2 + ARG:0)
+
+@GET_REVISION2(ARG:0, ARG:1, ARG:2)
+#FUNCTION
+SIF ARG:0 < 0
+	ARG:0 = 0
+RETURNF ARG:1 * (ARG:0 + 1) / (ARG:2 + ARG:0 + 1)
+
+
+;-------------------------------------------------
+;関数名:PRINT_BASE
+;概　要:汎用보정値취득関数
+;引　数:ARGS バーの名前
+;		ARG:0…参照する캐릭터番号
+;       ARG:1…ベースの番号
+;       ARG:2…バーの長さ
+;BARを표시させたいときに
+;-------------------------------------------------
+@PRINT_BASE(ARGS,ARG:0,ARG:1,ARG:2)
+PRINTFORM %ARGS,%
+BAR BASE:ARG:(ARG:1),MAXBASE:ARG:(ARG:1),ARG:2
+PRINTFORML ({BASE:ARG:(ARG:1)}/{MAXBASE:ARG:(ARG:1)})
+;-------------------------------------------------
+;未読판정関数@ONCE
+;式中で使用する関数です
+;ARGSは이벤트番号、ARGは真だと初回판정を更新しない、ARG:1は캐릭터登録番号（省略するとTARGET,-1ならMASTER）
+;{이벤트番号}/　という文字列をCSTR:1にぶっこんでいきます
+;-------------------------------------------------
+@ONCE(이벤트,初回更新,캐릭터_ID)
+#FUNCTION
+#DIMS DYNAMIC 이벤트
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 初回更新
+
+;ARG:2の変換
+캐릭터_ID = 캐릭터_ID ? 캐릭터_ID # TARGET
+캐릭터_ID = 캐릭터_ID == -1 ? MASTER # 캐릭터_ID
+
+SIF CSTR:캐릭터_ID:1 == ""
+	CSTR:캐릭터_ID:1 = /
+
+LOCALS = /%이벤트%/
+IF STRCOUNT(CSTR:캐릭터_ID:1,LOCALS)
+	RETURNF 0
+ELSEIF 初回更新
+	RETURNF 1
+ENDIF
+;初回판정更新
+CSTR:캐릭터_ID:1 = %CSTR:캐릭터_ID:1%%이벤트%/
+RETURNF 1
+;플래그リセット処理
+@EVENTTRAIN
+FOR LOCAL,0,CHARANUM
+	CSTR:LOCAL:1 = 
+NEXT
+
+;-------------------------------------------------
+;未読판정関数@FIRSTTIME
+;式中で使用する関数です。
+;ARGSは이벤트番号、ARGは真だと初回판정を更新しない、ARG:1は캐릭터登録番号（省略するとTARGET,-1ならMASTER）
+;{이벤트番号}/　という文字列をCSTR:0にぶっこんでいきます
+;-------------------------------------------------
+@FIRSTTIME(ARGS,ARG, ARG:1)
+#FUNCTION
+;ARG:1の変換
+ARG:1 = ARG:1 ? ARG:1 # TARGET
+ARG:1 = ARG:1 == -1 ? MASTER # ARG:1
+SIF CSTR:(ARG:1):0 == ""
+	CSTR:(ARG:1):0 = /
+
+LOCALS = /%ARGS%/
+IF STRCOUNT(CSTR:(ARG:1):0,LOCALS)
+	RETURNF 0
+ELSEIF ARG
+	RETURNF 1
+ENDIF
+;初回판정更新
+CSTR:(ARG:1):0 = %CSTR:(ARG:1):0%%ARGS%/
+RETURNF 1
+
+;-------------------------------------------------
+;関数名:EXP_UP
+;概　要:경험値変動チェック
+;引　数:ARG:0…参照するEXP
+;       ARG:1…参照する캐릭터番号
+;-------------------------------------------------
+@EXP_UP(EXP名,캐릭터クター)
+#FUNCTION
+#DIM DYNAMIC 캐릭터クター
+#DIM DYNAMIC EXP名
+
+RETURNF EXP:캐릭터クター:EXP名 - TCVAR:캐릭터クター:(400 + EXP名)
+
+;-------------------------------------------------
+;関数名:INVAGINA
+;概　要:Vに何が入っているのかを返す
+;引　数:ARG:0…参照する캐릭터番号
+;戻り値:0なし
+;戻り値:1 페니스
+;戻り値:2 바이브
+;戻り値:3 딜도
+;-------------------------------------------------
+@INVAGINA(ARG)
+#FUNCTION
+IF TEQUIP:ARG:50
+	RETURNF 1
+ELSEIF TEQUIP:ARG:바이브
+	RETURNF 2
+ELSEIF TEQUIP:ARG:딜도
+	RETURNF 3
+
+ENDIF
+
+;-------------------------------------------------
+;関数名:INANAL
+;概　要:Aに何が入っているのかを返す
+;引　数:ARG:0…参照する캐릭터番号
+;戻り値:0なし
+;戻り値:1 페니스
+;戻り値:2 애널바이브
+;戻り値:3 애널비즈
+;-------------------------------------------------
+@INANAL(ARG)
+#FUNCTION
+IF TEQUIP:ARG:51
+	RETURNF 1
+ELSEIF TEQUIP:ARG:애널바이브
+	RETURNF 2
+ELSEIF TEQUIP:ARG:애널비즈
+	RETURNF 3
+ENDIF
+;-------------------------------------------------
+;関数名:HETEROSEX
+;ARGとARG:1の성별が同じかどうかを返すほんとはHOMOSEXだけど語感が悪いので
+;女性器を持つものは女、持たないものを男とする
+;戻り値0=異性
+;戻り値1=同性(레즈)
+;戻り値2=同性(게이)
+;-------------------------------------------------
+@HETEROSEX(ARG,ARG:1)
+#FUNCTION
+IF GETBIT(TALENT:ARG:2,0) == GETBIT(TALENT:(ARG:1):2,0)
+	IF GETBIT(TALENT:ARG:2,0)
+		RETURNF 1
+	ELSE
+		RETURNF 2
+	ENDIF
+ELSE
+	RETURNF 0
+ENDIF
+
+;-------------------------------------------------
+;関数名:SHIRAHU
+;概　要:普通に意識がある状態か　2だとウフフ中
+;-------------------------------------------------
+@SHIRAHU(ARG)
+#FUNCTION
+IF FLAG:70
+	RETURNF 0
+;ELSEIF !CFLAG:ARG:수면 && !CFLAG:ARG:添い寝中 && !TCVAR:ARG:만취 && !CFLAG:ARG:쇠약
+ELSEIF !CFLAG:ARG:수면 && !CFLAG:ARG:쇠약
+	IF TCVAR:질내사정플래그 == 2
+		RETURNF 2
+	ELSE
+		RETURNF 1
+	ENDIF
+ELSE
+	RETURNF 0
+ENDIF
+
+;-------------------------------------------------
+;関数名:SOURCE_REVISION1
+;쾌락系SOURCEの쾌락系ABLによる보정
+;1/10される
+;-------------------------------------------------
+@SOURCE_REVISION1(ARG)
+#FUNCTION
+SELECTCASE ARG
+	CASE 0
+		RETURNF 5
+	CASE 1 TO 3
+		RETURNF 10 * ARG
+	CASE 4 TO 9
+		RETURNF 20 * ARG - 30
+	CASEELSE
+		RETURNF 150
+ENDSELECT
+;-------------------------------------------------
+;関数名:SOURCE_REVISION2
+;쾌락系SOURCEに依存するUP:욕망のABL:욕망による보정
+;1/100される
+;-------------------------------------------------
+@SOURCE_REVISION2(ARG)
+#FUNCTION
+SELECTCASE ARG
+	CASE 0 TO 5
+		RETURNF 50 + 10 * ARG
+	CASE 6 TO 9
+		RETURNF 75 + 5 * ARG
+	CASEELSE
+		RETURNF 140
+ENDSELECT
+
+;-------------------------------------------------
+;関数名:GET_TARGETNUM
+;같은방中のTARGETの数を返す
+;-------------------------------------------------
+@GET_TARGETNUM
+#FUNCTION
+VARSET LOCAL
+FOR LOCAL,1,CHARANUM
+	SIF TARGET:LOCAL > 0
+		LOCAL:1 ++
+NEXT
+RETURNF LOCAL:1
+
+;-------------------------------------------------
+;関数名:GET_DAY
+;概　要:曜日を表す文字列を취득する関数
+;引　数:なし
+;戻り値:曜日を表す文字列(日/月/火/물/木/金/土)
+;備　考:文中関数
+;-------------------------------------------------
+@GET_DAY
+#FUNCTIONS
+SIF !STRLENS(LOCALS)
+	SPLIT "일/월/화/수/목/금/토", "/", LOCALS
+RETURNF LOCALS:(DAY % 7)
+
+;FileName_COMMON.ERB ------------------------------- Rev1.00
+;季節名취득
+;CALL		USER
+;ARG		引数がない場合DAY:2
+;RETURN		VOID
+;COMMENT	
+;-----------------------------------------------------------
+@GET_MONTH(ARG)
+#FUNCTIONS
+SIF !ARG
+	ARG = DAY:2
+SIF !STRLENS(LOCALS)
+	SPLIT "무의 달/봄의 달/여름의 달/가을의 달/겨울의 달", "/", LOCALS
+RETURNF LOCALS:(ARG)
+
+
+
+@GET_WEATHER(ARG)
+#FUNCTIONS
+SIF !STRLENS(LOCALS)
+	SPLIT "쾌청/맑음/흐림/우천/호우/강설/눈보라", "/", LOCALS
+RETURNF LOCALS:(ARG)
+
+
+
+@GETDISHNAME(ARG)
+#FUNCTIONS
+SELECTCASE ARG
+	CASE 1
+		RETURNF "샌드위치"
+	CASE 2
+		RETURNF "삼각김밥"
+	CASE 10
+		RETURNF "오믈렛"
+	CASE 11
+		RETURNF "스튜"
+	CASE 12
+		RETURNF "햄버그"
+	CASE 13
+		RETURNF "그라탕"
+	CASE 14
+		RETURNF "카레라이스"
+	CASE 15
+		RETURNF "스테이크"
+	CASE 16
+		RETURNF "라멘"
+	CASE 17
+		RETURNF "우동"
+	CASE 18
+		RETURNF "소면"
+	CASE 19
+		RETURNF "메밀면"
+	CASE 50
+		RETURNF "푸딩"
+	CASE 51
+		RETURNF "케이크"
+	CASE 52
+		RETURNF "젤리"
+	CASE 53
+		RETURNF "타르트"
+	CASE 54
+		RETURNF "쿠키"
+	CASE 55
+		RETURNF "파이"
+	CASE 56
+		RETURNF "양갱"
+	CASE 57
+		RETURNF "찹살떡"
+	CASE 58
+		RETURNF "카스테라"
+	CASE 59
+		RETURNF "당고"
+ENDSELECT
+
+;-------------------------------------------------
+;関数名:HAS_PENIS
+;ARGがオトコかふたなりであれば1を返す
+;戻り値1=オトコかふたなり
+;戻り値0=オンナ
+;-------------------------------------------------
+@HAS_PENIS(ARG)
+#FUNCTION
+SIF TALENT:ARG:성별 & 2
+	RETURNF 1
+SIF CFLAG:ARG:막대구현화 != 0
+	RETURNF 1
+RETURNF 0
+;-------------------------------------------------
+;関数名:HAS_VAGINA
+;ARGがオンナかふたなりであれば1を返す
+;戻り値1=オンナかふたなり
+;戻り値0=オトコ
+;-------------------------------------------------
+@HAS_VAGINA(ARG)
+	#FUNCTION
+	SIF TALENT:ARG:성별 & 1
+		RETURNF 1
+	SIF CFLAG:ARG:질구현화 != 0
+		RETURNF 1
+	RETURNF 0
+
+;-------------------------------------------------
+;関数名:IS_MALE
+;ARGが男であれば1を返す
+;戻り値1=オトコ
+;戻り値0=オンナかふたなり
+;-------------------------------------------------
+@IS_MALE(ARG)
+	#FUNCTION
+	IF 2 == (TALENT:ARG:성별 & 3)
+		RETURNF 1
+	ELSE
+		RETURNF 0
+	ENDIF
+
+;-------------------------------------------------
+;関数名:IS_FEMALE
+;ARGがおんなであれば1を返す
+;戻り値1=オンナ
+;戻り値0=オトコかふたなり
+;-------------------------------------------------
+@IS_FEMALE(ARG)
+	#FUNCTION
+	IF 1 == (TALENT:ARG:성별 & 3)
+		RETURNF 1
+	ELSE
+		RETURNF 0
+	ENDIF
+
+;-------------------------------------------------
+;関数名:IS_FUTA
+;ARGがふたなりであれば1を返す
+;戻り値1=ふたなり
+;戻り値0=オトコかオンナ
+;-------------------------------------------------
+@IS_FUTA(ARG)
+	#FUNCTION
+	IF 3 == (TALENT:ARG:성별 & 3)
+		RETURNF 1
+	ELSE
+		RETURNF 0
+	ENDIF
+
+
+;-------------------------------------------------
+;関数名:BUST_SIZE
+;ARGの가슴사이즈を返す
+;-------------------------------------------------
+@BUST_SIZE(ARG)
+#FUNCTION
+#DIM DYNAMIC 戻り値
+
+戻り値 = TALENT:ARG:가슴사이즈 + CFLAG:ARG:추가가슴사이즈
+
+RETURNF 戻り値
+
+
+;-------------------------------------------------
+;関数名:MILK_CAN
+;ARGの모유の可能かを返す
+;-------------------------------------------------
+@MILK_CAN(ARG)
+#FUNCTION
+SIF TALENT:ARG:모유체질
+	RETURNF 1
+SIF CFLAG:ARG:유선폭주
+	RETURNF 1
+SIF TALENT:ARG:가슴사이즈 + CFLAG:ARG:추가가슴사이즈 >= 5
+	RETURNF 1
+RETURNF 0
+
+
+
+
+;-------------------------------------------------
+;関数名:VARLINE_ERASE
+;VARLINE의 수 만큼 過去のログを消去
+;-------------------------------------------------
+@VARLINE_ERASE
+#DIM VARLINE
+SIF VARLINE > 0
+    CLEARLINE LINECOUNT-VARLINE
+VARLINE = LINECOUNT
+RETURN RESULT
+
+
+
+
+;=================================================
+;   sub C_DEMO_LINE
+;=================================================
+;   C_DEMO_LINE
+;-------------------------------------------------
+;   入力文字列をリアルタイムで順次표시
+;-------------------------------------------------
+; Input:
+;  ARGS:0				文字列
+;  ARG:0				着色形式(0:無し 1:マップ1文字 2:マップLINE)
+;-------------------------------------------------
+@C_DEMO_LINE(ARGS="")
+#DIM カウンタ
+#DIM L_J
+#DIM L_K
+#DIMS L_STR
+
+FOR カウンタ , 0 , STRLENSU(ARGS)+1
+	IF カウンタ > 0
+		INPUTMOUSEKEY 100
+		CLEARLINE 1
+	ENDIF
+
+	L_STR = %SUBSTRINGU(ARGS, 0, カウンタ)%
+	SIF カウンタ != STRLENSU(ARGS)
+		L_STR += "_"
+
+	PRINTFORML %L_STR%
+NEXT
+
+
+;=================================================
+;   sub C_COLOR_MAP
+;=================================================
+;   C_COLOR_MAP
+;-------------------------------------------------
+;   入力文字列をカラーで표시
+;-------------------------------------------------
+; Input:
+;  ARGS					文字列
+;  ARG					종류(0:通常 1:ホテル)
+;  ARG:1				改行無し
+;-------------------------------------------------
+
+@C_COLOR_MAP(ARGS="",ARG)
+#DIM  L_LEN
+#DIM  L_I
+#DIMS  L_VAL
+#DIMS L_STR
+#DIMS MAPING, 50
+#DIM  DELETERS
+
+L_LEN = STRLENSU(ARGS)
+
+;L_LEN = RESULT
+FOR L_I, 0 , L_LEN
+    L_STR = %SUBSTRINGU(ARGS, L_I, 1)%
+    ;数値か確認
+	IF ISNUMERIC(L_STR)
+		;数値変換可能なので２桁取る
+		L_STR = %SUBSTRINGU(ARGS, L_I, 2)%
+        CALL GETMAP(L_STR)
+		;２桁取ったのでL_Iを一個進めとく
+		L_I += 1
+	ELSE
+		;数値じゃない
+		SELECTCASE L_STR
+			CASE "海","川"
+				SETCOLOR 0x4682b4
+			CASE "鉄","山", "島", "※", "瓦", "礫", "廃"
+				SETCOLOR 0xb8860b
+			CASE "森"
+				SETCOLOR 0x2e8b57
+			CASE "林"
+				SETCOLOR C_WOODS_G
+			CASE "木","w","W","艸"
+				SETCOLOR C_WOODS_G
+			CASE "冷", "噴"
+				SETCOLOR C_AQUA
+			CASE "窓"
+				SETCOLOR C_AQUA_2
+			CASE "■"
+				SETCOLOR C_S_WHITE
+			CASE "(",")"
+				SETCOLOR C_YELLOW
+				
+			CASEELSE
+
+		ENDSELECT
+		IF L_STR == "門"
+			PRINTBUTTON "문", 場所_中継땅点
+		ELSE
+	        PRINTPLAINFORM %L_STR%
+		ENDIF
+	ENDIF
+
+	;분기が何でもとりあえず文字色戻す
+    RESETCOLOR
+NEXT
+;一行ごとにこれを呼んでるので、終わったら改行
+PRINTL
+
+
+
+@GET_CHECK(캐릭터_NO)
+#DIM DYNAMIC 캐릭터_NO
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC モード
+
+FOR 캐릭터_ID,1,CHARANUM
+	SIF CFLAG:カウンタ:소유함 != 1
+		CONTINUE
+	IF NO:캐릭터_ID == 캐릭터_NO
+		RETURN 1
+	ENDIF
+NEXT
+
+RETURN 0
+
+@NO_TO_CHARANUM(캐릭터_NO)
+#FUNCTION
+#DIM DYNAMIC 캐릭터_NO
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC モード
+
+
+FOR 캐릭터_ID,1,CHARANUM
+	SIF NO:캐릭터_ID == 캐릭터_NO
+		RETURNF 캐릭터_ID
+NEXT
+
+RETURNF 0
+
+
+
+
+@KANTAN_TIME(時間,分数,その他플래그)
+#FUNCTION
+#DIM DYNAMIC 時間
+#DIM DYNAMIC 分数
+#DIM DYNAMIC その他플래그
+
+SELECTCASE その他플래그
+CASE 0
+	RETURNF (60 * 時間) + 分数
+CASE 1
+	IF 時間 <= 0
+		RETURNF 0
+	ELSE
+		RETURNF 時間 / 60
+	ENDIF
+ENDSELECT
+RETURNF 0
+
+
+
+@FAVOR_UP_ALL(条件,상승値)
+#DIMS DYNAMIC 条件
+#DIM DYNAMIC 상승値 
+#DIM DYNAMIC 캐릭터_ID
+FOR 캐릭터_ID,1,CHARANUM
+	IF GETVAR(@"CFLAG:캐릭터_ID:%条件%") >= 1
+		CFLAG:캐릭터_ID:호감도 += 상승値
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID% 호감도 + {상승値}
+		CFLAG:캐릭터_ID:호감도 = LIMIT(CFLAG:캐릭터_ID:호감도, 0, 999999)
+		RESETCOLOR
+	ENDIF
+NEXT
+
+
+@ABL_RANK(종류,能力値)
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 能力値
+
+;IF INRANGE(종류,50,60)
+	SELECTCASE 能力値
+		CASE 0
+			SETCOLOR C_GRAY
+			PRINT F 
+		CASE 1
+			SETCOLOR C_GREEN
+			PRINT E 
+		CASE 2
+			SETCOLOR C_YELLOW
+			PRINT D 
+		CASE 3
+			SETCOLOR C_ORANGE
+			PRINT C 
+		CASE 4
+			SETCOLOR C_RED
+			PRINT B 
+		CASE 5 
+			SETCOLOR C_H_PINK
+			PRINT A 
+		CASE 6
+			SETCOLOR C_GOLD
+			PRINT S 
+		CASEELSE 
+			SETCOLOR C_GOLD
+			PRINT SS
+	ENDSELECT
+[SKIPSTART]
+ELSE
+	SELECTCASE 能力値
+		CASE 0 to 1
+			SETCOLOR C_GRAY
+			PRINT F 
+		CASE 2 to 4
+			SETCOLOR C_GREEN
+			PRINT E 
+		CASE 5 to 7
+			SETCOLOR C_YELLOW
+			PRINT D 
+		CASE 8 to 10
+			SETCOLOR C_ORANGE
+			PRINT C 
+		CASE 11 to 14
+			SETCOLOR C_RED
+			PRINT B 
+		CASE 15 to 20 
+			SETCOLOR C_H_PINK
+			PRINT A 
+		CASE 21 to 30 
+			SETCOLOR C_GOLD
+			PRINT S 
+		CASEELSE 
+			SETCOLOR C_GOLD
+			PRINT SS
+	ENDSELECT
+ENDIF
+[SKIPEND]
+RESETCOLOR
+
+
+
+@FAV_RANK(能力値)
+#DIM DYNAMIC 能力値
+
+IF 能力値 < 101
+	SETCOLOR C_GRAY
+	PRINT F 
+ELSEIF INRANGE(能力値,101,500)
+	SETCOLOR C_GREEN
+	PRINT E 
+ELSEIF INRANGE(能力値,501,1500)
+	SETCOLOR C_YELLOW
+	PRINT D 
+ELSEIF INRANGE(能力値,1501,3000)
+	SETCOLOR C_ORANGE
+	PRINT C 
+ELSEIF INRANGE(能力値,3001,5000)
+	SETCOLOR C_RED
+	PRINT B 
+ELSEIF INRANGE(能力値,5001,10000)
+	SETCOLOR C_H_PINK
+	PRINT A 
+ELSEIF INRANGE(能力値,10001,30000)
+	SETCOLOR C_GOLD
+	PRINT S 
+ELSEIF INRANGE(能力値,30001,60000)
+	SETCOLOR C_GOLD
+	PRINT SS
+ELSE
+	SETCOLOR C_GOLD
+	PRINT SSS
+ENDIF
+RESETCOLOR
+
+@ANGER_AWAY(캐릭터_ID,표시)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 元値
+#DIM DYNAMIC 표시
+
+元値 = MARK:캐릭터_ID:반발각인
+MARK:캐릭터_ID:반발각인 -= 1
+SIF MARK:캐릭터_ID:반발각인 <= 0
+	MARK:캐릭터_ID:반발각인 = 0
+
+IF 표시 == 0
+	PRINTFORM %CALLNAME:캐릭터_ID%는 %CALLNAME:MASTER%에 대한 분노가
+	SIF MARK:캐릭터_ID:반발각인 == 0
+		PRINTFORM 완전히
+	PRINTFORML 치유된듯 하다。
+ENDIF
+
+
+SETCOLOR C_GREEN
+PRINTFORML 반발각인 LV:{元値} → 반발각인 LV:{MARK:캐릭터_ID:반발각인}
+RESETCOLOR
+
+
+
+@NEMUKE
+#FUNCTION
+#DIM DYNAMIC 返し値
+
+返し値 = DAY * 1440 + TIME - CFLAG:MASTER:기상시간
+RETURNF 返し値
+
+@FISHER_YATES_SHAFFLE(ARG:0)
+;シャッフル配列の初期化
+SIF !INRANGE(ARG:0 , 1 , 499)
+	THROW 引数({ARG:0})が이상です。1～499の範囲で지정してください。
+VARSET SHAFFLE_ARRAY , 0
+;SHAFFLE_ARRAYの初期化
+FOR LOCAL:0 , 0 , ARG:0
+	SHAFFLE_ARRAY:(LOCAL:0) = LOCAL:0
+NEXT
+
+FOR LOCAL:0 , 0 , ARG:0 - 1
+	LOCAL:1 = RAND(LOCAL:0 , ARG:0)
+	SWAP SHAFFLE_ARRAY:(LOCAL:0), SHAFFLE_ARRAY:(LOCAL:1)
+NEXT
+;終端用に-1をセット
+SHAFFLE_ARRAY:(ARG:0) = -1
+RETURN 0
+
+
+
+@DRUNKEN(캐릭터_ID,酒種)
+#DIM DYNAMIC 술기운増加量
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 酒種
+SELECTCASE 酒種
+;ほろよい
+CASE 423
+	술기운増加量 = RAND:300
+;鬼殺し
+CASE 424
+	술기운増加量 = 500 + RAND:300
+CASEELSE
+	술기운増加量 = 300 + RAND:100
+ENDSELECT
+IF TALENT:캐릭터_ID:술내성 == -1
+	TIMES 술기운増加量, 1.2
+ELSEIF TALENT:캐릭터_ID:술내성 == 1
+	TIMES 술기운増加量, 0.9
+ELSEIF TALENT:캐릭터_ID:술내성 == 2
+	TIMES 술기운増加量, 0.75
+ELSEIF TALENT:캐릭터_ID:술내성 == 3
+	TIMES 술기운増加量, 0.5
+ELSEIF TALENT:캐릭터_ID:술내성 == -2
+	TIMES 술기운増加量, 2.0
+ENDIF
+SIF 酒種 == 53 && (TALENT:캐릭터_ID:뿔이남 || TALENT:캐릭터_ID:흡혈귀)
+	TIMES 술기운増加量, 3.0
+SIF 캐릭터_ID == MASTER
+	술기운増加量 = 술기운増加量 / (1 + TFLAG:멀미약)
+
+BASE:캐릭터_ID:술기운 += 술기운増加量
+
+SIF BASE:캐릭터_ID:술기운 >= 1500
+	BASE:캐릭터_ID:술기운 = 1500
+
+@ALCOHOL_FACE(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+#FUNCTIONS
+SIF BASE:캐릭터_ID:술기운 <= 2
+	RETURNF "　멀쩡　"
+SIF TCVAR:캐릭터_ID:만취 >= 1
+	RETURNF "　만취　"
+SELECTCASE BASE:캐릭터_ID:술기운
+	CASE IS > 1000
+		RETURNF "ぐでぐで"
+	CASE IS > 500
+		RETURNF "酔いどれ"
+	CASEELSE 
+		RETURNF "ほろ酔い"
+ENDSELECT
+
+
+
+@YN_CHOICE_STR(選択:1,選択:2)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 選択,10
+PRINTL
+IF 選択:1 == ""
+	PRINTL [0] - 예
+ELSE
+	PRINTFORML [0] - %選択:1%
+ENDIF
+IF 選択:2 == ""
+	PRINTL [1] - 아니오
+ELSE
+	PRINTFORML [1] - %選択:2%
+ENDIF
+PRINTL
+BINPUT
+RETURN RESULT
+
+
+@FILL_DRAWLINE
+#DIMS DYNAMIC 任意の文字列変数
+#DIM DYNAMIC カウンタ
+任意の文字列変数 = %HTML_POPPRINTINGSTR()%
+HTML_PRINT 任意の文字列変数, 1
+FOR カウンタ, 0, STRLENS(GETLINESTR("-"))-STRLENS(HTML_TOPLAINTEXT(任意の文字列変数))
+    PRINT —
+NEXT

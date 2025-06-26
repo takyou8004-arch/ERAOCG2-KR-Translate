@@ -1,0 +1,141 @@
+@CARDNAME_52807,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 환상마수 키메라
+	CASE "略称"
+RESULTS = 환상마수 키메라
+	CASE "カテゴリ"
+RESULTS:0 = 환상수
+RESULTS:1 = 유익환상수 키메라
+ENDSELECT
+
+
+@CARD_52807(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3100
+	CASE "守備力"
+		RETURN 2800
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_52807(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「유익환상수 키메라」 몬스터 ＋ 미확인족 몬스터 1체 이상
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드의 융합 소재로 한 몬스터의 수까지 공격할 수 있다.
+PRINTL ②：이 카드가 몬스터와 전투를 실행할 경우, 그 2체는 그 전투에서는 파괴되지 않는다.
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ③：이 카드가 상대 몬스터와 전투를 실행한 데미지 스텝 종료시에 발동할 수 있다.
+PRINTL 그 상대 몬스터의 공격력은 0이 되고, 효과는 무효화된다.
+
+
+@CARDSUMMON_52807(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件数自由 = 1
+素材条件素材数起動 = 1
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 유익환상수 키메라
+ELSEIF EX参照 >= 10
+	素材条件종족 = 미확인족
+ENDIF
+
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,52807) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_52807(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52807)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF モンスター数(対面者) == 0
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52807(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 無効カード
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 素材数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 지속효과
+	IF 戦闘場所(듀얼리스트,1) != 5 && 戦闘場所(듀얼리스트) == 場所
+		CALL STATCHANGE_EFFECT(対面者,"自身",戦闘場所(듀얼리스트,1),"戦耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	ENDIF
+	素材数 = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",(素材数)-1)
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52807)
+	IF RESULT == 0
+		CALL FULLRESET
+		無効カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",無効カード,"지속無効")
+		CALL SET_FIELD_INFO(対面者,"필드",無効カード,"攻固",0,上書きモード)
+	ENDIF
+ENDIF

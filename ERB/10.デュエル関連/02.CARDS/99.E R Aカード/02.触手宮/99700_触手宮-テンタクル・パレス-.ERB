@@ -1,0 +1,401 @@
+﻿@CARDNAME_99700,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 촉수궁─텐타클 팰리스
+	CASE "略称"
+RESULTS = 촉수궁
+	CASE "カテゴリ"
+RESULTS:0 = 묘상
+RESULTS:1 = 주사위
+RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_99700(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99700(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드는 상대 턴 중에 지속 함정처럼 발동할 수 있다。
+PRINTL 자신 필드는 「촉수궁」이 된다。
+CALL CARD_ABLE(0,ライフ変強制誘発)
+PRINTL ①：상대 플레이어가 직접 공격으로 데미지를 입히는 것에 성공할 경우,
+PRINTL 상대 플레이어는 카드를 2장 뽑고 이 카드는 파괴된다。
+CALL CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ②：상대 플레이어가 여성몬스터로 공격을 선언 시 주사위를 굴려 랜덤한 이벤트를 발생시킵니다。
+CALL CARD_ABLE(0,身代효과)
+PRINTL ③：이 카드가 파괴되는 경우, 대신에 필드의 「묘상」를 묘지로 보낼 수 있다 。
+CALL CARD_ABLE(0,지속효과)
+PRINTL ④：여성 몬스터는 공격이 가능할 경우 공격 선언해야 한다。
+CALL CARD_ABLE(20,마함起動)
+PRINTL ×：필드에 묘상 몬스터가 4장 이상 존해나는 경우, 듀얼 중 1번만 발동할 수 있다。
+PRINTL 상대의 덱에 「리빙 바인」을 20장 더하고 셔플한다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_99700(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99700)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARD_{戦闘カードID(듀얼리스트,1)}("성별")
+	SIF RESULT != 牝性
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == ライフ変強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF ダメージ受者 != 듀얼리스트
+		RETURN 0
+	SIF ダメージ종류 != "直接戦闘"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARD_{戦闘カードID(듀얼리스트,1)}("성별")
+	SIF RESULT != 牝性
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_D1(듀얼리스트,99700)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 묘상
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 4
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 손패起動
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+	ELSEIF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 破壊대상ゾーン != "마함"
+		RETURN 0
+
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+		
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件他所 = 1
+	효과条件カテゴリ = 묘상
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+		
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99700(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 대상カード
+#DIM DYNAMIC 取込カードID
+#DIM DYNAMIC 選択효과
+#DIM DYNAMIC 조교結果
+#DIM DYNAMIC 추가先
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 조교강도
+#DIM DYNAMIC 攻撃力修正
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99700)
+	IF RESULT == 0
+		대상カード = 戦闘場所(듀얼리스트,1)
+		CALL DICE_ROLL(듀얼리스트,1)
+		選択효과 = RESULT
+		IF 選択효과 == 1
+			PRINTFORMW 강행 돌파에 성공하여 무사해졌다……
+			CALL DICE_ROLL(듀얼리스트,1)
+			조교結果 = RESULT
+			IF INRANGE(조교結果, 1, 2)
+				PRINTFORMW 모험가들은 안전한 방에 들어갔다。
+			ELSEIF INRANGE(조교結果, 3, 4)
+				PRINTFORMW 모험가들은 회복의 샘에 몸을 담갔다。
+				CALL LIFE_CHANGE(対面者,"増加","효과",1000)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",대상カード,"永攻",0,1,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",대상カード,"無効",0,1,1)
+			ELSEIF INRANGE(조교結果, 5, 6)
+				PRINTFORMW 모험가들은 보물을 발견했습니다.！
+				CALL CARDDRAW_BASIC(対面者,1)
+			ENDIF
+		ELSEIF INRANGE(選択효과, 2, 3)
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:대상カード")}("名前")
+			PRINTFORMW 강행 돌파에 실패했고, %RESULTS%은 묘상에게 몸이 휘감겨졌다！！
+			CALL FULLRESET
+			CALL CARD_GENERATE(듀얼리스트,199700,"攻撃표시")
+			IF GETVAR(@"%듀얼리스트%_필드:カード소환先") > 0
+				CALL COVER_ATTACK(듀얼리스트,カード소환先)
+				CALL DICE_ROLL(듀얼리스트,1)
+				조교結果 = RESULT
+				IF INRANGE(조교結果, 1, 2)
+					PRINTFORMW 리빙 바인이 얽혀 왔다！
+				ELSEIF INRANGE(조교結果, 3, 4)
+					PRINTFORMW 브러싱 바인이 얽혀 왔다！ 공격 몬스터의 가랑이를 브러시로 자극하였다 !
+					CALL FULLRESET
+					효과추가종류 = 2
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",대상カード,"永攻DOWN",99700)
+
+				ELSEIF INRANGE(조교結果, 5, 6)
+					PRINTFORMW 부카게 바인이 얽혀 왔다！공격 몬스터의 공격이 무효화 되었다！
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",대상カード,"無効",1,1,1)
+				ENDIF
+			ENDIF
+		ELSEIF 選択효과 == 4
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:대상カード")}("名前")
+			PRINTFORMW 강행 돌파에 실패하고, %RESULTS% 강력한 묘상 몬스터를 대면했다。
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 묘상
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			IF GETVAR(@"%듀얼리스트%_필드:カード소환先") > 0
+				CALL COVER_ATTACK(듀얼리스트,カード소환先)
+			ENDIF
+		ELSEIF 選択효과 == 5
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:대상カード")}("名前")
+			PRINTFORMW 강행 돌파에 성공！！
+			PRINTFORMW 하여 성공의 한숨을 내쉰 순간……%RESULTS%은 문을 열었고、
+			PRINTFORMW       
+			PRINTFORMW     
+			PRINTFORMW   
+
+			CALL FULLRESET
+			효과範囲EX덱 = 1
+			효과条件カテゴリ = 묘상
+			효과条件종류 = 엑시즈
+			효과추가종류 = 効追Ｘ素
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)			
+			IF RESULT == 1
+				IF RESULT:1 == 59700
+					PRINTFORMW 덥 석……！！	
+					PRINTFORMW 매복하고 있던 묘상 병기에게 먹혀버렸다……。
+					取込カードID = GETVAR(@"%対面者%_필드:대상カード")
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"変化元ID",取込カードID,上書きモード)
+					CALL FULLRESET
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",대상カード,"제외",99700)
+				ELSEIF RESULT:1 == 59701
+					PRINTFORMW 거대한 윔의 물결에 삼켜져 버렸다……。
+					PRINTFORMW 웜의 둥지에 해매 버리게 되었다。
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"Ｘ",10)
+					CALL COVER_ATTACK(듀얼리스트,カード소환先)
+				ELSEIF RESULT:1 == 59702
+					PRINTFORMW 거기에는 거대한 묘상 괴물……아니, 『여왕』이 있었다。
+					CALL COVER_ATTACK(듀얼리스트,カード소환先)
+					CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+				ENDIF
+			ENDIF
+
+		ELSEIF 選択효과 == 6
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과条件カテゴリ = 묘상
+			효과条件他所 = 1
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 1
+PRINTL 아무것도 없다……이곳은……출구이다！！
+				CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+				PRINTW 던전은 공략되어 붕괴했다。
+			ELSE
+PRINTL 막다른 곳에서 묘상이 된 몬스터들이 있었고 구출하는 데에 성공했다。
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ライフ変強制誘発
+	CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+	SIF RESULT == 1
+		CALL CARDDRAW_BASIC(対面者,2)
+
+
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99700)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件カテゴリ = 묘상
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99700,20)
+	IF RESULT == 0
+		REPEAT 20
+			CALL CARD_GENERATE_DECK(対面者,39706)
+		REND
+		CALL SHUFFLE(対面者)
+
+
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML 　　　덱
+			PRINTFORMW 상대방의　영혼은　미끌거리는 묘상으로 덮쳐지며 범해졌다。
+			PRINTFORMW 
+			PRINTFORMW 또한, 덱에서 뻗은 묘상은 %CALLNAME:조교대상%에 감싸며……。
+			PRINTFORMW 그 몸을 범하기 시작했습니다。
+			CALL EROTIC_MOVE("묘상 포박",조교대상,-1,1000)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99700)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "촉수궁")
+	CALL FULLRESET
+;	효과元カードID = 99700
+	효과条件성별 = 牝性
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"戦狂",0,99700)
+ENDIF
+
+
+
+@CARDNAME_199700,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 리빙 바인
+	CASE "略称"
+RESULTS = 리빙 바인
+	CASE "カテゴリ"
+RESULTS:0 = 묘상
+ENDSELECT
+
+
+@CARD_199700(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+RETURN 0
+
+@CARDCAN_199700(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+RETURN 0

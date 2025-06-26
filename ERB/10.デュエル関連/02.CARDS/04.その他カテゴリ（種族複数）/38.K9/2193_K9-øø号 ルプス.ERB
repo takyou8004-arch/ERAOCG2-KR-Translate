@@ -1,0 +1,159 @@
+﻿@CARDNAME_2193,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = K9-øø호 루프스
+	CASE "略称"
+RESULTS = K9 루프스
+	CASE "カテゴリ"
+RESULTS:0 = K9
+ENDSELECT
+
+
+@CARD_2193(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 200
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250322
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_2193(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①: 상대가 패 / 묘지의 몬스터의 효과를 발동한 자신 / 상대 턴의 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드를 패 / 묘지에서 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 이 카드는 필드에서 벗어났을 경우에 제외된다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 상대 턴에 발동할 수 있다.
+PRINTL 이 카드를 포함한 자신 필드의 몬스터를 소재로 하여 X 소환을 실행한다.
+CALLFORM CARD_ABLE(0,X素材時효과)
+PRINTL ③: 이 카드가 X 소재로 되었을 경우에 발동할 수 있다.
+PRINTL 자신 필드의 랭크 5의 X 몬스터 1장에게 대상 내성을 부여한다.
+
+@CARDSUMMON_AA_2193
+
+
+@CARDCAN_2193(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2193)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "손패") || (종류 == フリー誘発 && ゾーン == "묘지")
+	SIF !GROUPMATCH(ゾーン,"손패","묘지")
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,2193)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,2193,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	SIF GET_PLAYER_INFO(듀얼리스트,"K9발동数",1) <= 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || (종류 == フリー誘発 && ゾーン == "필드")
+	SIF 발동済_2(듀얼리스트,2193)
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 엑시즈
+	효과条件소환可 = 1
+	強制素材場所 = 지정場所(場所,ゾーン)
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == X素材時효과
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	효과条件レベル = 5
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_2193(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 손패起動 || 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "손패") || (종류 == フリー誘発 && ゾーン == "묘지")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2193,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 効追除処
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動 || (종류 == フリー誘発 && ゾーン == "필드")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2193,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 엑시즈
+		효과条件소환可 = 1
+		強制素材場所 = 지정場所(場所,ゾーン)
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{RESULT:99}(듀얼리스트,選択カード)
+			CALL XYZSUMMON(듀얼리스트,選択カード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == X素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2193)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件レベル = 5
+		효과条件종류 = 엑시즈
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"対耐",2,1)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

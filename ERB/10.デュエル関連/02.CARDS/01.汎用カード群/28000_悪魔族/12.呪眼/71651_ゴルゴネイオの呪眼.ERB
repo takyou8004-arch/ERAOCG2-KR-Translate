@@ -1,0 +1,170 @@
+﻿@CARDNAME_71651,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 고르고네이오의 주안
+	CASE "略称"
+RESULTS = 고르고네이오
+	CASE "カテゴリ"
+RESULTS:0 = 주안
+ENDSELECT
+
+
+@CARD_71651(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 装備마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71651(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「주안」 몬스터에게만 장비할 수 있다.
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 자신의 LP가 상대보다 적을 경우,
+PRINTL 장비 몬스터의 공격력은 LP 차이의 수치만큼 올라간다.
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ②: 묘지의 이 카드를 제외하고, 패에서 카드 1장을 보여주고 발동할 수 있다.
+PRINTL 덱에서 「고르고네이오의 주안」 이외의 「주안」 마법 / 함정 카드 1장을 패에 더한다.
+PRINTL 그 후, 보여준 카드가 「주안」 카드가 아니었을 경우, 그 카드를 묘지로 보낸다.
+
+@CARDCAN_71651(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 装備先名前
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71651)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 주안
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%装備者%_필드:装備先") == -1
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") >= GETVAR(@"ライフ_%対面者%") 
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,71651)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = 마함全般
+	효과条件カテゴリ = 주안
+	효과条件固名前 = 고르고네이오의 주안
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71651(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71651)
+	IF RESULT == 0
+		;패에서 발동後、마법トラップ 존에 カード이동
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件표시 = 表側표시
+		효과条件カテゴリ = 주안
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71651,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "손패",ゾーン,場所)	
+		選択カード = RESULT
+		選択カード_ID = RESULT:99
+
+		IF 選択カード != 9999
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 주안
+			효과条件종류 = 마함全般
+			효과条件固名前 = 고르고네이오의 주안
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+			CALLFORM CARDNAME_{選択カード_ID}("カテゴリ")				
+			SIF RESULTS != "주안"
+				CALL CARD_DISPOSE(듀얼리스트,"손패",選択カード,효과묘지行き)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	攻撃力修正 = GETVAR(@"ライフ_%対面者%") - GETVAR(@"ライフ_%듀얼리스트%")
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,攻撃力修正)
+ENDIF

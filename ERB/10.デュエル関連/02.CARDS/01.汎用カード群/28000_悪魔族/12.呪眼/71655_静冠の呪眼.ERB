@@ -1,0 +1,170 @@
+﻿@CARDNAME_71655,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 정관의 주안
+	CASE "略称"
+RESULTS = 정관의 주안
+	CASE "カテゴリ"
+RESULTS:0 = 주안
+ENDSELECT
+
+
+@CARD_71655(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71655(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신의 묘지에서 "주안" 카드 1장을 제외하고 발동할 수 있다.
+PRINTL 자신은 덱에서 1장 드로우한다.
+CALLFORM CARD_ABLE(10,攻撃時誘発)
+PRINTL ②: 1턴에 1번, "주안" 장착 마법이 자신의 마법 & 함정 존에 존재할 경우,
+PRINTL 자신의 "주안" 몬스터가 몬스터를 공격할 때 발동할 수 있다.
+PRINTL 그 상대 몬스터를 제외한다.
+CALLFORM CARD_ABLE(0,破壊→묘지)
+PRINTL ③: 이 카드가 효과로 파괴되었을 경우,
+PRINTL 제외되어 있는 자신의 "주안" 카드를 3장까지 대상으로 하고 발동할 수 있다.
+PRINTL 그 카드를 묘지로 되돌린다.
+
+@CARDCAN_71655(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71655)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,71655)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 주안
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ELSE
+		SIF 마함数(듀얼리스트) >= 5
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件종류 = 装備마법
+	효과条件カテゴリ = 주안
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	SIF RESULTS != "주안"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 破壊→묘지
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件カテゴリ = 주안
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71655(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 破壊カード
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71655,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 주안
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71655)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71655)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件カテゴリ = 주안
+		효과条件複数 = 97
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71655,10)
+	IF RESULT == 0
+		破壊カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",破壊カード,"제외")
+	ENDIF
+ENDIF

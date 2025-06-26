@@ -1,0 +1,109 @@
+﻿@CARDNAME_28301,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 암흑의 초래신
+	CASE "略称"
+RESULTS = 암흑의 초래신
+	CASE "カテゴリ"
+RESULTS:0 = 환마
+ENDSELECT
+
+
+@CARD_28301(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28301(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「환마」라는 카드명의 ①의 효과는 1턴에 한 번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時)
+PRINTL ①：이 카드가 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 「환마」 카드 1장을 덱에서 패에 더한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드가 몬스터 존에 존재하는 한, 자신은 일반 소환에 더해 한 번만,
+PRINTL 자신 메인 페이즈에 공격력과 수비력이 0인 악마족 몬스터 1장을 소환할 수 있다.
+PRINTL 
+
+@CARDCAN_28301(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28301)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	SIF 발동済_1(듀얼리스트,28301)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 환마
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28301(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28301,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 환마
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件종족 = 악마족
+	효과条件攻撃力 = 1
+	효과条件守備力 = 1
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+ENDIF
+
+

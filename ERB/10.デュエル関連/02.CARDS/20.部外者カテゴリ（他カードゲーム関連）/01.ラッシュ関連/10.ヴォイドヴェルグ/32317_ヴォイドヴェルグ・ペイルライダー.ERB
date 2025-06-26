@@ -1,0 +1,150 @@
+﻿@CARDNAME_32317,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 보이드베르그 페일라이더
+	CASE "略称"
+RESULTS = 보이드 P 라이더
+	CASE "カテゴリ"
+RESULTS:0 = 보이드베르그
+ENDSELECT
+
+
+@CARD_32317(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 0
+	CASE "추가日"
+		RETURN 250608
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_32317(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 일반 몬스터이다.
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 이 카드가 앞면 표시로 존재하는 한 자신 메인 페이즈에 1번만, 이 카드는 「각성」할 수 있다.
+PRINTL (「각성」은 1턴에 1번밖에 할 수 없다.)
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 각성 상태의 이 카드는 효과로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ③: 이 카드가 각성 상태일 경우, 패/덱에서 「블랙홀」 1장을 묘지로 보내 발동할 수 있다.
+PRINTL 의 패/묘지에서 레벨 4 이하의 미확인족/어둠 속성 몬스터 1장을 고르고 특수 소환한다.
+
+
+@CARDCAN_32317(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,32317)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+	SIF 발동済_1(듀얼리스트,覚醒발동)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") >= 1
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+효과条件名前 = 블랙홀
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件속성 = 어둠속성
+	효과条件종족 = 미확인족
+	CALL 효과条件レベル_ADV(4, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_32317(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,覚醒발동,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"破耐")
+ELSEIF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") >= 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,32317,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+효과条件名前 = 블랙홀
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件속성 = 어둠속성
+			효과条件종족 = 미확인족
+			CALL 효과条件レベル_ADV(4, "以下")
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+

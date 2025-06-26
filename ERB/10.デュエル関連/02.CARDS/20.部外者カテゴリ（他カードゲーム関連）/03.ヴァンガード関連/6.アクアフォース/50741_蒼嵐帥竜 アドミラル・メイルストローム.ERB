@@ -1,0 +1,199 @@
+﻿@CARDNAME_50741,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 창람패룡 로드리 메일스트롬
+	CASE "略称"
+RESULTS = L 메일
+	CASE "カテゴリ"
+RESULTS:0 = 아쿠아 포스
+RESULTS:1 = 메일스트롬
+RESULTS:2 = 창람
+RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_50741(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 의식
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수制限"
+		RETURN 1
+
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50741(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「아쿠아 포스」 카드에 의해 강림.
+PRINTL 이 카드명의 ①②의 효과는 1턴에 각각 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：패의 이 카드를 상대에게 보여주고 발동할 수 있다.
+PRINTL 패의 이 카드를 마법 & 함정 존에 앞면 표시로 놓고, 덱에서 「창람」 몬스터 1장을 특수 소환한다.
+PRINTL 그 후, 자신 필드의 레벨 4의 「창람」 몬스터 1장을 선택하고,
+PRINTL 그 몬스터의 공격 가능 횟수를 1회 늘린다.
+CALLFORM CARD_ABLE(2,필드起動 ,마함起動 ,フリー誘発)
+PRINTL ②：이 카드가 몬스터 존 또는 마법 & 함정 존에 존재할 경우,
+PRINTL 4회 이상 공격 선언된 자신 턴에 발동할 수 있다.
+PRINTL 덱에서 1장 드로우한다. 상대 필드의 카드 1장을 선택하여 파괴한다.
+PRINTL 그 후, 이 카드가 마법 & 함정 존에 존재할 경우, 이 카드를 특수 소환한다.
+
+@CARDSUMMON_50741(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,50741) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50741(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50741)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,50741)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 창람
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || (종류 == フリー誘発 && ゾーン == "필드")
+	SIF 발동済_2(듀얼리스트,50741)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターン中攻撃횟수 < 4
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	SIF 발동済_2(듀얼리스트,50741)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	SIF ターン中攻撃횟수 < 4
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50741(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50741,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 창람
+		효과条件종류 = モン全般
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件レベル = 4
+			효과条件종류 = レベル持ち
+			효과条件カテゴリ = 창람
+			효과条件표시 = 表側표시
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			IF RESULT != 9999
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",RESULT,"戦",1)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動 || (종류 == フリー誘発 && ゾーン == "필드")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50741,2)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50741,2)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+
+

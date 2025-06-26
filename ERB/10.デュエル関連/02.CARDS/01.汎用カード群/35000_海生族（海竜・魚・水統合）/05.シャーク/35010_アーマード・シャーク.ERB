@@ -1,0 +1,217 @@
+﻿@CARDNAME_35010,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아머드 샤크
+	CASE "略称"
+RESULTS = 아머드 상어
+	CASE "カテゴリ"
+RESULTS:0 = 샤크
+RESULTS:1 = 아머드 엑시즈
+ENDSELECT
+
+@CARD_35010(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_35010(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명은 룰 상 '아머드 엑시즈' 카드로도 취급한다.
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL EX덱에서 물 속성 X 몬스터 1장을 묘지로 보내고,
+PRINTL 그 랭크의 수치와 같은 레벨을 가지는 자신 묘지의 바다생물족 몬스터 1장을 특수 소환한다.
+CALL CARD_ABLE(2,묘지起動)
+PRINTL ②: 상대 턴에, 이 카드가 묘지에 존재할 경우에 발동할 수 있다.
+PRINTL 이 카드를 공격력 500 업의 장착 마법 카드 취급으로
+PRINTL 자신 필드의 물 속성 X 몬스터 1장에게 장착한다.
+
+
+
+@CARDCAN_35010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 存在カード星,100
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,35010)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,35010)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件소환可 = 1
+	효과条件종족 = 바다생물족
+	효과条件종류 = レベル持ち
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	FOR カウンタ,0,50
+		SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") == -1
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")},"종류"
+		SIF GROUPMATCH(RESULT,엑시즈,링크)
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")},"종족"
+		SIF !MATCH(RESULT,바다생물족)
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")},"レベル"
+		IF MATCH(存在カード星,RESULT)
+			CONTINUE
+		ELSE
+			存在カード星:カウンタB = RESULT
+			カウンタB ++
+		ENDIF
+	NEXT
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件속성 = 물속성
+	효과条件종류 = 엑시즈
+	효과条件レベル:0 = 0
+	FOR カウンタ,0,20
+		효과条件レベル:カウンタ = 存在カード星:カウンタ
+	NEXT
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+		
+	RETURN 1
+ELSEIF 종류 == 묘지起動 ||  종류 == フリー誘発
+	SIF 발동済_2(듀얼리스트,35010)
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	효과条件속성 = 물속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_35010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード星
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 存在カード星,100
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35010,1)
+	IF RESULT == 0
+		カウンタB = 0
+		FOR カウンタ,0,50
+			SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")},"종류"
+			SIF GROUPMATCH(RESULT,엑시즈,링크)
+				CONTINUE
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")},"종족"
+			SIF !MATCH(RESULT,바다생물족)
+				CONTINUE
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")},"レベル"
+			PRINTFORML レベル:{RESULT}
+			IF MATCH(存在カード星,RESULT)
+				CONTINUE
+			ELSEIF !INRANGE(RESULT,1,13)
+				CONTINUE
+			ENDIF
+			存在カード星:カウンタB = RESULT
+			カウンタB ++
+		NEXT
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종류 = 엑시즈
+		효과条件속성 = 물속성
+		효과条件レベル:0 = -1
+		FOR カウンタ,0,20
+			SIF 存在カード星:カウンタ == 0
+				CONTINUE
+			효과条件レベル:カウンタ = 存在カード星:カウンタ
+		NEXT
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			TRYCALLFORM CARD_{選択カード_ID},"レベル"
+			選択カード星 = RESULT
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件レベル = 選択カード星
+			효과条件소환可 = 1
+			효과条件종족 = 바다생물족
+			효과条件종류 = レベル持ち
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動 ||  종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35010,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 엑시즈
+		효과条件속성 = 물속성
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,"묘지",場所,1)
+		ENDIF
+	ENDIF
+ENDIF
+

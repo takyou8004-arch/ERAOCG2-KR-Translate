@@ -1,0 +1,483 @@
+﻿@FUSSUMMON(듀얼리스트,소환カード,素材行先플래그)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 대상者
+
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC 소환カード_ID	;ザポルグ追記20250309
+#DIM DYNAMIC 素材行先플래그
+#DIM DYNAMIC カードID
+#DIMS DYNAMIC カード名
+#DIM DYNAMIC 종류
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC カウンタC
+#DIM DYNAMIC 固名前CNT
+#DIM DYNAMIC R종족CNT
+#DIM DYNAMIC R속성CNT
+
+#DIM DYNAMIC 上級値
+#DIM DYNAMIC 素材数確認
+#DIM DYNAMIC 選択カード,99
+#DIM DYNAMIC 選択カード_ID,99
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択済カード
+
+#DIM DYNAMIC 상대지정カード
+#DIM DYNAMIC 現在最小攻撃力
+#DIM DYNAMIC 合計攻撃力
+#DIM DYNAMIC 추가場所
+#DIM DYNAMIC 最大値
+#DIM DYNAMIC 消去カード
+#DIM DYNAMIC 一時보존,99
+#DIM DYNAMIC 소환待機
+#DIMS DYNAMIC 素材条件固名前설정,99
+#DIM DYNAMIC 素材条件R종족설정,99
+#DIM DYNAMIC 素材条件R속성설정,99
+#DIM DYNAMIC 一時제외場所
+#DIMS DYNAMIC 使用素材名前,99
+
+#DIM DYNAMIC 素材数起動
+#DIM DYNAMIC 素材攻撃力起動
+#DIM DYNAMIC 효과추가종류보존,20
+#DIM DYNAMIC 素材ID起動 ;Anonym추가
+#DIM DYNAMIC 보존素材ID
+
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+SIF 素材条件素材数起動 >= 1
+	素材数起動 = 1
+SIF 素材条件素材攻撃力起動 >= 1
+	素材攻撃力起動 = 1
+SIF 素材条件素材ID起動 >= 1 ;Anonym추가
+	素材ID起動 = 素材条件素材ID起動
+
+;융합소환
+VARSET 選択カード, -1
+VARSET 一時제외場所, -1
+VARSET 使用素材名前
+
+FOR カウンタ,0,10
+	효과추가종류보존:カウンタ = 효과추가종류:カウンタ
+NEXT
+
+소환待機 = GETVAR(@"%듀얼리스트%_EX덱:소환カード")
+IF 듀얼리스트 == "자신"
+	ARRAYREMOVE 자신_EX덱, 소환カード, 1
+	자신_EX덱:(VARSIZE("자신_EX덱")-1) = -1
+ELSEIF 듀얼리스트 == "상대"
+	ARRAYREMOVE 상대_EX덱, 소환カード, 1
+	상대_EX덱:(VARSIZE("상대_EX덱")-1) = -1
+ENDIF
+
+IF 듀얼리스트 == "상대"
+	カードID = 소환待機
+	CALL FUSCAN(듀얼리스트,소환カード,カードID)
+	IF RESULT == 1
+		素材数 = RESULT:50
+		FOR カウンタ,0,素材数
+			選択カード:カウンタ = RESULT:(1 + カウンタ)
+		NEXT
+		GOTO INPUT_SKIP
+	ENDIF
+	VARSET ALT条件
+	RETURN 0
+ENDIF
+
+
+$CHOICE_LOOP
+IF 素材数 == 0
+	TRYCALLFORM CARDSUMMON_{소환待機}(듀얼리스트,소환カード,0)
+	IF 一時제외場所 >= 0
+		素材条件固場所 = 一時제외場所
+	ENDIF
+	SIF 強制必要素材名前 != "" && 素材条件名前 == ""
+		素材条件名前 = %強制必要素材名前%
+ELSEIF 素材数 >= 1
+	TRYCALLFORM CARDSUMMON_{소환待機}(듀얼리스트,소환カード,(9 + 素材数))
+	IF 強制必要素材名前２ != "" && 素材数 == 1
+		素材条件名前 = %強制必要素材名前２%
+	ENDIF
+ENDIF
+
+IF 素材条件固名前起動 == 1
+	FOR カウンタ,0,固名前CNT
+		素材条件固名前:カウンタ = %素材条件固名前설정:カウンタ%
+	NEXT
+ENDIF
+IF 素材条件R종족起動 == 1
+	FOR カウンタ,0,R종족CNT
+		素材条件R종족:カウンタ = 素材条件R종족설정:カウンタ
+	NEXT
+ENDIF
+IF 素材条件R속성起動 == 1
+	FOR カウンタ,0,R속성CNT
+		素材条件R속성:カウンタ = 素材条件R속성설정:カウンタ
+	NEXT
+ENDIF
+
+
+IF 듀얼리스트 == "자신"
+	TRYCALLFORM CARDNAME_{소환待機}, "名前"
+	カード名 = %RESULTS%
+	PRINTFORML 소환카드：《%カード名%》
+
+	CUSTOMDRAWLINE —
+	PRINTW 소재로 할 몬스터를 골라주세요：
+	PRINTFORML 필요소재수：{素材数}/{必要素材数}
+	CUSTOMDRAWLINE —
+	PRINTL
+ENDIF
+
+CALL CARD_FILTER_EXSS(듀얼리스트,소환待機,융합,選択カード,"EX덱",素材数)
+IF 듀얼리스트 == "자신"
+	PRINTL
+	SIF 素材数 >= 2 && 素材条件数自由 == 1
+		PRINTL 　[8888] - 결정（이 소재수로 F소환）
+	PRINTL 　[7777] - 리셋한다
+	PRINTL 　[9999] - 돌아간다
+	PRINTL
+	BINPUT
+	選択カード:素材数 = RESULT
+ELSE
+	選択カード:素材数 = RESULT
+	PRINTFORML 선택카드:{素材数} = {選択カード:素材数}
+ENDIF
+
+IF 選択カード:素材数 == 7777
+	VARSET 素材数
+	VARSET 選択カード
+
+	VARSET 素材条件固名前설정
+	VARSET 素材条件固名前
+	VARSET 固名前CNT
+	VARSET 素材条件R종족설정
+	VARSET 素材条件R종족
+	VARSET R종족CNT
+	VARSET 素材条件R속성설정
+	VARSET 素材条件R속성
+	VARSET R속성CNT
+
+	GOTO CHOICE_LOOP
+ENDIF
+
+IF 選択カード:素材数 == 9999
+	IF 듀얼리스트 == "자신"
+		자신_EX덱:現EX山札数("자신") = 소환待機
+		PRINTFORMW 돌아갑니다。
+		VARSET ALT条件
+	RETURN 0
+	ELSE
+		상대_EX덱:現EX山札数("상대") = 소환待機
+		一時제외場所 = 選択カード:0
+		VARSET 選択カード,-1
+		VARSET 素材数
+		GOTO CHOICE_LOOP
+	ENDIF
+ELSEIF 選択カード:素材数 != 8888
+	IF 素材条件固名前起動 == 1
+		CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+		TRYCALLFORM CARDNAME_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "名前"
+		素材条件固名前설정:固名前CNT = %RESULTS%
+		固名前CNT ++
+	ENDIF
+	IF 素材条件R종족起動 == 1
+		CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+		TRYCALLFORM CARD_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "종족"
+		素材条件R종족설정:R종족CNT = RESULT
+		R종족CNT ++
+	ENDIF
+	IF 素材条件R속성起動 == 1
+		CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+		TRYCALLFORM CARD_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "속성"
+		素材条件R속성설정:R속성CNT = RESULT
+		R속성CNT ++
+	ENDIF
+
+	;Anonym추가
+	CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+	TRYCALLFORM CARDNAME_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "名前"
+	SIF RESULTS != ""
+		使用素材名前:素材数 = %RESULTS%
+	PRINTFORMW %使用素材名前:素材数%를 소재로합니다({素材数+1}체째)
+
+	;현재의 소재의 수と、素材条件素材ID起動で지정した数が同じなら起動
+	IF 素材ID起動 == 素材数 + 1
+		CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+		보존素材ID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")
+	ENDIF
+
+	素材数 ++
+ENDIF
+
+
+;ここまで
+
+
+IF 素材数 == 必要素材数 || 素材数 == 代替素材数 || 選択カード:素材数 == 8888
+	SIF 選択カード:素材数 == 8888
+		選択カード:素材数 = -1
+
+	$INPUT_SKIP
+	FOR カウンタ,0,素材数
+		最大値 = -1
+		FOR カウンタB,0,素材数
+			IF 選択カード:カウンタB >= 最大値
+				最大値 = 選択カード:カウンタB
+				一時보존:カウンタ = 選択カード:カウンタB
+				消去カード = カウンタB
+			ENDIF
+		NEXT
+		ARRAYREMOVE 選択カード, 消去カード, 1
+	NEXT
+	FOR カウンタ,0,素材数
+		選択カード:カウンタ = 一時보존:カウンタ
+	NEXT
+	VARSET 代替素材数
+
+	FOR カウンタ,0,素材数
+		SIF 選択カード:カウンタ == -1
+			CONTINUE
+		;カードID설정
+		CALL CARD_SELECT(듀얼리스트,選択カード:カウンタ)
+		選択カード_ID:カウンタ = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{選択カード（CS）}")
+		;カードIDを見て覚醒状態を確認
+		IF 지정素材名前 != ""
+			TRYCALLFORM CARDNAME_{選択カード_ID:カウンタ}, "名前"
+			SIF RESULTS == 지정素材名前
+				条件달성 = 1
+		ENDIF
+		IF 지정素材カテゴリ != ""
+			TRYCALLFORM CARDNAME_{選択カード_ID:カウンタ}, "カテゴリ"
+			FOR カウンタC,0,5
+				IF RESULTS:カウンタC != ""
+					SIF MATCH(RESULTS:カウンタC, 지정素材カテゴリ)
+						条件달성 = 1
+					SIF MATCH(지정素材カテゴリ, RESULTS:カウンタC)
+						条件달성 = 1
+				ENDIF
+			NEXT
+		ENDIF
+		IF 지정素材속성 != 0
+			TRYCALLFORM CARD_{選択カード_ID:カウンタ}, "속성"
+			IF MATCH(지정素材속성, RESULT)
+				条件달성 = 1
+			ENDIF
+		ENDIF
+		IF 지정素材종족 != 0
+			TRYCALLFORM CARD_{選択カード_ID:カウンタ}, "종족"
+			IF MATCH(지정素材종족, RESULT)
+				条件달성 = 1
+			ENDIF
+		ENDIF
+
+		IF 素材攻撃力起動 == 1
+			TRYCALLFORM CARD_{選択カード_ID:カウンタ}, "攻撃力"
+			合計攻撃力 += RESULT
+		ENDIF
+	NEXT
+
+	FOR カウンタ,0,素材数
+		CALL CARD_SELECT(듀얼리스트,選択カード:カウンタ)
+		選択カード_ID:カウンタ = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{選択カード（CS）}")
+
+		CALL CARD_SELECT(듀얼리스트,選択カード:カウンタ)
+		CALL CARD_DISPOSE(대상者（CS）,参照先（CS）,選択カード（CS）,素材行先플래그)
+		IF INRANGE (選択カード:カウンタ, 0, 1000)
+			CALLFORM CARD_STANBY(選択カード_ID:カウンタ,듀얼리스트,F素材時효과,"묘지")
+		ELSEIF INRANGE (選択カード:カウンタ, 2000, 3000)
+			CALLFORM CARD_STANBY(選択カード_ID:カウンタ,対面者,F素材時효과,"묘지")
+		ENDIF
+	NEXT
+
+
+	;ザポルグ追記20250309
+	소환カード_ID = GETVAR(@"%듀얼리스트%_EX덱:{소환カード}")
+	TRYCALLFORM CARD_FINISHER_SHOKO(듀얼리스트,소환カード_ID)
+
+	TRYCALLFORM CARDNAME_{소환待機}, "名前"
+	カード名 = %RESULTS%
+	CALL MAT_EVENT_CHECK(듀얼리스트,カード名,使用素材名前)
+	PRINTFORML 융합소환、%カード名%！
+
+	IF 듀얼리스트 == "자신"
+		소환カード = 現EX山札数("자신")
+		자신_EX덱:現EX山札数("자신") = 소환待機
+	ELSE
+		소환カード = 現EX山札数("상대")
+		상대_EX덱:現EX山札数("상대") = 소환待機
+	ENDIF
+	VARSET 효과추가종류
+	FOR カウンタ,0,10
+		효과추가종류:カウンタ = 효과추가종류보존:カウンタ
+	NEXT
+	CALL CARD_EX_SUMMON(듀얼리스트, "EX덱", 소환カード)
+	IF RESULT == 1
+		SIF 条件달성
+			SETVAR @"%듀얼리스트%_MZ_条達:カード소환先", 2
+
+		IF 素材数起動 == 1
+			SETVAR @"%듀얼리스트%_MZ_汎数:カード소환先", 素材数
+		ENDIF
+		IF 素材攻撃力起動 == 1
+			;PRINTFORML 合計攻撃力：{合計攻撃力}
+			SETVAR @"%듀얼리스트%_MZ_汎数:カード소환先", 合計攻撃力
+		ENDIF
+		IF 보존素材ID > 0 ;Anonym추가
+			SETVAR @"%듀얼리스트%_MZ_汎数:カード소환先", 보존素材ID
+		ENDIF
+	ENDIF
+
+	IF 듀얼리스트 == "자신"
+		リザルト：FUS소환 = 1
+	ENDIF
+	VARSET ALT条件
+	RETURN 1
+ELSE
+	GOTO CHOICE_LOOP
+ENDIF
+
+@FUSCAN(듀얼리스트,소환カード,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 固名前CNT
+#DIM DYNAMIC R종족CNT
+#DIM DYNAMIC R속성CNT
+#DIM DYNAMIC 素材数確認
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 選択カード,99
+#DIM DYNAMIC 選択カード_ID,10
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC 소환カード_ID
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択済カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード보존,99
+#DIMS DYNAMIC 素材条件固名前설정,99
+#DIM DYNAMIC 素材条件R종족설정,99
+#DIM DYNAMIC 素材条件R속성설정,99
+#DIM DYNAMIC 上級値
+#DIMS DYNAMIC 대상者
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 一時제외場所
+#DIM DYNAMIC リトライ済
+#DIM DYNAMIC 소환待機
+;융합소환
+
+VARSET RESULT
+VARSET 選択カード, 35
+VARSET 一時제외場所, -1
+VARSET 選択カード, -1
+
+소환待機 = GETVAR(@"%듀얼리스트%_EX덱:소환カード")
+IF 듀얼리스트 == "상대"
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+ENDIF
+
+CALL CARD_EX_CHECK(듀얼리스트,カードID)
+SIF RESULT == 1
+	RETURN 0
+
+
+$RETRY_LOOP
+IF 一時제외場所 >= 0
+	TRYCALLFORM CARDSUMMON_{소환待機}(듀얼리스트,소환カード,0)
+	素材条件固場所 = 一時제외場所
+ENDIF
+
+IF 強制必要素材名前 != ""
+;強制必要素材名前があるなら以下を処理
+	;素材の名前と必要素材が一致してなかったら、自動的にNGでRETURN0。
+	;それ以外なら素材条件名前を설정。
+	IF 素材条件名前 != 強制必要素材名前 && 素材条件名前 != ""
+		RETURN 0
+	ELSE
+		素材条件名前 = %強制必要素材名前%
+	ENDIF
+ENDIF
+
+$CHOICE_LOOP
+SIF 素材数 >= 1
+	TRYCALLFORM CARDSUMMON_{소환待機}(듀얼리스트,소환カード,(9 + 素材数))
+IF 強制必要素材名前２ != "" && 素材数 == 1
+	素材条件名前 = %強制必要素材名前２%
+ENDIF
+
+IF 素材条件固名前起動 == 1
+	FOR カウンタ,0,固名前CNT
+		素材条件固名前:カウンタ = %素材条件固名前설정:カウンタ%
+	NEXT
+ENDIF
+IF 素材条件R종족起動 == 1
+	FOR カウンタ,0,R종족CNT
+		素材条件R종족:カウンタ = 素材条件R종족설정:カウンタ
+	NEXT
+ENDIF
+IF 素材条件R속성起動 == 1
+	FOR カウンタ,0,R속성CNT
+		素材条件R속성:カウンタ = 素材条件R속성설정:カウンタ
+	NEXT
+ENDIF
+
+CALL CARD_FILTER_EXSS(듀얼리스트,소환待機,융합,選択カード,"EX덱",素材数,1)
+IF RESULT == 1
+	選択カード:素材数 = RESULT:1
+	選択カード보존:素材数 = 選択カード:素材数
+
+	IF 素材条件固名前起動 == 1
+		CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+		TRYCALLFORM CARDNAME_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "名前"
+		素材条件固名前설정:固名前CNT = %RESULTS%
+		固名前CNT ++
+	ENDIF
+	IF 素材条件R종족起動 == 1
+		CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+		TRYCALLFORM CARD_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "종족"
+		素材条件R종족설정:R종족CNT = RESULT
+		R종족CNT ++
+	ENDIF
+	IF 素材条件R속성起動 == 1
+		CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+		TRYCALLFORM CARD_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "속성"
+		素材条件R속성설정:R속성CNT = RESULT
+		R속성CNT ++
+	ENDIF
+
+
+
+	素材数 ++
+	IF 素材数 >= 必要素材数 || (素材数 >= 2 && 素材条件数自由)
+		IF 듀얼리스트 == "상대"
+			RESULT:50 = 素材数
+			FOR カウンタ,0,素材数
+				RESULT:(1 + カウンタ) = 選択カード보존:カウンタ
+			NEXT
+		ENDIF
+		RETURN 1
+	ELSE
+		GOTO CHOICE_LOOP
+	ENDIF
+ELSEIF RESULT == 0 || RESULT == 9999
+	IF リトライ済 >= 2
+		RETURN 0
+	ELSE
+		一時제외場所 = 選択カード:0
+		VARSET 選択カード,-1
+		VARSET 素材数
+		リトライ済 ++ 
+		GOTO RETRY_LOOP
+	ENDIF
+ENDIF
+RETURN 0

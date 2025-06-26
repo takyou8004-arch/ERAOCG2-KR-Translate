@@ -1,0 +1,153 @@
+﻿;-------------------------------------------------
+;머리를 쓰다듬는다
+;日常계커맨드　レベル2
+;-------------------------------------------------
+@COM309
+
+
+LOCAL = RAND:110
+LOCAL:1 = 90 + GET_SUCCESS_RATE() / 5
+SIF LOCAL:1 > 109
+	LOCAL:1 = 109
+IF LOCAL <= 19
+	;大成功
+	TFLAG:SELECTCOM분기 = 1
+ELSEIF LOCAL >= LOCAL:1
+	;失敗
+	TFLAG:SELECTCOM분기 = -1
+ELSE
+	;残りは成功
+	TFLAG:SELECTCOM분기 = 0
+ENDIF
+
+
+
+;先制発生時は失敗しない
+SIF TFLAG:COMABLE관리 == 3 && TFLAG:192 != -1
+	TFLAG:SELECTCOM분기 = MAX(TFLAG:SELECTCOM분기,0)
+
+SIF TALENT:TARGET:연모
+	TFLAG:SELECTCOM분기 = 1
+
+
+DOWNBASE:기력 += 50
+DOWNBASE:MASTER:기력 += 50
+
+;固定で획득するソース
+SOURCE:환락 = 150
+SOURCE:정애 = 150
+SOURCE:반감 = 50 - MIN(ABL:친밀 * 10,50)
+
+;ABL:친밀をみる
+IF ABL:친밀 <= 3
+	SOURCE:환락 += 150 + (ABL:친밀 * 50)
+	SOURCE:정애 += 180 + (ABL:친밀 * 40)
+ELSEIF ABL:친밀 <= 5
+	SOURCE:환락 += 500 + (ABL:친밀 * 50)
+	SOURCE:정애 += 450 + (ABL:친밀 * 30)
+ELSEIF ABL:친밀 <= 8
+	SOURCE:환락 += 800 + (ABL:친밀 * 50)
+	SOURCE:정애 += 700 + (ABL:친밀 * 50)
+ELSEIF ABL:친밀 <= 11
+	SOURCE:환락 += 1000 + (ABL:친밀 * 90)
+	SOURCE:정애 += 900 + (ABL:친밀 * 50)
+ELSE
+	SOURCE:환락 += 1800 + (ABL:친밀 * 40)
+	SOURCE:정애 += 2000 + (ABL:친밀 * 20)
+ENDIF
+
+;호감도をみる
+IF CFLAG:호감도 <= 500
+	SOURCE:환락 += CFLAG:호감도
+ELSEIF CFLAG:호감도 <= 5000
+	SOURCE:환락 += 500 + (CFLAG:호감도 - 500) / 3
+ELSE
+	SOURCE:환락 += 2000 + (CFLAG:호감도 - 5000) / 5
+ENDIF
+SIF SOURCE:환락 < 0
+	SOURCE:환락 = 0
+
+;寝てる場合효과半額
+IF CFLAG:수면 && SOURCE:환락 > 0
+	SOURCE:환락 = SOURCE:환락 / 2
+	SOURCE:정애 = SOURCE:정애 / 2
+ENDIF
+
+LOCAL = 0
+;수면中は호감도変化無し
+IF !CFLAG:수면
+	;친밀が低いと호감도低下
+	IF ABL:친밀 == 0
+		LOCAL -= 3
+	ELSEIF ABL:친밀 == 1
+		LOCAL -= 2
+	ELSEIF ABL:친밀 == 2
+		LOCAL -= 1
+	ENDIF
+	;호감도が低いと호감도低下
+	IF CFLAG:호감도 <= 50
+		LOCAL -= 3
+	ELSEIF CFLAG:호감도 <= 100
+		LOCAL -= 2
+	ELSEIF CFLAG:호감도 <= 250
+		LOCAL -= 1
+	ENDIF
+ENDIF
+
+SOURCE:욕정 = 50 + 150 * ABL:욕망
+SOURCE:수동 = 100 + 200 * ABL:순종
+
+;호감도変化
+TFLAG:97 += LOCAL
+
+;환락강도
+LOCAL:0 = 200
+;정복
+LOCAL:1 = 100
+IF TFLAG:SELECTCOM분기 == -1
+	TIMES LOCAL:0 , 0.10
+	TIMES LOCAL:1 , 0.50
+ELSEIF TFLAG:SELECTCOM분기 == 0
+	TIMES LOCAL:0 , 1.00
+	TIMES LOCAL:1 , 1.00
+ELSE
+	TIMES LOCAL:0 , 2.00
+	TIMES LOCAL:1 , 2.00
+ENDIF
+
+CALL SOURCE_CALC_환락(TARGET, MASTER, LOCAL:0)
+CALL SOURCE_CALC_정복(TARGET, MASTER, LOCAL:1)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 50)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 60)
+TIME += 10
+;頭を撫でた플래그
+TCVAR:304 = 1440 * DAY + TIME
+IF CFLAG:TARGET:데이트중
+	EXP:MASTER:데이트경험 ++
+	EXP:TARGET:데이트경험 ++
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE309
+;머리를 쓰다듬는다実行판정
+SIF !TFLAG:100
+	RETURN 0
+SIF CFLAG:우후후 == 1
+	RETURN 1
+;一括관리
+SIF GLOBAL_COMABLE(309)
+	RETURN RESULT
+;1時間間隔
+SIF TIME_PROGRESS(TCVAR:304) < 60 && TALENT:TARGET:연모 != 2
+	RETURN 0
+;친밀감강도1
+SIF (TCVAR:MASTER:친밀감 < 1)
+	RETURN 0
+;1時間間隔
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+RETURN 1
+

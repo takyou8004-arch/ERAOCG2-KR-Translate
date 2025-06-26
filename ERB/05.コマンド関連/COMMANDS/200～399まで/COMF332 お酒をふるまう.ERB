@@ -1,0 +1,208 @@
+﻿;-------------------------------------------------
+;술을 권한다
+;日常계커맨드、レベル1
+;-------------------------------------------------
+@COM332
+#DIM DYNAMIC 술기운増加量
+#DIM DYNAMIC 味보정
+#DIM DYNAMIC 選択酒
+#DIM DYNAMIC 환락강도
+#DIM DYNAMIC 정복강도
+#DIM DYNAMIC 반감강도
+#DIM DYNAMIC カウンタ
+
+CUSTOMDRAWLINE ―
+PRINTFORML 뭘 추천하시겠습니까？（{BASE:TARGET:술기운}）
+CUSTOMDRAWLINE ―
+FOR カウンタ,420,430
+	SIF ITEMNAME:カウンタ == ""
+		CONTINUE
+	SIF ITEM:カウンタ <= 0
+		CONTINUE
+	PRINTFORML [{カウンタ}] - %ITEMNAME:カウンタ%
+NEXT
+PRINTFORML 
+PRINTFORML [9999] - 돌아간다
+BINPUT
+IF RESULT == 9999
+	RETURN -1
+ELSE
+	;飲む酒の종류
+	選択酒 = RESULT
+	TFLAG:194 = RESULT
+	ITEM:RESULT --
+ENDIF
+PRINTFORML %CALLNAME:MASTER%는 %ITEMNAME:RESULT%을 붓고 %CALLNAME:TARGET%에게 건네주었다…
+;暫定的に成功플래그を立てる
+TFLAG:SELECTCOM분기 = 0
+[SKIPSTART]
+IF !TALENT:TARGET:연모 && CFLAG:TARGET:만취강간 == 1
+	PRINTFORML %CALLNAME:TARGET%는 이미 %CALLNAME:MASTER%과는 술을 마실 생각이 없는것 같다…
+	SOURCE:반감 += 3000
+	BASE:무드 = 0
+	BASE:분노 = 1500
+	RETURN -1
+ENDIF
+[SKIPEND]
+IF BASE:TARGET:술기운 >= 1200
+	PRINTFORML %CALLNAME:TARGET%는 이 이상 마실 생각이 없는것 같다
+	RETURN -1
+ELSEIF TALENT:TARGET:술내성 == -2
+	PRINTFORML 술찌인 %CALLNAME:TARGET%는 술을 마실 생각이 없는것 같다…
+	PRINTFORML %LOCALS%
+	PRINTFORML [0] 포기한다
+	PRINTFORML [1] 설득한다
+	BINPUT
+	IF RESULT == 0
+		PRINTFORML %CALLNAME:TARGET%이 술을 마실 생각이 없었기에、포기했다…
+		TFLAG:SELECTCOM분기 = -5
+		RETURN 0
+	ELSEIF RESULT == 1
+		IF (ABL:친밀 * 200 + ABL:MASTER:화술기능 * 100) * BASE:무드 / MAXBASE:무드 >= 1500
+			PRINTFORML %CALLNAME:MASTER%의 설득에 의해 %CALLNAME:TARGET%는 쭈뼛쭈뼛 술을 입에 대기 시작했다…
+			TFLAG:SELECTCOM분기 = 12
+		ELSE
+			PRINTFORML %CALLNAME:MASTER%가 무슨말을 하든、 %CALLNAME:TARGET%는 술에 입을 대지 않았다…
+			SOURCE:반감 += 500
+			BASE:무드 /= 2
+			TFLAG:호감도마이너스 = 1
+			TFLAG:SELECTCOM분기 = -1
+			RETURN 1
+		ENDIF
+	ENDIF
+ENDIF
+
+IF TALENT:MASTER:연령 >= 0
+	DOWNBASE:MASTER:기력 += 100
+	DOWNBASE:MASTER:체력 += 50
+	CALL DRUNKEN(MASTER,選択酒)
+ELSE
+	PRINTFORML %CALLNAME:MASTER%는 자신에겐 물을 따랐다。미성년자는 마시지마！
+ENDIF
+
+DOWNBASE:기력 += 10
+
+;固定で획득するソース
+환락강도 = 500
+;연속実行時は반감が発生
+SIF PREVCOM == SELECTCOM
+	반감강도 = 100
+
+;ABL:순종をみる
+IF ABL:순종 <= 1
+	환락강도 += (ABL:순종 * 30)
+ELSEIF ABL:순종 <= 3
+	환락강도 += 400 + (ABL:순종 * 30)
+ELSEIF ABL:순종 <= 5
+	환락강도 += 600 + (ABL:순종 * 30)
+ELSEIF ABL:순종 <= 8
+	환락강도 += 800 + (ABL:순종 * 50)
+ELSEIF ABL:순종 <= 11
+	환락강도 += 1000 + (ABL:순종 * 70)
+ELSE
+	환락강도 += 1500 + (ABL:순종 * 40)
+ENDIF
+
+;호감도をみる
+IF CFLAG:2 <= 500
+	환락강도 += CFLAG:2
+ELSEIF CFLAG:2 <= 5000
+	환락강도 += 700 + (CFLAG:2 - 500) / 3
+ELSE
+	환락강도 += 2500 + (CFLAG:2 - 5000) / 5
+ENDIF
+SIF 환락강도 < 0
+	환락강도 = 0
+
+SOURCE:수동 = 200 + 100 * ABL:순종
+정복강도 = 200 + 100 * ABL:새드끼
+
+IF TFLAG:SELECTCOM분기 == -1
+	TIMES 환락강도 , 0.10
+	TIMES 정복강도 , 0.50
+	TIMES SOURCE:수동 , 0.50
+ELSEIF TFLAG:SELECTCOM분기 == 0
+	TIMES 환락강도 , 1.00
+	TIMES 정복강도 , 1.00
+	TIMES SOURCE:수동 , 1.00
+ELSE
+	TIMES 환락강도 , 2.00
+	TIMES 정복강도 , 2.00
+	TIMES SOURCE:수동 , 2.00
+ENDIF
+
+CALL DRUNKEN(TARGET,選択酒)
+CALL FAVOR_DRINK(TARGET,選択酒)
+
+환락강도 = 환락강도 * 味보정
+정복강도 = 정복강도 * 味보정
+;SOURCE:수동 = SOURCE:수동 * 味보정
+CALL SOURCE_CALC_환락(TARGET, MASTER, 환락강도)
+CALL SOURCE_CALC_정복(TARGET, MASTER, 정복강도)
+CALL SOURCE_CALC_반감(TARGET, MASTER, 반감강도)
+TIME += 30
+RETURN 1
+
+@FAVOR_DRINK(캐릭터_ID,酒種)
+#DIM DYNAMIC 술기운増加量
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 酒種
+
+IF CFLAG:캐릭터_ID:좋아하는술 == 0
+	CFLAG:캐릭터_ID:좋아하는술 = RAND:5 + 420
+ENDIF
+
+IF CFLAG:캐릭터_ID:좋아하는술 == 酒種
+	PRINTFORML %CALLNAME:캐릭터_ID%는 이 술이 취향인듯 하다。
+	RETURN 3
+ELSE
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE332
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+;酒所持판정
+
+FOR カウンタ,420,440
+	IF ITEM:カウンタ >= 1
+		条件달성 = 1
+		BREAK
+	ENDIF
+NEXT
+SIF 条件달성 == 0
+RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(332)
+	RETURN RESULT
+;수면中
+SIF CFLAG:수면
+	RETURN 0
+;ガキは飲むな！
+SIF TALENT:TARGET:연령 < -1
+	RETURN 0
+;임신自覚状態は불가
+SIF TALENT:TARGET:임신 == 1
+	RETURN 0
+;浴場
+SIF BATHROOM(CFLAG:MASTER:현재위치)
+	RETURN 0
+;외출先で実行時は친밀3を要求
+;SIF CFLAG:MASTER:현재위치 > 20 && ABL:친밀 < 3
+SIF CFLAG:MASTER:현재위치 > 20
+	RETURN 0
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+SIF TARGET < 1
+	RETURN 0
+RETURN 1
+

@@ -1,0 +1,212 @@
+﻿@CARDNAME_1642,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 꽤 매혹적인 수주 물산
+	CASE "略称"
+RESULTS = 매혹적인 수주
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1642(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1642(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1번만 사용할 수 있다.
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 상대의 묘지의 카드 1장을 제외하고, 자신 필드에 「미와쿠의 오더메이드」 1장을 특수 소환한다.
+PRINTL 그 후, 제외한 카드와 동명의 카드를 덱에서 패에 더할 수 있다.
+PRINTL 
+
+@CARDCAN_1642(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1642)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,1642)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,11642,"")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1642(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 選択カード名前
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1642,1)
+	IF RESULT == 0
+		;通常마법汎用발동後묘지送り処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			TRYCALLFORM CARDNAME_{RESULT:1},"名前"
+			選択カード名前 = %RESULTS%
+			CALL FULLRESET
+			CALL CARD_GENERATE(듀얼리스트,11642)
+
+			CALL FULLRESET
+			효과範囲덱 = 1
+효과条件名前 = %選択カード名前%
+			효과条件任意 = 1
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+@CARDNAME_11642,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 미와쿠의 오더메이드
+	CASE "略称"
+RESULTS = 미와쿠의 수주 물산자
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_11642(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+@CARD_EXPLANATION_11642(종류)
+#DIM DYNAMIC 종류
+
+CALL CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ①: 자신 턴에 1번, 상대의 묘지의 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 제외하고, 덱에서 제외한 카드와 동명의 카드 1장을 패에 더한다.
+PRINTL 패에 더할 수 없었던 경우, 자신은 덱에서 1장 드로우한다.
+PRINTL
+
+@CARDCAN_11642(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,11642)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_11642(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 選択カード名前
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,11642,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			TRYCALLFORM CARDNAME_{RESULT:1},"名前"
+			選択カード名前 = %RESULTS%
+			CALL FULLRESET
+			효과範囲덱 = 1
+효과条件名前 = %選択カード名前%
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 1
+				CALL CARDDRAW_BASIC(듀얼리스트,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

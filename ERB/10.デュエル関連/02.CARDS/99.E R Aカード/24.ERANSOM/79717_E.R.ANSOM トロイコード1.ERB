@@ -1,0 +1,409 @@
+@CARDNAME_79717,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = E.R.ANSOM 트로이코드 1
+	CASE "略称"
+		RESULTS = 트로이코드 1
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.ANSOM
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79717(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_79717(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ②의 효과는 각각 1턴에 1번 밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：자신 묘지의 사이버스 몬스터 1장을 제외하고 발동할 수 있다.
+PRINTL 상대의 덱에 "ERANSOM 웜"이 존재하지 않을 경우, 덱으로부터 "ERANSOM 웜 패스" 1장을 패에 넣는다.
+PRINTL 존재할 경우, 자신의 패에 "ERANSOM 포토" 1장을 생성한다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：상대 묘지의 "ERANSOM 웜" 또는 "MC" 통상 마법 3장을 제외하고 발동할 수 있다.
+PRINTL 묘지에 존재하는 이 카드를 패로 되돌려,
+PRINTL 상대에게 900 데미지를 준다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79717(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79717)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 사이버스족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대덱 = 1
+	효과条件ID = 179716
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件ID = 79716
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+    SIF 발동済_2(듀얼리스트,79717)
+    	RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과条件スーパー名前 = E.R.ANSOM 웜
+	효과条件カテゴリ = MC
+	효과条件종류 = 通常마법
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79717(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC シチュ종류
+#DIMS DYNAMIC 조교대상名前
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79717)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 사이버스족
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲상대덱 = 1
+			효과条件ID = 179716
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				조교대상 = -1
+				CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+				IF RESULT != -1
+					조교대상 = RESULT
+					조교대상名前 = %NAME:RESULT%
+				ELSE
+					조교대상名前 = %対面者%
+				ENDIF
+				PRINTFORMW %조교대상名前%의 덱에 잠복하고 있는 E.R.ANSOM 웜으로 부터 얻을 수 있던 데이터로, 화상 데이터가 만들어진다......
+				PRINTFORML
+				PRINTFORMW …………
+				PRINTFORML
+				IF 조교대상 >= 0
+					シチュ종류 = RAND:8 + 1
+					;空番なら差し替え
+					SIF シチュ종류 == 7
+						シチュ종류 = 9
+					SIF シチュ종류 == 8
+						シチュ종류 = 99
+					CALL IMAGE_HAMEDORI(조교대상,シチュ종류,500,500)
+					IF RESULT != 0
+						PRINTFORML %조교대상名前%의 사람에게 보여지지 않는 화상이 날조 되고「E.R.ANSOM 포토」에 담을 수 있었다.
+					ELSE
+						;外れなら取りあえず一番多く作られてるシチュの画像に
+						シチュ종류 = 99
+						CALL IMAGE_HAMEDORI(조교대상,シチュ종류,500,500)
+						IF RESULT != 0
+							PRINTFORML %조교대상名前%의 사람에게 보여지지 않는 화상이 날조 되고「E.R.ANSOM 포토」에 담을 수 있었다.
+						ELSE
+							SELECTCASE RAND:3
+								CASE 0
+									PRINTFORM %조교대상名前%가 어른을 장난감을 구입하고 있다.
+								CASE 1
+									PRINTFORM %조교대상名前%가 전라로 배회하고 있다.
+								CASE 2
+									PRINTFORM %조교대상名前%가 자위하고 있다.
+							ENDSELECT
+							PRINTFORML 화상이 날조 되고,「E.R.ANSOM 포토」에 담을 수 있었다.
+						ENDIF
+					ENDIF
+				ELSE
+					SELECTCASE RAND:3
+						CASE 0
+							PRINTFORM %조교대상名前%가 어른의 장난감을 구입하고 있다.
+						CASE 1
+							PRINTFORM %조교대상名前%가 전라로 배회하고 있다.
+						CASE 2
+							PRINTFORM %조교대상名前%가 자위하고 있다.
+					ENDSELECT
+					PRINTFORML 화상이 날조 되고,「E.R.ANSOM 포토」에 담을 수 있었다.
+				ENDIF
+				PRINTFORM 한층 더,
+				CALL CARD_GENERATE_HAND(듀얼리스트,179717)
+			ELSE
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과条件ID = 79716
+				CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79717,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과条件スーパー名前 = E.R.ANSOM 웜
+		효과条件カテゴリ = MC
+		효과条件종류 = 通常마법
+		효과条件行先플래그 = 제외行き
+		효과条件複数 = 3
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,손패行き)
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",900,1)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+@CARDNAME_179717,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = E.R.ANSOM 포토
+	CASE "略称"
+		RESULTS = E.R.ANSOM 포토
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.ANSOM
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_179717(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_179717(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：이하의 효과를 상대가 1개 선택해 적용한다.
+PRINTL ●이 카드를 발동한 플레이어는 1장 드로우하고, 1000 LP 회복한다.
+PRINTL ●이 카드를 발동한 플레이어로 부터 상대의 패에 랜덤으로 "MC" 통상 마법 2장을 생성한다.
+PRINTL ●발동한 이 카드를 인터넷에 공개하고, 듀얼로 부터 소멸 시킨다.
+CALLFORM CARD_ABLE(2,제외時)
+PRINTL ②：이 카드가 제외 되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 인터넷에 공개하고, 듀얼로 부터 소멸 시킨다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_179717(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,179717)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 제외時
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_179717(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 조교대상名前
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,179717)
+	IF RESULT == 0
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상名前 = %NAME:RESULT%
+		ELSE
+			조교대상名前 = %対面者%
+		ENDIF
+		PRINTFORMW %듀얼리스트%는 %조교대상名前%의 부끄러운 모습이 날조된 화상을 이용해 %조교대상名前%를 위협한다.
+		IF 対面者 == "자신"
+			PRINTL
+			PRINTL
+			PRINTFORML 적용하는 효과를 선택해 주세요.
+			PRINTL
+			PRINTFORML [0] - ●상대는 1장 드로우하고, 1000 LP 회복한다.
+			PRINTFORML [1] - ●자신의 패에 랜덤으로「MC」통상 마법 2장을 생성한다.
+			PRINTFORML [2] - ●발동한「E.R.ANSOM 포토」의 화상을 인터넷에 공개하고, 듀얼로 부터 소멸 시킨다.
+			PRINTL
+			BINPUT
+		ELSEIF 対面者 == "상대"
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				;캐릭터ありだと노출증が高い程怖いものがなくなるので脅しを突っぱねやすくなる
+				IF ABL:RESULT:노출증 <= 1
+					RESULT = RAND:2
+				ELSEIF ABL:RESULT:노출증 <= 4 && ABL:RESULT:노출증 > 1
+					RESULT = RAND:3
+				ELSE
+					RESULT = 2
+				ENDIF
+			ELSE
+				;名無し모브だと完全ランダム
+				RESULT = RAND:3
+			ENDIF
+		ENDIF
+		IF RESULT == 0
+			PRINTL
+			PRINTFORML 위협에 굽힌 %조교대상名前%는 %듀얼리스트%에게 듀얼에서의 어드밴티지를 허락했다.....
+			PRINTL
+			CALL CARD_DRAW_CHECK
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",1000)
+			PRINTL
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		ELSEIF RESULT == 1
+			PRINTL
+			PRINTFORML 위협에 굽힌 %조교대상名前%는 부끄러운 행동을 하도록, 한층 더 위협 당했다......
+			PRINTL
+			選択カード_ID = 79840 + RAND:9
+			CALL CARD_GENERATE_HAND(対面者,選択カード_ID)
+			選択カード_ID = 79840 + RAND:9
+			CALL CARD_GENERATE_HAND(対面者,選択カード_ID)
+			PRINTL
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		ELSEIF RESULT == 2
+			PRINTL
+			PRINTFORMW %조교대상名前%는 위협에 퇴짜 놓았다!
+			PRINTL
+			PRINTFORML 위협을 들어 주지 않았던 것으로
+			PRINTFORML 날조된 %조교대상名前%의 부끄러운 사진들이 인터넷에 나돌기 시작했다!
+			PRINTFORML %조교대상名前%는 날조된 것이라고는 해도, 자신의 부끄러운 모습들이 불특정 다수에게 보여지는 일에 수치와 흥분을 느꼈다.
+			PRINTL
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				CALL EROTIC_MOVE("晒しもの",RESULT,MASTER,300)
+			ELSE
+				PRINTFORMW 그러나 이름도 알려지지 않은 상대에게 있어 효과는 좀 더 였던 것 같다......
+			ENDIF
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+		ENDIF
+
+	ENDIF
+ELSEIF 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79717,2)
+	IF RESULT == 0
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상名前 = %NAME:RESULT%
+		ELSE
+			조교대상名前 = %対面者%
+		ENDIF
+		PRINTFORML 날조된 %조교대상名前%의 부끄러운 사진들이 인터넷에 나돌기 시작했다!
+		PRINTFORML %조교대상名前%는 날조된 것이라고는 해도, 자신의 부끄러운 모습이 불특정 다수에게 보여지는 일에 수치와 흥분을 느꼈다.
+		PRINTL
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			CALL EROTIC_MOVE("晒しもの",RESULT,MASTER,300)
+		ELSE
+			PRINTFORMW 그러나 이름도 알려지지 않은 상대에게 있어 효과는 좀 더 였던 것 같다......
+		ENDIF
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+	ENDIF
+ENDIF
+

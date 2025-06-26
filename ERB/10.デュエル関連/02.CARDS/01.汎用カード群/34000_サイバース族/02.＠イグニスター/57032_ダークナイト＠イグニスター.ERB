@@ -1,0 +1,182 @@
+﻿@CARDNAME_57032,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 다크 나이트@이그니스터
+	CASE "略称"
+RESULTS = 다크 나이트@
+	CASE "カテゴリ"
+RESULTS:0 = @이그니스터
+ENDSELECT
+
+
+@CARD_57032(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 1300
+ENDSELECT
+RETURN 0
+
+
+@CARDSUMMON_57032(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要링크数 = 3
+素材条件固名前起動 = 1
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,57032) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_57032(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 카드명이 다른 몬스터 2장 이상
+PRINTL 이 카드명의 ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 같은 공격력의 몬스터와의 전투로는 파괴되지 않는다.
+CALL CARD_ABLE(1,효과後誘発)
+PRINTL ②: 자신 필드에 「다크 나이트@이그니스터」 이외의 몬스터가 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지에서 레벨 4 이하의 「@이그니스터」 몬스터를 2장까지 가능한 한 효과를 무효로 하고 특수 소환한다.
+CALL CARD_ABLE(2,攻撃後誘発)
+PRINTL ③: 이 카드가 전투로 상대 몬스터를 파괴했을 때에 발동할 수 있다.
+PRINTL 자신의 묘지에서 사이버스족 몬스터 1장을 특수 소환한다.
+
+
+
+
+@CARDCAN_57032(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57032)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF GETVAR(@"%対面者%_MZ_攻:%対面者%_戦闘カード") != GETVAR(@"%듀얼리스트%_MZ_攻:場所")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,57032)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件固名前 = 다크 나이트@이그니스터
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = ＠이그니스터
+	효과条件종류 = レベル持ち
+	CALLFORM 효과条件レベル_ADV(4,"以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF 발동済_2(듀얼리스트,57032)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 사이버스족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_57032(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57032,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = ＠이그니스터
+		효과条件종류 = レベル持ち
+		CALLFORM 효과条件レベル_ADV(4,"以下")
+		효과추가종류 = 効追無効
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = ＠이그니스터
+		효과条件종류 = レベル持ち
+		CALLFORM 효과条件レベル_ADV(4,"以下")
+		효과추가종류 = 効追無効
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57032,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 사이버스족
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

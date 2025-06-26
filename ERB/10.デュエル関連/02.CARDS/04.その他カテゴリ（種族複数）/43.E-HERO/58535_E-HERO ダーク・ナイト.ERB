@@ -1,0 +1,161 @@
+﻿@CARDNAME_58535,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = E-HERO 다크 나이트
+	CASE "略称"
+RESULTS = 다크 나이트
+	CASE "カテゴリ"
+RESULTS:0 = HERO
+RESULTS:1 = E-HERO
+RESULTS:2 = 다크 퓨전
+ENDSELECT
+
+
+@CARD_58535(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 0
+	CASE "특수불가"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_58535(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 「E-HERO」 몬스터 ＋ 전사족 몬스터
+PRINTL 이 카드는 「다크 퓨전」 카드 효과로만 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 상대 필드의 몬스터의 공격력은,
+PRINTL 이 카드의 융합 소재로 한 몬스터의 원래 공격력 합계만큼 내린다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 1번의 배틀 페이즈 중에 2회 공격할 수 있다.
+CALLFORM CARD_ABLE(3,戦破壊→묘지)
+PRINTL ③: 특수 소환된 이 카드가 상대 카드 효과에 의해 필드에서 벗어났을 경우 발동할 수 있다.
+PRINTL 자신의 묘지에서 악마족 전사족 몬스터 1장을 수비 표시로 특수 소환한다.
+
+
+
+
+@CARDSUMMON_58535(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件素材攻撃力起動 = 1
+
+SIF 효과条件어둠융합 == 0
+	RETURN 0
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = E-HERO
+ELSEIF EX参照 >= 10
+	素材条件종족 = 전사족
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,58535)
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_58535(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58535)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") == 0
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF 処理中_듀얼리스트 == 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족:0 = 악마족
+	효과条件종족:1 = 전사족
+	효과条件소환可 = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_58535(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == 攻守変動
+	攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,-(攻撃力修正),0,58535)
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",1)
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58535,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족:0 = 악마족
+		효과条件종족:1 = 전사족
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+ENDIF
+

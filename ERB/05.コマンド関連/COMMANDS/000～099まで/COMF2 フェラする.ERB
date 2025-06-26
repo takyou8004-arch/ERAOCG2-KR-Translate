@@ -1,0 +1,85 @@
+﻿;-------------------------------------------------
+;펠라한다
+;애무계커맨드、レベル1
+;-------------------------------------------------
+@COM2
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+TCVAR:TARGET:사정대상캐릭터_1 = MASTER
+
+TCVAR:TARGET:사정부위플래그 = 4
+;강도
+TCVAR:TARGET:사정쾌락강도 = 1500
+
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 5
+DOWNBASE:기력 += 50
+
+LOCAL = 160
+;혀を使う조교では、조교者の혀사용자에 따라、쾌락のソース増加
+SIF TALENT:MASTER:혀사용자
+	TIMES LOCAL , 1.50
+;고양이혀では減少
+SIF TALENT:MASTER:고양이혀
+	TIMES LOCAL , 0.75
+CALL SOURCE_CALC_쾌Ｃ(TARGET, MASTER, LOCAL)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 25)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 100)
+CALL SOURCE_CALC_정복(TARGET, MASTER, 50)
+
+IF TALENT:TARGET:스위트바디
+	CALL RECOVER_PERMIL(MASTER,50,"체력",1)
+	CALL RECOVER_PERMIL(MASTER,100,"기력",1)
+ENDIF
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;奴隷のＰ⇔조교者の口の汚れが이동
+STAIN:2 |= STAIN:MASTER:0
+STAIN:MASTER:0 |= STAIN:2
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 3
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 3
+ENDIF
+;조교者が고양이혀持ちの場合は、조교者に가학쾌락경험を추가
+SIF TALENT:MASTER:고양이혀
+	EXP:MASTER:가학쾌락경험 += 1
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+
+@COM_ABLE2
+;펠라한다実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(2)
+	RETURN RESULT
+;性器が汚れているとMASTER의場合펠라한다はできない（조교者が汚れ無視か愛液、Ｐ、모유のよごれならＯＫ）
+SIF STAIN:2 >= 4 && (STAIN:2 != 18 && STAIN:2 != 19) && TALENT:MASTER:악취내성 < 2
+	RETURN 0
+;고양이혀の조교者の場合は기교Lv2以上必要
+SIF TALENT:MASTER:고양이혀 && ABL:MASTER:기교 < 2
+	RETURN 0
+;オトコか후타나리じゃないとダメ
+SIF HAS_PENIS(TARGET) == 0
+	RETURN 0
+;하반신착의
+SIF TEQUIP:0 & 4
+	RETURN 0
+;오나홀사용중はダメ
+SIF TEQUIP:12
+	RETURN 0
+RETURN 1

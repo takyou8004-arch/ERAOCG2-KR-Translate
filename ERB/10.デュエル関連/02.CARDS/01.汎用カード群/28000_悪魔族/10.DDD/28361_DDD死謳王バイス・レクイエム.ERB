@@ -1,0 +1,173 @@
+﻿@CARDNAME_28361,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = DDD 사어가왕 바이스 레퀴엠
+	CASE "略称"
+RESULTS = DDD 레퀴엠
+	CASE "カテゴリ"
+RESULTS:0 = DD
+RESULTS:1 = DDD
+ENDSELECT
+
+
+@CARD_28361(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2000
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_28361(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 ① 펜듈럼 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 자신 필드의 "계약서" 카드 1장을 파괴하고, 이 카드를 특수 소환한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+;フィールドでカテゴリ縛りの関数が無さそうなので
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한, 자신은 악마족 몬스터밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,F素材時효과,S素材時효과,X素材時효과,L素材時효과)
+PRINTL ②: 이 카드를 소재로서 융합 / 싱크로 / 엑시즈 / 링크 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 자신의 필드(앞면 표시) / 묘지에서 "계약서" 카드 1장을 덱으로 되돌리고,
+PRINTL 상대 필드의 카드 1장을 파괴한다.
+PRINTL 그 후, 자신은 1000 LP 회복한다.
+@CARDSUMMON_AA_28361
+
+
+@CARDCAN_28361(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28361)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,28361)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,28361,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件カテゴリ = 계약서
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == F素材時효과 || 종류 == S素材時효과 || 종류 == X素材時효과 || 종류 == L素材時효과
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 계약서
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28361(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択횟수
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28361)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28361,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件カテゴリ = 계약서
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, ゾーン, 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == F素材時효과 || 종류 == S素材時효과 || 종류 == X素材時효과 || 종류 == L素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28361)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = 계약서
+PRINTL 덱으로 되돌릴 계약서를 선택해 주세요
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_TMP_SS_RST(듀얼리스트,"종족",악마족)
+ENDIF
+
+
+

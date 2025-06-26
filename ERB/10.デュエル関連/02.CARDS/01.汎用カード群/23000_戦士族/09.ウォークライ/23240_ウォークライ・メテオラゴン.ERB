@@ -1,0 +1,124 @@
+﻿@CARDNAME_23240,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 워크라이 메테오라곤
+	CASE "略称"
+RESULTS = 메테오라곤
+	CASE "カテゴリ"
+RESULTS:0 = 워크라이
+ENDSELECT
+
+
+@CARD_23240(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 2600
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_23240(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 상대의 효과로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(0,常在無効)
+PRINTL ②: 이 카드가 전투를 실행할 경우, 상대 필드의 몬스터 효과는 무효화된다.
+CALLFORM CARD_ABLE(10,攻撃時誘発)
+PRINTL ③: 1턴에 1번, 자신의 전사족 땅 속성 몬스터가 전투를 실행할 경우에 발동할 수 있다.
+PRINTL 자신 필드의 모든 "워크라이" 몬스터의 공격력은 200 올린다.
+PRINTL 이 턴, 이 카드는 1번의 배틀 페이즈 중에 2회까지 공격할 수 있다.
+
+
+
+@CARDSUMMON_AA_23240
+
+
+@CARDCAN_23240(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23240)
+SIF RESULT == 1
+	RETURN 0
+	
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+    RETURN 1
+ELSEIF 종류 == 常在無効
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	CALLFORM ATTACK_CARD(듀얼리스트,"종족")
+	SIF !MATCH(RESULT,전사족)
+		RETURN 0
+	CALLFORM ATTACK_CARD(듀얼리스트,"속성")
+	SIF !MATCH(RESULT,땅속성)
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23240(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+ELSEIF 종류 == 常在無効
+	CALL FULLRESET
+;	효과元カードID = 23240
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効",0,23240)
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23240,10)
+	IF RESULT == 0
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦",2)
+		CALL FULLRESET
+		효과条件カテゴリ = 워크라이
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"永攻",200)
+	ENDIF
+ENDIF

@@ -1,0 +1,133 @@
+﻿@CARDNAME_92900,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 역전하는 운명
+	CASE "略称"
+RESULTS = 역전하는 운명
+	CASE "カテゴリ"
+RESULTS:0 = 아르카나 포스
+ENDSELECT
+
+
+@CARD_92900(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250520
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_92900(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 룰상 「아르카나 포스」 카드로 취급한다.
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 발동할 수 없다.
+CALL CARD_ABLE(0,마함起動 ,フリー誘発)
+PRINTL ①：필드의 「아르카나 포스」 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터의 표시 형식에 따라 이하의 효과를 적용한다.
+PRINTL ●정위치：역위치로 한다.
+PRINTL ●역위치：정위치로 한다.
+PRINTL ●그 외：그 몬스터의 소환 / 특수 소환 시의 효과를 적용한다.
+CALL CARD_ABLE(2,묘지起動,フリー誘発)
+PRINTL ②：자신 필드에 「빛의 결계」가 존재할 경우 발동할 수 있다.
+PRINTL 묘지의 이 카드를 세트한다.
+
+@CARDCAN_92900(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92900)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 아르카나 포스
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	SIF 발동済_2(듀얼리스트,92900)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+효과条件名前 = 빛의 결계
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_92900(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92900)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		SIF 듀얼리스트 == "자신"
+			효과範囲상대필드 = 1
+		효과条件カテゴリ = 아르카나 포스
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"選択")
+		IF RESULT == 1
+			選択カード_ID = RESULT:2
+			CALL CARD_SELECT(듀얼리스트,RESULT:1)
+			選択カード = RESULT
+			IF GETVAR(@"%대상者（CS）%_MZ_汎数:選択カード") == 1
+				CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード,"汎数",2,1)
+			ELSEIF GETVAR(@"%대상者（CS）%_MZ_汎数:選択カード") == 2
+				CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード,"汎数",1,1)
+			ELSE
+				CALL ARCANA_SET(대상者（CS）,"필드",選択カード,選択カード_ID)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92900,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 역전하는 운명
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF

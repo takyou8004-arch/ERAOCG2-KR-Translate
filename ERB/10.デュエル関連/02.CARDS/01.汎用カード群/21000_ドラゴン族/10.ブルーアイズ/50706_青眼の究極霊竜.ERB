@@ -1,0 +1,164 @@
+﻿@CARDNAME_50706,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 궁극의 푸른 눈의 영룡
+	CASE "略称"
+RESULTS = 궁극의 푸른영룡
+	CASE "カテゴリ"
+RESULTS:0 = 푸른 눈의
+ENDSELECT
+
+
+@CARD_50706(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 3500
+	CASE "守備力"
+		RETURN 4000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50706(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 12
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件カテゴリ = 푸른 눈의
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50706) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50706(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 튜너 ＋ 튜너 이외의 「푸른 눈의」 몬스터 1장 이상
+PRINTL 이 카드명의 ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한, 상대는 카드를 제외할 수 없다.
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ②: 상대 카드의 효과가 필드에서 발동했을 때에 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고, 이 카드의 공격력을 턴 종료시까지 1000 올린다.
+CALLFORM CARD_ABLE(3,破壊→묘지,戦闘→묘지)
+PRINTL ③: 이 카드가 전투 / 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지에서 「푸른 눈의 궁극영룡」 이외의 드래곤족 빛속성 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_50706(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50706)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,50706)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_3(듀얼리스트,50706)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 드래곤족
+	효과条件속성 = 빛속성
+	효과条件固名前 = 궁극의 푸른 눈의 영룡
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50706(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"제외NG置換",3,1)
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50706,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",1000)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50706,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 드래곤족
+		효과条件속성 = 빛속성
+		효과条件固名前 = 궁극의 푸른 눈의 영룡
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

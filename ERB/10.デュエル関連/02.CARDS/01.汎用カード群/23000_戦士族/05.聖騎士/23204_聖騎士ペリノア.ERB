@@ -1,0 +1,116 @@
+﻿@CARDNAME_23204,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성기사 페리노아
+	CASE "略称"
+RESULTS = 페리노아
+	CASE "カテゴリ"
+RESULTS:0 = 성기사
+ENDSELECT
+
+
+@CARD_23204(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23204(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 이 카드가 "성검" 카드를 장착하고 있을 경우 발동할 수 있다.
+PRINTL 상대 필드의 카드 1장을 파괴하고, 1장 드로우한다.
+PRINTL 그 후, 자신 필드의 "성검" 장착 마법 카드 1장을 패로 되돌릴 수 있다.
+PRINTL 
+
+@CARDCAN_23204(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23204)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,23204)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 성검
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23204(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23204,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		IF RESULT != 0
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+			CALL FULLRESET
+			효과条件カテゴリ = 성검
+			효과条件종류 = 装備마법
+			효과条件任意 = 1
+			CALL CARD_CHOOSE_BASIC(듀얼리스트, "마함",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL CARD_DISPOSE(듀얼리스트,"마함",選択カード,손패行き)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

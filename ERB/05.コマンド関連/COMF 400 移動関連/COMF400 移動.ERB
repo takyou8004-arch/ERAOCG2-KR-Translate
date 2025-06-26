@@ -1,0 +1,582 @@
+;-------------------------------------------------
+;이동
+;-------------------------------------------------
+@COM400
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 行先위치
+#DIM DYNAMIC 行先確定
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ2
+#DIM DYNAMIC カウンタ3
+#DIM DYNAMIC 개시시간
+#DIM DYNAMIC トイレ사용중
+#DIM DYNAMIC 浴室사용중
+#DIM DYNAMIC 浴室使用者
+#DIM DYNAMIC 자위中
+#DIM DYNAMIC 寝室人数
+;원거리이동中の処理
+
+VARSET マップモード
+VARSET トイレ사용중
+VARSET 浴室사용중
+VARSET 자위中
+VARSET 寝室人数
+FOR 캐릭터_ID,1,CHARANUM
+	IF CFLAG:캐릭터_ID:현재위치 == 場所_トイレ
+		SIF CFLAG:캐릭터_ID:변기화 != 1
+			トイレ사용중 = 1
+	ENDIF
+	IF CFLAG:캐릭터_ID:현재위치 == 場所_浴室
+		浴室사용중 = 캐릭터_ID
+	ENDIF
+
+	IF CFLAG:캐릭터_ID:현재위치 == 場所_寝室
+		寝室人数 ++
+		IF CFLAG:캐릭터_ID:시작위치 == 場所_寝室
+			IF RAND:200 >= BASE:캐릭터_ID:만족 
+				자위中 = 캐릭터_ID
+			ENDIF
+		ENDIF
+	ENDIF
+NEXT
+SIF 寝室人数 >= 2
+	VARSET 자위中
+
+
+
+IF TFLAG:195
+	TIME += 1
+	IF TFLAG:195 == CFLAG:MASTER:현재위치
+		TFLAG:195 = 0
+		RETURN 0
+	ENDIF
+	CALL CHARA_MOVEMENT("이동")
+	TFLAG:시간경과 = TIME + 1440 * DAY
+	;캐릭터をCFLAG:310の昇順に並び替え
+	VARSET TARGET
+	VARSET カウンタ2	
+	FOR カウンタ,1,CHARANUM
+		SIF カウンタ == MASTER
+			CONTINUE
+		SIF CFLAG:MASTER:현재위치 != CFLAG:カウンタ:현재위치
+			CONTINUE
+		カウンタ2 ++
+		TARGET:カウンタ2 = カウンタ
+	NEXT	
+
+	캐릭터_ID = 0
+	;誰かいないかチェック
+	FOR カウンタ,1,CHARANUM
+		SIF カウンタ == MASTER
+			CONTINUE
+		SIF TARGET:カウンタ <= 0
+			CONTINUE
+		SIF CFLAG:(TARGET:カウンタ):동행
+			CONTINUE
+		캐릭터_ID = TARGET:カウンタ
+	NEXT
+
+	IF 캐릭터_ID
+		PRINTFORM %GETPLACENAME(CFLAG:MASTER:현재위치)%에서 %CALLNAME:캐릭터_ID%를 만나다
+		IF STRLENS(CSTR:MASTER:모은팬티) && RAND:2 && !CFLAG:캐릭터_ID:수면
+			PRINTL 
+			PRINTFORMW %CALLNAME:캐릭터_ID%에게 발각되어 신체검사를 받았다…
+			PRINTFORMW 
+			PRINTFORMW 
+			PRINTFORMW 
+			PRINTFORMW 팬티를 압수당했다
+			SIF GETBIT (CFLAG:캐릭터_ID:10,0)
+				PRINTFORMW %CALLNAME:캐릭터_ID%에게 약점을 잡혔다
+			CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 11, 0)
+			SETBIT CFLAG:캐릭터_ID:10 ,0
+			CSTR:MASTER:모은팬티 =
+			TFLAG:195 = 0
+			RETURN 0
+		ELSE
+			PRINTL ……　어떻게 할까요？
+			PRINTL [0] 그대로 이동하기
+			PRINTL [1] 멈춰서기
+			INPUT	
+			IF RESULT == 0
+				CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 4, 2)
+			ELSE
+				CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 4, 1)
+				TFLAG:195 = 0
+				RETURN 0
+			ENDIF
+		ENDIF
+	ENDIF
+	LOCAL:1 = IN_ROOM("MIN", 18, "CFLAG", 6)
+	;원거리이동
+	IF CAN_MOVE(CFLAG:MASTER:현재위치, TFLAG:195) & 1
+		;땅下室
+		IF TFLAG:195 == 17 && ABL:MASTER:신체능력 <= 0
+			PRINTW 문 안쪽에서 불길한 기운이 느껴진다…
+			TFLAG:195 = 0
+			RETURN 0
+
+		ELSEIF FLAG:(300 + TFLAG:195) && !HAS_DUPLICATE_KEY(TFLAG:195)
+			PRINTW 안쪽에서 자물쇠로 잠겨 있다…
+			TFLAG:195 = 0
+			RETURN 0
+		ELSE
+			CFLAG:MASTER:현재위치 = (TFLAG:195)
+			IF FLAG:(300 + TFLAG:195) && HAS_DUPLICATE_KEY(TFLAG:195)
+				PRINTFORML 여벌 열쇠를 사용하여 들어갔다
+				FOR 캐릭터_ID, 1,CHARANUM
+					IF CFLAG:캐릭터_ID:311 == TFLAG:195
+						PRINTFORMW %CALLNAME:캐릭터_ID%는 자고 있다
+						CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 3, 3)
+					ENDIF
+				NEXT
+			ENDIF			
+			TFLAG:195 = 0
+			RETURN 0
+		ENDIF
+		FOR 캐릭터_ID,1,CHARANUM
+			SIF CFLAG:캐릭터_ID:동행
+				CFLAG:캐릭터_ID:현재위치 = CFLAG:MASTER:현재위치
+		NEXT
+	ELSEIF TFLAG:195 == 場所_トイレ && トイレ사용중
+		CFLAG:MASTER:현재위치 = 3
+		PRINTW 현재 사용중인 것 같다……。
+		TFLAG:195 = 0
+		RETURN 0
+	ELSEIF TFLAG:195 == 場所_浴室 && 浴室사용중 >= 1
+		PRINTFORMW 현재 목욕탕은 %CALLNAME:浴室사용중%가 사용 중인 것 같다。
+		PRINTFORML [1] - 들어간다！
+		PRINTFORML [2] - 그만두자……
+		BINPUT
+		IF RESULT == 1
+			IF CFLAG:浴室사용중:호감도 >= 1500
+				CFLAG:MASTER:현재위치 = 場所_浴室
+				PRINTFORMW %CALLNAME:浴室사용중%는 싫은 기색도 없이、함께 목욕을 하는 것을 승낙했다。
+				BASE:浴室사용중:무드 +=  200
+				BASE:浴室사용중:무드 = MIN(BASE:浴室사용중:무드 , MAXBASE:浴室사용중:무드 )
+			ELSEIF TALENT:浴室사용중:무지 || TALENT:浴室사용중:무관심
+				CFLAG:MASTER:현재위치 = 場所_浴室
+				PRINTFORMW %CALLNAME:浴室사용중%는 알몸을 보여도 개의치 않고、함께 목욕을 하는 것을 승낙했다。
+			ELSEIF TALENT:浴室사용중:배짱 == -1
+				CFLAG:MASTER:현재위치 = 場所_浴室
+				PRINTFORMW %CALLNAME:浴室사용중%는 강하게 말하지 못하고、함께 목욕을 하는 것에 동의했다。
+			ELSEIF CFLAG:浴室사용중:호감도 < 1500
+				CFLAG:MASTER:현재위치 = 3
+				PRINTFORMW 들어가려는 순간、 %CALLNAME:浴室사용중%에게 쫓겨나 버렸다……。
+			ENDIF
+		ELSEIF RESULT == 2
+			CFLAG:MASTER:현재위치 = 3
+		ENDIF
+		TFLAG:195 = 0
+		RETURN 0
+
+	ELSEIF TFLAG:195 == 場所_寝室 && 자위中 >= 1
+		CALLFORM ONANII_EVENT(자위中)
+		TFLAG:195 = 0
+		RETURN 0
+	ELSE
+		CALL FARMOVE(TFLAG:195)
+		CFLAG:MASTER:현재위치 = RESULT
+	ENDIF
+	RESTART
+ENDIF
+$INPUT_LOOP
+CUSTOMDRAWLINE —
+PRINTL
+PRINTL 이동 장소 선택
+PRINTL
+SIF CFLAG:MASTER:현재위치 < 自宅部屋最大値
+	CALLFORM MAP_PRINT_1
+PRINTL 
+CUSTOMDRAWLINE ―
+PRINTFORML 현재{CFLAG:MASTER:현재위치}:%GETPLACENAME(CFLAG:MASTER:현재위치)%에 있다
+CUSTOMDRAWLINE ―
+
+FOR カウンタ,0,10
+	IF INRANGE(依頼_場所:カウンタ,1,20)
+		SETCOLOR C_AQUA
+		PRINTFORML [{依頼_場所:カウンタ,3}] - %GETPLACENAME(依頼_場所:カウンタ),20,LEFT%
+	ELSEIF INRANGE(依頼_場所:カウンタ,50,100)
+		SETCOLOR C_AQUA
+		PRINTFORML 의뢰처는「동역 주변」인 것 같다。외출하자。
+	ELSEIF INRANGE(依頼_場所:カウンタ,101,200)
+		SETCOLOR C_AQUA
+		PRINTFORML 의뢰처는「남역 주변」인 것 같다。외출하자。
+	ELSEIF 依頼_場所:カウンタ >= 500
+		SETCOLOR C_AQUA
+		PRINTFORML 의뢰처는「이세계」인 것 같다。[{場所_中継땅点}]를 사용하자。
+	ENDIF
+NEXT
+
+
+RESETCOLOR
+PRINTL 
+CUSTOMDRAWLINE —
+SIF !CAN_MOVE(CFLAG:MASTER:현재위치, CFLAG:MASTER:시작위치) && CFLAG:MASTER:현재위치 != CFLAG:MASTER:시작위치
+	PRINTL [8] - 개인실로 돌아가기
+FOR LOCAL,0, 20+1
+	SIF CAN_MOVE(CFLAG:MASTER:현재위치, LOCAL)
+		PRINTFORML [{LOCAL}] - %GETPLACENAME(LOCAL)%
+NEXT
+CUSTOMDRAWLINE ―
+
+SIF ITEM:천년도어 >= 1
+	PRINTFORML [500] - 차원 여행하기
+CUSTOMDRAWLINE ―
+
+PRINT [100] - 뒤로
+
+BINPUT
+IF RESULT == 100
+	RETURN 0
+ELSEIF CFLAG:MASTER:현재위치 == RESULT
+	RETURN 0
+ELSEIF CAN_MOVE(CFLAG:MASTER:현재위치, RESULT) & 1
+	VARSET 追跡설정_ID
+	IF FLAG:(300 + RESULT) && !HAS_DUPLICATE_KEY(RESULT)
+		PRINTW 안쪽에서 자물쇠로 잠겨 있다…
+		RESTART
+	ELSE
+		CFLAG:MASTER:현재위치 = RESULT
+		IF FLAG:(300 + RESULT) && HAS_DUPLICATE_KEY(RESULT)
+			PRINTFORML 여벌 열쇠를 사용하여 들어갔다
+		ENDIF
+	ENDIF
+
+	IF RESULT == 11 && トイレ사용중
+		CFLAG:MASTER:현재위치 = 3
+		PRINTW 현재 사용중인 것 같다……。
+		RESTART
+
+
+	ELSEIF RESULT == 場所_浴室 && 浴室사용중 >= 1
+		PRINTFORMW 현재 목욕탕은 %CALLNAME:浴室사용중%가 사용 중인 것 같다。
+		PRINTFORML [1] - 들어간다！
+		PRINTFORML [2] - 그만두자……
+		BINPUT
+		IF RESULT == 1
+			IF CFLAG:浴室사용중:호감도 >= 2500
+				CFLAG:MASTER:현재위치 = 場所_浴室
+				PRINTFORMW %CALLNAME:浴室사용중%는 싫은 기색도 없이、함께 목욕을 하는 것을 승낙했다。
+				BASE:浴室사용중:무드 +=  200
+				BASE:浴室사용중:무드 = MIN(BASE:浴室사용중:무드 , MAXBASE:浴室사용중:무드 )
+				CALL KOJO_MESSAGE_SEND("EVENT", 浴室사용중, 1, 3)
+			ELSEIF TALENT:浴室사용중:무지 || TALENT:浴室사용중:무관심
+				CFLAG:MASTER:현재위치 = 場所_浴室
+				PRINTFORMW %CALLNAME:浴室사용중%는 알몸을 보여도 개의치 않고、함께 목욕을 하는 것을 승낙했다。
+				CALL KOJO_MESSAGE_SEND("EVENT", 浴室사용중, 1, 3)
+			ELSEIF TALENT:浴室사용중:배짱 == -1
+				CFLAG:MASTER:현재위치 = 場所_浴室
+				PRINTFORMW %CALLNAME:浴室사용중%는 강하게 말하지 못하고、함께 목욕을 하는 것에 동의했다。
+				CALL KOJO_MESSAGE_SEND("EVENT", 浴室사용중, 1, 3)
+			ELSEIF CFLAG:浴室사용중:호감도 < 1500
+				CFLAG:MASTER:현재위치 = 3
+				PRINTFORMW 들어가려는 순간、 %CALLNAME:浴室사용중%에게 쫓겨나 버렸다……。
+				CALL KOJO_MESSAGE_SEND("EVENT", 浴室사용중, 1, 5)
+			ENDIF
+		ELSEIF RESULT == 2
+			CFLAG:MASTER:현재위치 = 3
+		ENDIF
+	ELSEIF RESULT == 場所_寝室 && 자위中 >= 1
+		CALLFORM ONANII_EVENT(자위中)
+	ENDIF
+ELSE
+	VARSET 追跡설정_ID
+	TFLAG:195 = RESULT
+	CALL FARMOVE(RESULT)
+	;현재위치を更新し、次も이동の扱いにする
+	CFLAG:MASTER:현재위치 = RESULT
+	TIME += 1
+	RESTART
+ENDIF
+TIME += 1
+PREVCOM = 400
+STR:0 = 이동
+
+RETURN 0
+
+
+@GETMAP(ARGS,色취득플래그)
+#DIM 캐릭터_ID
+#DIM カウンタ
+#DIM DYNAMIC 色취득플래그
+#DIM DYNAMIC 보정
+
+SIF INRANGE(マップモード,1,2)
+	보정 = 100
+
+
+
+;천년スマホを所持していたら、外にいる캐릭터も見れる
+IF ITEM:천년스마트폰
+	;交流可能캐릭터はピンク色に光る
+	FOR 캐릭터_ID,1,CHARANUM
+		IF CFLAG:캐릭터_ID:현재위치 == TOINT(ARGS) + 보정
+			IF TALENT:캐릭터_ID:듀얼리스트 >= 1 || CFLAG:캐릭터_ID:소유함 == 1
+				SETCOLOR C_H_PINK
+			ELSE
+				SETCOLOR C_GOLD
+			ENDIF			
+		ENDIF
+
+	NEXT
+ELSE
+	FOR 캐릭터_ID,1,CHARANUM		
+		IF CFLAG:캐릭터_ID:현재위치 == TOINT(ARGS) + 보정 && CFLAG:캐릭터_ID:현재위치 <= 20
+			SETCOLOR C_H_PINK
+		ENDIF
+	NEXT
+ENDIF
+FOR カウンタ,0,10
+	SIF 依頼_場所:カウンタ == TOINT(ARGS) + 보정
+		SETCOLOR C_AQUA
+NEXT
+SIF CFLAG:MASTER:현재위치 == TOINT(ARGS) + 보정
+	SETCOLOR C_M_GREEN
+
+IF 色취득플래그 == 0
+	PRINTBUTTON ARGS , TOINT(ARGS)
+	RESETCOLOR
+ENDIF
+
+;MASTER원거리이동
+;ARG:0	最終目的땅
+;RETURN	今回이동するところ
+@FARMOVE(ARG:0)
+;LOCAL一覧
+
+;0	현재의 위치
+;1	暫定目的땅
+#DIM 이동_현재위치
+#DIM 이동_暫定目的땅
+
+;현재위치취득
+이동_현재위치 = CFLAG:MASTER:현재위치
+
+;暫定目的땅결정
+이동_暫定目的땅 = ARG:0
+$INPUT_LOOP
+;暫定目的땅に直接이동できる場合
+IF CAN_MOVE(CFLAG:MASTER:현재위치, 이동_暫定目的땅) & 1
+	;そこに이동
+	RETURN 이동_暫定目的땅
+ENDIF
+
+;袋小路から行ける場所は固定なので、そこを目손가락す
+;トイレ/浴室は洗面所のみ
+IF (이동_현재위치 == 場所_トイレ) || (이동_현재위치 == 場所_浴室)
+	RETURN 場所_洗面所 
+ENDIF
+;キッチンはダイニング
+IF (이동_현재위치 == 場所_キッチン)
+	RETURN 場所_ダイニング
+ENDIF
+;ベランダからはリビングのみ
+IF (이동_현재위치 == 場所_ベランダ)
+	RETURN 場所_リビング
+ENDIF
+
+IF (이동_현재위치 == 場所_子供部屋)
+	RETURN 場所_リビング
+ENDIF
+
+;直接이동できない경우、1つ近い위치を暫定目的땅に설정し直してループ
+SELECTCASE 이동_暫定目的땅
+	CASE 場所_玄関
+		;玄関に直接行けない경우、廊下を目손가락す
+		이동_暫定目的땅 = 場所_廊下
+	CASE 場所_廊下
+		;廊下を目손가락す경우、現在땅が2か4なら3を目손가락す
+		IF (이동_현재위치 ==場所_トイレ) || (이동_현재위치 == 場所_浴室)
+			이동_暫定目的땅 = 場所_洗面所
+		ELSE
+		;それ 이외의 (直接行けない)場所からは、5を目손가락す
+			이동_暫定目的땅 = 場所_ダイニング
+		ENDIF
+	CASE 場所_洗面所 
+		;洗面所に直接行けない경우、2を目손가락す
+		이동_暫定目的땅 = 場所_廊下 
+	CASE 場所_浴室
+		;浴室に直接行けない경우、3を目손가락す
+		이동_暫定目的땅 = 場所_洗面所 
+	CASE 場所_ダイニング
+		;ダイニングに直接行けない경우、7を目손가락す
+		IF (이동_현재위치 == 場所_寝室) || (이동_현재위치 == 場所_収納) || (이동_현재위치 == 場所_ベランダ)
+			이동_暫定目的땅 = 場所_リビング
+		;それ 이외의 (直接行けない)場所からは、2を目손가락す
+		ELSE
+			이동_暫定目的땅 = 場所_廊下 
+		ENDIF
+	CASE 場所_キッチン
+		;キッチンに直接行けない경우、5を目손가락す
+		이동_暫定目的땅 = 場所_ダイニング
+	CASE 場所_リビング
+		;リビングに直接行けない경우、8を目손가락す
+		IF (이동_현재위치 == 場所_収納)
+			이동_暫定目的땅 = 場所_寝室
+		;それ 이외의 (直接行けない)場所からは、5を目손가락す
+		ELSE
+			이동_暫定目的땅 = 場所_ダイニング 
+		ENDIF
+	CASE 場所_寝室 
+		;寝室に直接行けない경우、7を目손가락す
+		이동_暫定目的땅 = 場所_リビング
+	CASE 場所_収納
+		;クローゼットに直接行けない경우、8を目손가락す
+		이동_暫定目的땅 = 8
+	CASE 場所_ベランダ
+		;ベランダに直接行けない경우、7を目손가락す
+		이동_暫定目的땅 = 場所_リビング
+	CASE 場所_トイレ
+		;トイレに直接行けない경우、3を目손가락す
+		이동_暫定目的땅 = 場所_洗面所 
+	CASE 場所_子供部屋
+		;子供部屋に直接行けない경우、7を目손가락す
+		이동_暫定目的땅 = 場所_リビング
+	CASE 場所_中継땅点
+		;子供部屋に直接行けない경우、7を目손가락す
+		이동_暫定目的땅 = 場所_収納
+		
+ENDSELECT
+GOTO INPUT_LOOP
+
+@HAS_DUPLICATE_KEY, ARG
+#FUNCTION
+FOR LOCAL, 1,CHARANUM
+	IF CFLAG:LOCAL:311 == ARG
+		SIF TALENT:LOCAL:연모
+			RETURNF 1
+	ENDIF
+NEXT
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE400
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(400)
+	RETURN RESULT
+SIF CFLAG:MASTER:현재위치 >= 自宅部屋最大値
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+SIF 듀얼モード == 1
+	RETURN 0
+RETURN 1
+
+
+
+
+@ONANII_EVENT(캐릭터_ID,覗き플래그)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 覗き플래그
+CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 35, 1)
+PRINTFORMW %CALLNAME:캐릭터_ID%의 요염한 목소리가 울린다……。
+
+IF 覗き플래그 == 1
+	PRINTFORML [1] - 문 열기
+ELSE
+	PRINTFORML [1] - 들어간다！
+ENDIF
+PRINTFORML [2] - 그만두자……
+BINPUT
+IF RESULT == 1
+	PRINTFORMW %CALLNAME:캐릭터_ID%는 자신의 손가락으로 성기를 문지르며 쾌감을 맛보고、음탕한 소리를 내는 모습을 %CALLNAME:MASTER%에게 들키고 말았다。
+	IF TALENT:캐릭터_ID:즉시타락 >= 2
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 35, 10)
+		PRINTFORMW %CALLNAME:MASTER%의 하반신에 매달려、먹이를 달라는 강아지 같은 눈빛으로 %CALLNAME:MASTER%에게 열정을 호소했다。
+		PRINTFORMW 어떻게 할까……。
+		PRINTFORML [1] - 한다
+		PRINTFORML [2] - 방 정리한다
+		SIF TALENT:MASTER:성별 & 2
+			PRINTFORML [3] - 장대만 냄새를 맡게 해준다
+		BINPUT
+		IF RESULT == 1
+			CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 35, 4)
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 기대에 부응하기 위해 밀어붙여 주었다。
+			CFLAG:캐릭터_ID:우후후 = 1
+			CFLAG:MASTER:우후후 = 1
+			CFLAG:MASTER:현재위치 = 場所_寝室
+		ELSEIF RESULT == 2
+			
+			CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 35, 5)
+			IF 覗き플래그 == 1
+				PRINTFORMW 정리해 달라고 말하자마자 방 청소를 시작했다。
+			ELSE
+				PRINTFORMW 방을 쓰고 싶다、라고 전하자 무엇인가에 두려워하는 듯이 눈물로 방을 정리해 주었다。
+				CFLAG:MASTER:현재위치 = 場所_寝室
+			ENDIF
+		ELSEIF RESULT == 3
+			CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 35, 11)
+			PRINTFORMW 이거 써도 돼、 라고 하반신을 노출하고、 %CALLNAME:캐릭터_ID%의 얼굴에 성기를 문질렀다.。
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 혀를 내밀고 흥분하면서、하반신을 만지작거리는 손가락을 멈추지 않았다。
+			PRINTFORMW ・・・・・・
+			PRINTFORMW ・・・・
+			PRINTFORMW ・・
+			CALL SOURCE_CALC_쾌Ｂ(TARGET, TARGET, 1000)
+			CALL SOURCE_CALC_쾌Ｃ(TARGET, TARGET, 1000)
+			EXP:캐릭터_ID:자위경험 += 5
+			CFLAG:캐릭터_ID:축적 -= 300
+			CFLAG:MASTER:현재위치 = 場所_寝室
+			TIME += 20
+		ENDIF
+	
+		CALL SOURCE_CALC_쾌Ｂ(TARGET, TARGET, 240)
+		CALL SOURCE_CALC_쾌Ｃ(TARGET, TARGET, 240)
+		CFLAG:캐릭터_ID:축적 -= 100
+		EXP:캐릭터_ID:자위경험 += 1
+	ELSEIF TALENT:캐릭터_ID:포식자
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 35, 15)
+		PRINTFORMW 『육』이 왔다는 듯이 %CALLNAME:MASTER%를 밀어 넘어뜨렸다！
+		CFLAG:캐릭터_ID:우후후 = 2
+		CFLAG:MASTER:우후후 = 2
+		TFLAG:COMABLE관리 = 3
+		CFLAG:MASTER:현재위치 = 場所_寝室
+	ELSE
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 35, 2)
+		PRINTFORMW 어떻게든 몸을 감추기 위해、담요로 몸을 감추려 했지만、들켜버렸다。
+		PRINTFORMW 열쇠는 걸어두자……
+		IF CFLAG:캐릭터_ID:호감도 >= 1500
+			CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 35, 3)
+			PRINTFORMW 그 후、 %CALLNAME:캐릭터_ID%가 정리할 때까지 방을 나가려고 하지만……。
+			PRINTFORMW 어딘지 모르게 호소하는 듯한 눈빛으로 쳐다보고 있다……。
+			PRINTFORML [1] - 한다
+			PRINTFORML [2] - 지금은 좀……
+			BINPUT
+			IF RESULT == 1
+				CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 35, 4)
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 기대에 부응하기 위해 밀어붙였다。
+				CFLAG:캐릭터_ID:우후후 = 1
+				CFLAG:MASTER:우후후 = 1
+				CFLAG:MASTER:현재위치 = 場所_寝室
+			ELSE
+				CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 35, 5)
+				IF 覗き플래그 == 1
+					PRINTFORMW 정리해 달라고 말하자、미안한 듯이 바로 방 청소를 시작했다。
+				ELSE
+					PRINTFORMW 방을 쓰고 싶다고 말하자、미안한 듯이 방을 치워주었다。
+					CFLAG:MASTER:현재위치 = 場所_寝室
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+	
+	CALL SOURCE_CALC_쾌Ｂ(캐릭터_ID, 캐릭터_ID, 250)
+	CALL SOURCE_CALC_쾌Ｃ(캐릭터_ID, 캐릭터_ID, 250)
+	CFLAG:캐릭터_ID:축적 -= 100
+	EXP:캐릭터_ID:자위경험 += 3
+ELSEIF RESULT == 2
+	CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 35, 6)
+
+	PRINTFORMW 잠시 기다렸다가、쾅하고 문을 두드리고 들어가자、
+	PRINTFORMW 아무 일도 없었다는 듯 %CALLNAME:캐릭터_ID%는 %CALLNAME:MASTER%에게 인사를 건넸다。
+	CALL SOURCE_CALC_쾌Ｂ(캐릭터_ID, 캐릭터_ID, 500)
+	CALL SOURCE_CALC_쾌Ｃ(캐릭터_ID, 캐릭터_ID, 500)
+	SIF 覗き플래그 == 0
+		CFLAG:MASTER:현재위치 = 場所_寝室
+	CFLAG:캐릭터_ID:축적 -= 300
+	EXP:캐릭터_ID:자위경험 += 5
+	TIME += 10
+ENDIF

@@ -1,0 +1,164 @@
+﻿@CARDNAME_26998,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마루챠미 후와로스
+	CASE "略称"
+		RESULTS = 후와로스
+	CASE "カテゴリ"
+		RESULTS:0 = 마루챠미
+ENDSELECT
+
+
+@CARD_26998(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 600
+	CASE "튜너"
+		RETURN 0
+	CASE "성별"
+		RETURN 0
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26998(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드의 효과를 발동하는 턴에、자신은 이 카드 이외의 "마루챠미" 몬스터의 효과를 １번밖에 발동할 수 없다。
+CALLFORM CARD_ABLE(1,손패起動,フリー誘発)
+PRINTL ①：자신 / 상대 턴에、자신 필드에 카드가 존재하지 않는 경우、이 카드를 패에서 버리고 발동할 수 있다。
+PRINTL 이 턴 중에、이하의 효과를 적용한다。
+PRINTL ●상대가 덱 / EX덱에서 몬스터를 특수 소환할 때마다、자신은 １장 드로우한다。
+PRINTL ●엔드 페이즈에、자신의 패가 상대 필드의 카드의 수＋６장보다 많을 경우、그 차의 수만큼 자신의 패를 무작위로 덱으로 되돌린다。
+
+
+@CARDCAN_26998(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限達成
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26998)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,25998) + 발동済_2(듀얼리스트,25998) + 발동済_1(듀얼리스트,26998) + 발동済_2(듀얼리스트,26998) + 발동済_1(듀얼리스트,31998) + 발동済_2(듀얼리스트,31998) >= 2
+		RETURN 0
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,26998)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 効後紋章起動
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환",1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"소환出処",4,1)
+	SIF RESULT == 1
+		RETURN 1
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"소환出処",5,1)
+	SIF RESULT == 1
+		RETURN 1
+	RETURN 0
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,26998)
+	カウンタ = RESULT
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,26998)
+	カウンタB = RESULT
+
+	SIF カウンタ <= カウンタB + 6
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_26998(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 덱送りカード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26998,15)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARD_RESERV(듀얼리스트,26998,効後紋章予約)
+			CALL CARD_RESERV(듀얼리스트,26998,エンド予約)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 効後紋章起動
+	CALL CARDDRAW_BASIC(듀얼리스트,1)
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,26998)
+	カウンタ = RESULT
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,26998)
+	カウンタB = RESULT
+
+	덱送りカード = カウンタ - (カウンタB + 6)
+
+	VARSET カウンタ
+	FOR カウンタ,0,덱送りカード
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"손패破壊",場所,"덱",,1)
+	NEXT
+ENDIF
+

@@ -1,0 +1,202 @@
+﻿@CARDNAME_4063,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 기상천외 셔플
+	CASE "略称"
+RESULTS = 셔플
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:1 = 침략자
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_4063(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 1700
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4063(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時 ,특수소환時,攻撃時誘発)
+PRINTL ①: 이 카드가 소환 / 특수 소환했을 경우, 또는 이 카드의 공격 선언 시에 발동할 수 있다.
+PRINTL 숫자를 하나 선언한다.
+PRINTL 다음 자신 스탠바이 페이즈까지,
+PRINTL 선언한 숫자와 같은 코스트의 상대 필드의 몬스터는 공격할 수 없으며, 효과를 발동할 수 없다.
+PRINTL 이 효과는 중복되지 않으며, 덮어씌워진다.
+PRINTL (코스트 O는 레벨, 랭크, 링크 O를 지칭한다)
+
+@CARDCAN_4063(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4063)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,4063)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF 발동済_1(듀얼리스트,4063)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 短紋章起動
+	RETURN 1
+
+ELSEIF 종류 == ターン開始時予約
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4063(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC リピート횟수
+#DIM DYNAMIC 宣言レベル
+#DIM DYNAMIC 最多モンスター数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == 攻撃時誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4063,1)
+	IF RESULT == 0
+		宣言レベル = 0
+		IF 듀얼리스트 == "자신"
+			$INPUTLOOP
+			;レベル入力
+			SIF リピート횟수 >= 3
+				SETCOLOR C_YELLOW
+PRINTL 숫자를 입력해주세요 (반각 숫자, 최소 1, 최대 99)
+			RESETCOLOR
+			PRINTL
+			INPUT
+			;1から
+			IF INRANGE(RESULT,1,99)
+				宣言レベル = RESULT
+			ELSE
+				リピート횟수 ++
+				REPEAT 3
+					PRINTL
+				REND
+				GOTO INPUTLOOP
+			ENDIF
+			PRINTFORML {宣言レベル}でよろしいですか？
+			CALL YN_CHOICE(듀얼리스트)
+			SIF RESULT == いいえ
+				GOTO INPUTLOOP
+		ELSE
+			FOR カウンタ,1,13
+				CALL FULLRESET
+				효과範囲상대필드 = 1
+				효과範囲상대묘지 = 1
+				효과範囲상대제외 = 1
+				효과条件표시 = 表側표시
+				효과条件レベル = カウンタ
+				효과条件CNT = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF 最多モンスター数 < RESULT
+					最多モンスター数 = RESULT
+					宣言レベル = カウンタ
+				ENDIF
+			NEXT
+			IF 宣言レベル == 0
+				IF RAND:2 == 0
+					宣言レベル = 4
+				ELSE
+					宣言レベル = 2
+				ENDIF
+			ENDIF
+		ENDIF
+		PRINTL
+		PRINTL
+		PRINTFORMW %듀얼리스트%는{宣言レベル}を宣言しました
+		CALL SET_PLAYER_INFO(듀얼리스트,"シャッフ宣言", 宣言レベル)
+
+		CALL CARD_RESERV(듀얼리스트,4063,短紋章予約)
+		CALL CARD_RESERV(듀얼리스트,4063,スタン予約)
+	ENDIF
+ELSEIF 종류 == 短紋章起動
+	CALL FULLRESET
+	효과条件レベル = GETVAR(@"%듀얼리스트%_シャッフ宣言")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"発無")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"戦無")
+
+ELSEIF 종류 == ターン開始時予約
+	IF ターンプレイヤー != 듀얼리스트
+		SETCOLOR C_L_BLUE
+PRINTL 타임 오브 셔플!
+		RESETCOLOR
+		PRINTL
+		PRINT このターン、
+		IF 듀얼리스트 == "자신"
+			PRINT 상대の
+		ELSE
+			PRINT あなたの
+		ENDIF
+		宣言レベル = GETVAR(@"%듀얼리스트%_シャッフ宣言")
+		SETCOLOR C_YELLOW
+		PRINTFORM コスト{宣言レベル}
+		RESETCOLOR
+PRINTL 몬스터는 봉인됩니다!
+		WAIT
+		PRINTL
+		IF 듀얼리스트 != "자신"
+PRINTL [0] - 확인
+			PRINTL
+			BINPUT
+		ENDIF
+		CALL CARD_RESERV(듀얼리스트,4063,短紋章予約)
+	ENDIF
+ENDIF

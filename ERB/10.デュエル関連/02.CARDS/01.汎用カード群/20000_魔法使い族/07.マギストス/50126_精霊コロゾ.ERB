@@ -1,0 +1,188 @@
+﻿@CARDNAME_50126,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마기스토스 코로조
+	CASE "略称"
+RESULTS = 정령 코로조
+	CASE "カテゴリ"
+RESULTS:0 = 마기스토스
+ENDSELECT
+
+
+@CARD_50126(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족 
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 2800
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50126(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 융합 S X L 몬스터 + 마법사족 몬스터
+CALLFORM CARD_ABLE(1,EX덱起動)
+PRINTL 1턴에 1번, 자신 필드에서 융합 소재가 되는 몬스터 카드를 묘지로 보내는 것으로, EX덱에서 이 카드를 융합 소환 취급하여 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(10,攻撃時誘発)
+PRINTL ①: 1턴에 1번, 자신 또는 상대의 몬스터 공격 선언 시에 발동할 수 있다.
+PRINTL 그 공격을 무효로 하고, 이 카드의 공격력은 턴 종료시까지 공격한 몬스터의 공격력만큼 오른다.
+PRINTL 그 후, 공격한 몬스터가 상대의 몬스터라면, 그 몬스터를 패로 되돌린다.
+
+
+@CARDSUMMON_50126(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件종류:0 = 융합
+	素材条件종류:1 = 싱크로
+	素材条件종류:2 = 엑시즈
+	素材条件종류:3 = 링크
+ELSEIF EX参照 >= 10
+	素材条件종족 = 마법사족
+ENDIF
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,50126) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50126(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50126)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,50126)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,50126)
+	SIF RESULT == 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,41921,"EX덱")
+	SIF RESULT == 1
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲마함 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+효과条件名前 = 마기스토스 코로조
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 마기스토스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1	
+ENDIF
+
+@CARDEFFECT_50126(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50126,1)
+	IF RESULT == 0
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲마함 = 1
+		CALL FULLRESET
+효과条件名前 = 마기스토스 코로조
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			;카드의 条件を読み込む：
+			TRYCALLFORM CARDSUMMON_50126(듀얼리스트,選択カード)
+			;素材処理を読み込む
+			CALL FUSSUMMON(듀얼리스트,選択カード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50126,10)
+	IF RESULT == 0
+		IF ターンプレイヤー == 듀얼리스트
+			攻撃カード = 戦闘場所(듀얼리스트)
+			攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_攻:(%듀얼리스트%_戦闘カード)")
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",攻撃力修正)
+			CALL EVADE_ATTACK(듀얼리스트)
+		ELSEIF ターンプレイヤー == 対面者
+			攻撃カード = 戦闘場所(듀얼리스트,1)
+			攻撃力修正 = GETVAR(@"%対面者%_MZ_攻:(%対面者%_戦闘カード)")
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",攻撃力修正)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",攻撃カード,"손패")
+		ELSE
+PRINTL 에러
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+

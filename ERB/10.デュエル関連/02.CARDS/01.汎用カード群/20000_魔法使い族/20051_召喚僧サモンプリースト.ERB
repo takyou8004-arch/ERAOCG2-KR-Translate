@@ -1,0 +1,115 @@
+﻿@CARDNAME_20051,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 소환승 소환 프리스트
+	CASE "略称"
+RESULTS = 소환 프리스트
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_20051(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20051(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時強制)
+PRINTL ①：이 카드가 소환했을 경우에 발동한다. 이 카드를 수비 표시로 한다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②：1턴에 1번, 패에서 마법 카드 1장을 버리고 발동할 수 있다.
+PRINTL 덱에서 레벨 4 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터는 이번 턴 공격할 수 없다.
+
+
+@CARDCAN_20051(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20051)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時強制
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件レベル = 4
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20051(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+
+IF 종류 == 소환時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",2,1)
+ELSEIF 종류 == 필드起動
+	PRINTL 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20051,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 마법全般
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과추가종류 = 効追戦無
+			효과条件レベル = 4
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+

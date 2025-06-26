@@ -1,0 +1,242 @@
+@CARDNAME_59800,参照先
+;ココで지정 카드의 名前、略称を返す予定
+;#FUNCTIONS
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 트립아로마릴리스-매그놀리아-
+	CASE "略称"
+		RESULTS = TAL-매그놀리아-
+	CASE "カテゴリ"
+		RESULTS:0 = 트립아로마
+		RESULTS:1 = 아로마
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59800(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 1399
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_59800(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 「트립아로마" 몬스터 ＋식물족 몬스터
+PRINTL 이 카드명의  ①②의 효과는각각 1턴에 1번 밖에 사용 할 수 없다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①：자신의 메인 페이즈에 발동할 수 있다.
+PRINTL 상대 필드에 존재하는 마법 / 함정 카드 1장을 묘지에 보낸다.
+PRINTL 그 후, 상대 플레이어에 미약 카운터를 1개 둔다.
+CALL CARD_ABLE(2,발동誘発)
+PRINTL ②：상대가 마법 & 함정 카드를 발동 했을 때 발동 할 수 있다.
+PRINTL 상대 필드에 존재하는 미약 카운터가 놓여진 몬스터 1장을 릴리스 하여, 그 발동을 무효로 하고 파괴한다.
+PRINTL 그 후, 상대 플레이어에 미약 카운터를 1개 둔다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_AA_59800
+
+
+
+@CARDSUMMON_59800(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 트립아로마
+ELSEIF EX参照 >= 10
+	素材条件종족 = 식물족
+ENDIF
+
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,59800) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_59800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59800)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,59800)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,59800)
+		RETURN 0
+
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件薬Ｃ所持 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発 || 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_59800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59800,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 마함全般
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,"リリース")
+		IF RESULT == 1
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+				PRINTFORML
+				SETCOLOR C_PINK 
+				PRINTFORML %NAME:조교대상%은 매그놀리아가 피우는 미향에 의해 발정했다!
+				RESETCOLOR
+				CALL EROTIC_MOVE("媚毒汚染",조교대상,NO_TO_CHARANUM(1399),100)
+			ENDIF
+			CALL SET_PLAYER_INFO(듀얼리스트,"薬Ｃ",1,1,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59800,2)
+	IF RESULT == 0
+
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件薬Ｃ所持 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		選択カード_ID = RESULT:1
+		
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+		IF RESULT == 1
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+				PRINTFORML
+				SETCOLOR C_PINK 
+				PRINTFORML 매그놀리아에 얽혀진 %NAME:조교대상%은 미독에 범해졌다!
+				RESETCOLOR
+				CALL EROTIC_MOVE("媚毒汚染",조교대상,NO_TO_CHARANUM(1399),100)
+			ENDIF
+			CALL SET_PLAYER_INFO(듀얼리스트,"薬Ｃ",1,1,1)
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL FULLRESET
+	IF RESULT == 0
+		IF 戦闘場所(듀얼리스트,1) != 5
+			CALL CARD_EROTICS(戦闘カードID(듀얼리스트,1))
+			IF RESULT != 0
+				조교대상 = RESULT
+			ENDIF
+		ELSE
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != 0
+				조교대상 = RESULT
+			ENDIF
+		ENDIF
+		IF 조교대상 > 0
+			PRINTFORML
+			SETCOLOR C_PINK 
+			PRINTFORML %CALLNAME:조교대상%은 매그놀리아에게 전신이 포박되어 희롱당하고 있다!
+			RESETCOLOR
+			CALL EROTIC_MOVE("묘상捕縛",조교대상,NO_TO_CHARANUM(1399),100)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	IF RESULT != -1
+		조교대상 = RESULT
+		PRINTFORML
+		SETCOLOR C_PINK 
+		PRINTFORML %CALLNAME:조교대상%은 매그놀리아에게 전신이 포박되어 희롱당하고 있다!
+		RESETCOLOR
+		CALL EROTIC_MOVE("묘상捕縛",조교대상,NO_TO_CHARANUM(1399),100)
+	ENDIF
+ENDIF

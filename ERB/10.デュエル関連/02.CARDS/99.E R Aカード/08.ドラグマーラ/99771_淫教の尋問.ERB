@@ -1,0 +1,188 @@
+﻿@CARDNAME_99771,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 드래그마라의 심문
+	CASE "略称"
+		RESULTS = 음교의 심문
+	CASE "カテゴリ"
+		RESULTS:0 = 드래그마라
+		RESULTS:1 = 드래그마
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_99771(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99771(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 1턴에 1번, 둘 중 하나밖에 사용할 수 없다.
+CALL CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①：상대 묘지에 존재하는 암컷 카드 1장을 선택하여 자신의 묘지에 놓고, 상대의 패를 확인한다.
+PRINTL 자신의 필드 및 묘지에 선택한 카드와 같은 이름의 카드가 2장 이상 존재할 경우,
+PRINTL 또한 상대의 덱을 확인할 수 있다.
+CALL CARD_ABLE(2,묘지起動)
+PRINTL ②：묘지에 있는 이 카드를 덱으로 되돌리고 발동할 수 있다.
+PRINTL 덱에서 ‘드래그마라’ 의식 몬스터 1장과 ‘음교의 심문’ 이외의 ‘드래그마라’  마법 / 함정 카드 1장을 손에 추가한다.
+
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99771(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99771)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,99771)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,99771)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,99771)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,99771)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 드래그마라
+	효과条件종류 = 의식
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 드래그마라
+	효과条件종류 = 마함全般
+	효과条件固名前 = 드래그마라의 심문
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_99771(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 이동カード名
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99771,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과条件성별 = 牝性
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			選択カード = RESULT
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARDNAME_{選択カード_ID}, "名前"
+			이동カード名 = %RESULTS%
+			CALL CARD_RECONSTRUCT(듀얼리스트,"묘지",現묘지数(듀얼리스트),選択カード_ID)
+			CALL CARD_RECONSTRUCT(対面者,"묘지",選択カード,-1)
+			PRINTFORML %듀얼리스트%는 『{選択カード}』%이동カード名%을 자신의 묘지로 빼앗았다.
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲묘지 = 1
+			효과条件名前 = %이동カード名%
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT > 2
+				条件달성 = RESULT
+			CALL CARD_EROTICS(選択カード_ID)
+			조교대상 = RESULT
+			IF 조교대상 != -1
+				CALL EROTIC_MOVE("全身愛撫",조교대상, -1, 条件달성*100)
+				SETCOLOR C_PINK
+				PRINTFORML
+				IF 条件달성 < 3
+				PRINTFORMW 심문에 굴복한 %CALLNAME:조교대상%는 상대의 패 정보를 모두 말했다.
+				ELSE
+					PRINTFORMW 완전히 마음이 무너져 음교에 매료된 %CALLNAME:조교대상%는 상대의 정보를 모두 털어놓았다.
+				ENDIF
+				PRINTFORML
+				RESETCOLOR
+			ENDIF
+			CALL FULLRESET
+			효과範囲상대손패 = 1
+			SIF 条件달성 != 0
+				효과範囲상대덱 = 1
+			효과条件任意 = 1
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99771,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 드래그마라
+		효과条件종류 = 의식
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 드래그마라
+		효과条件종류 = 마함全般
+		효과条件固名前 = 드래그마라의 심문
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

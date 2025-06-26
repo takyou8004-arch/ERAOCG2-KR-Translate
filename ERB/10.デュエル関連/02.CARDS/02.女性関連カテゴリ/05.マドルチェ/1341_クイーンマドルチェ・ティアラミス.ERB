@@ -1,0 +1,145 @@
+﻿@CARDNAME_1341,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 퀸 마돌체 티아라미스
+	CASE "略称"
+RESULTS = 티아라미스
+	CASE "カテゴリ"
+RESULTS:0 = 마돌체
+ENDSELECT
+
+
+@CARD_1341(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 2100
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_1341(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+素材条件カテゴリ = 마돌체
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,1341) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_1341(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 "마돌체" 몬스터 x 2
+
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 이 카드의 엑시즈 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 자신 묘지의 "마돌체" 카드 2장까지를 고르고 덱으로 되돌리고,
+PRINTL 되돌린 수까지 상대 필드의 카드를 고르고 주인의 덱으로 되돌린다.
+
+@CARDCAN_1341(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1341)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,1341)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 마돌체
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1	
+ENDIF
+
+@CARDEFFECT_1341(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード,5
+#DIM DYNAMIC 戻した数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1341,1,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 마돌체
+		IF GETVARS(@"%듀얼리스트%_フィールド名")  ==  "マドル シャト-"
+			효과条件行先플래그 = 손패行き
+		ELSE
+			효과条件行先플래그 = 덱行き
+		ENDIF
+		효과条件複数 = 98
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			戻した数 = RESULT:2
+			CALL FULLRESET
+			효과条件複数 = 100 - 戻した数
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"덱")	
+		ENDIF
+	ENDIF
+ENDIF

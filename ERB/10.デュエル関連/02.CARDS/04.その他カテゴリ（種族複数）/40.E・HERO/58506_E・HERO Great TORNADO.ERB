@@ -1,0 +1,140 @@
+﻿@CARDNAME_58506,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = E•HERO Great TORNADO
+	CASE "略称"
+		RESULTS = Great TORNADO
+	CASE "カテゴリ"
+		RESULTS:0 = HERO
+		RESULTS:1 = E•HERO
+ENDSELECT
+
+
+@CARD_58506(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2200
+	CASE "특수불가"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_58506(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「E•HERO」と名のついたモンスター＋바람 속성 몬스터
+PRINTL 이 카드는 융합소환でしか특수 소환할 수 없다。
+CALL CARD_ABLE(0,EX소환時強制)
+PRINTL ①：이 카드가 융합소환에 성공했을 경우에 발동한다。
+;PRINTL 상대 필드의 모든 몬스터의 공격력 / 수비력은 半分になる。
+PRINTL 상대 필드의 모든 몬스터의 공격력은 半分になる。
+CALL CARD_ABLE(10,필드起動)
+PRINTL ②：１턴에 １번、자신 메인 페이즈에 발동할 수 있다。
+PRINTL 상대 필드에 존재하는 마법 / 함정 카드를 すべて패로 되돌린다。
+
+
+
+@CARDSUMMON_58506(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = E•HERO
+ELSEIF EX参照 >= 10
+	素材条件속성 = 바람속성
+
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,58506) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_58506(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58506)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == EX소환時強制
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_58506(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58506)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 2
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"永攻DOWN")
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58506,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함全体",場所,"손패")
+	ENDIF
+ENDIF

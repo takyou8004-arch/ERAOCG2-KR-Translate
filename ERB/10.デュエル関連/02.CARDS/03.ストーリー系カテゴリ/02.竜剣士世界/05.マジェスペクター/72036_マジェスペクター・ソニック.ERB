@@ -1,0 +1,99 @@
+﻿@CARDNAME_72036,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마제스펙터 소닉
+	CASE "略称"
+RESULTS = MJ 소닉
+	CASE "カテゴリ"
+RESULTS:0 = 마제스펙터
+ENDSELECT
+
+
+@CARD_72036(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "추가日"
+		RETURN 250604
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_72036(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動,손패起動,フリー誘発)
+PRINTL ①: 필드의 '마제스펙터' 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 공격력 / 수비력은 턴 종료시까지 배가 되고, 직접 공격할 수 없다.
+
+
+
+@CARDCAN_72036(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72036)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件カテゴリ = 마제스펙터
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72036(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72036)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+효과条件カテゴリ = 마제스펙터
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"一攻",GETVAR(@"%듀얼리스트%_MZ_攻:選択カード"))
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"一守",GETVAR(@"%듀얼리스트%_MZ_守:選択カード"))
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"直無",1,1)
+		ENDIF
+	ENDIF
+ENDIF
+

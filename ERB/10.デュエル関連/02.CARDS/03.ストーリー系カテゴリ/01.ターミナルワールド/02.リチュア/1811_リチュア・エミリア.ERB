@@ -1,0 +1,88 @@
+﻿@CARDNAME_1811,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 리추어 에밀리아
+	CASE "略称"
+RESULTS = 에밀리아
+	CASE "カテゴリ"
+RESULTS:0 = 리추어
+RESULTS:1 = 스피릿
+ENDSELECT
+
+
+@CARD_1811(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1811(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한,
+;PRINTL 「리추어」カード의 효과의 발동に対して상대は마법 / 함정 モンスター의 효과를 발동할 수 없다。
+PRINTL 자신의 물속성 몬스터의 효과 발동에 대해 상대는 마법 / 함정 / 몬스터의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ②: 엔드 페이즈에 발동한다.
+PRINTL 이 카드를 주인의 패로 되돌린다.
+
+
+@CARDCAN_1811(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1811)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1811(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+IF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"물属阻害",3)
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,손패行き)
+ENDIF

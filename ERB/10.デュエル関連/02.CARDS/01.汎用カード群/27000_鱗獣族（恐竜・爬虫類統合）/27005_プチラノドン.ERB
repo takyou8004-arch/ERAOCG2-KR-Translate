@@ -1,0 +1,94 @@
+﻿@CARDNAME_27005,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 프티라노돈
+	CASE "略称"
+RESULTS = 프티라노돈
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_27005(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 500
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_27005(종류)
+#DIM DYNAMIC 종류
+CALL CARD_ABLE(0,破壊→묘지)
+PRINTL ①: 이 카드가 효과로 파괴되어 묘지로 보내졌을 경우에 발동한다.
+PRINTL 덱에서 레벨 4 이상의 비늘야수족 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터는 이 턴 공격할 수 없다.
+PRINTL 
+
+@CARDCAN_27005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,27005)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 破壊→묘지
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 비늘야수족
+	CALL 효과条件レベル_ADV(4, "以上")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_27005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM サーチカード 
+
+
+
+;PRINTFORMW 종류:{종류}
+
+IF 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27005)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종족 = 비늘야수족
+		효과추가종류 = 26
+		CALL 효과条件レベル_ADV(4, "以上")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

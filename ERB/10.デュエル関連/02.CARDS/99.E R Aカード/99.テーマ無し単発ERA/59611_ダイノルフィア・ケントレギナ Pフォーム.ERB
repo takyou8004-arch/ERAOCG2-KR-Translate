@@ -1,0 +1,216 @@
+﻿@CARDNAME_59611,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 다이놀피어 켄트레기나 파이즈리자우루스
+	CASE "略称"
+		RESULTS = 켄트레기나ＰＳ
+	CASE "カテゴリ"
+		RESULTS:0 = 다이놀피어
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59611(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 0
+	CASE "連動ID"
+		RETURN 1326
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_59611(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 「다이놀피어" 몬스터＋「E.R.A" 몬스터
+PRINTL 이 카드명의  ②③의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(0,常在無効)
+PRINTFORM ①：이 카드의 공격력은
+SETCOLOR C_YELLOW
+PRINTFORM %CALLNAME:MASTER%의 체력
+RESETCOLOR
+PRINTL 의 수치만큼 내려간다。
+CALL CARD_ABLE(2,필드起動,フリー誘発)
+PRINT ②：자신 / 상대의 메인 페이즈에、이 카드는
+SETCOLOR C_YELLOW
+PRINTFORM %CALLNAME:MASTER%에게
+RESETCOLOR
+PRINTL 파이즈리를 행한다。
+PRINTL 그 후、자신의 묘지에서 "다이놀피어」일반함정카드１장을 제외하고 발동할 수 있다。
+PRINTL 이 효과는、그 함정카드 발동시의 효과과 같아진다。（그 함정의 효과에 의한LP는 지불한다）
+
+CALL CARD_ABLE(3,破壊→묘지,戦闘→묘지)
+PRINTL ③：이 카드가 전투 효과로 파괴되었을 경우에 발동할 수 있다。
+PRINTL 자신의 묘지에서 레벨４이하의 "다이놀피어" 몬스터 １장을 고르고 특수 소환한다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+
+@CARDSUMMON_59611(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 다이놀피어
+ELSEIF EX参照 >= 10
+	素材条件カテゴリ = E.R.A
+ENDIF
+
+
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,59611) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_59611(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59611)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 常在無効
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,59611)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 通常함정
+	효과条件カテゴリ = 다이놀피어
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_3(듀얼리스트,59611)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 다이놀피어
+	CALL 효과条件レベル_ADV(4, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_59611(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻守変動
+	攻撃力修正 = BASE:MASTER:체력
+	CALL STATCHANGE_BASIC(듀얼리스트,"자신",場所,-攻撃力修正)
+
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59611,1)
+	IF RESULT == 0
+		SIF TALENT:MASTER:성별 == 1
+			PRINTFORMW %CALLNAME:MASTER%는 자신에게서 자라난 강직함에 놀라고있다！
+
+
+		CALL CARD_EROTICS(1326)
+		조교대상 = RESULT
+
+		SIF 듀얼리스트 == "상대"
+			PRINTFORMW %CALLNAME:조교대상%는 어째서 %CALLNAME:MASTER%에게 파이즈리하지 않으면 안되는지 모르고있다。
+
+		IF TALENT:조교대상:굴복됨 >= 1
+			PRINTFORMW %CALLNAME:조교대상%는 명령대로 가슴을 개방하고、공포와 불만으로 가득안 눈으로 그것을 바라본 후…
+			PRINTFORMW %CALLNAME:MASTER%에게 사랑을 담은 파이즈리를 시작했다。
+		ELSEIF TALENT:조교대상:연모 >= 2
+			PRINTFORMW %CALLNAME:조교대상%는 이미 기다릴수 없다는듯이 가슴을 개방하고、
+			PRINTFORMW 情熱的にも %CALLNAME:MASTER%에게 사랑을 담은 파이즈리를 시작했다。
+		ELSEIF CFLAG:조교대상:호감도 >= 2000
+			PRINTFORMW %CALLNAME:조교대상%는 난처해보이는 얼굴을 하면서도 가슴을 개방하고、
+			PRINTFORMW 顔を赤らめながら %CALLNAME:MASTER%에게 사랑을 담은 파이즈리를 시작했다。
+		ELSE
+			PRINTFORMW %CALLNAME:조교대상%는 난처해보이는 얼굴을 하면서도 가슴을 개방하고、
+			PRINTFORMW 悪態をつきながらも %CALLNAME:MASTER%에게 사랑을 담은 파이즈리를 시작했다。
+		ENDIF
+		REPEAT 5
+			CALL EROTIC_MOVE("파이즈리",조교대상,MASTER)
+		REND
+		PRINTFORMW %CALLNAME:조교대상%는 가슴 백탁액을 흘리면서、묘지에서 함정의 효과를 발동한다……
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 通常함정
+		효과条件カテゴリ = 다이놀피어
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 0
+			選択カード_ID = RESULT:1
+			CALLFORM CARDEFFECT_{選択カード_ID}(듀얼리스트,마함起動,"효과処理")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59611,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 다이놀피어
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

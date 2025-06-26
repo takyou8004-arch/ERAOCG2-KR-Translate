@@ -1,0 +1,313 @@
+﻿@CARDNAME_99691,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 드래곤메이드의 아침인사
+	CASE "略称"
+		RESULTS = 아침 인사
+	CASE "カテゴリ"
+		RESULTS:0 = 드래곤메이드
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99691(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_99691(종류)
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC 듀얼리스트
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+PRINTL 자신 필드에 카드가 존재하지 않을 경우、이 카드의 발동은 패에서도 가능하다。
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신 스탠바이 페이즈에 발동할 수 있다。
+PRINTL 덱에서 레벨４ 이하의「드래곤메이드」 몬스터를 효과를 무효로 하고 특수 소환한다。
+PRINTL 그 후、그 몬스터와 같은 속성의「드래곤메이드」X 몬스터를 EX덱에서 고르고、
+PRINTL 특수 소환한 몬스터의 위에 겹쳐서 공격표시로 특수 소환한다。
+PRINTL 그리고、자신은 ６００ＬＰ 회복한다。
+PRINTL 이 카드의 발동 후、자신은 턴 종료시 까지「드래곤메이드」 몬스터밖에 특수 소환할 수 없다。
+CALL CARD_ABLE(2,효과後誘発)
+PRINTL ②：자신이「드래곤메이드의 밤」마법 / 함정을 발동했을 경우에 발동할 수 있다。
+PRINTL 묘지의 이 카드를 자신 필드에 세트한다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_99691(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99691)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発 || 종류 == ターン開始時
+	SIF 발동済_1(듀얼리스트,99691)
+		RETURN 0
+	IF ゾーン == "손패"
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF スタンバイフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	CALL CARDRUM_99691(듀얼리스트)
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,99691)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 드래곤메이드의 밤
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDRUM_99691(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 설정カードID
+#DIM DYNAMIC 설정カード속성
+VARSET RESULT
+VARSET RESULTS
+
+FOR カウンタ,0,紙束最大値
+	설정カードID =  GETVAR(@"%듀얼리스트%_덱:カウンタ")
+	SIF 설정カードID == -1
+		CONTINUE
+	TRYCCALLFORM CARD_{설정カードID}, "종류"
+		SIF !GROUPMATCH(RESULT, 효과モン, 通常モン, 의식)
+			CONTINUE
+		CALLFORM CARD_{설정カードID}, "レベル"
+		SIF !INRANGE(RESULT, 1, 4)
+			CONTINUE
+		CALLFORM CARD_{설정カードID}, "속성"
+		설정カード속성 = RESULT
+	CATCH
+		CONTINUE
+	ENDCATCH
+	TRYCCALLFORM CARDNAME_{설정カードID}, "カテゴリ"
+		SIF !MATCH(RESULTS,"드래곤메이드")
+			CONTINUE
+	CATCH
+		CONTINUE
+	ENDCATCH
+	CALL CARD_SS_CHECK(듀얼리스트,설정カードID,"덱")
+	SIF RESULT == 1
+		CONTINUE
+
+	TRYCALLFORM CARDRUM_99691_2(듀얼리스트,설정カード속성)
+	SIF RESULT != 1
+		CONTINUE
+	VARSET RESULT
+	VARSET RESULTS
+	효과条件ID:カウンタB = 설정カードID
+	カウンタB ++
+NEXT
+
+VARSET RESULT
+VARSET RESULTS
+SIF カウンタB == 0
+	RETURN 0
+RETURN 1
+
+
+@CARDRUM_99691_2(듀얼리스트,素材속성)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 素材속성
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 설정カードID
+VARSET RESULT
+VARSET RESULTS
+
+FOR カウンタ,0,紙束最大値
+	설정カードID =  GETVAR(@"%듀얼리스트%_EX덱:カウンタ")
+	SIF 설정カードID == -1
+		CONTINUE
+	TRYCCALLFORM CARD_{설정カードID}, "종류"
+		SIF RESULT != 엑시즈
+			CONTINUE
+		CALLFORM CARD_{설정カードID}, "속성"
+		SIF RESULT != 素材속성
+			CONTINUE
+	CATCH
+		CONTINUE
+	ENDCATCH
+	TRYCCALLFORM CARDNAME_{설정カードID}, "カテゴリ"
+		SIF !MATCH(RESULTS,"드래곤메이드")
+			CONTINUE
+	CATCH
+		CONTINUE
+	ENDCATCH
+	CALL CARD_SS_CHECK(듀얼리스트,설정カードID,"EX덱",1)
+	SIF RESULT == 1
+		CONTINUE
+	VARSET RESULT
+	VARSET RESULTS
+	RETURN 1
+NEXT
+
+VARSET RESULT
+VARSET RESULTS
+RETURN 0
+
+
+@CARDEFFECT_99691(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択カードB
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 조교대상名
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発 || 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99691,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		CALL CARDRUM_99691(듀얼리스트)
+		효과추가종류 = 効追無効
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			효과先 = カード소환先
+			CALL FULLRESET
+			;효과範囲EX덱 = 1
+			CALLFORM CARD_{選択カード_ID}, "속성"
+			효과条件속성 = RESULT
+			효과条件カテゴリ = 드래곤메이드
+			효과条件종류 = 엑시즈
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カードB = RESULT
+			IF 選択カードB != 9999
+				CALL RESETCONDITION_MAT(1)
+				代替素材数 = 1
+				重ねてＸ = 1
+				素材条件固定 = 효과先
+				CALL XYZSUMMON(듀얼리스트,選択カードB,"攻撃표시")
+
+				;フレーバー1
+				IF 듀얼리스트 == "자신"
+					CALL CARD_EROTICS(選択カード_ID)
+					조교대상 = RESULT
+					IF 조교대상 != -1
+						조교대상名 '= CALLNAME:조교대상
+					ELSE
+						TRYCALLFORM CARDNAME_{選択カード_ID},"略称"
+						조교대상名 '= RESULTS
+					ENDIF
+
+					PRINTL
+					PRINTFORML 눈치채보니 %CALLNAME:MASTER%는 듀얼중임에도 불구하고 침대위에서 자고있다。
+					PRINTL
+					SETCOLOR C_PINK
+					PRINTFORM %CALLNAME:MASTER%가 눈을 뜨니、아침발기
+					IF RAND:2 == 0
+						PRINTFORMW 에 혀를 기게하는 음란한 복장의 %조교대상名%과 눈이 맞았다…
+						RESETCOLOR
+						IF 조교대상 != -1
+							CALL EROTIC_MOVE("펠라치오",조교대상,MASTER,400)
+						ENDIF
+					ELSE
+						IF 조교대상 != -1
+							SELECTCASE BUST_SIZE(조교대상)
+								CASE IS <= -2
+									PRINT 에게 없는 가슴을 懸命に擦りつける
+								CASE -1
+									PRINT 를 작은편인 가슴에 懸命に挟む
+								CASE 0
+									PRINT 를 가슴에 끼운
+								CASE 1
+									PRINT 를 붕만한 가슴에 끼운
+								CASE 2
+									PRINT 를 그 폭유에 끼운
+								CASE 3, 4
+									PRINT 를 그 소같은 마유에 끼운
+								CASE IS >= 5
+									PRINT 를 그 평범한 생활을 보낼수 있는지 모르는 규격외의 쵸유에 끼운
+							ENDSELECT
+						ELSE
+							PRINT 를 가슴에 끼운
+						ENDIF
+						PRINTFORMW 음란한 복장의 %조교대상名%과 눈이 맞았다…
+						RESETCOLOR
+						IF 조교대상 != -1
+							CALL EROTIC_MOVE("パイズリ",조교대상,MASTER,400)
+						ENDIF
+					ENDIF
+				ENDIF
+				PRINTW ………………
+				PRINTW …………
+				PRINTL ……
+				PRINTW
+				;ライフ回復
+				CALL LIFE_CHANGE(듀얼리스트,"増加","효과",600)
+				;フレーバー2
+				IF 듀얼리스트 == "자신"
+					PRINTL
+					SETCOLOR C_PINK
+					PRINTFORML 吐き出された%CALLNAME:MASTER%の白濁液を、%조교대상名%는尿道に残った最後の一滴まで綺麗に舐めとると
+					PRINTFORMW ペニスから唇を離し、%CALLNAME:MASTER%へ朝の挨拶の言葉を述べた…
+					RESETCOLOR
+					IF 조교대상 != -1
+						CALL EROTIC_MOVE("精飲",조교대상,MASTER,100)
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+		CALL CARD_SS_RESTRICTION(듀얼리스트,"드래곤메이드")
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99691,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前 = 드래곤메이드の朝のご挨拶
+		CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF

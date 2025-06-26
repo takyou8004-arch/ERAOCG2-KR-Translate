@@ -1,0 +1,163 @@
+﻿@CARDNAME_58006,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = No.6 선사 유산 아틀란탈
+	CASE "略称"
+RESULTS = #6 아틀란탈
+	CASE "カテゴリ"
+RESULTS:0 = 넘버즈
+		RESULTS:1 = 오파츠
+ENDSELECT
+
+
+@CARD_58006(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 3000
+	CASE "추가日"
+		RETURN 250613
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_58006(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 6
+;추가효과用
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,58006) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_58006(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 6 몬스터 × 2
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 엑시즈 소환에 성공했을 때, 자신 묘지의 "No." 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터를 장착 카드 취급으로서 이 카드에 장착한다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드의 공격력은, 이 카드의 효과로 장착한 몬스터의 원래 공격력만큼 상승한다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ③: 1턴에 1번, 이 카드의 엑시즈 소재를 1개 제거하고,
+PRINTL 이 카드가 장착하고 있는 자신 마법 & 함정 존의 카드를 전부 묘지로 보내고 발동할 수 있다.
+PRINTL 상대의 LP를 절반으로 한다.
+PRINTL 이 효과를 발동하는 턴, 자신은 배틀 페이즈를 실행할 수 없다.
+
+@CARDCAN_58006(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58006)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件カテゴリ = 넘버즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ２ == 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_58006(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58006,0)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件カテゴリ = 넘버즈
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,場所,"묘지",選択カード,(1 + 2))
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58006,10,X消費1)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_마함:カウンタ") == -1
+				CONTINUE
+			SIF GETVAR(@"%듀얼리스트%_魔_装:カウンタ") != 場所
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"마함",カウンタ)
+		NEXT
+		CALL LIFE_SET(対面者,(GETVAR(@"ライフ_%対面者%") / 2))
+		CALL SET_PLAYER_INFO(듀얼리스트,"バトルスキップ", 1)
+	ENDIF
+ENDIF

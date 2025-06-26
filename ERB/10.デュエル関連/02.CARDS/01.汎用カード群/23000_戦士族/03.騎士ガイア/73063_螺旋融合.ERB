@@ -1,0 +1,145 @@
+﻿@CARDNAME_73063,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 나선 융합
+	CASE "略称"
+RESULTS = 나선 융합
+	CASE "カテゴリ"
+RESULTS:0 = 융합
+RESULTS:1 = 기사 가이아
+ENDSELECT
+
+
+@CARD_73063(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_73063(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,마함起動 ,손패起動)
+PRINTL ①：자신의 패 / 필드의 몬스터를 융합 소재로 하고,
+PRINTL 「기사 가이아」 융합 몬스터 1장을 융합 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터의 공격력은 2600 올린다.
+CALLFORM CARD_ABLE(2,バトル開始時)
+PRINTL ②：배틀 페이즈 개시 시, 이 카드가 묘지에 존재할 경우에,
+PRINTL 자신 필드의 공격력 5200 이상의 「기사 가이아」 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터의 공격 횟수를 1회 늘린다.
+
+@CARDCAN_73063(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73063)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲손패 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	효과条件カテゴリ = 기사 가이아
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == バトル開始時
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,73063)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 기사 가이아
+	효과条件以攻撃力 = 5200
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73063(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 묘지送カード,10
+#DIM DYNAMIC 손패묘지送カード,10
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択済カード
+#DIM DYNAMIC 효과先
+;융합소환
+VARSET 묘지送カード, 35
+VARSET 손패묘지送カード, 35
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73063)
+	IF RESULT == 0
+		;마법카드를 묘지送り
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲손패 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件カテゴリ = 기사 가이아
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		;戻る
+		IF 選択カード != 9999
+			;카드의 条件を読み込む：
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			;素材処理を読み込む
+			CALL FUSSUMMON(듀얼리스트, 選択カード)
+			SIF RESULT == 1
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"永攻",2600)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == バトル開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73063,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 기사 가이아
+		효과条件以攻撃力 = 5200
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "필드",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"戦",1)
+		ENDIF		
+	ENDIF
+ENDIF

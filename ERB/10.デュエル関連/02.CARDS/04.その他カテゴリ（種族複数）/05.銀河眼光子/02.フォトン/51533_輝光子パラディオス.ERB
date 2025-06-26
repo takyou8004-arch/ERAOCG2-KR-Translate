@@ -1,0 +1,141 @@
+@CARDNAME_51533,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 휘광자 팔라디오스
+	CASE "略称"
+RESULTS = 팔라디오스
+	CASE "カテゴリ"
+RESULTS:0 = 포톤
+ENDSELECT
+
+
+@CARD_51533(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1000
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_51533(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+素材条件속성 = 빛속성
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51533) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_51533(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 빛 속성 레벨 4 몬스터 2장
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 이 카드의 X 소재를 2개 제거하고,
+PRINTL 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 공격력을 0으로 하고, 그 효과를 무효로 한다.
+CALLFORM CARD_ABLE(0,破壊→묘지 ,戦闘→묘지)
+PRINTL ②: 필드의 이 카드가 파괴되어 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 자신은 1장 드로우한다.
+
+
+@CARDCAN_51533(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51533)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51533(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51533,10,X消費2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"지속無効")
+			CALL FULLRESET
+			효과추가종류 = 1
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"永攻DOWN")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51533)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ENDIF
+

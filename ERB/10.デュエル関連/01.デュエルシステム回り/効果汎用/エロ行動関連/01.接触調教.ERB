@@ -1,0 +1,255 @@
+﻿@CARD_REACT(듀얼리스트,場所,ゾーン)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 조교대상,9999
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 裸状態
+#DIM DYNAMIC 発情状態
+#DIM DYNAMIC 交尾可能
+#DIM DYNAMIC ソース倍率
+#DIM DYNAMIC 交尾횟수
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 대상ID
+#DIM DYNAMIC 装備品
+#DIM DYNAMIC 성별판정
+#DIM DYNAMIC 実성별판정
+
+
+VARSET 조교대상, -1
+
+IF ゾーン == "プレイヤー" || ゾーン == "이벤트"
+	VARSET RESULT
+	RESULT = 場所
+ELSE
+	대상ID = GETVAR(@"%듀얼리스트%_%ゾーン%:場所")
+	CALL CARD_EROTICS(대상ID,,1)
+ENDIF
+IF RESULT >= 1
+	SETBGCOLOR C_MD_BLACK
+	FOR カウンタ,0,99
+		SIF RESULT:カウンタ <= 0
+			CONTINUE
+		조교대상:カウンタ = RESULT:カウンタ
+	NEXT
+	SELECTCOM = -1
+	TFLAG:SELECTCOM보존 = SELECTCOM
+	NEXTCOM = -1
+	듀얼モード = 1
+	TFLAG:104 = 조교대상
+	FOR カウンタ,0,99
+		SIF 조교대상:カウンタ == -1
+			CONTINUE
+		캐릭터_ID = 조교대상:カウンタ
+		CFLAG:캐릭터_ID:우후후 = 1
+	NEXT
+	CFLAG:MASTER:우후후 = 1
+	TFLAG:COMABLE관리 = 2
+	IF ゾーン == "필드"
+		FOR カウンタ,0,99
+			SIF 조교대상:カウンタ == -1
+				CONTINUE
+			캐릭터_ID = 조교대상:カウンタ
+			성별판정 = GETVAR(@"%듀얼리스트%_MZ_性:場所")
+			実성별판정 = TALENT:캐릭터_ID:성별
+
+			;【服の状態】服の状態を見る
+			IF GETVAR(@"%듀얼리스트%_MZ_服状:場所")  == 1
+				PRINTFORMW %CALLNAME:캐릭터_ID%는 바람이 통해 하반신에 얼굴을 붉히면서 저항하지 못하고있다。
+				EQUIP:캐릭터_ID:하반신속옷１ = 0
+			ELSEIF GETVAR(@"%듀얼리스트%_MZ_服状:場所")  == 2
+				PRINTFORMW %CALLNAME:캐릭터_ID%는 전라모습 그대로、얼굴을 붉히고 저항하지 못하고 있다。
+				CALL CLOTHES_ZENRA(캐릭터_ID)
+			ENDIF
+
+			;【성별판정】男なら그대로 で、それ以外なら続く
+			;男以外で、本来の성별の、フィールドでの성별が違うなら
+			IF 성별판정 != 2 && 성별판정 != 実성별판정
+				;ふたなり化した女の人はチンポ反応
+				IF 성별판정 == 3 && 実성별판정 == 1
+					PRINTFORML %CALLNAME:캐릭터_ID%는 생겨난 막대를 손으로 필사적으로 억누르면서、
+					PRINTFORMW 치욕과 떨림으로 가득찬 눈빛으로 %CALLNAME:MASTER%를 노려보았다。
+					CFLAG:캐릭터_ID:막대구현화 = 1
+					BASE:캐릭터_ID:발기 = 1000
+				;それ以外はおまんこ（男とか）
+				ELSE
+					PRINTFORML %CALLNAME:캐릭터_ID%는 여성다워진 자신의 모습에 망설이면서도、
+					PRINTFORMW 치욕과 떨림으로 가득찬 눈빛으로 %CALLNAME:MASTER%를 노려보았다。
+					CFLAG:캐릭터_ID:질구현화 = 1
+				ENDIF
+			ENDIF
+
+			;【최면상태】상대가 자신의 カードでない野なら、최면상태
+			IF 듀얼리스트 == "자신" && GETVAR(@"%듀얼리스트%_MZ_所有:場所") == 2
+				PRINTFORML 대전상대%TEXTR("에게서 빼앗아/의 곁에서 벗어나")%、지금은 당신의 충실한 종자가 된 %CALLNAME:캐릭터_ID%는、최면상태인채로 몽롱한 표정으로 당신을 올려다보았다。
+				PRINTFORMW 당신의 어떤 소원도 따라줄것같다。
+				CFLAG:캐릭터_ID:최면상태 = 1
+			ENDIF
+
+			;【発情状態】発情状態ならもうドロドロ
+			IF GETVAR(@"%듀얼리스트%_MZ_発情:場所") >= 1
+				PRINTFORML %CALLNAME:캐릭터_ID%는 얼굴을 붉히고、괴로워보이는 숨을 뱉고있다。
+				PRINTFORML 울상인 눈으로、같고싶어하는 것처럼 당신의 고간을 바라보고있다。
+				PRINTFORMW 발정에 몸을 애태우고있는 지금이라면、분명 뭐든지 시킬수 있을것이다。
+				BASE:캐릭터_ID:만족 = 0
+				BASE:캐릭터_ID:무드 = 1500
+				CFLAG:캐릭터_ID:발정중 = 1
+			ENDIF
+			CFLAG:캐릭터_ID:접촉조교중 = 1
+
+		NEXT
+		IF GETVAR(@"%듀얼리스트%_MZ_특수状態:場所")  == 99602
+			停止状態 = 1
+		ENDIF
+		;レイ追記250601
+		IF GETVAR(@"%듀얼리스트%_MZ_특수状態:場所") == 79617
+			TEQUIP:캐릭터_ID:절정금지 = 1
+		ENDIF
+	ENDIF
+	$INPUT_LOOP
+	VARSET TARGET
+	FOR カウンタ,1,CHARANUM
+		SIF 조교대상:(カウンタ - 1) == -1
+			CONTINUE
+		TARGET:カウンタ = 조교대상:(カウンタ - 1)
+	NEXT
+	CALL SHOW_STATUS
+
+	CALL SHOW_USERCOM
+
+	PRINTL
+	PRINTL [2000] - 듀얼로 돌아간다
+	SIF NEXTCOM == -1
+		BINPUT
+
+	IF RESULT == 2000
+		SELECTCOM = -1
+		TFLAG:SELECTCOM보존 = SELECTCOM
+		CALL_COMスキップ = 1
+		CALL SOURCE_CHECK
+		CALL TURN_RESET
+		FOR 캐릭터_ID,0,CHARANUM
+			CALL RESET_SEXCON(캐릭터_ID)
+			FOR 装備品,10,150
+				TEQUIP:캐릭터_ID:装備品 = 0
+			NEXT
+			BASE:캐릭터_ID:사정 = 0
+			TCVAR:캐릭터_ID:갈것같음 = 0
+		NEXT
+		CALL_COMスキップ = 0
+		듀얼モード = 0
+		停止状態 = 0
+		TFLAG:COMABLE관리 = 0
+		PRINTL 듀얼로 돌아간다
+		RESETBGCOLOR
+		RETURN 0
+	ELSE
+		;コマンド処理
+		CALL USERCOM
+		SIF RESULT
+			GOTO INPUT_LOOP
+		CALL SOURCE_CHECK
+		CALL TURN_RESET
+		GOTO INPUT_LOOP
+	ENDIF
+ELSE
+	CALLFORM CARDNAME_{(GETVAR(@"%듀얼리스트%_%ゾーン%:場所"))}("名前")
+	PRINTFORML 그저 솔리드비전이기 때문에、%RESULTS%을 만져도 큰 반응은 돌아오지 않았다。
+	PRINTFORMW 
+ENDIF
+
+
+
+
+@EVENT_TRAIN(설정우후후 = 1)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 조교대상,9999
+#DIM DYNAMIC 최면상태
+#DIM DYNAMIC 裸状態
+#DIM DYNAMIC 発情状態
+#DIM DYNAMIC 交尾可能
+#DIM DYNAMIC ソース倍率
+#DIM DYNAMIC 交尾횟수
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 대상ID
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 装備品
+#DIM DYNAMIC 설정우후후
+
+VARSET TARGET
+FOR カウンタ,0,5
+	IF 依頼조교대상:カウンタ >= 1
+		カウンタB ++
+		TARGET:カウンタB = 依頼조교대상:カウンタ
+	ELSE
+		CONTINUE
+	ENDIF
+NEXT
+
+IF TARGET:1 >= 1
+	TARGET:0 = TARGET:1
+ELSE
+	CALL RESET_TARINCON
+	RETURN 0
+ENDIF
+
+SETBGCOLOR C_MD_BLACK
+SELECTCOM = -1
+TFLAG:SELECTCOM보존 = SELECTCOM
+NEXTCOM = -1
+듀얼モード = 1
+TFLAG:104 = TARGET:0
+
+FOR カウンタ,0,CHARANUM
+	SIF TARGET:カウンタ <= 0
+		CONTINUE
+	CFLAG:(TARGET:カウンタ):우후후 = 설정우후후
+NEXT
+CFLAG:MASTER:우후후 = 설정우후후
+TFLAG:COMABLE관리 = 2
+
+$INPUT_LOOP
+CALL SHOW_STATUS
+CALL SHOW_USERCOM
+PRINTL
+
+SETCOLOR C_GREEN
+PRINTL [2000] - 정사를 종료한다
+RESETCOLOR
+SIF NEXTCOM == -1
+	BINPUT
+IF RESULT == 2000
+	$KYOUSEI_SHUURYO
+	SELECTCOM = -1
+	TFLAG:SELECTCOM보존 = SELECTCOM
+	CALL_COMスキップ = 1
+	CALL SOURCE_CHECK
+	CALL TURN_RESET
+	CALL_COMスキップ = 0
+	듀얼モード = 0
+	停止状態 = 0
+	TFLAG:COMABLE관리 = 0
+	FOR 캐릭터_ID,0,CHARANUM
+		CALL RESET_SEXCON(캐릭터_ID)
+	NEXT
+	PRINTL 의뢰로 돌아갑니다
+	CALL RESET_TARINCON
+	RESETBGCOLOR
+	RETURN 0
+ELSE
+	;コマンド処理
+	CALL USERCOM
+	SIF RESULT
+		GOTO INPUT_LOOP
+	CALL SOURCE_CHECK
+	CALL TURN_RESET
+	IF CFLAG:TARGET:우후후 == 0
+		GOTO KYOUSEI_SHUURYO
+	ENDIF
+	GOTO INPUT_LOOP
+ENDIF

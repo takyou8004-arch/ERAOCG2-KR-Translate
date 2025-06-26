@@ -1,0 +1,138 @@
+﻿@CARDNAME_92710,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 세뇌광선
+	CASE "略称"
+RESULTS = 세뇌광선
+	CASE "カテゴリ"
+RESULTS:0 = 에이리언
+ENDSELECT
+
+
+@CARD_92710(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92710(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 룰 상 "에이리언" 카드로 취급한다.
+CALL CARD_ABLE(0,마함起動)
+PRINTL ①: 상대 필드의 악성 카운터가 올려진 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 이 카드를 그 몬스터에 장착하고, 컨트롤을 얻는다.
+CALL CARD_ABLE(0,ターン終了時強制)
+PRINTL ②: 자신 엔드 페이즈에 발동한다.
+PRINTL 이 카드를 장착하고 있는 몬스터의 악성 카운터를 1개 제거한다.
+PRINTL 그 몬스터의 악성 카운터가 모두 제거되었을 때, 이 카드를 파괴하고 장착 몬스터의 컨트롤을 상대로 되돌린다.
+
+
+@CARDCAN_92710(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92710)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 
+	SIF 발동済_1(듀얼리스트,92710)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件悪Ｃ所持 = 999
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_92710(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92710)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件悪Ｃ所持 = 999
+		효과추가종류:0 = 50 + 場所
+		효과추가종류:1 = 695
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"装",コントロール先,1)
+		TRYCALLFORM CARDNAME_{他参照選択カードID},"略称"
+		PRINTL
+		PRINTFORMW コズミックな怪しい光線を浴びた%RESULTS%는、ふらふらと光の下へと歩いていった……
+	ENDIF
+
+ELSEIF 종류 == ターン終了時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",装備先,"悪Ｃ",-1)
+	TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:装備先")},"略称"
+	IF GETVAR(@"%듀얼리스트%_MZ_悪Ｃ:装備先") < 1
+		PRINTFORMW ハッと我に返った%RESULTS%는いそいそと자신의 持ち主の下へと帰っていった……
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_GET_CONTROL(対面者,装備先)
+	ELSEIF GETVAR(@"%듀얼리스트%_MZ_悪Ｃ:装備先") == 1
+		PRINTFORMW %RESULTS%는訝しげな顔をしている……
+	ELSE
+		PRINTFORMW %RESULTS%는ぼ-っとしている……
+	ENDIF
+ENDIF
+

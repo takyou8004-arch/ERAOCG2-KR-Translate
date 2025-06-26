@@ -1,0 +1,170 @@
+﻿@CARDNAME_50653,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 빙령산의 용조 란세아
+	CASE "略称"
+RESULTS = 란세아
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_50653(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3300
+	CASE "守備力"
+		RETURN 2700
+
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50653(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1체 이상
+PRINTL 이 카드명의 ①의 효과는 1턴에 2번까지 사용할 수 있다.
+CALLFORM CARD_ABLE(15,효과後誘発)
+PRINTL ①: 상대가 몬스터를 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 자신의 패 / 덱 / EX덱 / 묘지 에서 「빙결계」 몬스터 1장을 특수 소환한다.
+PRINTL 그 후, 상대 필드의 공격 표시 몬스터 1장을 수비 표시로 할 수 있다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②: S 소환한 앞면 표시인 이 카드가 상대에 의해 필드를 벗어났을 경우에 발동할 수 있다.
+PRINTL EX덱 에서 「빙결계」 S 몬스터 1장을 S 소환 취급으로 특수 소환한다.
+
+
+@CARDSUMMON_50653(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50653) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50653(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50653)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,50653) && 발동済_2(듀얼리스트,50653)
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환",1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과範囲묘지 = 1
+    효과条件カテゴリ = 빙결계
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF 処理中_듀얼리스트 == 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種EX덱
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+    효과条件カテゴリ = 빙결계
+	효과条件종류 = 싱크로
+	효과条件소환可 = 2
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50653(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50653,15)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과範囲EX덱 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 빙결계
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50653)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 빙결계
+		효과条件종류 = 싱크로
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		소환カード = RESULT
+		IF 소환カード != 9999
+			CALL FULLRESET
+			CALL CARD_EX_SUMMON(듀얼리스트, "EX덱", 소환カード)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

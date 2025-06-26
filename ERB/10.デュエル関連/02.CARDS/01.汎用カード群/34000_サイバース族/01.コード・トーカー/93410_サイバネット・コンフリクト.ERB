@@ -1,0 +1,104 @@
+﻿@CARDNAME_93410,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 사이버넷 컨플릭트
+	CASE "略称"
+RESULTS = Cynet 컨플리
+	CASE "カテゴリ"
+RESULTS:0 = 사이버넷
+ENDSELECT
+
+
+@CARD_93410(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93410(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,발동誘発)
+PRINTL ①: 자신 필드에 「코드 토커」 L 몬스터가 존재하고, 상대 몬스터의 효과 마법 / 함정 카드가 발동했을 때에 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 제외한다.
+PRINTL 다음 턴의 종료시까지, 상대는 이 효과로 제외한 카드와 원래 카드명이 같은 카드의 효과는 무효화된다.
+
+
+@CARDCAN_93410(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,93410)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,93410)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 링크
+	효과条件カテゴリ = 코드 토커
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_93410(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+
+#DIM DYNAMIC 설정禁止
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93410,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"제외")
+		설정禁止 = 効後_효과ID:(処理中番号 - 1)
+		CALL CARD_EFFECT_PROHIB(듀얼리스트,설정禁止,1,1)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+

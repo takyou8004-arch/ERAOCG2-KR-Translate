@@ -1,0 +1,151 @@
+﻿@CARDNAME_39711,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = A섬도공역－쇼 에리어
+	CASE "略称"
+		RESULTS = A섬공－S AREA
+	CASE "カテゴリ"
+		RESULTS:0 = A섬도
+		RESULTS:1 = E.R.A
+		RESULTS:2 = 섬도
+ENDSELECT
+
+
+@CARD_39711(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39711(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,攻守変動)
+PRINTL ①：이 카드가 필드에 존재하는 한, 「A섬도희」 이외의 모든 암컷 몬스터의 공격력은 1500 감소하고、
+PRINTL 자신 필드의 "A섬도희」를 제외한 서로의 필드의 몬스터는 수비 표시 상태라면 공격 표시로 변경된다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39711(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39711)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과 || 종류 == リアクション효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_39711(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 戦闘ダメージ
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻守変動 
+	CALL FULLRESET
+	효과条件固カテゴリ= A섬도희
+	효과条件성별= 牝性
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,-1500)
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,-1500,0,39711)
+	
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件固カテゴリ= A섬도희
+	효과条件성별 = 牝性
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"表",1)
+	CALL FULLRESET
+	효과条件성별 = 牝性
+;	효과元カードID = 39711
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"表",1,39711)
+
+ELSEIF 종류 == リアクション효과
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_MZ_リ数:カウンタ") >= 10
+			CONTINUE
+
+		CALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:カウンタ")},"カテゴリ"
+		;PRINTFORML %RESULTS% 
+		SIF MATCH(RESULTS, "A섬도희")
+			CONTINUE
+
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORMW 전장을 송출하는 드론에서 저속한 환호성이 들려온다。
+			PRINTFORMW 찢어진 옷 사이로 드러난 가슴과 허벅지에 흥분된 목소리가 들려오자、 %CALLNAME:조교대상%는 몸을 숨기려다 제대로 싸우지 못하는 듯하다。
+			CALL EROTIC_MOVE("晒しもの",조교대상)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"リ数",1)
+		ENDIF
+	NEXT
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%対面者%_MZ_リ数:カウンタ") >= 10
+			CONTINUE
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ,1)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORMW 전장을 송출하는 드론에서 저속한 환호성이 들려온다。
+			PRINTFORMW 찢어진 옷 사이로 드러난 가슴과 허벅지에 흥분된 목소리가 들려오자、 %CALLNAME:조교대상%는 몸을 숨기려다 제대로 싸우지 못하는 듯하다。
+			CALL EROTIC_MOVE("晒しもの",조교대상)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"リ数",1,0,1)
+		ENDIF
+	NEXT
+ENDIF
+
+
+

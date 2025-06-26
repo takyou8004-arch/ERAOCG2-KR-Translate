@@ -1,0 +1,215 @@
+
+@IRAI_DUEL_INTRO_392
+#DIM DYNAMIC カウンタ
+;듀얼前に「詰め플래그」に1を설정し、最初の5ドローをスキップ
+;ターン跨いで処理したいので、듀얼が始まったら詰め플래그をリセット
+詰め플래그 = 0
+
+;詰め플래그でスキップしてしまった初期化
+CALL CARD_LOADUP
+
+;必要に応じて、ターンプレイヤーを변경(ここで자신にすると、상대のターンになる)
+;ターンプレイヤー = 자신
+
+;1以上の値を入れると、1한번만 ドローがスキップされる
+SETVAR @"자신_ドロースキップ", 1
+SETVAR @"상대_ドロースキップ", 1
+
+SETVAR @"자신_バトルスキップ", 1
+
+;필드의 情報を설정
+SETVAR @"자신_魔_所有:2", 1;자신의 カード
+SETVAR @"자신_魔_表:2", 1;表
+SETVAR @"자신_마함:2",279555;発情제어
+SETVAR @"자신_魔_個Ｃ:2",1 ;카운터を一個乗せる
+SETVAR @"자신_魔_破耐:2",2
+SETVAR @"자신_魔_対耐:2",2
+
+SETVAR @"상대_MZ_所有:2", 2;상대のカード
+SETVAR @"상대_MZ_表:2", 1;表
+SETVAR @"상대_필드:2",50703;푸른 눈의究極룡
+
+;자신의 패
+SETVAR @"자신_손패:0", 79556;미유
+
+;자신의 덱
+SETVAR @"자신_덱:0", 79555;호루스타인ミルクファーム
+SETVAR @"자신_덱:1", 2110;라뷰린스
+SETVAR @"자신_덱:2", 21141;アナザーベリル
+
+;자신의 묘지
+SETVAR @"자신_묘지:0", 23063;混沌の使者(エンドフェイズ時、빛속성と어둠속성を제외하고 패에 加える)
+SETVAR @"자신_묘지:1", 23962;어둠・サキュバスナイト
+SETVAR @"자신_묘지:2", 11607;光・クイーズナイト
+
+;상대の덱：引いても使えない札
+SETVAR @"상대_덱:0", 41813;의식ガストクラーケ
+SETVAR @"상대_덱:1", 41813
+SETVAR @"상대_덱:2", 41813
+SETVAR @"상대_덱:3", 41813
+
+;勝利条件の설정、ここで詰めデュエルの勝利条件を설치할 수 있다。
+@IRAI_DUEL_CONDVIC_392
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+VARSET RESULT
+
+듀얼리스트 = 자신
+対面者 = 상대
+
+;상대몬스터를 全て倒したらクリア
+CALL FULLRESET
+효과範囲상대필드 = 1
+효과条件CNT = 1
+CALL CARD_CHECK_ADV("자신")
+SIF RESULT == 0
+	RETURN 1
+
+IF ターン数 == 3
+;패에 미유あり
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件ID = 79556
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 2
+
+;패에 ミルクファームあり
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件ID = 79555
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 3
+
+;패에 암소あり
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件ID = 179556
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 4
+
+;손패なし
+	SIF 現손패(듀얼리스트) == 0
+		RETURN 5
+	
+ELSEIF ターン数 == 4
+
+;メインフェイズ１
+	SIF メインフェイズ == 1 && メインフェイズ２ == 0
+		RETURN 6
+
+;バトルフェイズ
+	IF バトルフェイズ == 1 
+		
+		;패에 回収した카드가 ある
+		SIF 現손패(듀얼리스트) != 0
+			RETURN 7
+
+		;필드에 암소あり
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV("자신")
+		SIF RESULT == 1
+			RETURN 8
+
+		;묘지에 암소あり
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件ID = 179556
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV("자신")
+		SIF RESULT == 1
+			RETURN 9
+	ENDIF
+	
+	SIF メインフェイズ２ == 1
+		RETURN 9
+
+;3ターン目
+ELSEIF ターン数 == 5
+	;암소의 효과使わずに殴った場合
+	SIF ライフ_자신 < 4500
+		RETURN 0
+	RETURN 10
+	
+ELSE
+	RETURN -1
+ENDIF
+
+RETURN 0
+
+;メッセージの설정
+@IRAI_DUEL_MESSAGE_392(存在確認)
+#DIM DYNAMIC 存在確認
+VARSET RESULT
+
+IF 存在確認 == 1
+	RETURN 1
+ENDIF
+
+;リアクション
+CALL IRAI_DUEL_CONDVIC_392
+
+SELECTCASE RESULT
+
+CASE 1
+	;デュエルクリア！
+	PRINTFORML お疲れ様！
+	PRINTFORML 「勝利条件달성」を押せば終了するよ！
+
+;1ターン目
+CASE 2
+	;패에 미유あり
+	PRINTFORML 미유登録で「ミルクファーム」を패에 加えよう。
+	PRINTFORML あっ、失敗したな？と思ったら「降参する」から、やり直しが出来るよ。…まぁ気軽にね。
+CASE 3
+	;패에 ミルクファームあり
+	PRINTFORML フィールド마법「ミルクファーム」を발동しよう
+CASE 4
+	;패에 암소あり
+	PRINTFORML 패의 「【미유】암소」は元の레벨을 参照しているので、「白銀の城の라뷰린스」と同じレベル8になっている。
+	PRINTFORML 
+	PRINTFORML 通常소환も出来ないので「ミルクファーム」의 효과で묘지로 보내고 おこう。
+CASE 5
+	;손패なし
+	PRINTFORML 「호루스타인」モンスターは「ミルクファーム」의 효과で패에서 捨てると착유할 수 있다。
+	PRINTFORML このターンは他に出来ることが無いので、このままターンを終了しよう。
+	PRINTFORML 
+	PRINTFORML ※묘지에 「混沌の使者」が落ちている。忘れずに발동しておこう。(姫様を제외しないように注意！)
+
+;2ターン目
+CASE 6
+	;メインフェイズ１
+	PRINTFORML 호루스타인は 함정 카드 以外でメインフェイズに動くことはできない…黙って상대の展開を見届けよう。
+CASE 7
+	;バトルフェイズ
+	PRINTFORML 「ミルクファーム」は배틀 페이즈에 も발동することが할 수 있다。
+	PRINTFORML 回収した「混沌の使者」を버리고、姫様を수비 표시로 특수소환しよう！
+CASE 8
+	;필드에 암소あり
+	PRINTFORML 「ミルクファーム」が존재한다면 、암소も배틀 페이즈에 乳を搾ることが할 수 있다。
+	PRINTFORML 乳を搾って、상대の攻撃を耐えよう！
+CASE 9
+	;묘지에 암소あり
+	PRINTFORML 一撃貰うけど…なんとか耐えきれそうだね！
+	PRINTFORML 次のターンに戦闘破壊を狙おう！
+	
+;3ターン目
+CASE 10
+	;
+	PRINTFORML 효과モンスターが引けたね！
+	PRINTFORML 「ミルクファーム」의 효과で姫様を공격 표시로 특수 소환하고、
+	PRINTFORML 先ほどと同じように배틀 페이즈에 乳を搾って、戦闘破壊してみよう！
+	
+CASEELSE
+	PRINTFORML あっ、失敗したな？と思ったら「降参する」から、やり直しが出来るよ。…まぁ気軽にね。
+
+ENDSELECT

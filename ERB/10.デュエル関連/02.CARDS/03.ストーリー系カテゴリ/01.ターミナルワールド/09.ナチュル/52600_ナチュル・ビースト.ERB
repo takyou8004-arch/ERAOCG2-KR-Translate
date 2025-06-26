@@ -1,0 +1,135 @@
+﻿@CARDNAME_52600,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 나츄르 비스트
+	CASE "略称"
+RESULTS = 나츄르 비스트
+	CASE "カテゴリ"
+RESULTS:0 = 나츄르
+ENDSELECT
+
+
+@CARD_52600(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 1700
+
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52600(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 5
+素材条件속성 = 땅속성
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52600) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52600(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 땅속성 튜너 ＋ 튜너 이외의 땅속성 몬스터 1마리 이상
+CALLFORM CARD_ABLE(0,발동誘発)
+PRINTL ①: 상대의 마법 카드가 발동했을 때, 자신의 덱 위에서 카드를 1장 묘지로 보내고 발동할 수 있다.
+PRINTL 이 카드가 필드에 앞면 표시로 존재할 경우, 그 발동을 무효로 하고 파괴한다.
+
+
+@CARDCAN_52600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52600)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_52600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52600)
+	IF RESULT == 0
+		CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",0)
+		IF RESULT == 1 && ゾーン == "필드" && GETVAR(@"%듀얼리스트%_MZ_表:場所") != 3
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ENDIF

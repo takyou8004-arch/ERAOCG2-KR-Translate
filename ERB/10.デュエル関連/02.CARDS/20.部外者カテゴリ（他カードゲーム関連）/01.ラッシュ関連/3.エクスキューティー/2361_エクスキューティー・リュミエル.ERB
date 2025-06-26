@@ -1,0 +1,165 @@
+﻿@CARDNAME_2361,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 엑스큐티 류미엘
+	CASE "略称"
+RESULTS = 류미엘
+	CASE "カテゴリ"
+RESULTS:0 = 엑스큐티
+ENDSELECT
+
+
+@CARD_2361(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2361(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②③의 효과는 각각 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 자신 필드에 "엑스큐티" 이외의 몬스터가 존재하지 않는 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 레벨 7 이상의 몬스터를 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ②: 자신 / 상대 턴에 발동할 수 있다.
+PRINTL 자신 필드의 앞면 표시의 레벨 6 몬스터 1장과 상대 필드의 카드 1장을 고르고 주인의 덱으로 되돌린다.
+CALLFORM CARD_ABLE(3,소환時 ,특수소환時)
+PRINTL ③: 이 카드가 소환 / 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 자신의 덱에서 "엑스큐티-류미엘" 이외의 "엑스큐티" 몬스터 1장을 패에 넣는다.
+PRINTL
+
+@CARDCAN_2361(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2361)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,2361)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,2361,"손패")
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件固カテゴリ = 엑스큐티
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,2361)
+		RETURN 0
+
+	SIF 마함数(対面者) != 0
+		条件달성 ++
+	SIF モンスター数(対面者) != 0
+		条件달성 ++
+	SIF 条件달성 == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_3(듀얼리스트,2361)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 엑스큐티
+	효과条件종류 = モン全般
+	효과条件固名前 = 엑스큐티 류미엘
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2361(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2361,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 엑스큐티
+		효과条件종류 = モン全般
+		효과条件固名前 = 엑스큐티 류미엘
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2361,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 엑스큐티
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"덱")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2361,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		CALLFORM SS소환可能レベル_ADV(6, "以下")
+		CALL CARD_SS_RESTRICTION(듀얼리스트)
+	ENDIF
+ENDIF

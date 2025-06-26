@@ -1,0 +1,162 @@
+﻿@CARDNAME_28164,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 벨즈 골렘
+	CASE "略称"
+RESULTS = Ve 골렘
+	CASE "カテゴリ"
+RESULTS:0 = 벨즈
+ENDSELECT
+
+
+@CARD_28164(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2150
+	CASE "守備力"
+		RETURN 1250
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28164(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 자신 필드에 「벨즈」 몬스터가 2체 이상 존재할 경우에 발동할 수 있다.
+PRINTL 패의 이 카드를 레벨 4로 특수 소환한다.
+CALLFORM CARD_ABLE(2,소환時 ,특수소환時)
+PRINTL ②: 이 카드가 소환 / 특수 소환에 성공했을 때 발동할 수 있다.
+PRINTL 덱에서 이 카드보다 레벨이 낮은 「벨즈」 몬스터 1장을 패에 추가한다.
+CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
+PRINTL ③: 자신 / 상대 턴에,
+PRINTL 상대 필드의 어둠 속성 이외의 레벨 5 이상의 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터를 파괴한다.
+
+
+@CARDCAN_28164(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 現在レベル
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28164)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,28164)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,28164,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 벨즈
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,28164)
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件속성:0 = 빛속성
+	효과条件속성:1 = 신속성
+	효과条件속성:2 = 땅속성
+	효과条件속성:3 = 물속성
+	효과条件속성:4 = 화염속성
+	효과条件속성:5 = 바람속성
+	효과条件표시 = 表側표시
+	효과条件종류 = レベル持ち
+	CALL 효과条件レベル_ADV(5, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_3(듀얼리스트,28164)
+		RETURN 0
+	CALL FULLRESET
+	現在レベル = GETVAR(@"%듀얼리스트%_MZ_星:場所") - 1
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 벨즈
+	CALL 효과条件レベル_ADV(現在レベル,"以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28164(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 現在レベル
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28164,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 効追永星M1
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28164,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件속성:0 = 빛속성
+		효과条件속성:1 = 신속성
+		효과条件속성:2 = 땅속성
+		효과条件속성:3 = 물속성
+		효과条件속성:4 = 화염속성
+		효과条件속성:5 = 바람속성
+		효과条件표시 = 表側표시
+    	효과条件종류 = レベル持ち
+		CALL 효과条件レベル_ADV(5, "以上")
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28164,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		現在レベル = GETVAR(@"%듀얼리스트%_MZ_星:場所") - 1
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 벨즈
+		CALL 효과条件レベル_ADV(現在レベル,"以下")
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF

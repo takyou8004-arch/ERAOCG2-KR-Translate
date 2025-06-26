@@ -1,0 +1,323 @@
+﻿@CARDNAME_99641,参照先
+;ココで지정卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 애률의 바르모니카
+	CASE "略称"
+		RESULTS = 애율
+	CASE "カテゴリ"
+		RESULTS:0 = 바르모니카
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99641(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99641(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  카드는 1턴에 1번 밖에 발동 할 수 없다.
+CALL CARD_ABLE(1,마함起動)
+PRINTL ①：자신 필드 위에「바르모니카" 몬스터가 존재할 경우, 이하의 효과 중 1개를 선택해 발동할 수 있다.
+PRINTL 자신 필드 위에「바르모니카」싱크로/링크 몬스터가 존재할 경우, 양쪽 모두를 선택해 적용할 수 있다.
+PRINTL ●자신은 500LP를 회복한다.
+PRINTL 그 후, 자신 필드의「바르모니카」카드는 턴 종료시까지 효과에 의해 파괴되지 않는다.
+PRINTL ●자신은 500LP 데미지를 받는다.
+PRINTL 그 후, 상대 필드의 모든 몬스터는 턴 종료시까지 뒷면 수비표시가 된다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99641(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99641)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,99641)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 바르모니카
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99641(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;卡片发动確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99641,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류:0 = 링크
+		효과条件종류:1 = 싱크로
+		효과条件カテゴリ = 바르모니카
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성 = 1
+
+		IF 듀얼리스트 == "자신"
+			PRINTL
+			PRINTL 어떤 느낌의
+			PRINTL 　음을 선택해?
+			PRINTL
+			PRINTL （속닥속닥…！）
+			PRINTL （회복하면서「바르모니카」카드를 지키자…！）[0]
+			PRINTL
+			PRINTL （소근소근…♪）
+			PRINTL （데미지는 신경쓰지말고 상대 몬스터를 뒤집어버리자…！）[1]
+			IF 条件달성 == 1
+				PRINTL
+				PRINTL （（아니면, 둘다?））[2]
+			ENDIF
+			BINPUT
+			IF RESULT == 0
+				CALL CARDEFFECT_99641_1(듀얼리스트,종류,ゾーン,場所)
+			ELSEIF RESULT == 1
+				CALL CARDEFFECT_99641_2(듀얼리스트,종류,ゾーン,場所)
+			ELSEIF RESULT == 2
+				CALL CARDEFFECT_99641_1(듀얼리스트,종류,ゾーン,場所)
+				CALL CARDEFFECT_99641_2(듀얼리스트,종류,ゾーン,場所)
+			ENDIF
+		ELSEIF 듀얼리스트 == "상대"
+			PRINTFORML 選ばれた효과 
+			IF 条件달성 == 1
+				PRINTFORMW ●両方適用する
+				CALL CARDEFFECT_99641_1(듀얼리스트,종류,ゾーン,場所)
+				CALL CARDEFFECT_99641_2(듀얼리스트,종류,ゾーン,場所)
+			ELSE
+				SELECTCASE RAND:2
+					CASE 0
+						PRINTFORMW ●５００回復し、자신의 "바르모니카」に破壊耐性を付与する。
+						CALL CARDEFFECT_99641_1(듀얼리스트,종류,ゾーン,場所)
+					CASE 1
+						PRINTFORMW ●５００데미지를 受け、상대 몬스터를 全て뒷면 수비 표시로한다。
+						CALL CARDEFFECT_99641_2(듀얼리스트,종류,ゾーン,場所)
+				ENDSELECT
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ターン終了時予約
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%対面者%_MZ_表:カウンタ") != 3
+			CONTINUE
+		CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"表",2,1)
+	NEXT
+ENDIF
+RETURN
+
+@CARDEFFECT_99641_1(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 조교강도
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;响鸣지시物数量统计
+CALL FULLRESET
+효과範囲마함 = 1
+효과条件カテゴリ = 바르모니카
+효과条件CNT = 1
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+조교강도 = RESULT:9
+
+;조교대상通常是 天魔之声选姬
+조교대상 = NO_TO_CHARANUM(2140)
+
+;回复生命通用
+CALL FULLRESET
+CALL LIFE_CHANGE(듀얼리스트,"増加","효과",500)
+
+;主要效果：全场异响鸣效破抗性
+CALL FULLRESET
+효과条件カテゴリ = 바르모니카
+CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐",1)
+CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐",1)
+
+;天魔之声选姬在场上时进行接吻
+CALL FULLRESET
+효과範囲필드 = 1
+효과条件名前:0 = 셀레트리체 바르모니카
+효과条件名前:1 = 바르모니카의 음란신-Lussuria
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+IF RESULT == 1 && 듀얼리스트 == "자신"
+;&& TALENT:2140:爱慕 >= 1
+	
+	SETCOLOR C_PINK
+	PRINTFORML
+	PRINTFORML 자신의 필드를 마력으로 생성된 벽이 둘러쌌다.
+	PRINTFORML 「이제 아무도 우리를 방해할 수 없어❤」
+	PRINTFORML %CALLNAME:조교대상%는 %CALLNAME:MASTER%을 껴안하 입술을 맞붙여 왔다.
+	PRINTFORMW
+	
+	CALL EROTIC_MOVE("ディ-プ키스",조교대상,MASTER,100 + 25 * 조교강도)
+	PRINTFORMW 
+	PRINTFORML 몇 번이나 서로의 타액을 교환한 후, 두명의 사이에는 은빛의 실이 걸려 있었다.
+	PRINTFORML %CALLNAME:조교대상%는 아직 부족한 듯, 눈에 눈물이 고인 채 입을 벌리고 있다.
+	PRINTFORMW
+	
+	IF PALAM:조교대상:욕정 > 20000
+		SETCOLOR C_PINK
+		PRINTFORML
+		PRINTFORML 「조금만 더❤　좀 더 키스 하고 싶엇❤❤❤❤」
+		PRINTFORML 흥분이 최대까지 높아진 %CALLNAME:조교대상%는 %CALLNAME:MASTER%에게 키스의 재개를 요구했다.
+		PRINTFORMW
+		PRINTFORML 입술이 다시 서로 겹쳐, 얽히는 혀와 타액이 서로의 흥분을 높여간다.
+		PRINTFORMW
+
+		CALL EROTIC_MOVE("ディ-プ키스",조교대상,MASTER,100 + 25 * 조교강도)
+		PRINTFORMW 
+ENDIF
+	ENDIF
+RETURN
+
+
+@CARDEFFECT_99641_2(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 조교강도
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;响鸣지시物数量统计
+CALL FULLRESET
+효과範囲마함 = 1
+효과条件カテゴリ = 바르모니카
+효과条件CNT = 1
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+조교강도 = RESULT:9
+
+;조교대상通常是 天魔之声选姬
+조교대상 = NO_TO_CHARANUM(2140)
+
+;受到伤害通用
+CALL FULLRESET
+CALL LIFE_CHANGE(듀얼리스트,"減少","효과",500)
+
+;主要效果：对方怪兽全部里侧표시
+CALL FULLRESET
+효과条件표시 = 表側표시
+CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"표시변경")
+CALL CARD_RESERV(듀얼리스트,99641)
+
+
+;天魔之声选姬在场上时进行接吻
+CALL FULLRESET
+효과範囲필드 = 1
+효과条件名前:0 = 셀레트리체 바르모니카
+효과条件名前:1 = 바르모니카의 음란신-Lussuria
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+IF RESULT == 1 && 듀얼리스트 == "자신"
+;&& TALENT:TARGET:爱慕 >= 1
+
+	SETCOLOR C_PINK
+	PRINTFORML
+	PRINTFORML 상대의 몬스터는 뒷면 수비표시가 되어, 밖을 볼 방법을 잃었다!
+	PRINTFORML 「이렇게 하면, 당신에게만 보여 줄 수 있겠네요❤」
+	PRINTFORMW
+	PRINTFORML %CALLNAME:조교대상%가 치마를 걷어 올렸다.
+	IF EQUIP:조교대상:6 == 0
+		PRINTFORML 아무것도 신지 않았다!
+		PRINTFORMW
+		PRINTFORML %CALLNAME:MASTER%는 주저앉아, %CALLNAME:조교대상%의 더러움 하나 없는 비부를 바라보았다.
+		PRINTFORML %CALLNAME:조교대상%의 호흡에 맞춰, 그녀의 허벅지가 부르르 떨린다.
+		PRINTFORMW
+		PRINTFORML %CALLNAME:조교대상%의 사타구니로부터 향기나는 음란한 냄새에 조금 머리가 어질어질해진다.
+		SIF PALAM:조교대상:윤활 > 5000
+			PRINTFORML %CALLNAME:조교대상%의 균열로부터 애액이 눅진눅진 흘러넘치고있고, 땅에 애액으로 만들어진 얼룩을 만들어 냈다.
+		PRINTFORMW
+		조교강도 += 3
+	ELSE
+		PRINTFORML 거기에는 %PANTS_DESCRIPTION(EQUIP:조교대상:6)%%PANTSNAME(EQUIP:조교대상:6)%가 있었다!
+		PRINTFORMW
+		PRINTFORML %CALLNAME:MASTER%는 주저앉아, %CALLNAME:조교대상%의 속옷을 바라보았다.
+		PRINTFORMW
+		PRINTFORML 수치심이 강하게 든 것인지 %CALLNAME:조교대상%의 뺨은 붉은 빛을 늘려간다.
+		PRINTFORML 그런데도, %CALLNAME:조교대상%은 부끄러움을 견디며, 하반신을 한층 더 가까이 다가오게 한다.
+		PRINTFORMW
+		PRINTFORML %CALLNAME:조교대상%의 사타구니로부터 향기나는 음란한 냄새에 조금 머리가 어질어질해진다.
+		SIF PALAM:조교대상:윤활 > 5000
+			PRINTFORML 조금 더 보고있자, %CALLNAME:조교대상%의 팬티의 일부가 천천히 변색되기 시작했다.
+		PRINTFORMW
+		PRINTL
+		PRINTL 속옷을 요구한다[0]
+		PRINTL
+		PRINTL 이제 됐다[1]
+		BINPUT
+		IF RESULT == 0
+			IF PALAM:조교대상:욕정 > 20000
+				PRINTFORML
+				PRINTFORML 「 %CALLNAME:MASTER%씨 나빠……❤」
+				PRINTFORMW
+				PRINTFORML %CALLNAME:조교대상%는 얼굴을 새빨갛게 하면서%PANTSNAME(EQUIP:조교대상:6)%를 벗어, 온기가 사라지기전에 당신에게 건네주었다.
+				PRINTFORMW
+				EQUIP:조교대상:6 = 0
+				조교강도 += 2
+			ELSE
+				PRINTFORML
+				PRINTFORML 「아, 안돼！！」
+				PRINTFORML 역시, 거기까지는 부끄러운 듯, %CALLNAME:조교대상%는 얼굴을 새빨갛게 하고 팬티를 숨겼다.
+				PRINTFORMW
+			ENDIF
+		ENDIF
+	ENDIF
+	CALL EROTIC_MOVE("晒しもの",조교대상,MASTER,100 + 25 * 조교강도)
+	PRINTFORMW 
+ENDIF
+RETURN

@@ -1,0 +1,154 @@
+﻿@CARDNAME_39705,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 촉수궁의 휴프노
+	CASE "略称"
+		RESULTS = 촉수궁 휴프노
+	CASE "カテゴリ"
+		RESULTS:0 = 촉수
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39705(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 2800
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39705(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번 밖에 사용할 수 없다。
+CALL CARD_ABLE(1,손패起動,묘지起動,フリー誘発)
+PRINTL ①：필드 에 "묘상」이 존재할 경우에, 자신 / 상대 턴에 발동할 수 있다。
+PRINTL 패 / 묘지 의 이 카드를 특수 소환한다。
+CALL CARD_ABLE(2,攻撃後強制誘発)
+PRINTL ②：이 카드가 전투를 실행한 여성 몬스터의 컨트롤을 얻는다。
+PRINTL 그 카드는 「묘상」 카테고리를 얻는다。
+CALL CARD_ABLE(3,지속효과)
+PRINTL ③：이 카드는 전투로는 파괴되지 않는다。
+
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39705(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39705)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動 || 종류 == フリー誘発
+	SIF !GROUPMATCH(ゾーン,"손패","묘지")
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,39705)
+		RETURN 0	
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39705,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 묘상
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARD_{戦闘カードID(듀얼리스트,1)}("성별")
+	SIF RESULT != 牝性
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動 || 종류 == リアクション효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_39705(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 묘상可대상
+#DIM DYNAMIC 조교대상
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 || 종류 == 묘지起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39705,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39705)
+	IF RESULT == 0
+		묘상可대상 = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",묘상可대상,"強奪",39705)
+		CALL CARD_SET_CATEGORY(듀얼리스트,"필드",コントロール先,"묘상")
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",コントロール先)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML 휴프노가 거대한 눈으로 수상한 기술을 %CALLNAME:조교대상%에게 향해 걸었고
+			PRINTFORML %CALLNAME:조교대상%은 공허한 눈으로 스스로 이쪽 필드로 걸어왔다。
+			PRINTFORML 그 후 음란한 미소를 보여주며 촉수에게 봉사를 시작했다。
+			CALL EROTIC_MOVE("펠라치오",조교대상)
+		ENDIF
+
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"戦耐")
+ENDIF
+
+
+

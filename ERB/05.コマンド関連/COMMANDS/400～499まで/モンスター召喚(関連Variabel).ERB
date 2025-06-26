@@ -1,0 +1,1206 @@
+﻿;-------------------------------------------------
+;モンスター소환(関連Variabel)
+;-------------------------------------------------
+@MONSTERLIST_RESET
+
+;VARSET 필터_所持,1
+VARSET 필터_所持
+
+VARSET 필터_속성
+VARSET 필터_종족
+VARSET 필터_구상
+VARSET 필터_名前
+VARSET 필터_듀얼리스트
+VARSET 필터_전화번호
+VARSET 필터_消去可
+
+
+VARSET 필터_연모
+VARSET 필터_お気に入り
+VARSET 필터_덱所持
+VARSET 필터_저장모유량
+VARSET 필터_임신可
+VARSET 필터_素質_ACT
+VARSET 필터_画像
+VARSET 필터_仲良し
+
+VARSET 필터_素質, -100
+VARSET 필터_각인, -100
+VARSET 필터_特価品
+
+
+@MONSTERLIST_SORT(ソート種)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 캐릭터番号
+#DIM DYNAMIC リスト番号
+#DIM DYNAMIC ソート種
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 気入_リスト,10000
+#DIM DYNAMIC 気入_カウンタ
+#DIM DYNAMIC 이력_リスト,10000
+#DIM DYNAMIC 이력_カウンタ
+#DIM DYNAMIC 通常_リスト,10000
+#DIM DYNAMIC 通常_カウンタ
+
+VARSET 소환_リスト
+VARSET リスト最大値
+
+FOR カウンタ,0,10
+	IF お気に入り:カウンタ > 0
+		CALL MONSTERLIST_FILTER(お気に入り:カウンタ)
+		IF RESULT == 1
+			SIF MATCH(気入_リスト,お気に入り:カウンタ)
+				CONTINUE
+			気入_リスト:気入_カウンタ = お気に入り:カウンタ
+			気入_カウンタ ++
+		ENDIF
+	ENDIF
+NEXT
+
+FOR カウンタ,0,10
+	IF 소환이력:カウンタ > 0
+		SIF 소환이력:カウンタ > CHARANUM
+			CONTINUE
+		CALL MONSTERLIST_FILTER(소환이력:カウンタ)
+		IF RESULT == 1
+			SIF MATCH(이력_リスト,소환이력:カウンタ)
+				CONTINUE
+			SIF MATCH(気入_リスト,소환이력:カウンタ)
+				CONTINUE
+			이력_リスト:이력_カウンタ = 소환이력:カウンタ
+			이력_カウンタ ++
+		ENDIF
+	ENDIF
+NEXT
+
+
+FOR 캐릭터番号,1,CHARANUM
+	SIF MATCH(이력_リスト,캐릭터番号)
+		CONTINUE
+	SIF MATCH(気入_リスト,캐릭터番号)
+		CONTINUE
+	CALL MONSTERLIST_FILTER(캐릭터番号)
+	IF RESULT == 1
+		通常_リスト:通常_カウンタ = 캐릭터番号		
+		通常_カウンタ ++
+	ENDIF
+NEXT
+
+
+FOR カウンタ,0,通常_カウンタ
+	通常_リスト:カウンタ += NO:(通常_リスト:カウンタ) * 10000000
+NEXT
+ARRAYSORT 通常_リスト,FORWARD,0,通常_カウンタ
+
+FOR カウンタ,0,通常_カウンタ
+	通常_リスト:カウンタ = 通常_リスト:カウンタ % 10000000 
+NEXT
+
+FOR カウンタ,0,気入_カウンタ
+	소환_リスト:リスト最大値 = 気入_リスト:カウンタ
+	リスト最大値 ++
+NEXT
+
+FOR カウンタ,0,이력_カウンタ
+	소환_リスト:リスト最大値 = 이력_リスト:カウンタ
+	リスト最大値 ++
+NEXT
+
+FOR カウンタ,0,通常_カウンタ
+	소환_リスト:リスト最大値 = 通常_リスト:カウンタ
+	リスト最大値 ++
+NEXT
+
+
+
+@MONSTERLIST_FILTER(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+
+IF 필터_所持 == 1
+	SIF CFLAG:캐릭터_ID:소유함 == 0
+		RETURN 0
+ELSEIF 필터_所持 == 2
+	SIF CFLAG:캐릭터_ID:소유함 == 1
+		RETURN 0
+ENDIF
+
+VARSET 条件달성
+IF 필터_名前 != ""
+	SIF STRFIND(NAME:캐릭터_ID, 필터_名前)  != -1
+		条件달성 ++
+	SIF STRFIND(CALLNAME:캐릭터_ID, 필터_名前)  != -1
+		条件달성 ++
+	SIF 条件달성 == 0
+		RETURN 0
+ENDIF
+
+
+IF 필터_속성 > 0
+	SIF TALENT:캐릭터_ID:속성 != 필터_속성
+		RETURN 0
+ENDIF
+
+IF 필터_종족 > 0
+	SIF TALENT:캐릭터_ID:종족 != 필터_종족
+		RETURN 0
+ENDIF
+
+IF 필터_구상 > 0
+	VARSET RESULT
+	TRYCALLFORM M_KOJO_K{NO:캐릭터_ID}
+	SIF RESULT != 1
+		RETURN 0
+ENDIF
+
+IF 필터_저장모유량
+	SIF CFLAG:캐릭터_ID:저장모유량 <= 0
+		RETURN 0
+ENDIF
+
+IF 필터_임신可
+	SIF TALENT:캐릭터_ID:임신가능 <= 0
+		RETURN 0
+ENDIF
+
+VARSET 条件달성
+IF 필터_消去可 == 1
+	SIF TALENT:캐릭터_ID:모브 >= 1
+		条件달성 = 1
+	SIF TALENT:캐릭터_ID:복제 >= 1
+		条件달성 = 1
+	SIF 条件달성 == 0
+		RETURN 0
+ENDIF
+
+
+IF 필터_듀얼리스트 > 0
+	IF 필터_듀얼리스트 == 1
+		SIF TALENT:캐릭터_ID:듀얼리스트 >= 1
+			RETURN 0
+	ELSEIF 필터_듀얼리스트 == 2
+		SIF TALENT:캐릭터_ID:듀얼리스트 == 0
+			RETURN 0
+	ENDIF
+ENDIF
+
+IF 필터_전화번호 > 0
+	SIF CFLAG:캐릭터_ID:전화번호 == 0
+		RETURN 0
+ENDIF
+
+
+VARSET 条件달성
+IF 필터_연모 > 0
+	SIF TALENT:캐릭터_ID:연모 != 0
+		条件달성 = 1
+	SIF TALENT:캐릭터_ID:굴복됨 != 0
+		条件달성 = 1
+	SIF 条件달성 == 0
+		RETURN 0
+ENDIF
+VARSET 条件달성
+IF 필터_お気に入り
+	FOR カウンタ,1,6
+		SIF 캐릭터_ID == お気に入り:カウンタ
+			条件달성 = 1
+	NEXT
+	SIF 条件달성 == 0
+		RETURN 0
+ENDIF
+VARSET 条件달성
+IF 필터_画像
+	;カード画像が有るか無いか판정
+	IF ENUMFILES("RESOURCES/CHARA", @"{NO:캐릭터_ID}_*") || ENUMFILES("RESOURCES/CHARA", @"%NAME:캐릭터_ID%_*")
+		条件달성 = 1
+	ENDIF
+	IF 필터_画像 == 1
+		SIF 条件달성 == 0
+			RETURN 0
+	ELSE
+		SIF 条件달성 >= 1
+			RETURN 0
+	ENDIF
+ENDIF
+
+IF 필터_덱所持 > 0
+	CALL ENEMYDECK_CHECK(캐릭터_ID)
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+VARSET 条件달성
+IF 필터_仲良し
+	SIF CFLAG:캐릭터_ID:호감도 >= 1000
+		条件달성 = 1
+	SIF TALENT:캐릭터_ID:굴복됨 != 0
+		条件달성 = 1
+	SIF 条件달성 == 0
+		RETURN 0
+ENDIF
+
+VARSET 필터_素質_ACT
+FOR カウンタ,0,200
+	IF (필터_素質:カウンタ) != -100
+		필터_素質_ACT = 1
+		BREAK
+	ENDIF
+NEXT
+
+IF 필터_素質_ACT == 1
+	FOR カウンタ,0,200
+		SIF (필터_素質:カウンタ) == -100
+			CONTINUE
+		IF カウンタ == 2
+			IF 필터_素質:カウンタ == 4
+				SIF TALENT:캐릭터_ID:カウンタ == 1
+					RETURN 0
+			ELSEIF 필터_素質:カウンタ == 5
+				SIF TALENT:캐릭터_ID:カウンタ == 2
+					RETURN 0
+			ELSE
+				SIF TALENT:캐릭터_ID:カウンタ != (필터_素質:カウンタ)
+					RETURN 0
+			ENDIF
+		ELSE
+			SIF TALENT:캐릭터_ID:カウンタ != (필터_素質:カウンタ)
+				RETURN 0
+		ENDIF
+	NEXT
+ENDIF
+
+IF 필터_特価品 == 1
+	SIF !MATCH(日々_特価品,캐릭터_ID)
+		RETURN 0
+ENDIF
+
+FOR カウンタ,0,4
+	SIF 필터_각인:カウンタ == -100
+		CONTINUE
+	SIF MARK:캐릭터_ID:カウンタ == 0
+		RETURN 0
+NEXT
+
+RETURN 1
+
+
+
+@SUMMON_FILTER
+#DIM DYNAMIC カウンタ
+#DIM 필터_ページ送り
+#DIM CONST リスト표시 = 40
+#DIM DYNAMIC リストスタート
+
+
+;個人メモ、ココで필터ーを通していく、詳細でさらにいろいろと見れる
+$INPUT_LOOP
+
+CUSTOMDRAWLINE —
+PRINTL 필터 설정
+CUSTOMDRAWLINE —
+SIF 필터_ページ送り >= 3
+	필터_ページ送り = 3
+
+FOR カウンタ,リストスタート,(リストスタート + リスト표시)
+	IF カウンタ == 0
+		PRINTFORML --성별계열/함락소질--
+	ELSEIF カウンタ == 10
+		PRINTL
+		PRINTFORML --성격계열--
+	ELSEIF カウンタ == 20
+		PRINTL
+		PRINTFORML --성으로의 관심--
+	ELSEIF カウンタ == 30
+		PRINTL
+		PRINTFORML --소녀마음--
+
+	ELSEIF カウンタ == 40
+		PRINTFORML --체질--
+	ELSEIF カウンタ == 50
+		PRINTL
+		PRINTFORML --기술--
+	ELSEIF カウンタ == 60
+		PRINTL
+		PRINTFORML --결벽도--
+	ELSEIF カウンタ == 70
+		PRINTL
+		PRINTFORML --솔직도--
+
+	ELSEIF カウンタ == 80
+		PRINTFORML --성애성--
+	ELSEIF カウンタ == 90
+		PRINTL
+		PRINTFORML --매료--
+	ELSEIF カウンタ == 100
+		PRINTL
+		PRINTFORML --신체특징--
+	ELSEIF カウンタ == 130
+		PRINTL
+		PRINTFORML --특수특징--
+	ENDIF
+
+
+	SIF TALENTNAME:(カウンタ) == ""
+		CONTINUE
+
+	SIF (필터_素質:(カウンタ)) == -100
+		SETCOLOR 100,100,100
+
+	PRINTFORM [{(カウンタ),3}]
+	PRINTFORM - %TALENTNAME:(カウンタ),20,LEFT%
+
+	RESETCOLOR
+NEXT
+PRINTL
+CUSTOMDRAWLINE —
+FOR カウンタ,0,4
+	SIF (필터_각인:(カウンタ)) == -100
+		SETCOLOR 100,100,100
+	PRINTFORM [{(カウンタ + 400),3}]
+	PRINTFORM - %MARKNAME:カウンタ,20,LEFT%
+	RESETCOLOR
+NEXT
+PRINTL
+CUSTOMDRAWLINE —
+
+SIF リスト표시 == 0
+	SETCOLOR 0X444444
+PRINTBUTTON "[9998]돌아간다", 9998
+RESETCOLOR
+PRINTFORM %LOCALS,40,RIGHT%  
+SIF 필터_ページ送り == 3
+	SETCOLOR 0X444444
+PRINTBUTTON "[9999]다음으로", 9999
+RESETCOLOR
+PRINTL
+CUSTOMDRAWLINE —
+PRINTBUTTON "[확인종료]", 9996
+BINPUT
+
+
+IF RESULT == 9996
+	RETURN 0
+ELSEIF RESULT == 9998
+	リストスタート -= リスト표시
+	SIF リストスタート <= 0
+		リストスタート = 0
+
+ELSEIF RESULT == 9999 
+	IF リストスタート >= 160
+		PRINT
+	ELSE
+		リストスタート += リスト표시
+	ENDIF
+
+ELSEIF RESULT < 300
+	IF 필터_素質:RESULT == -100
+		CALL SUMMON_FILTER_DETAIL(RESULT)
+	ELSE
+		필터_素質:RESULT = -100
+	ENDIF
+ELSEIF RESULT > 300 && RESULT < 410
+	RESULT -= 400
+	IF 필터_각인:RESULT == -100
+		필터_각인:RESULT = 1
+	ELSE
+		필터_각인:RESULT = -100
+	ENDIF
+ENDIF
+
+GOTO INPUT_LOOP
+
+
+
+
+
+
+@SUMMON_FILTER_DETAIL(대상素質)
+#DIM DYNAMIC 대상素質
+
+
+;オンオフ型の素質
+IF TALENTNAME:대상素質 == GET_TALENTNAME(대상素質,1) 
+	필터_素質:대상素質 = 1
+
+ELSEIF TALENTNAME:대상素質 != GET_TALENTNAME(대상素質,1)
+	필터_素質:대상素質 = 0
+	$INPUT_LOOP
+	PRINTFORML  ----상세설정----
+	PRINTFORM 『%TALENTNAME:대상素質%
+	PRINTFORM …【%GET_TALENTNAME(대상素質,(필터_素質:대상素質))%】』
+	PRINTBUTTON "[소질설정]", 0
+	PRINTL
+	PRINTFORML %LOCALS,10,LEFT%
+	PRINTBUTTON "[종료]", 1
+	PRINTFORM 
+	BINPUT
+	IF RESULT == 0
+		IF 대상素質 == 2
+			IF 필터_素質:대상素質 == 3
+				필터_素質:대상素質 = 1
+			ELSE
+				필터_素質:대상素質 ++
+			ENDIF
+		ELSEIF 대상素質 == 3
+			IF 필터_素質:대상素質 == 2
+				필터_素質:대상素質 = 1
+			ELSE
+				필터_素質:대상素質 ++
+			ENDIF
+		ELSEIF 대상素質 == 72
+			IF 필터_素質:대상素質 == 2
+				필터_素質:대상素質 = 1
+			ELSE
+				필터_素質:대상素質 ++
+			ENDIF
+		;성별嗜好
+		ELSEIF 대상素質 == 81
+			IF 필터_素質:대상素質 == 3
+				필터_素質:대상素質 = -1
+			ELSEIF 필터_素質:대상素質 == 0
+				필터_素質:대상素質 = 1
+			ELSE
+				필터_素質:대상素質 ++
+			ENDIF
+		;体系
+		ELSEIF 대상素質 == 100
+			IF 필터_素質:대상素質 == 3
+				필터_素質:대상素質 = -4
+			ELSE
+				필터_素質:대상素質 ++
+			ENDIF
+		;몸두께
+		ELSEIF 대상素質 == 120
+			IF 필터_素質:대상素質 == 4
+				필터_素質:대상素質 = 0
+			ELSE
+				필터_素質:대상素質 ++
+			ENDIF
+		;가슴사이즈
+		ELSEIF 대상素質 == 121
+			IF 필터_素質:대상素質 == 5
+				필터_素質:대상素質 = -3
+			ELSE
+				필터_素質:대상素質 ++
+			ENDIF
+		;허벅지사이즈
+		ELSEIF 대상素質 == 122
+			IF 필터_素質:대상素質 == 3
+				필터_素質:대상素質 = -1
+			ELSE
+				필터_素質:대상素質 ++
+			ENDIF
+		;가슴사이즈
+		ELSEIF 대상素質 == 128
+			IF 필터_素質:대상素質 == 3
+				필터_素質:대상素質 = -1
+			ELSE
+				필터_素質:대상素質 ++
+			ENDIF
+		;연령
+		ELSEIF 대상素質 == 117
+			IF 필터_素質:대상素質 == 2
+				필터_素質:대상素質 = -2
+			ELSE
+				필터_素質:대상素質 ++
+			ENDIF
+		;量的素質
+		ELSE
+			;성별
+			IF 대상素質 == 2
+				IF 필터_素質:대상素質 == 3
+					필터_素質:대상素質 = 1
+				ELSE
+					필터_素質:대상素質 ++
+				ENDIF
+			;端まで行くと-1を掛ける
+			ELSEIF STRLENS(GET_TALENTNAME(대상素質,필터_素質:대상素質 + 1)) || 필터_素質:대상素質 == -1
+				IF 필터_素質:대상素質 == -1
+					필터_素質:대상素質 = 1
+				ELSE
+					필터_素質:대상素質 ++
+				ENDIF
+			ELSE
+				필터_素質:대상素質 = -1 * 필터_素質:대상素質
+			ENDIF
+		ENDIF
+		GOTO INPUT_LOOP
+
+
+	ELSEIF RESULT == 1
+		RETURN 0
+	ENDIF
+ENDIF
+
+
+@SUMMON_FILTER_ATTRIBUTE
+#DIM 속성표시
+
+
+$INPUT_LOOP
+PRINTFORML ----상세설정----
+PRINTFORML 『속성필터』
+PRINTL 
+FOR 속성표시,1,7
+	PRINTFORM [{속성표시}]
+	PRINTFORM 【%GET_TALENTNAME(190,속성표시)%】
+NEXT
+PRINTFORML %LOCALS,10,LEFT%
+PRINTL
+PRINTBUTTON "[종료]", 9999
+PRINTFORM 
+
+
+BINPUT
+IF RESULT == 9999
+	RETURN 0
+ELSEIF RESULT > 0 && RESULT <= 6
+	필터_속성 = RESULT
+	RETURN 0
+ENDIF
+
+
+@SUMMON_FILTER_TYPE
+#DIM 종족표시
+
+
+$INPUT_LOOP
+PRINTFORML ----상세설정----
+PRINTFORML 『종족 필터』
+FOR 종족표시,1,21
+	PRINTFORM [{종족표시,2,LEFT}]
+	PRINTFORM 【%GET_TALENTNAME(191,종족표시),12,LEFT%】
+	SIF 종족표시 == 5 || 종족표시 == 10 || 종족표시 == 15 || 종족표시 == 20
+		PRINTL
+NEXT
+PRINTL
+PRINTFORML %LOCALS,10,LEFT%
+PRINTBUTTON "[종료]", 9999
+PRINTFORM 
+INPUT
+IF RESULT == 9999
+	RETURN 0
+ELSEIF RESULT > 0 && RESULT <= 24
+	필터_종족 = RESULT
+	RETURN 0
+ELSE 
+	GOTO INPUT_LOOP
+ENDIF
+
+
+@SUMMON_FILTER_NAME
+#DIM 종족표시
+PRINTL 
+PRINT 카드명을 입력해주세요：
+PRINTBUTTON @"【돌아간다】", ""
+PRINTL 
+PRINTL 
+INPUTS
+IF RESULTS == ""
+	필터_名前 = 
+ELSE
+	필터_名前 = %RESULTS%
+ENDIF
+
+
+
+
+@LIST_SHORI(使用場所,캐릭터_ID)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 改行カウンタ
+#DIM DYNAMIC リストスタート
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC リスト_現체력
+#DIM DYNAMIC 使用場所
+#DIM CONST リスト표시 = 30
+#DIM DYNAMIC 캐릭터選択数
+#DIM DYNAMIC 모유回復量
+#DIM DYNAMIC 모유価格
+#DIM DYNAMIC 待機_체력
+#DIM DYNAMIC 待機_기력
+#DIMS DYNAMIC 元バスト数値
+#DIMS DYNAMIC 元가슴사이즈
+#DIMS DYNAMIC 元カップ
+
+SELECTCASE 使用場所
+	;カード소환（使用場所 0）
+	CASE 0
+		CALL PRINT_STATE(캐릭터_ID,5)
+		SIF RESULT == 2
+			RETURN 1
+	;初期설정구입（使用場所 2）
+	CASE 1
+		FOR カウンタ,1,CHARANUM
+			SIF CFLAG:カウンタ:소유함 == 1
+				캐릭터選択数 ++
+		NEXT
+
+		IF CFLAG:캐릭터_ID:소유함 == 1
+			CFLAG:캐릭터_ID:소유함 = 0
+			FOR カウンタ,1,CHARANUM
+				IF CFLAG:カウンタ:소유함 == 1
+					初소환 = カウンタ
+					BREAK
+				ENDIF
+				初소환 = 0
+			NEXT
+		ELSEIF CFLAG:캐릭터_ID:소유함 == 0
+			IF 캐릭터選択数 >= 3
+				PRINTFORMW 이 이상은 고를수 없습니다！
+			ELSE
+				CFLAG:캐릭터_ID:소유함 = 1
+				CALL PRINT_STATE(캐릭터_ID)
+				PRINTFORMW %CALLNAME:캐릭터_ID%를 선택했습니다。
+				SIF 캐릭터選択数 == 0
+					初소환 = 캐릭터_ID
+			ENDIF
+		ENDIF
+	;캐릭터구입（使用場所 2）
+	CASE 2
+		IF CFLAG:캐릭터_ID:소유함 == 1
+			PRINTFORMW 이미 소지하고있습니다。
+			RETURN 0
+		ENDIF
+		CALL CHARA_KACHI(캐릭터_ID,100)
+		IF MONEY >= RESULT
+			CALL PRINT_STATE(캐릭터_ID)
+			PRINTFORML 《%NAME:캐릭터_ID%》를 구입하시겠습니까？
+			PRINTL [0] - 예
+			PRINTL [1] - 아니오
+			INPUT
+			IF RESULT == 0 && CFLAG:캐릭터_ID:소유함 == 0
+				PRINTFORML 「구매 갑사합니다！」
+				CALL CARD_GET_CHARA(캐릭터_ID,1)
+				CALL CHARA_KACHI(캐릭터_ID,100)
+				CALL MONEY_GET(-RESULT)
+			ELSEIF RESULT == 0 && CFLAG:캐릭터_ID:소유함 == 1
+				PRINTFORMW 이미 소지하고있습니다。
+			ELSE
+				PRINTFORMW 구입을 그만두었습니다。
+			ENDIF
+		ELSE
+			PRINTFORMW 「돈이 부족하신데요？」
+		ENDIF
+	CASE 4
+
+
+	;情報確認（使用場所 5）
+	CASE 5
+		CALL PRINT_STATE(캐릭터_ID,2)
+	;연인住居（使用場所 6）
+	CASE 6
+		$LOVERS_LOOP 
+		SETCOLOR C_PINK
+		PRINTL ―❤　연인 메뉴　❤―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+		PRINTFORML ＞%NAME:캐릭터_ID%
+		CUSTOMDRAWLINE ―
+		PRINTL
+		RESETCOLOR
+		PRINTFORM [1] - %"침상을 변경한다",30,LEFT%
+		IF CFLAG:캐릭터_ID:시작위치 == 100
+			IF TALENT:캐릭터_ID:듀얼리스트 == 0
+				PRINTFORM [%"카드 안",16,left%]
+			ELSEIF TALENT:캐릭터_ID:듀얼리스트 >= 1
+				PRINTFORM [%"본인의 방",16,left%]
+			ENDIF
+		ELSEIF CFLAG:캐릭터_ID:시작위치 != 100
+			PRINTFORM [%GETPLACENAME(CFLAG:캐릭터_ID:시작위치),16,left%]
+		ENDIF
+		PRINTL
+		PRINTFORML [2] - %"호칭을 변경한다",30,LEFT%[ %CALLNAME:캐릭터_ID%]
+		PRINTFORML 
+		CUSTOMDRAWLINE ―
+		PRINTFORML [100] - 돌아간다
+		BINPUT
+		IF RESULT == 1
+			IF CFLAG:캐릭터_ID:시작위치 == 100
+				PRINTFORML %NAME:캐릭터_ID%를 침대로 수비표시로 소환！！
+				CFLAG:캐릭터_ID:시작위치 = CFLAG:MASTER:시작위치
+				CFLAG:캐릭터_ID:현재위치 = CFLAG:MASTER:현재위치
+
+			ELSEIF CFLAG:캐릭터_ID:시작위치 != 100
+				PRINTFORML %NAME:캐릭터_ID%에게 일단 친가로 돌아가달라고 했습니다
+				CFLAG:캐릭터_ID:시작위치 = 100
+				CFLAG:캐릭터_ID:현재위치 = 100
+			ENDIF
+			PRINTFORMW 변경은 바로 반영된다구！！
+		ELSEIF RESULT == 2
+			PRINT 호칭을 입력해주세요(최대10글자):
+			PRINTBUTTON @"【돌아간다】", ""
+			SIF !EXISTCSV(NO:캐릭터_ID)
+				PRINTBUTTON @"【DEFAULT】", "DEFAULT"
+			INPUTS
+
+			IF RESULTS == "DEFAULT"
+				CALLNAME:캐릭터_ID = %CSVCALLNAME(NO:캐릭터_ID)%
+			ELSEIF RESULTS != ""
+				SUBSTRING RESULTS, 0, 20
+				CALLNAME:캐릭터_ID = %RESULTS%
+			ENDIF
+		ELSEIF RESULT == 100
+			PRINTW 돌아갑니다。
+			RETURN 0
+		ENDIF
+		GOTO LOVERS_LOOP
+	;カード化（使用場所 7）
+	CASE 7
+		IF CFLAG:캐릭터_ID:카드화됨 != 1
+			CALL MONEY_GET(-ITEMPRICE:78)
+			TALENT:캐릭터_ID:듀얼리스트 = 0
+			CFLAG:캐릭터_ID:카드화됨 = 1
+			CALL CARD_GET_CHARA(캐릭터_ID,1)
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 영혼까지 완전히 당신의 것이 되었습니다。
+			RETURN 1
+		ELSE
+			PRINTFORMW 이미 %CALLNAME:캐릭터_ID%의 영혼은 완전히 카드처럼 되어있다。
+		ENDIF
+	;대전상대를 찾는다（使用場所 10）
+	CASE 10
+		CALL PRINT_STATE(캐릭터_ID,5)
+		SIF RESULT == 2
+			RETURN 1
+
+
+
+
+
+	;소원빌기（使用場所 11）
+	CASE 11
+		CALL PRINT_STATE(캐릭터_ID)
+		PRINTFORMW %NAME:캐릭터_ID%가 내일 놀러오도록 해주세요……。
+		IF RESULT == 0 && CFLAG:캐릭터_ID:전화번호 == 1
+			FLAG:소원빌기캐릭터 = 캐릭터_ID
+			CALL MONEY_GET(-10)
+			PRINTFORMW 어쩐지 내일、%NAME:캐릭터_ID%가 방으로 놀러올것같은 기분이 들었다。
+			PRINTFORMW 내일은 집에서 느긋하게 지내도 괜찮을것같다。
+		ELSE
+			PRINTFORMW 어쩐지 실패한 기분이 들었다……。
+			CALL MONEY_GET(-10)
+		ENDIF
+
+
+	CASE 12
+		IF CFLAG:캐릭터_ID:수면 == 1 || CFLAG:캐릭터_ID:현재위치 == 100
+			PRINTFORML %CALLNAME:캐릭터_ID%의 집을 방문했지만 아무도 대답하지않는다、아마 자고있는거겠지。
+		ELSEIF CFLAG:캐릭터_ID:방문했음 >= 1
+			PRINTFORMW 오늘은 이제 그만두자。
+		ELSE
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 집을 방문하니、본인이 배웅나왔다。
+			IF (CFLAG:캐릭터_ID:호감도 >= 3000 && RAND:3 == 0) || デバッグシステム == 1
+				PRINTFORMW …… %CALLNAME:캐릭터_ID%에게 방으로 초대받았다。
+				SIF TALENT:캐릭터_ID <= -1
+					PRINTFORML 오늘 집에 부모님은 없는것같다。
+				PRINTFORML 어떻게 할까？
+				PRINTL
+				PRINTL [0] - 초대를 받아들인다
+				PRINTL [1] - 그만둔다
+				BINPUT
+				IF RESULT == 0
+					PRINTFORMW %CALLNAME:캐릭터_ID%는 방 안으로 환영했다。
+					CFLAG:MASTER:현재위치 = 場所_캐릭터家
+					CFLAG:캐릭터_ID:현재위치 = 場所_캐릭터家
+					캐릭터家_名称 = %CALLNAME:캐릭터_ID%の家
+				ELSE
+					PRINTFORMW 오늘은 그만둔다고 전하자、 %CALLNAME:캐릭터_ID%는 유감스러운듯하지만、깨끗히 알았다고 해주었다。
+				ENDIF
+			ELSE
+				PRINTFORMW 조금정도 담소를 나눈 뒤、일단 헤어졌다。
+			ENDIF
+			CALL SOURCE_CALC_환락(캐릭터_ID, MASTER, 500)
+			CALL SOURCE_CALC_정복(캐릭터_ID, MASTER, 100)
+			CFLAG:캐릭터_ID:방문했음 = 1
+			RETURN 1
+			
+		ENDIF
+
+	;소원빌기2（使用場所 13）
+	CASE 13
+		CALL PRINT_STATE(캐릭터_ID)
+		PRINTFORML %NAME:캐릭터_ID%와 인연을 맺겠습니까？		
+		PRINTL [0] - 예
+		PRINTL [1] - 아니오
+		BINPUT
+		PRINTFORML %NAME:캐릭터_ID%과 인연이 이어지기를……
+		IF RESULT == 0 && MONEY >= 100
+			FLAG:신사방문캐릭터 = 캐릭터_ID
+			CALL MONEY_GET(-100)
+		ELSE
+			RETURN 0
+		ENDIF
+		PRINTFORML %NAME:캐릭터_ID%가 내일 신사로 올것같은 기분이 들었습니다。
+		RETURN 1
+	CASE 14
+		CALL PRINT_STATE(캐릭터_ID)
+		PRINTFORML %NAME:캐릭터_ID%에게 말을 거시겠습니까？		
+		PRINTL [0] - 예
+		PRINTL [1] - 아니오
+		BINPUT
+		IF MONEY < 1200
+			PRINTFORMW 돈이 부족합니다！
+			RETURN 0
+		ELSEIF RESULT == 0
+			CALL MONEY_GET(-1200)
+			PRINTFORMW 안전안심 합법적인 어플이라구요！		
+			CALL SUMMON_SHORI(캐릭터_ID,1)
+			RETURN 1
+		ENDIF
+		
+	CASE 15
+
+		CALL PRINT_STATE(캐릭터_ID)
+		PRINTFORML %NAME:캐릭터_ID%와 헤어지시겠습니까？		
+		PRINTL [0] - 예
+		PRINTL [1] - 아니오
+		BINPUT
+		IF RESULT == 0
+			PRINTFORML 바이바이、%NAME:캐릭터_ID%！！
+			;Anonym修正
+			CALL DELETE_CHARA(캐릭터_ID)
+		ENDIF
+	CASE 16
+		CALL CSV_CREATE(캐릭터_ID)
+	CASE 17
+		IF !EXISTCSV(NO:캐릭터_ID)
+			PRINTFORMW 이 캐릭터의CSV는 존재하지 않습니다。
+			RETURN 0
+		ENDIF
+
+		CALL PRINT_STATE(캐릭터_ID)
+		PRINTFORML %NAME:캐릭터_ID%를 리셋하시겠습니까？
+		PRINTL [0] - 예
+		PRINTL [1] - 아니오
+		BINPUT
+		IF RESULT == 0
+			NAME:캐릭터_ID = %CSVNAME(NO:캐릭터_ID)%
+			CALLNAME:캐릭터_ID = %CSVCALLNAME(NO:캐릭터_ID)%
+			FOR カウンタ, 0, VARSIZE("MAXBASE")
+				BASE:캐릭터_ID:カウンタ = CSVBASE(NO:캐릭터_ID,カウンタ)
+			NEXT
+			FOR カウンタ, 0, VARSIZE("TALENT")
+				TALENT:캐릭터_ID:カウンタ = CSVTALENT(NO:캐릭터_ID,カウンタ)
+			NEXT
+			FOR カウンタ, 0, VARSIZE("ABL")
+				ABL:캐릭터_ID:カウンタ = CSVABL(NO:캐릭터_ID,カウンタ)
+			NEXT
+			FOR カウンタ, 0, VARSIZE("EXP")
+				EXP:캐릭터_ID:カウンタ = CSVEXP(NO:캐릭터_ID,カウンタ)
+			NEXT
+			CFLAG:캐릭터_ID:지금복장 = CSVCFLAG(NO:캐릭터_ID,7)
+			CALL CLOTHES_SETTING(캐릭터_ID)
+			CALL SET_BODYSIZE(캐릭터_ID,0,2)
+			; CALL SHOP_BUST_RESET(캐릭터_ID)
+			; CALL SHOP_BUTT_RESET(캐릭터_ID)
+			CALL PRINT_STATE(캐릭터_ID)
+		ENDIF
+		PRINTFORML 리셋 완료했습니다。
+		RETURN 0
+	;임신開放
+	CASE 18
+		CALL PREG_RELEASE(캐릭터_ID)
+	;ミルク（使用場所 20）
+	CASE 20
+		IF CFLAG:캐릭터_ID:저장모유량 < 200
+			PRINTL
+			PRINTW 뭔갈 하기에는 양이 부족합니다。
+		ELSE			
+			모유回復量 = CFLAG:캐릭터_ID:저장모유량
+			CALLFORM CHARA_KACHI(캐릭터_ID, (CFLAG:캐릭터_ID:저장모유량),1)
+			모유価格 = RESULT
+
+			PRINTFORML 모유가격：{모유価格}円
+			PRINTL
+			PRINTL 어떻게 사용하시겠습니까？
+			PRINTL [1] - 우유를 마신다。
+			PRINTL [2] - 우유를 판다。
+			PRINTL [3] - 식재료로 한다。
+			PRINTL [100] - 돌아간다
+			BINPUT
+			IF RESULT == 1
+				PRINTFORML %CALLNAME:MASTER%는 %CALLNAME:캐릭터_ID%의 모유를 꿀꺽꿀꺽 마시기시작했다。
+				CALL RECOVER_PERMIL(MASTER,모유回復量,"체력",1)
+				CALL RECOVER_PERMIL(MASTER,모유回復量 * 2,"기력",1)
+				CALL RECOVER_PERMIL(MASTER,모유回復量,"정력",1)
+				CFLAG:캐릭터_ID:저장모유량 = 0
+			ELSEIF RESULT == 2
+				PRINTFORML 어둠의 통판사이트에서 모유를 %CALLNAME:캐릭터_ID%의 눈을가린 사진과 함께、{모유価格}円에 판매했습니다。
+				CALL MONEY_GET(모유価格)
+				CFLAG:캐릭터_ID:저장모유량 = 0
+			ELSEIF RESULT == 3
+			 	IF (CFLAG:캐릭터_ID:저장모유량) / 10 >= 1 
+					ITEM:식재료 += (CFLAG:캐릭터_ID:저장모유량) / 10
+					CFLAG:캐릭터_ID:저장모유량 = 0
+					PRINTFORMW 식재료를{(CFLAG:캐릭터_ID:저장모유량) / 10}개 손에 넣었습니다。
+				ELSE
+					PRINTFORMW 식재료로 하기엔 부족했습니다。
+				ENDIF
+			ELSEIF RESULT == 100
+				PRINTW 돌아갑니다。
+			ENDIF
+		ENDIF
+	CASE 30
+		CALL HAN_KOJO_OPTION(캐릭터_ID)
+
+	CASE 31
+
+	CASE 3
+		IF TALENT:캐릭터_ID:듀얼리스트 == 0 && CFLAG:캐릭터_ID:소유함 == 0
+			PRINTFORML 이 캐릭터는 소유하고 있지 않습니다。			
+		;아이템66_【右手に검を左手に盾を】
+		ELSEIF 	아이템플래그 == 66
+			PRINTFORML %NAME:캐릭터_ID%
+			PRINTFORML 체력（{MAXBASE:캐릭터_ID:체력}）→（{MAXBASE:캐릭터_ID:기력}） 
+			PRINTFORML 기력（{MAXBASE:캐릭터_ID:기력}）→（{MAXBASE:캐릭터_ID:체력}） 
+			CALL YN_CHOICE_STR()
+			IF RESULT == はい
+				CALL MONEY_GET(-ITEMPRICE:66)
+				待機_체력 = MAXBASE:캐릭터_ID:체력
+				待機_기력 = MAXBASE:캐릭터_ID:기력 
+				MAXBASE:캐릭터_ID:체력 = 待機_기력
+				MAXBASE:캐릭터_ID:기력 = 待機_체력
+				BASE:캐릭터_ID:체력 = MAXBASE:캐릭터_ID:체력
+				BASE:캐릭터_ID:기력 = MAXBASE:캐릭터_ID:기력
+				PRINTFORMW 적용했습니다！
+				RETURN 1
+			ENDIF
+		;아이템67_時의 마술사
+		ELSEIF 	아이템플래그 == 67
+			PRINTFORML 설정할 연령을 선택해주세요。
+			PRINTL [5] 어린이
+			PRINTL [4] 10대
+			PRINTL [3] 성년
+			PRINTL [2] 어른
+			PRINTL [1] 중년
+			PRINTL [0] 돌아간다
+			BINPUT
+			IF RESULT >= 1 && RESULT < 6
+				CALL MONEY_GET(-ITEMPRICE:67)
+				IF RESULT == 5
+					TALENT:캐릭터_ID:연령 = -2
+					IF TALENT:캐릭터_ID:체형 > -2 
+						CFLAG:캐릭터_ID:원래체형 = TALENT:캐릭터_ID:체형
+						TALENT:캐릭터_ID:체형 = -2
+					ENDIF
+					PRINTFORMW %CALLNAME:캐릭터_ID%는 어린이가 되었습니다
+				ELSEIF RESULT == 4
+					TALENT:캐릭터_ID:연령 = -1
+					IF TALENT:캐릭터_ID:체형 == -2 
+						TALENT:캐릭터_ID:체형 = CFLAG:캐릭터_ID:원래체형
+					ENDIF
+					PRINTFORMW %CALLNAME:캐릭터_ID%는 10대가 되었습니다
+				ELSEIF RESULT == 3
+					TALENT:캐릭터_ID:연령 = 0
+					IF TALENT:캐릭터_ID:체형 == -2 
+						TALENT:캐릭터_ID:체형 = CFLAG:캐릭터_ID:원래체형
+					ENDIF
+					PRINTFORMW %CALLNAME:캐릭터_ID%는 성년이 되었습니다
+				ELSEIF RESULT == 2
+					TALENT:캐릭터_ID:연령 = 1
+					IF TALENT:캐릭터_ID:체형 == -2 
+						TALENT:캐릭터_ID:체형 = CFLAG:캐릭터_ID:원래체형
+					ENDIF
+					PRINTFORMW %CALLNAME:캐릭터_ID%는 어른이 되었습니다
+				ELSEIF RESULT == 1
+					TALENT:캐릭터_ID:연령 = 2
+					IF TALENT:캐릭터_ID:체형 == -2 
+						TALENT:캐릭터_ID:체형 = CFLAG:캐릭터_ID:원래체형
+					ENDIF
+					PRINTFORMW %CALLNAME:캐릭터_ID%는 중년이 되었습니다
+				ENDIF
+				RETURN 1
+			ENDIF
+		;아이템71_薬の材料（双）
+		ELSEIF 	아이템플래그 == 71
+			IF TALENT:캐릭터_ID:성별 == 1
+				PRINTFORML 남성기형태를 설정해주세요。
+				PRINTFORML 자지사이즈에 의한 영향은 아직 개발중입니다。
+				PRINTL [1] 암컷쥬지（공격력100이하）
+				PRINTL [2] 미성숙　　（공격력500）
+				PRINTL [3] 작은자지　　（공격력1000）
+				PRINTL [4] 보통　　　（공격력1500）
+				PRINTL [5] 큰편　（공격력2000）
+				PRINTL [6] 두꺼움　（공격력2500）
+				PRINTL [7] 에엣……　（공격력3000）
+				PRINTL [8] 네놈에게 신을 보여주마
+			BINPUT
+				IF RESULT == 8
+					TALENT:캐릭터_ID:형태 = 8
+					PRINTFORMW 신근으로 설정했습니다
+				ELSEIF RESULT == 7
+					TALENT:캐릭터_ID:형태 = 7
+					PRINTFORMW 암컷죽이기로 설정했습니다
+				ELSEIF RESULT == 6
+					TALENT:캐릭터_ID:형태 = 6
+					PRINTFORMW 두꺼움으로 설정했습니다
+				ELSEIF RESULT == 5
+					TALENT:캐릭터_ID:형태 = 5
+					PRINTFORMW 큰편으로 설정했습니다
+				ELSEIF RESULT == 4
+					TALENT:캐릭터_ID:형태 = 4
+					PRINTFORMW 보통으로 설정했습니다
+				ELSEIF RESULT == 3
+					TALENT:캐릭터_ID:형태 = 3
+					PRINTFORMW 작은자지로 설정했습니다
+				ELSEIF RESULT == 2
+					TALENT:캐릭터_ID:형태 = 2
+					PRINTFORMW 미성숙으로 설정했습니다
+				ELSEIF RESULT == 1
+					TALENT:캐릭터_ID:형태 = 1
+					PRINTFORMW 암컷쥬지로 설정했습니다
+				ENDIF
+				CALL MONEY_GET(-ITEMPRICE:71)
+				TALENT:캐릭터_ID:성별 = 3
+				MAXBASE:캐릭터_ID:사정 = 10000
+				MAXBASE:캐릭터_ID:정력 = 1000
+				PRINTFORMW %CALLNAME:캐릭터_ID%는 후타나리가 되었습니다
+				RETURN 1
+			ELSE
+				PRINTFORMW 이미 나있습니다！
+			ENDIF
+		;아이템72_薬の材料（消）
+		ELSEIF 	아이템플래그 == 72
+			IF TALENT:캐릭터_ID:성별 != 1
+				CALL MONEY_GET(-ITEMPRICE:72)
+				TALENT:캐릭터_ID:성별 = 1
+				TALENT:캐릭터_ID:형태 = 0
+				MAXBASE:캐릭터_ID:사정 = 0
+				MAXBASE:캐릭터_ID:정력 = 0
+				PRINTFORMW %CALLNAME:캐릭터_ID%는 여자아이가 되었습니다
+				RETURN 1
+			ELSE
+				PRINTFORMW 남자와 후타나리 이외에는 사용할수 없습니다
+			ENDIF
+
+		;아이템73_ブルーポーション
+		ELSEIF 	아이템플래그 == 73
+			IF TALENT:캐릭터_ID:성별 == 2
+				PRINTFORMW 남자아이는 모유를 낼수 없어요！
+			ELSEIF TALENT:캐릭터_ID:모유체질 == 0
+				CALL MONEY_GET(-ITEMPRICE:73)
+				TALENT:캐릭터_ID:모유체질 = 1
+				PRINTFORMW %CALLNAME:캐릭터_ID%는 모유체질이 되었습니다
+				RETURN 1
+			ELSEIF TALENT:캐릭터_ID:모유체질 == 1
+				CALL MONEY_GET(-ITEMPRICE:73)
+				TALENT:캐릭터_ID:모유체질 = 0
+				PRINTFORMW %CALLNAME:캐릭터_ID%는 모유체질을 잃었습니다
+				RETURN 1
+			ENDIF
+		;아이템74_レッドポーション
+		ELSEIF 	아이템플래그 == 74
+			IF TALENT:캐릭터_ID:성별 == 2
+				PRINTFORMW 뒤쪽 처녀는 대상 외 입니다……
+			ELSEIF TALENT:캐릭터_ID:처녀 == 0
+				CALL MONEY_GET(-ITEMPRICE:74)
+				TALENT:캐릭터_ID:처녀 = 1
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 처녀막이 재생했습니다
+				RETURN 1
+			ELSE
+				PRINTFORMW 이미 처녀입니다！
+			ENDIF
+		;아이템75_巨大化（乳）
+		ELSEIF 	아이템플래그 == 75
+			IF TALENT:캐릭터_ID:성별 == 2
+				PRINTFORMW 남자의 가슴은 크게할수 없습니다
+			ELSEIF TALENT:캐릭터_ID:가슴사이즈 < 5
+				CALL MONEY_GET(-ITEMPRICE:75)
+				元가슴사이즈 = %TOSTR_BUSTSIZE(캐릭터_ID)%
+				元バスト数値 = %DECIMAL_STRING(CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장,2)%
+				元カップ = %TOSTR_CUPSIZE(캐릭터_ID)%
+				TALENT:캐릭터_ID:가슴사이즈 += 1 
+				CALL SET_BODYSIZE(캐릭터_ID,0b10,1)
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴이 비대화했습니다（【%元가슴사이즈%】→【%TOSTR_BUSTSIZE(캐릭터_ID)%】 / %元バスト数値%cm(%元カップ%)→%DECIMAL_STRING(CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장,2)%cm(%TOSTR_CUPSIZE(캐릭터_ID)%)）
+				; PRINTFORMW %CALLNAME:캐릭터_ID%の가슴が肥大化しました
+				; CALL SHOP_BUST_RESET(캐릭터_ID)
+				RETURN 1
+			ELSE
+				PRINTFORMW 약으론 이 이상 커질수 없습니다！
+			ENDIF
+		;아이템76_収縮（乳）
+		ELSEIF 	아이템플래그 ==  76
+			IF TALENT:캐릭터_ID:성별 == 2
+				PRINTFORMW 남자의 가슴은 작게할수 없습니다
+			ELSEIF TALENT:캐릭터_ID:가슴사이즈 > -3
+				元가슴사이즈 = %TOSTR_BUSTSIZE(캐릭터_ID)%
+				元バスト数値 = %DECIMAL_STRING(CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장,2)%
+				元カップ = %TOSTR_CUPSIZE(캐릭터_ID)%
+				TALENT:캐릭터_ID:가슴사이즈 -= 1 
+				CALL SET_BODYSIZE(캐릭터_ID,0b10,1)
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴이 축소화했습니다（【%元가슴사이즈%】→【%TOSTR_BUSTSIZE(캐릭터_ID)%】 / %元バスト数値%cm(%元カップ%)→%DECIMAL_STRING(CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장,2)%cm(%TOSTR_CUPSIZE(캐릭터_ID)%)）
+				; PRINTFORMW %CALLNAME:캐릭터_ID%の가슴が縮小化しました
+				; CALL SHOP_BUST_RESET(캐릭터_ID)
+				RETURN 1
+			ELSE
+				PRINTFORMW 이 이상 작게할수 없습니다！
+			ENDIF
+		;아이템77_男体化薬
+		ELSEIF 	아이템플래그 == 77
+			IF TALENT:캐릭터_ID:성별 != 2
+				IF TALENT:캐릭터_ID:성별 == 1
+					PRINTFORML 남성기 형태를 설정해주세요。
+					PRINTFORML 자지사이즈에 의한 영향은 아직 개발중입니다。
+					PRINTL [1] 암컷쥬지（공격력100이하）
+					PRINTL [2] 미성숙　　（공격력500）
+					PRINTL [3] 작은자지　　（공격력1000）
+					PRINTL [4] 보통　　　（공격력1500）
+					PRINTL [5] 큰편　（공격력2000）
+					PRINTL [6] 두꺼움　（공격력2500）
+					PRINTL [7] 에엣……　（공격력3000）
+					PRINTL [8] 네놈에게 신을 보여주마
+				BINPUT
+					IF RESULT == 8
+						TALENT:캐릭터_ID:형태 = 8
+						PRINTFORMW 신근으로 설정했습니다
+					ELSEIF RESULT == 7
+						TALENT:캐릭터_ID:형태 = 7
+						PRINTFORMW 암컷죽이기로 설정했습니다
+					ELSEIF RESULT == 6
+						TALENT:캐릭터_ID:형태 = 6
+						PRINTFORMW 두꺼움으로 설정했습니다
+					ELSEIF RESULT == 5
+						TALENT:캐릭터_ID:형태 = 5
+						PRINTFORMW 큰편으로 설정했습니다
+					ELSEIF RESULT == 4
+						TALENT:캐릭터_ID:형태 = 4
+						PRINTFORMW 보통으로 설정했습니다
+					ELSEIF RESULT == 3
+						TALENT:캐릭터_ID:형태 = 3
+						PRINTFORMW 작은자지로 설정했습니다
+					ELSEIF RESULT == 2
+						TALENT:캐릭터_ID:형태 = 2
+						PRINTFORMW 미성숙으로 설정했습니다
+					ELSEIF RESULT == 1
+						TALENT:캐릭터_ID:형태 = 1
+						PRINTFORMW 암컷쥬지로 설정했습니다
+					ENDIF
+				ENDIF
+				CALL MONEY_GET(-ITEMPRICE:77)
+				TALENT:캐릭터_ID:성별 = 2
+				TALENT:캐릭터_ID:가슴사이즈 = 0
+				MAXBASE:캐릭터_ID:사정 = 10000
+				MAXBASE:캐릭터_ID:정력 = 1000
+				PRINTFORMW %CALLNAME:캐릭터_ID%는 남자가 되었습니다
+				; CALL SHOP_BUST_RESET(캐릭터_ID)
+				CALL SET_BODYSIZE(캐릭터_ID,0b10,1)
+				RETURN 1
+			ELSE
+				PRINTFORMW 이런걸 사용해더 더욱 남자답게 되지는 않는다구요！
+			ENDIF
+		ELSEIF 	아이템플래그 == 82
+			IF TALENT:캐릭터_ID:펫 == 1
+				CALL MONEY_GET(-ITEMPRICE:82)
+				TALENT:캐릭터_ID:펫 = 0
+				PRINTFORMW %CALLNAME:캐릭터_ID%을 펫의 임무에서 해방시켜주었습니다。
+				RETURN 1
+			ELSEIF TALENT:캐릭터_ID:펫 == 0
+				CALL MONEY_GET(-ITEMPRICE:82)
+				TALENT:캐릭터_ID:펫 = 1
+				PRINTFORMW %CALLNAME:캐릭터_ID%를 펫으로 해주었습니다。
+				RETURN 1
+			ENDIF
+		ENDIF
+	CASEELSE
+		RETURN RESULT
+ENDSELECT
+RETURN 0

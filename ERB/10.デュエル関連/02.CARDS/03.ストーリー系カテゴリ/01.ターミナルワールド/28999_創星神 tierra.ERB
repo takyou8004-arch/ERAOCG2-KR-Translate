@@ -1,0 +1,218 @@
+﻿@CARDNAME_28999,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 창성신 티에라
+	CASE "略称"
+RESULTS = 창성신 티에라
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_28999(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 11
+	CASE "攻撃力"
+		RETURN 3400
+	CASE "守備力"
+		RETURN 3600
+	CASE "특수不可"
+		RETURN 1
+	CASE "소환不可"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250601
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28999(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 상대는 이 카드의 특수 소환/효과 발동에 대해 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL 이 카드는 일반 소환할 수 없다.
+PRINTL 이 카드 이외의 자신의 패/필드의 카드 10종류를 주인의 덱 / EX덱으로 되돌렸을 경우에만 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,특수소환時強制)
+PRINTL ①: 이 카드가 특수 소환했을 경우에 발동한다.
+PRINTL 이 카드 이외의 서로의 패/필드 / 묘지의 카드 및 EX덱의 EX 몬스터가 아닌 펜듈럼 몬스터를 전부 주인의 덱으로 되돌린다.
+PRINTL 이 효과는 내성으로 막을 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 1턴에 1번 전투 / 효과로는 파괴되지 않으며, 이 카드를 대상으로 하지 않는 효과를 받지 않는다.
+
+@CARDCAN_28999(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28999)
+SIF RESULT == 1
+	RETURN 0
+
+;특수소환
+IF 종류 == 손패起動 
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件固名前起動 = 1
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 10
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時強制
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == チェーン可否
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28999(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28999)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件固名前選択 = 1
+		효과条件複数 = 10
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 특수소환時強制
+	FOR カウンタ,0,VARSIZE(@"%対面者%_손패") - 1
+		VARSET RESULT
+		VARSET RESULTS
+		SIF GETVAR(@"%対面者%_손패:{カウンタ}") == -1
+			CONTINUE
+		CALL CARD_DISPOSE(対面者,"손패",カウンタ,덱行き)
+	NEXT
+	FOR カウンタ,0,5
+		VARSET RESULT
+		VARSET RESULTS
+		SIF カウンタ == 場所
+			CONTINUE
+		SIF GETVAR(@"%対面者%_필드:{カウンタ}") == -1
+			CONTINUE
+		CALL CARD_DISPOSE(対面者,"필드",カウンタ,덱行き)
+	NEXT
+	FOR カウンタ,0,5
+		VARSET RESULT
+		VARSET RESULTS
+		SIF GETVAR(@"%対面者%_마함:{カウンタ}") == -1
+			CONTINUE
+		CALL CARD_DISPOSE(対面者,"마함",カウンタ,덱行き)
+	NEXT
+	FOR カウンタ,0,VARSIZE(@"%対面者%_묘지") - 1
+		VARSET RESULT
+		VARSET RESULTS
+		SIF GETVAR(@"%対面者%_묘지:{カウンタ}") == -1
+			CONTINUE
+		CALL CARD_DISPOSE(対面者,"묘지",カウンタ,덱行き)
+	NEXT
+	FOR カウンタ,0,VARSIZE(@"%対面者%_EX덱") - 1
+		VARSET RESULT
+		VARSET RESULTS
+		SIF GETVAR(@"%対面者%_EX덱:{カウンタ}") == -1
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%対面者%_EX덱:{カウンタ}")}, "종류"
+		SIF RESULT > 3
+			CONTINUE
+		CALL CARD_DISPOSE(対面者,"EX덱",カウンタ,덱行き)
+	NEXT
+	CALL SHUFFLE(対面者)
+
+	FOR カウンタ,0,VARSIZE(@"%듀얼리스트%_손패") - 1
+		VARSET RESULT
+		VARSET RESULTS
+		SIF GETVAR(@"%듀얼리스트%_손패:{カウンタ}") == -1
+			CONTINUE
+		CALL CARD_DISPOSE(듀얼리스트,"손패",カウンタ,덱行き)
+	NEXT
+	FOR カウンタ,0,5
+		VARSET RESULT
+		VARSET RESULTS
+		SIF カウンタ == 場所
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+			CONTINUE
+		CALL CARD_DISPOSE(듀얼리스트,"필드",カウンタ,덱行き)
+	NEXT
+	FOR カウンタ,0,5
+		VARSET RESULT
+		VARSET RESULTS
+		SIF GETVAR(@"%듀얼리스트%_마함:{カウンタ}") == -1
+			CONTINUE
+		CALL CARD_DISPOSE(듀얼리스트,"마함",カウンタ,덱行き)
+	NEXT
+	FOR カウンタ,0,VARSIZE(@"%듀얼리스트%_묘지") - 1
+		VARSET RESULT
+		VARSET RESULTS
+		SIF GETVAR(@"%듀얼리스트%_묘지:{カウンタ}") == -1
+			CONTINUE
+		CALL CARD_DISPOSE(듀얼리스트,"묘지",カウンタ,덱行き)
+	NEXT
+	FOR カウンタ,0,VARSIZE(@"%듀얼리스트%_EX덱") - 1
+		VARSET RESULT
+		VARSET RESULTS
+		SIF GETVAR(@"%듀얼리스트%_EX덱:{カウンタ}") == -1
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_EX덱:{カウンタ}")}, "종류"
+		SIF RESULT > 3
+			CONTINUE
+		CALL CARD_DISPOSE(듀얼리스트,"EX덱",カウンタ,덱行き)
+	NEXT
+	CALL SHUFFLE(듀얼리스트)
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"一破")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"無差耐")
+ENDIF
+
+

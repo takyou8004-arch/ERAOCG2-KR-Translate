@@ -1,0 +1,222 @@
+﻿@CARDNAME_91170,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 결빙 융합－퓨전 프리징
+	CASE "略称"
+RESULTS = 결빙 융합
+	CASE "カテゴリ"
+RESULTS:0 = 융합
+		RESULTS:1 = 블리자드
+		RESULTS:2 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_91170(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250615
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91170(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①② 효과는 1턴에 1번, 어느 한 쪽만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①: 상대의 엑스트라 덱에서 몬스터가 특수 소환되었을 경우에 발동할 수 있다. 그 특수 소환한 몬스터를 파괴한다.
+PRINTL 이 효과로 융합 몬스터를 파괴했을 경우, 상대 필드에 「빙주 토큰」(마법사족・물・레벨 4・공격력 1900／수비력 1200) 2장을 수비 표시로 특수 소환할 수 있다.
+PRINTL (이 효과로 생성된 「빙주 토큰」은, 턴 종료 시에 소멸한다.)
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 자신 메인 페이즈에 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 자신의 패・필드의 몬스터를 융합 소재로 하여 「블리자드」 융합 몬스터 1장을 융합 소환한다.
+PRINTL 자신 필드에 「블리자드 프린세스」가 존재할 경우, 이 효과에 대해 상대는 카드의 효과를 발동할 수 없다.
+
+;原作漫画では十代の융합を実質的に無効にする함정카드로서活躍したカード。
+;
+;元々は융합限定だったがそれでは流石に妨害として心許ないのでＥＸモンスター全般に효과が出るようにして융합だと추가효과という形式に。
+;융합소재로 한 몬스터를 상대 필드에 再び出すという효과は、それだけだとまあまあデメリット효과になっているので、
+;任意で出せるようにしつつ、こちらの盤面次第では殴る상대몬스터를 増やすメリット효과として活用できることを狙っている。
+;とはいえ、ターンを跨ぐと消滅してしまうので、ほんのり原作의 효과를 意識したおまけという程度。
+;
+;【블리자드 프린세스】として最終的な着地点となる大型モンスターは欲しくなり、그 몬스터はＧＸなのだから
+;やはり융합モンスターが望ましいだろうということで、このカードに묘지효과で융합できるという今どき感のある性能を추가。(参考：青眼龍轟臨)
+;この묘지효과は융합体を出すなら非常に重要で、テーマ内で唯一の융합手段である。융합テーマというわけでもないのでこれで十分。
+;いちおう「クリスタル・ガール」でサーチして即捨てるとかすれば実質的に융합をサーチしてるようなものなので実戦では問題ないだろう。
+;もっと융합軸に寄せたいときは「星辰砲手ファイメナ」あたりを入れてアイスドールやガールのサーチ先にするのも面白いかもしれない。
+
+
+@CARDCAN_91170(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC 대상カード_ID
+#DIM DYNAMIC 대상カード_종류
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91170)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,91170)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,91170)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	;상대가 ＥＸ덱에서 특수소환した場合に발동可能。
+	CALL FULLRESET
+	효과条件종류 = 효과全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX특수소환",1)
+	SIF RESULT != 1
+		RETURN 0
+	
+	;最終소환先を確認して、ＥＸモンスターであることも確認。
+	;チェーン処理でおかしくなりそう。動きはしたがとても怖い。
+	효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+	대상カード_ID = GETVAR(@"%対面者%_필드:효과先")
+	TRYCALLFORM CARD_{대상カード_ID},"종류"
+	대상カード_종류 = RESULT
+	SIF 대상カード_종류 <= 3 && 대상カード_종류 >= 10
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,91170)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,91170)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;융합효과が발동可能かチェック
+	CALL RESETAREA_MAT
+	素材範囲손패 = 1
+	素材範囲필드 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+효과条件カテゴリ = 블리자드
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 종류 == チェーン可否
+	SIF !GROUPMATCH(チェーン可否종류, 묘지起動)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件名前 = 블리자드 프린세스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_91170(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC 설정レベル
+#DIM DYNAMIC 대상カード_ID
+#DIM DYNAMIC 대상カード_종류
+#DIM DYNAMIC 選択結果
+
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 효과後誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91170,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		
+		효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+		대상カード_ID = GETVAR(@"%対面者%_필드:효과先")
+		TRYCALLFORM CARD_{대상カード_ID},"종류"
+		대상カード_종류 = RESULT
+		
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",효과先,"묘지")
+		IF RESULT == 1
+			;융합モンスターだった場合の処理
+			IF 대상カード_종류 == 융합
+				;상대 필드에 空きが必要
+				SIF モンスター数(対面者) >= 4
+					RETURN 0
+				;CPUの場合は氷柱を作ってしまう
+				IF 듀얼리스트 == "상대"
+					選択結果 = はい
+				ELSE
+PRINTL 상대 필드에 빙주 토큰을 수비 표시로 특수 소환하시겠습니까?
+					CALL YN_CHOICE(듀얼리스트)
+					選択結果 = RESULT
+				ENDIF
+				
+				IF 選択結果 == はい
+					CALL FULLRESET
+					CALL CARD_GENERATE(듀얼리스트,120082,"守備표시",1,2)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91170,2)
+	IF RESULT == 0
+		;EX덱確認
+		CALL RESETAREA_MAT
+		素材範囲손패 = 1
+		素材範囲필드 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+효과条件カテゴリ = 블리자드
+		효과条件소환可 = 1	
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{RESULT:99}(듀얼리스트,選択カード)
+			CALL FUSSUMMON(듀얼리스트, 選択カード)
+		ENDIF
+	ENDIF
+ENDIF
+
+

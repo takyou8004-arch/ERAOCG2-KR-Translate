@@ -1,0 +1,169 @@
+@CARDNAME_79741,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 괴한수의 침식능역
+	CASE "略称"
+		RESULTS = 괴한수 침식능역
+	CASE "カテゴリ"
+		RESULTS:0 = 괴한수
+		RESULTS:1 = 괴한에 물든 경계의 날개
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+@CARD_79741(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "추가日"
+		RETURN 250420
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_79741(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_79741(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①③의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+
+CALL CARD_ABLE(1,발동誘発)
+PRINTL ①：이 카드의 발동시의 효과처리로서、덱에서 "ＢＡＫＩＡ플레저 플랜트" １장을 패에 넣을 수 있다。
+CALL CARD_ABLE(0,소환強制誘発)
+PRINTL ②：암컷 몬스터가 특수 소환될때 마다 이 카드에 악성 카운터를 １개 놓는다（최대５개 까지）。
+CALL CARD_ABLE(2,효과後誘発)
+PRINTL ③：자신 필드의 "괴한수" 몬스터가 전투 / 효과로 파괴된 경우에、이 카드에 악성 카운터가 ２개 이상 놓여져 있다면 발동할 수 있다。
+PRINTL 이 카드의 악성 카운터를 ２개 제거하고、덱에서 레벨 ７이상의 "괴한수" 몬스터 １장을 패에 넣는다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79741(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79741)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,79741)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF !GROUPMATCH(最終소환타입,"특수","EX특수")
+		RETURN 0
+	SIF GETVAR(@"%最終소환決者%_MZ_性:{最終소환場所}") != 牝性
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_悪Ｃ:場所") > 4
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,79741)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 괴한수
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 괴한수
+	효과条件종류 = モン全般
+	CALLFORM 효과条件レベル_ADV(7, "以上")
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_悪Ｃ:場所") < 2
+		RETURN 0
+    RETURN 1
+ENDIF
+
+@CARDEFFECT_79741(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 変身カードID
+#DIM DYNAMIC 修正値
+#DIM DYNAMIC 元괴한플랜트위치
+#DIMS DYNAMIC ヒロインネーム
+#DIMS DYNAMIC 元ヒロインネーム
+#DIMS DYNAMIC 無効대상ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79741,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件名前 = ＢＡＫＩＡ플레저 플랜트
+		효과条件任意 = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 소환強制誘発
+	PRINTFORML 괴한수의 능역은 암컷의 냄새에 반응해 그 힘을 키우고있다……
+	PRINTFORMW 괴한수의 절첩결계『{場所}』에 카운터가 놓였습니다。
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"悪Ｃ",1)
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79741,2)
+	IF RESULT == 0
+		IF GETVAR(@"%듀얼리스트%_魔_悪Ｃ:場所") < 2
+			PRINTFORMW 이 카드에 놓인 악성 카운터의 총 수가 필요한 개수에 부족해졌습니다
+			RETURN
+		ENDIF
+		CALL FULLRESET
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"悪Ｃ",-2)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 괴한수
+		효과条件종류 = モン全般
+		CALLFORM 효과条件レベル_ADV(7, "以上")
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF

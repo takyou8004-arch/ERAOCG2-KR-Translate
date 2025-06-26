@@ -1,0 +1,127 @@
+﻿@CARDNAME_75050,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 헤븐즈 게이트
+	CASE "略称"
+RESULTS = 천문
+	CASE "カテゴリ"
+RESULTS:0 = 헤븐즈
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_75050(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_75050(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,フリー誘発)
+PRINTL ①：패에서 수비력 2500 이상의 빛 속성 몬스터를 2체까지 수비 표시로 특수 소환한다.
+PRINTL 이 효과는 자신이 직접 공격을 받았을 경우에 패에서도 발동할 수 있다.
+
+@CARDCAN_75050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,75050)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,75050)
+		RETURN 0
+	IF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件以守備力 = 2500
+	효과条件속성 = 빛속성
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,75050)
+		RETURN 0
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"被弾種",2)
+	SIF RESULT != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件以守備力 = 2500
+	효과条件속성 = 빛속성
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_75050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,75050,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件以守備力 = 2500
+		효과条件속성 = 빛속성
+		효과条件종류 = モン全般
+		효과条件複数 = 98
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,75050,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件以守備力 = 2500
+		효과条件속성 = 빛속성
+		효과条件종류 = モン全般
+		효과条件複数 = 98
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+ENDIF

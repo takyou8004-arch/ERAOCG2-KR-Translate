@@ -1,0 +1,286 @@
+﻿@CARDNAME_59810,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 언더 홀－세라
+	CASE "略称"
+		RESULTS = 탱글구멍의 세라
+	CASE "カテゴリ"
+		RESULTS:0 = 함정 속으로
+		RESULTS:1 = 충혹마
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59810(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_59810(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件종류 = 링크以外
+素材条件カテゴリ = 충혹마
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,59810) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_59810(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 링크 이외의 “충혹마” 몬스터 1장
+PRINTL 이 카드의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,발동強制誘発)
+PRINTL ①：자신의 마법 / 묘지에서 '함정 속으로' 카드의 효과를 발동했을 경우에 발동할 수 있다.
+PRINTL 자신은 서로의 묘지의 "충혹마" 몬스터의 종류 × 200LP를 회복한다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ②：자신의 메인 페이즈에 자신의 묘지에 '충혹마' 융합 몬스터가 존재할 경우에 발동할 수 있다.
+PRINTL 덱에서 '충혹마' 카드를 묘지로 보낸다.
+CALLFORM CARD_ABLE(0,지속효과,攻守変動)
+PRINTL ③：이 카드는 함정 내성과 공격 유도를 가지고,
+PRINTL 상대 필드 몬스터의 공격력 / 수비력은 서로의 묘지의 "충혹마" 몬스터의 종류 × 200 내린다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_59810(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 효과발동불가,10
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 효과先
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59810)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 함정 속으로
+	효과条件他所 = 1
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,59810)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 융합
+	효과条件カテゴリ = 충혹마
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 충혹마
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+;シトリス묘지효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 오나 홀－시트리스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+;フレシア묘지효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 글로리 홀－플레시아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	SIF FINAL_SUMMON_TARGET(듀얼리스트,1) == 5 
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0	
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_59810(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 충혹마数
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC 回復量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동強制誘発
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 트랩트릭 네스트홀
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		CALL FULLRESET
+		효과条件カテゴリ = 충혹마
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과条件固名前起動 = 1
+		효과条件종류 = モン全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		回復量 = RESULT * 200
+	ELSE
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과条件固名前起動 = 1
+		효과条件종류 = モン全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		回復量 = RESULT * 200
+	ENDIF
+	PRINTFORML 
+	CALL LIFE_CHANGE(듀얼리스트,"増加","효과",回復量)
+	PRINTFORML
+	SETCOLOR C_PINK 
+	PRINTFORML 세라가 묘지에 숨어있는 충혹마들의 꿀을 모아 입에 넣어 마시게 했다.
+	RESETCOLOR
+	CALL EROTIC_MOVE("ディ-プ키스",NO_TO_CHARANUM(1370),MASTER,50)
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59810,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 충혹마
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 트랩트릭 네스트홀
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		CALL FULLRESET
+		효과条件カテゴリ = 충혹마
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과条件固名前起動 = 1
+		효과条件종류 = モン全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		攻撃力修正 = RESULT * 200
+	ELSE
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과条件固名前起動 = 1
+		효과条件종류 = モン全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		攻撃力修正 = RESULT * 200
+	ENDIF
+
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,-攻撃力修正,-攻撃力修正)
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"함정耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"攻誘")
+ELSEIF 종류 == 攻撃時誘発
+	;シトリス묘지효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59810)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		戦闘カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		효과추가종류 = 6
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘カード,"永攻DOWN")
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	;フレシア묘지효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59810)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",효과先,"묘지")
+	ENDIF
+ENDIF
+
+

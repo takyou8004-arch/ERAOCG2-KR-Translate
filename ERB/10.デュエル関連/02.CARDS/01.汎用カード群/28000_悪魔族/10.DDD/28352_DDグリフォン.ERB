@@ -1,0 +1,158 @@
+﻿@CARDNAME_28352,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = DD그리폰
+	CASE "略称"
+		RESULTS = DD그리폰
+	CASE "カテゴリ"
+		RESULTS:0 = DD
+ENDSELECT
+
+
+@CARD_28352(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 1200
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_28352(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 ①P효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①：자신 필드에 "DD" 몬스터가 존재하는 경우에 발동할 수 있다。
+PRINTL 마법＆ゾーンの이 카드의 효과를 無効化し、수비 표시로 특수 소환한다。
+PRINTL 그 후、패에서 "DD」カードか「계약서」카드 １장을 버리고 もよい。
+PRINTL そう했을 경우、자신은 １장 드로우한다。
+
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 카드명의 ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(2,특수소환時)
+PRINTL ①：이 카드가 특수 소환했을 경우에 발동할 수 있다。
+PRINTL 덱에서 "DD그리폰" 이외의 "DD」카드 １장을 패에 넣는다。
+
+@CARDSUMMON_AA_28352
+
+
+@CARDCAN_28352(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28352)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,28352)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,28352,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = DD
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,28352)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = DD
+	효과条件固名前 = DD그리폰
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28352(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択횟수
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28352)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28352,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 効追無効
+		CALL CARD_SP_SUMMON(듀얼리스트, ゾーン, 場所,"守備표시")
+		CALL FULLRESET
+		효과条件カテゴリ:0 = 계약서
+		효과条件カテゴリ:1 = DD
+		효과条件任意 = 1
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28352,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = DD
+		효과条件固名前 = DD그리폰
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+

@@ -1,0 +1,146 @@
+﻿@CARDNAME_52371,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 룡의 의교－메테오니스＝DRA
+	CASE "略称"
+RESULTS = 룡의 의교－DRA
+	CASE "カテゴリ"
+RESULTS:0 = 드라이트론
+ENDSELECT
+
+
+@CARD_52371(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 의식
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+	CASE "추가日"
+		RETURN 250412
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_52371(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 出処
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 12
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,52371) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52371(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「유성휘교군」에 의해 강림
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 대상 내성을 가진다.
+CALLFORM CARD_ABLE(0,발동誘発)
+PRINTL ②: 이 카드는 상대 몬스터 전부에 1번씩 공격할 수 있다.
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ③: 서로의 턴에, 자신 묘지의 카드를 3장까지 제외하고 발동할 수 있다.
+PRINTL 제외한 카드의 공격력 합계 2000당 1장, 상대 필드의 앞면 표시 카드를 1장 고르고
+PRINTL 그 카드를 릴리스한다.
+
+
+@CARDCAN_52371(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52371)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_3(듀얼리스트,52371)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52371(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 설정枚数
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦")
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52371,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件複数 = 97
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"リリース")
+		ENDIF
+	ENDIF
+ENDIF

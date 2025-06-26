@@ -1,0 +1,156 @@
+﻿@CARDNAME_39733,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 드래곤의 애완 해피
+	CASE "略称"
+		RESULTS = 용의 애완해피
+	CASE "カテゴリ"
+		RESULTS:0 = 해피
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39733(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1400
+	CASE "성별"
+		RETURN 牝性
+	CASE "別途ID"
+		RETURN 1050
+	CASE "連動ID"
+		RETURN 1050
+ENDSELECT
+
+@CARD_EXPLANATION_39733(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드는 룰상 "해피 레이디" 로 취급한다。
+PRINTL 이 카드명의  ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①：자신 필드의 수컷인 "해피" 몬스터가 존재하지 않을 경우에 발동할 수 있다。
+PRINTL 패 / 덱에서 "해피의 마스터 드래곤" １장을 특수 소환한다。
+CALL CARD_ABLE(2,攻撃後誘発)
+PRINTL ②：이 카드가 전투로 상대 몬스터를 파괴한 경우에 발동할 수 있다。
+PRINTL 자신 필드의 수컷인 "해피" 몬스터의 공격력은 그 몬스터의 공격력만큼 올린다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39733(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1050)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,1050)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39730,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 해피
+	효과条件성별 = 雄性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件名前 = 해피의 마스터 드래곤
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0	
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 해피
+	효과条件성별 = 雄性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39733(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39733,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과条件名前 = 해피의 마스터 드래곤
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		PRINTFORML 
+		PRINTFORMW 드래곤의 애완 해피는 주인이 되는 드래곤을 불러내었다。
+	ENDIF
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39733)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件성별 = 雄性
+		효과条件カテゴリ = 해피
+		CALLFORM CARD_{直前戦闘破壊ID(듀얼리스트,1)}("攻撃力")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"永攻",RESULT)
+		PRINTFORML 
+		PRINTFORMW 드래곤의 애완 해피는 주인인 드래곤에게 전과를 바쳤다。
+	ENDIF
+ENDIF

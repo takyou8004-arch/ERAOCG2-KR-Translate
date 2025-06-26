@@ -1,0 +1,312 @@
+﻿@CARDNAME_59540,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 패러사이트 여왕
+	CASE "略称"
+		RESULTS = 패러사이트여왕
+	CASE "カテゴリ"
+		RESULTS:0 = 패러사이트
+		RESULTS:1 = 묘상
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59540(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 곤충족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_59540(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 암컷 몬스터 + 레벨 2의 “패러사이트” 몬스터
+PRINTL 이 카드는 융합 소환 및 이하의 방법으로만 EX덱에서 특수 소환할 수 있다.
+PRINTL ●자신 몬스터 존의 "다크 패러사이트 퓨저너」1장 및,
+PRINTL 필드의 '패러사이트 여왕' 이외의 암컷 몬스터 1장을 융합 소재로 릴리스했을 경우에 EX덱에서 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：필드 위의 이 카드의 카드명은 소재로 사용한 암컷 몬스터와 같은 이름의 몬스터로 취급한다.
+CALLFORM CARD_ABLE(0,특수소환時,EX소환時)
+PRINTL ②：이 카드가 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 자신의 덱 / 묘지에서 '패러사이트' 몬스터를 3장까지 선택하고 이 몬스터에 장착한다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ③：이 카드의 공격력은 자신 필드 / 묘지의 '패러사이트 여왕' 이외의 '패러사이트' 몬스터 카드의 수× 300 올린다.
+CALLFORM CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ④：이 카드가 '패러사이트' 몬스터 카드를 장착하고 있을 경우, 1턴에 1번,
+PRINTL 상대 필드의 앞면 표시 몬스터 1장을 대상으로 발동할 수 있다. (이 효과는 상대 턴에도 발동할 수 있다)
+PRINTL 그 몬스터의 컨트롤을 빼앗고, 자신의 마법 & 함정 존의 '패러사이트' 몬스터 카드 1장을 그 몬스터에게 장착한다.
+CALL TEXT_DECORATION("ROGUE")
+
+;패러사이트のエ-ス。未ＯＣＧカード。フリーチェーンで상대 몬스터의 コントロール奪取できるのは妨害として優秀。
+;패러사이트を生理的に許容できるならサブプランとして使いやすい想定だが、牝性몬스터는 필드에 必要な点が注意。
+;なお패러사이트装備→コントロール奪取ではないので、패러사이트装備状態を解除してもコントロールは戻らない。嫌な原作再現。
+;효과は名称ターン１ではないので、소환条件さえクリアできているなら女王３体並べるとかやっても問題ない設計。
+;多少並べにくいものの横並べを許容してるのは、柚子シ리즈を並べて女王にして使いたいという需要を想定。
+
+
+@CARDSUMMON_59540(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件素材ID起動 = 1
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件성별 = 牝性
+ELSEIF EX参照 >= 10
+	素材条件レベル = 2
+	素材条件カテゴリ = 패러사이트
+ENDIF
+
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,59540) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_59540(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59540)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,59540)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	;효과範囲손패 = 1
+	효과範囲필드 = 1
+	;효과範囲마함 = 1
+	효과条件名前 = 다크 패러사이트 퓨저너
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	효과条件종류 = モン全般
+	효과条件固名前 = 패러사이트 여왕
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時 || 종류 == EX소환時
+	;SIF 발동済_1(듀얼리스트,59540)
+	;	RETURN 0
+	SIF	마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 패러사이트
+	효과条件종류 = モン全般
+	효과条件うらら解除 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF	GETVAR(@"%듀얼리스트%_MZ_汎数:場所") > 0
+		RETURN 1
+	SIF	GETVAR(@"%듀얼리스트%_MZ_変化元ID:場所") >= 0
+		RETURN 1
+	RETURN 0
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 패러사이트
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT == 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	효과条件除去種 = 強奪
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_59540(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正値
+#DIM DYNAMIC 選択횟수
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 出処
+#DIM DYNAMIC 대상A
+#DIM DYNAMIC 대상A_ID
+#DIM DYNAMIC 대상B
+#DIM DYNAMIC 대상B_ID
+#DIM DYNAMIC 元素材カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59540)
+	IF RESULT == 0
+		CALL FULLRESET
+		;효과範囲손패 = 1
+		효과範囲필드 = 1
+		;효과範囲마함 = 1
+		효과条件名前 = 다크 패러사이트 퓨저너
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲상대필드 = 1
+			효과条件성별 = 牝性
+			효과条件종류 = モン全般
+			효과条件固名前 = 패러사이트 여왕
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			元素材カード_ID = RESULT:1
+			IF RESULT == 1
+				;PRINTFORMW 元の素材のカードID：{元素材カード_ID}
+				CALL FULLRESET
+				CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",場所)
+				;소환소재로 한 牝性 몬스터의 IDを引き継ぐ。（参考：淫靡な슬라임クイ-ン）
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"汎数",元素材カード_ID,上書きモード)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	元素材カード_ID = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"変化元ID",元素材カード_ID)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"汎数",-1)
+	;CALL FULLRESET
+	;접촉조교も可能にしたかったが、どうもカードID上書きだけでは접촉조교は出来ないみたいなので削除
+	;CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"接可")
+ELSEIF 종류 == 특수소환時 || 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59540)
+	IF RESULT == 0
+		選択횟수 = 0
+		WHILE 選択횟수 < 3
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 패러사이트
+			효과条件종류 = モン全般
+			효과条件任意 = 1
+			CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,場所,,59540)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				選択횟수 += 1
+			ELSEIF 選択カード == 9999
+				選択횟수 += 3
+			ENDIF
+			SIF	마함数(듀얼리스트) >= 5
+				選択횟수 += 3
+		WEND
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 패러사이트
+	효과条件종류 = モン全般
+	효과条件固名前 = 패러사이트 여왕
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正値 =  RESULT * 300
+	CALL STATCHANGE_BASIC(듀얼리스트,"자신",場所,攻撃力修正値,0)
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59540,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		대상A_ID = RESULT:1
+		대상A = コントロール先
+		IF RESULT == 1
+			;コントロール先に자신의 마함の「패러사이트" 몬스터를 装備させる
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件カテゴリ = 패러사이트
+			효과条件종류 = モン全般
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			選択カード = RESULT
+			대상B_ID = RESULT:99
+			IF 選択カード != 9999
+				CALL CARD_SELECT(듀얼리스트,選択カード)
+				대상B = RESULT
+				CALL SET_FIELD_INFO(듀얼리스트,"마함",대상B,"装",대상A,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+

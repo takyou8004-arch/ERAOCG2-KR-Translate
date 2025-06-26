@@ -1,0 +1,117 @@
+﻿@CARDNAME_34206,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 참기 서브트라
+	CASE "略称"
+RESULTS = 참기 서브트라
+	CASE "カテゴリ"
+RESULTS:0 = 참기
+ENDSELECT
+
+
+@CARD_34206(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_34206(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 필드의 앞면 표시 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환하고, 대상 몬스터의 공격력을 턴 종료시까지 1000 내린다.
+PRINTL 이 효과로 특수 소환한 턴, 이 카드는 공격할 수 없다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 사이버스족 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+PRINTL 
+
+@CARDCAN_34206(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,34206)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,34206)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,34206,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_34206(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 손패選択
+#DIM 묘지送カード
+#DIM 묘지送カード_ID
+#DIM 소환カード
+#DIM 소환カード_ID
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,34206,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"一時",-1000)
+
+			CALL FULLRESET
+			효과추가종류 = 26
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+			EX소환可能종족 = 사이버스족
+			CALL CARD_EX_RESTRICTION(듀얼리스트)
+		ENDIF
+	ENDIF
+ENDIF

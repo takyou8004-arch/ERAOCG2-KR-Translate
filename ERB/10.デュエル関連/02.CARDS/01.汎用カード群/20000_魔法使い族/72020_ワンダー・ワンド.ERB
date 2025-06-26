@@ -1,0 +1,124 @@
+﻿@CARDNAME_72020,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 원더 완드
+	CASE "略称"
+RESULTS = W 완드
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_72020(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 装備마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72020(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 마법사족 몬스터에게만 장착 가능.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①장착 몬스터의 공격력은 500 올린다.
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ②장착 몬스터와 이 카드를 자신 필드에서 묘지로 보내고 발동할 수 있다.
+PRINTL 자신은 덱에서 2장 드로우한다.
+PRINTL 
+
+@CARDCAN_72020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 選択カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72020)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_필드:装備先") != -1
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 마법사족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 選択カード
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_필드:装備先") != -1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72020)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,"필드",装備先)
+		;ドロー処理
+		IF RESULT
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72020)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 마법사족
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,500)
+ENDIF

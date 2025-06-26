@@ -1,0 +1,87 @@
+@CARDNAME_92750,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 룡성 흉폭화
+	CASE "略称"
+RESULTS = 룡성 흉폭화
+	CASE "カテゴリ"
+RESULTS:0 = 룡성
+ENDSELECT
+
+
+@CARD_92750(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92750(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①：자신의 「룡성」 몬스터가 상대 몬스터와 전투를 실행할 경우에 발동할 수 있다.
+PRINTL 그 자신의 몬스터의 공격력 / 수비력은 턴 종료시까지 배가 되고,
+PRINTL 이 턴의 엔드 페이즈에 파괴된다.
+
+@CARDCAN_92750(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92750)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트) },"カテゴリ"
+	SIF !MATCH(RESULTS, "룡성")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_92750(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+IF 종류 == 攻撃時誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92750)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘場所(듀얼리스트),"一攻",GETVAR(@"%듀얼리스트%_MZ_攻:戦闘場所(듀얼리스트)"))
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘場所(듀얼리스트),"一守",GETVAR(@"%듀얼리스트%_MZ_守:戦闘場所(듀얼리스트)"))
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘場所(듀얼리스트),"終処",破壊行き)
+	ENDIF
+ENDIF

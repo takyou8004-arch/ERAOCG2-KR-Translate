@@ -1,0 +1,100 @@
+﻿;-------------------------------------------------
+;딜도
+;도구사용コマンド、レベル3
+;-------------------------------------------------
+@COM53
+;着脱の処理
+TEQUIP:딜도 = !TEQUIP:딜도
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 100
+DOWNBASE:기력 += 200
+
+CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER,600)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 100)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 50)
+
+;고통
+LOCAL = 300 * PAIN_CHECK_V(TARGET) / 1000
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+
+;처녀喪失
+CALL LOST_VIRGIN(TARGET, MASTER, 3)
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;삽입時はＶ경험+
+EXP:TARGET:Ｖ경험 += 2
+
+;이상경험
+IF TALENT:처녀 == 1 && !GETBIT(CFLAG:3,3)
+	EXP:이상경험 ++
+	SETBIT CFLAG:3,3
+ENDIF
+
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 1
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 1
+ENDIF
+
+EXP:MASTER:도구사용경험 ++
+
+RETURN 1
+
+;-------------------------------------------------
+;装着계속の処理
+;-------------------------------------------------
+@EQUIP_COM53(ARG)
+;딜도 삽입중
+PRINTL ＜딜도 삽입중＞
+
+DOWNBASE:ARG:체력 += 50
+DOWNBASE:ARG:기력 += 100
+
+CALL SOURCE_CALC_쾌Ｖ(TARGET, -1,300)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 20)
+;고통
+LOCAL = 100 * PAIN_CHECK_V(TARGET) / 1000
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;자위実行時は경험＋１
+SIF EXP_UP(22,TARGET)
+	EXP:ARG:Ｖ경험 += 2
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+
+@COM_ABLE53
+;딜도実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(53)
+	RETURN RESULT
+;解除はいつでも可能
+SIF TEQUIP:딜도
+	RETURN 1
+;オトコだとダメ
+SIF !(TALENT:2 & 1)
+	RETURN 0
+;순종、욕망の합계가 6以上ないとダメ
+SIF ABL:순종 + ABL:욕망 < 6
+	RETURN 0
+;아이템を持っているか、아이템なし설정でないとダメ
+SIF ITEM:딜도 == 0 && NOITEM == 0
+	RETURN 0
+;바이브NG
+SIF TEQUIP:바이브 || TEQUIP:로터
+	RETURN 0
+;하반신착의
+SIF TEQUIP:0 & 4
+	RETURN 0
+RETURN 1

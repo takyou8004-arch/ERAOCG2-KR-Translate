@@ -1,0 +1,152 @@
+﻿@CARDNAME_1030,参照先
+;ココで지정카드의 名前、略称を返す予定
+;#FUNCTIONS
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아마조네스 여제
+	CASE "略称"
+RESULTS = 아마조네스 여제
+	CASE "カテゴリ"
+RESULTS:0 = 아마조네스
+ENDSELECT
+
+
+@CARD_1030(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1030(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「아마조네스 여왕」＋「아마조네스」몬스터
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 이 카드 이외의 자신 필드의 「아마조네스」카드는 전투 효과로는 파괴되지 않으며, 관통 공격을 가진다.
+;PRINTL ②：융합소환した表側표시のこの카드가 상대의 효과でフィールドから離れた場合、
+CALLFORM CARD_ABLE(1,戦破壊→묘지)
+PRINTL ②: 이 카드가 전투 효과로 필드에서 벗어났을 경우에 발동할 수 있다.
+PRINTL 자신의 패 / 덱 / 묘지에서 「아마조네스 여왕」 1장을 고르고 특수 소환한다.
+
+
+@CARDCAN_1030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1030)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,1030)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,1029,"")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 아마조네스 여왕
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+
+@CARDSUMMON_1030(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 아마조네스 여왕
+ELSEIF EX参照 >= 10
+	素材条件カテゴリ = 아마조네스
+ENDIF
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,1030) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDEFFECT_1030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == 지속효과
+	;耐性付与
+	CALL FULLRESET
+	효과条件カテゴリ = 아마조네스
+	효과条件他所 = 1
+	효과条件표시 = 表側표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"貫通")
+
+	CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐")
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1030,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 아마조네스 여왕
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

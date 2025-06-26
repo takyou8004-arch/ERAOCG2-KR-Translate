@@ -1,0 +1,190 @@
+﻿@CARDNAME_99578,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = E.R.ARG☆S─열투의 파르테
+	CASE "略称"
+		RESULTS = ERARG☆S─파르테
+	CASE "カテゴリ"
+		RESULTS:0 = ARG☆S
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_99578(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 1900
+	CASE "分割"
+		RETURN 효과モン
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 1684
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99578(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 필드에 앞면 표시로 존재하는 한,
+PRINTL 자신 필드의 전사족 몬스터는 관통 공격을 얻는다.
+CALLFORM CARD_ABLE(2,마함起動,フリー誘発)
+PRINTL ②: 자신 / 상대 턴에 발동할 수 있다.
+PRINTL 이 카드는 ③④의 효과를 가지는 효과 몬스터로서 몬스터 존에 특수 소환한다 (함정 카드로서도 취급한다).
+PRINTL (전사족 / 빛 / 레벨4 / 공격력 1900 / 수비력 1900)
+CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
+PRINTL ③: 이 카드가 몬스터 존에 존재할 경우, 자신 / 상대 턴에 발동할 수 있다.
+PRINTL 몬스터 존의 이 카드를 제외한다. 그 후, 자신의 묘지 / 제외 상태인 "E.R.ARG☆S─열투의 파르테" 이외의
+PRINTL "ARG☆S" 지속 함정 카드 1장을 자신의 마법 & 함정 존에 앞면 표시로 놓을 수 있다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ④: 이 카드가 몬스터 존에 존재하고, 자신의 마법 & 함정 존의 몬스터가 몬스터 존에 특수 소환되었을 경우,
+PRINTL 상대 필드의 카드 1장을 대상으로 하여 발동할 수 있다. 그 카드를 파괴한다.
+CALL TEXT_DECORATION("ROGUE")
+
+;지속함정となって他のARG☆Sのメンバーと同等の立ち位置になったパルテ。
+;チームの大躍進の立役者となった事で少し天狗になっていた自尊心が「あなた」によって是正（方法はプレイヤー次第）され、
+;スタンドプレーを止め、チームプレーも出来るようになって、エースとして他メンバーからの信頼をさらに得られるようになった。
+;「苦紋様の土像」互換の置物효과が付き、条件なしで마함から飛び出していくチームの切り込み隊長的なムーブを仕掛けて、
+;他のチームメンバーが前線に出てくる動きを先導しつつ상대 필드を割っていく動きは、まさにチームのエースに相応しい。
+;何故これほどまでに重要な役割を実際のOCGは謎の土像が担うんですか？　と思う事もある。TCGはそういうゲームと言えばそれまでではあるが。
+
+
+@CARDCAN_99578(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99578)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	IF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+			RETURN 0
+		RETURN 1
+	ENDIF
+	SIF ゾーン == "필드"
+		RETURN 1
+	RETURN 0
+ELSEIF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || (종류 == フリー誘発 && ゾーン == "마함")
+	SIF 발동済_2(듀얼리스트,99578)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,99578,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || (종류 == フリー誘発 && ゾーン == "필드")
+	SIF 발동済_3(듀얼리스트,99578)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	;SIF 마함数(듀얼리스트) >= 5
+	;	RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"소환出処",1,2)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_最召場所") == 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99578(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과使用플래그= 0
+#DIM DYNAMIC 選択結果
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件종족 = 전사족
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"貫通")
+ELSEIF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || (종류 == フリー誘発 && ゾーン == "마함")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99578,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"마함",場所)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99578)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 필드起動 || (종류 == フリー誘発 && ゾーン == "필드")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99578,3)
+	IF RESULT == 0
+		;この카드를 제외한다。
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き)
+		IF RESULT == 1
+			;제외したら、묘지제외からパルテ 이외의 ARG☆S지속함정を任意で앞면 표시로 置ける。（任意なので、置ける카드가 なくても발동可能）
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲제외 = 1
+효과条件カテゴリ = ARG☆S
+효과条件固名前 = E.R.ARG☆S─열투의 파르테
+			효과条件종류 = 지속함정
+			효과条件任意 = 1
+			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99578)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+ENDIF
+

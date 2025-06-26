@@ -1,0 +1,216 @@
+@CARDNAME_79628,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 바르모니카 서키아레
+	CASE "略称"
+		RESULTS = Suckiare
+	CASE "カテゴリ"
+		RESULTS:0 = 바르모니카
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79628(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79628(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  카드는 1턴에 1장 밖에 발동 할 수 없다.
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：향명 카운터를 놓을 수 있는 자신의 마법 & 함정 존의 카드 1장에 햐명 카운터를 1개 놓는다.
+PRINTL 그 후, 이하의 효과 중 1 개를 선택하여 적용한다.
+PRINTL ●자신은 500LP를 회복한다.
+PRINTL 그 후, 상대 필드의 카드 1장을 제외한다.
+PRINTL ●자신은 500LP 데미지를 받는다.
+PRINTL 그 후, 덱에서「바르모니카" 몬스터 1장을 패로 가져올 수 있다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79628(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79628)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79628)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前:0 = 안젤로 바르모니카
+	효과条件名前:1 = 데모네 바르모니카
+	효과条件名前:2 = 서큐베 바르모니카
+	효과条件名前:3 = 바르모니카의 음란신-Lussuria
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79628(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79628,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CUSTOMDRAWLINE —
+		PRINTL 【響鳴카운터を乗せる 카드를 選択】
+		CUSTOMDRAWLINE —
+		CALL FULLRESET
+		효과条件名前:0 = 안젤로 바르모니카
+		효과条件名前:1 = 데모네 바르모니카
+		효과条件名前:2 = 서큐베 바르모니카
+		효과条件名前:3 = 바르모니카의 음란신-Lussuria
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"마함",ゾーン,場所,79628)
+		SIF RESULT == 9999
+			RETURN 0
+		選択カード = RESULT
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",選択カード,"個Ｃ",1)
+		IF 듀얼리스트 == "자신"
+			PRINTL
+			PRINTL 어떤 느낌의
+			PRINTL 　음을 선택해?
+			PRINTL
+			PRINTL （속닥속닥…！）
+			PRINTL （회복하면서 상대 필드의 카드 1장을 제외 해버리자…！）[0]
+			PRINTL
+			PRINTL （소근소근…♪）
+			PRINTL （데미지는 신경쓰지말고「바르모니카" 몬스터 1장을 가져오자…♪）[1]
+			BINPUT
+			IF RESULT == 0
+				CALL CARDEFFECT_79628_1(듀얼리스트,종류,ゾーン,場所)
+			ELSEIF RESULT == 1
+				CALL CARDEFFECT_79628_2(듀얼리스트,종류,ゾーン,場所)
+			ENDIF
+		;상대가 발동
+		ELSEIF 듀얼리스트 == "상대"
+			SELECTCASE RAND:2
+				CASE 0
+					PRINTFORML 選ばれた효과 
+					PRINTFORMW ●５００ＬＰ回復する。그 후、상대 필드의 카드 １장을 제외한다。
+					CALL CARDEFFECT_79628_1(듀얼리스트,종류,ゾーン,場所)
+				CASE 1
+					PRINTFORML 選ばれた효과 
+					PRINTFORMW ●５００데미지를 受ける。그 후、덱에서 "바르모니카" 몬스터 １장을 패에 넣을 수 있다。
+					CALL CARDEFFECT_79628_2(듀얼리스트,종류,ゾーン,場所)
+			ENDSELECT
+		ENDIF
+	ENDIF
+ENDIF
+
+
+@CARDEFFECT_79628_1(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL FULLRESET
+CALL LIFE_CHANGE(듀얼리스트,"増加","효과",500)
+CALL FULLRESET
+CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"제외")
+
+CALL FULLRESET
+효과範囲필드 = 1
+효과条件名前:0 = 셀레트리체 바르모니카
+효과条件名前:1 = 바르모니카의 음란신-Lussuria
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+IF RESULT == 1 && TALENT:MASTER:성별 >= 2
+	TARGET = NO_TO_CHARANUM(2140)
+	PRINTFORML 
+	CALL MESSAGE_COM11
+	PRINTFORML 
+	CALL COM11
+	CALL CARD_EROTICS_END(TARGET)
+	WAIT
+	TARGET = LOCAL
+ENDIF
+
+RETURN
+
+
+@CARDEFFECT_79628_2(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL FULLRESET
+CALL LIFE_CHANGE(듀얼리스트,"減少","효과",500)
+CALL FULLRESET
+효과条件任意 = 1
+효과条件カテゴリ = 바르모니카
+효과条件종류 = モン全般
+CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+CALL FULLRESET
+효과範囲필드 = 1
+효과条件名前:0 = 셀레트리체 바르모니카
+효과条件名前:1 = 바르모니카의 음란신-Lussuria
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+IF RESULT == 1 && TALENT:MASTER:성별 >= 2
+	TARGET = NO_TO_CHARANUM(2140)
+	PRINTFORML 
+	CALL MESSAGE_COM81
+	PRINTFORML 
+	CALL COM81
+	CALL CARD_EROTICS_END(TARGET)
+	WAIT
+	TARGET = LOCAL
+ENDIF
+
+RETURN
+

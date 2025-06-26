@@ -1,0 +1,118 @@
+﻿@CARDNAME_70101,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 푸른 눈의 격림
+	CASE "略称"
+RESULTS = 푸른 눈의 격림
+	CASE "カテゴリ"
+RESULTS:0 = 푸른 눈의 백룡
+ENDSELECT
+
+
+@CARD_70101(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_70101(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이번 턴, 특수 소환하지 않았을 경우, 소환권을 하나 소비하여 발동할 수 있다.
+CALLFORM CARD_ABLE(0,마함起動,손패起動,フリー誘発)
+PRINTL ①: 자신의 패 / 필드 / 묘지의 카드를 전부 제외하고,
+PRINTL 덱에서 「푸른 눈의 백룡」을 3체까지 특수 소환한다.
+PRINTL 이번 턴 자신은 「푸른 눈의 백룡」 카드밖에 특수 소환할 수 없다.
+
+@CARDCAN_70101(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,70101)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件名前 = 푸른 눈의 화이트 드래곤
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF 소환権 == 0
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_특수소환횟수") >= 1 
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_70101(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 소환カード
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70101)
+	IF RESULT == 0
+		;通常마법汎用발동後묘지送り処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		;何も残らない
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"필드",カウンタ,1)
+		NEXT
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_마함:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"마함",カウンタ,1)
+		NEXT
+		FOR カウンタ,0,紙束最大値
+			SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"손패",カウンタ,1)
+		NEXT
+		FOR カウンタ,0,紙束最大値
+			SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"묘지",カウンタ,1)
+		NEXT
+		CALL FULLRESET
+		효과範囲덱 = 1
+효과条件名前 = 푸른 눈의 화이트 드래곤
+		효과条件複数 = 97
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		CALL CARD_EX_RESTRICTION(듀얼리스트,"푸른 눈의 백룡")
+	ENDIF
+ENDIF

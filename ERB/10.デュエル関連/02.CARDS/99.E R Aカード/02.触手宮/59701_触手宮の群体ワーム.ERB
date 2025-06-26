@@ -1,0 +1,474 @@
+﻿@CARDNAME_59701,参照先
+;ココで지정 카드의 名前、略称を返す予定
+;CALLFORM 等で名前を취득する際に使用されたりする
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 촉수궁의 군체 웜
+	CASE "略称"
+		RESULTS = 촉수궁 군체 웜
+	CASE "カテゴリ"
+		RESULTS:0 = 촉수
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59701(参照先)
+;종족他を설정。
+;CALLFORM 等でステータスを취득する際に使用されたりする
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 200
+	CASE "守備力"
+		RETURN 200
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_59701(듀얼리스트,소환カード,EX参照)
+;EX소환条件をここに書く
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+;素材条件カテゴリ = 촉수
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,59701) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_59701(종류)
+; 카드의 텍스트はここに書く
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 몬스터 × ２
+CALL CARD_ABLE(0,EX덱起動)
+PRINTL 이 카드는 자신 필드의 레벨 1 「촉수」 위에 겹쳐서 엑시즈 소환할 수 잇다。
+PRINTL 이 카드명의  ②③의 효과는 1턴에 1번 밖에 사용할 수 없다。
+;PRINTL 이 카드는 엑시즈 소환의 소재로 사용할 수 없다。
+
+CALL CARD_ABLE(0,攻撃時誘発)
+PRINTL ①：이 카드가 몬스터와의 전투를 할 경우, 이카드의 엑시즈 소재를 임의의 수만큼 제거하고 발동할 수 잇다。
+PRINTL 전투를 하는 상대 몬스터의 공격력 / 수비력은 제거한 엑시즈 소재 수×２００ 만큼 감소시킨다。
+
+CALL CARD_ABLE(2,攻撃後誘発)
+PRINTL ②：이 카드가 전투로 여성 몬스터를 파괴했을 때에 발동할 수 있다。
+PRINTL 그 몬스터를 장착 카드 취급하여 이 카드에 장착하고 「묘상」 카테고리를 추가한다。
+
+CALL CARD_ABLE(3,필드起動)
+PRINTL ③：자신 / 상대 필드의 "묘상」 몬스터 1장을 묘지에 보내고 발동할 수 있다。
+PRINTL 필드의 "촉수」 카드의 수만큼, 이 카드의 엑시즈 소재를 추가한다。
+PRINTL 필드가 「촉수궁」일 경우에, 증가하는 엑시즈 소재는 2배가 된다。
+
+CALL CARD_ABLE(0,身代효과)
+PRINTL ④：이 카드가 파괴될 경우, 대신에 이 카드의 엑시즈 소재 1개를 제거할 수 있다。
+
+@CARDCAN_59701(듀얼리스트,종류,ゾーン,場所)
+;효과발동可否判別部分
+;ここを適当にやると全然관계ないときに処理が走り変数の範囲外を触ったりして強制종료한다。
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+;スキドレ等の無効판정他チェック
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59701)
+SIF RESULT == 1
+	RETURN 0
+
+;ターンごとの対面者を취득
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;EXからの특수소환(下敷きモード)が可能かのチェック
+IF 종류 == EX덱起動
+	;メインフェイズ 이외의 場合は발동불가
+	SIF メインフェイズ != 1
+		RETURN 0
+	;자신의 ターン 이외의 場合は발동불가
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;EX소환が可能でなければ발동불가
+	CALL CARD_EX_CHECK(듀얼리스트,59701)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	;下の条件の 몬스터가 いなければ발동불가
+	효과範囲필드 = 1
+	효과条件カテゴリ = 촉수
+	효과条件レベル = 1
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;全部問題なければ발동可能
+	RETURN 1
+
+;身代わり효과が발동可能かチェック
+ELSEIF 종류 == 身代효과
+	;フィールド에 존재하고ない場合は발동불가
+	SIF ゾーン != "필드"
+		RETURN 0
+	;자신を대상으로 하고 いない場合は발동불가
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	;X소재를 持っていなければ발동불가
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	;효과 戦闘破壊"以外"であれば발동불가
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	;全部問題なければ발동可能
+	RETURN 1
+
+;戦闘の直前に효과が발동可能かチェック
+ELSEIF 종류 == 攻撃時誘発
+	;フィールド에 존재하고ない場合は발동불가
+	SIF ゾーン != "필드"
+		RETURN 0
+	;バトルフェイズ以外は발동불가
+	SIF バトルフェイズ != 1
+		RETURN 0
+	;자신이 戦闘していない場合は발동불가
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	;戦闘상대가 存在していない場合は발동불가
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	;X소재를 持っていなければ발동불가
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	;全部問題なければ발동可能
+	RETURN 1
+
+;戦闘の直後に효과が발동可能かチェック
+ELSEIF 종류 == 攻撃後誘発
+	;フィールド에 존재하고ない場合は발동불가
+	SIF ゾーン != "필드"
+		RETURN 0
+	;この②효과를 すでに발동している場合は발동불가
+	SIF 발동済_2(듀얼리스트,59701)
+		RETURN 0
+	;자신이 戦闘していない場合は발동불가
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	;戦闘상대を破壊していない場合は발동불가
+	SIF GETVAR(@"%対面者%_直前戦闘破壊") == 0
+		RETURN 0
+	;戦闘파괴한 몬스터가 ♀ 이외의 場合は발동불가
+	CALLFORM CARD_{GETVAR(@"%対面者%_直前戦闘破壊")}("성별")
+	SIF RESULT != 牝性
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	;全部問題なければ발동可能
+	RETURN 1
+
+;フィールドで효과が발동可能かチェック
+ELSEIF 종류 == 필드起動
+	;メインフェイズ 이외의 場合は발동불가
+	SIF メインフェイズ != 1
+		RETURN 0
+	;자신의 ターン 이외의 場合は발동불가
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;この③효과를 すでに발동している場合は발동불가
+	SIF 발동済_3(듀얼리스트,59701)
+		RETURN 0
+	;下の条件の 몬스터가 いなければ발동불가
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 묘상
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;全部問題なければ발동可能
+	RETURN 1
+
+; 엔드 페이즈에 효과が발동可能かチェック
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "필드"
+		RETURN 0
+	;下の条件の 몬스터가 いなければ발동불가
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 묘상
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;全部問題なければ발동可能
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59701(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタA
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC X消費
+#DIM DYNAMIC X素材数
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 효과대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	;효과발동選択(ターン１なし)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59701)
+	IF RESULT == 0
+		;検索条件を初期化(ゾーン관계なし)
+		CALL RESETCONDITION_MAT
+		;소환条件설정
+		必要素材数 = 1
+		素材条件カテゴリ = 촉수
+		素材条件レベル = 1
+		重ねてＸ = 1
+		;可能であればEX소환処理
+		TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	;효과발동選択(ターン１なし)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59701)
+	IF RESULT == 0
+		;현재의 X소재의 수を취득
+		X素材数 = 1 + GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所")
+		IF 듀얼리스트 == "자신"
+			;자신의 場合はコスト入力
+			PRINTFORML 取り除くX소재의 수を入力してください(1～{X素材数})
+			INPUT 
+		ELSEIF 듀얼리스트 == "상대"
+			;상대의 場合は自動計算
+			RESULT = GETVAR(@"%対面者%_MZ_攻:(%対面者%_戦闘カード)") / 200
+		ENDIF
+		X消費 = RESULT
+		;コストが望ましくない場合は修正
+		SIF RESULT == 0
+			X消費 = 1
+		SIF RESULT > X素材数
+			X消費 = X素材数
+		PRINTFORML X소재를 {X消費}取り除きます。	
+		;低下させる守備力を취득
+		攻撃力修正 = X消費 * 200
+		;X소재를 コスト分減らす
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",-X消費)
+		;상대 몬스터를 취득
+		選択カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		;"永攻DOWN"의 효과選択として10番(永守)を설정
+		효과추가종류 = 10
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"永攻DOWN",59701,攻撃力修正)
+
+		PRINTFORMW 상대 몬스터의 공격력 / 수비력은 {攻撃力修正}ダウンしてしまった！
+	ENDIF
+ELSEIF 종류 == 身代효과
+	;효과발동選択(ターン１なし、Xコスト1)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59701,0,X消費1)
+	IF RESULT == 0
+		PRINTFORML 촉수궁 군체 웜은 자신을 구성하는 촉수로 대신하였다。
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 攻撃後誘発
+	;②효과발동選択(ターン１)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59701,2)
+	IF RESULT == 0
+		;検索条件を初期化(すべて)
+		CALL FULLRESET
+		;直前に파괴한  카드의 名前を취득
+		CALLFORM CARDNAME_{GETVAR(@"%対面者%_直前戦闘破壊")}("名前")
+		;대상となる名称及び효과後に適用されるカテゴリ-を설정
+		효과条件名前 = %RESULTS%
+		효과추가カテ = 묘상
+		;대상 카드를 選択 場所취득
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "상대묘지",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			;조교可能かチェック(可能なら조교IDがかえってくる)
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"묘지",選択カード,1)
+			IF RESULT != -1
+				조교대상 = RESULT
+				PRINTFORMW %CALLNAME:조교대상%은 촉수궁 군체 웜 안에 사로잡혀 버렸다！
+				;현재의 X소재의 수を취득しその数に応じた조교효과를 処理
+				X素材数 = GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所")
+				SELECTCASE X素材数
+					CASE IS >= 20
+						PRINTFORML %CALLNAME:조교대상%은 크고 작은 다양한 촉수로 전신이 범해지고 있다。
+						CALL SOURCE_CALC_쾌Ｍ(조교대상, -1, (25* X素材数))
+						CALL SOURCE_CALC_쾌Ｃ(조교대상, -1, (25* X素材数))
+						CALL SOURCE_CALC_쾌Ｖ(조교대상, -1, (25* X素材数))
+						CALL SOURCE_CALC_쾌Ｂ(조교대상, -1, (25* X素材数))
+						CALL SOURCE_CALC_쾌Ａ(조교대상, -1, (25* X素材数))
+					CASE IS >= 15
+						PRINTFORML 촉수들은 마침내 %CALLNAME:조교대상%의 속옷 안까지 침투에 성공한 것 같다。
+						PRINTFORML %CALLNAME:조교대상%은 가장 중요한 부분만은 지키려고 필사적으로 저항하고 있다。
+						CALL SOURCE_CALC_쾌Ｍ(조교대상, -1, (20* X素材数))
+						CALL SOURCE_CALC_쾌Ｃ(조교대상, -1, (20* X素材数))
+						CALL SOURCE_CALC_쾌Ｂ(조교대상, -1, (20* X素材数))
+					CASE  IS >= 10
+						PRINTFORML 촉수들은 %CALLNAME:조교대상%의 입을 목표로 정한 것 같다。
+						PRINTFORML %CALLNAME:조교대상%은 다른 부위의 저항에 신경이 쏠려 입 안으로의 침입을 허용해 버렸다。
+						CALL SOURCE_CALC_쾌Ｍ(조교대상, -1, (20* X素材数))
+						CALL SOURCE_CALC_쾌Ｂ(조교대상, -1, (20* X素材数))
+					CASE  IS >= 5
+						PRINTFORML %CALLNAME:조교대상%의 가슴을 촉수들이 감싼다…
+						CALL SOURCE_CALC_쾌Ｂ(조교대상, -1, (20* X素材数))
+					CASEELSE
+						PRINTFORMW %CALLNAME:조교대상%은 촉수에 붙잡히면서도 필사적으로 저항하고 있다…
+				ENDSELECT  
+				CALL SOURCE_CALC_불결(조교대상, -1, (20* X素材数))
+				CALL SOURCE_CALC_拘束(조교대상, -1, (20* X素材数))
+				CALL SOURCE_CALC_고통(조교대상, -1, (50 * X素材数))
+
+				CALL CARD_EROTICS_END(조교대상)
+			ENDIF
+			;선택한 몬스터를 (♂♀問わず)装備
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,場所,"상대묘지",選択カード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	;③효과발동選択(ターン１)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59701,3)
+	IF RESULT == 0
+		;検索条件を初期化(すべて)
+		CALL FULLRESET
+		;検索範囲 条件を설정
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과範囲마함 = 1
+		효과範囲상대마함 = 1
+		효과条件カテゴリ = 묘상
+		효과条件종류 = モン全般
+		;検索条件に当てはまる 카드를 선택하고、묘지로 보る
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			選択カード = RESULT:1
+			CALL FULLRESET
+			;추가するX소재의 수を취득
+			효과範囲필드 = 1
+			효과範囲상대필드 = 1
+			효과範囲마함 = 1
+			효과範囲상대마함 = 1
+			효과条件カテゴリ = 촉수
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			X消費 = RESULT
+			;フィールドが"촉수궁"なら*素材2倍*
+			SIF GETVARS(@"%듀얼리스트%_フィールド名") == "촉수궁"
+				X消費 = X消費 * 2
+			;ほんとは조교可否で텍스트分けたかったけどエロ텍스트が！書けない！！
+				TRYCALLFORM CARDNAME_{選択カード}, "名前"
+				SETCOLOR C_PINK
+				PRINTFORML %RESULTS%은 대량에 촉수에 삼켜져 마지막에는 완전히 삼켜져 버렸다……
+				RESETCOLOR
+				PRINTFORML ………
+				PRINTFORML ……
+				PRINTFORML …
+				PRINTFORMW 그 후, %RESULTS%가 있던 장소에 남아 있던 것은 윔의 무리뿐이었다………。
+			;대상箇所の조교IDを취득(IDが존재하지 않는 경우はスキップ)
+			CALL CARD_EROTICS(選択カード)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL EROTIC_MOVE("묘상 포박",조교대상, -1, (15* X素材数))
+			ELSE
+
+			ENDIF
+			PRINTFORML
+			;엑시즈 소재 추가
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",X消費)
+			PRINTFORMW 촉수궁 군체 웜의 엑시즈 소재가 {X消費} 증가했다！
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ターン終了時
+	FOR カウンタA,0,10
+		;듀얼리스트/対面者のル-プを一括で処理するためにカウンタに細工する
+		IF カウンタA < 5
+			효과대상 = %듀얼리스트%
+			カウンタB = カウンタA
+		ELSE
+			효과대상 = %対面者%
+			カウンタB = カウンタA - 5
+		ENDIF
+		;마함존에 카드가 存在しなければ次のル-プ
+		SIF GETVAR(@"%효과대상%_마함:{カウンタB}") == -1
+			CONTINUE
+		;대상箇所の조교IDを취득(IDが존재하지 않는 경우はスキップ)
+		CALL CARD_EROTICS_FIELD(효과대상,"마함",カウンタB)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML %CALLNAME:조교대상%은 촉수의 무리에 사로잡혀 필사적으로 몸부림 치고 있다。
+			;현재의 X소재의 수を취득しその数に応じた조교효과를 処理
+			X素材数 = GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所")
+			PRINTFORML
+			SETCOLOR C_PINK
+			SELECTCASE X素材数
+				CASE IS >= 20
+					PRINTFORMW %CALLNAME:조교대상%크고 작은 다양한 촉수에게 전신을 범해지고 있다……
+					CALL SOURCE_CALC_쾌Ｍ(조교대상, -1, (25 * X素材数))
+					CALL SOURCE_CALC_쾌Ｃ(조교대상, -1, (25 * X素材数))
+					CALL SOURCE_CALC_쾌Ｖ(조교대상, -1, (25 * X素材数))
+					CALL SOURCE_CALC_쾌Ｂ(조교대상, -1, (25 * X素材数))
+					CALL SOURCE_CALC_쾌Ａ(조교대상, -1, (25 * X素材数))
+				CASE IS >= 15
+					PRINTFORML 촉수들은 마침내 %CALLNAME:조교대상%의 속옷 안으로 침투에 성공한 것 같다。
+					PRINTFORMW %CALLNAME:조교대상%의 가장 주용한 부분만은 지키려고 필사적으로 저항하고 있다。
+					CALL SOURCE_CALC_쾌Ｍ(조교대상, -1, (20 * X素材数))
+					CALL SOURCE_CALC_쾌Ｃ(조교대상, -1, (20 * X素材数))
+					CALL SOURCE_CALC_쾌Ｂ(조교대상, -1, (20 * X素材数))
+				CASE  IS >= 10
+					PRINTFORML 촉수들은 %CALLNAME:조교대상%입을 목표로 정한 것 같다
+					PRINTFORMW %CALLNAME:조교대상%은 다른 부위에 저항에 신경을 쓰고 있어 입안으로의 침입을 허용했다。
+					CALL SOURCE_CALC_쾌Ｍ(조교대상, -1, (20 * X素材数))
+					CALL SOURCE_CALC_쾌Ｂ(조교대상, -1, (20 * X素材数))
+				CASE  IS >= 5
+					PRINTFORMW %CALLNAME:조교대상%의 가슴에 촉수들이 몰려들었다…
+					CALL SOURCE_CALC_쾌Ｂ(조교대상, -1, (20 * X素材数))
+				CASEELSE
+					PRINTFORMW %CALLNAME:조교대상%는 촉수들에게 붙잡히면서도 필사적으로 저항하고 있다…
+			ENDSELECT  
+			RESETCOLOR
+			CALL SOURCE_CALC_불결(조교대상, -1, (20 * X素材数))
+			CALL SOURCE_CALC_拘束(조교대상, -1, (20 * X素材数))
+			CALL SOURCE_CALC_고통(조교대상, -1, (50 * X素材数))
+			CALL CARD_EROTICS_END(조교대상)
+		ENDIF
+	NEXT
+ENDIF

@@ -1,0 +1,98 @@
+﻿@CARDNAME_92441,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 이매지너리 아크 턴 백
+	CASE "略称"
+RESULTS = 허강연기 재동
+	CASE "カテゴリ"
+RESULTS:0 = 이매지너리
+ENDSELECT
+
+
+@CARD_92441(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92441(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①: 자신의 몬스터(빛속성)가 전투 / 효과로 파괴되었을 경우 발동할 수 있다.
+PRINTL 자신의 묘지에서 '메탈리온' 또는 '이매지너리' 몬스터 1장을 선택하여 특수 소환한다.
+
+
+@CARDCAN_92441(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92441)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,92441)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ:0 = 메탈리온
+	효과条件カテゴリ:1 = 이매지너리
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件속성 = 빛속성
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_92441(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92441,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ:0 = 메탈리온
+		효과条件カテゴリ:1 = 이매지너리
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

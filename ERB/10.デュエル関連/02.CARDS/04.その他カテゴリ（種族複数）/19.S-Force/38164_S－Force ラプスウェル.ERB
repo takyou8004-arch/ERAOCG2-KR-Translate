@@ -1,0 +1,186 @@
+﻿@CARDNAME_38164,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = S－Force 라프스웰
+	CASE "略称"
+RESULTS = SF 라프스웰
+	CASE "カテゴリ"
+RESULTS:0 = S－Force
+ENDSELECT
+
+
+@CARD_38164(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_38164(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(2,특수소환時)
+PRINTL ①: 이 카드가 특수 소환에 성공했을 경우,
+PRINTL 「S－Force 라프 스웰」 이외의 자신의 묘지의 「S－Force」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 특수 소환한다.
+
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ②: 패에서 「S－Force」 카드 1장을 제외하고 발동할 수 있다.
+PRINTL 자신 필드의 「S－Force」 몬스터의 수만큼 상대 몬스터를 고르고,
+PRINTL 그 카드들을 모두 파괴한다.
+
+@CARDCAN_38164(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38164)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,38164)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = S－Force
+	효과条件固名前 = S－Force 라프스웰
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,38164)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前:0 = S－Force 레트로 액티브
+	효과条件名前:1 = S－Force 체이스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 1
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = S－Force
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_38164(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC リピート数
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38164,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前:0 = S－Force 레트로 액티브
+		효과条件名前:1 = S－Force 체이스
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+PRINTL 묘지의 S－Force 효과 대용 카드를 제외합니까?
+			CALL YN_CHOICE(듀얼리스트)
+		ELSE
+			RESULT = 1
+		ENDIF
+		
+		IF RESULT == 0
+			CALL FULLRESET
+			효과条件名前:0 = S－Force 레트로 액티브
+			효과条件名前:1 = S－Force 체이스
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL CARD_DISPOSE(듀얼리스트,"묘지",選択カード)
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과条件カテゴリ = S－Force
+				효과条件CNT = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				リピート数 = RESULT
+				CALL FULLRESET
+				효과条件複数 = 100 - リピート数
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+			ENDIF
+		ELSEIF RESULT == 1
+			CALL FULLRESET
+			효과条件カテゴリ = S－Force
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		選択カード = RESULT
+			IF 選択カード != 9999
+				CALL CARD_DISPOSE(듀얼리스트,"손패",選択カード,1)
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과条件カテゴリ = S－Force
+				효과条件CNT = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				リピート数 = RESULT
+				CALL FULLRESET
+				효과条件複数 = 100 - リピート数
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38164,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = S－Force
+		효과条件固名前 = S－Force 라프스웰
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

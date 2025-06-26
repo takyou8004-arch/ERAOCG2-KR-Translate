@@ -1,0 +1,102 @@
+﻿@CARDNAME_73185,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 누메론 창조
+	CASE "略称"
+RESULTS = 누메론 창조
+	CASE "カテゴリ"
+RESULTS:0 = 누메론
+RESULTS:1 = 갤럭시 아이즈
+RESULTS:2 = 갤럭시
+ENDSELECT
+
+
+@CARD_73185(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73185(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①: 공격력 3000 이상의 드래곤족 빛 속성 몬스터가 필드에 3체 이상 존재할 경우에 발동할 수 있다.
+PRINTL EX덱에서 드래곤족의 「No.」 X 몬스터 1장을 특수 소환하고, 그 몬스터의 X 소재를 1개 늘린다.
+
+@CARDCAN_73185(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73185)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,73185)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件종족 = 드래곤족
+	효과条件속성 = 빛속성
+	효과条件以攻撃力 = 3000
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 2
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종족 = 드래곤족
+	효과条件カテゴリ = 넘버즈
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73185(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 選択カード
+#DIM 選択レベル
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73185,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종족 = 드래곤족
+		효과条件カテゴリ = 넘버즈
+		효과추가종류 = 効追Ｘ素
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

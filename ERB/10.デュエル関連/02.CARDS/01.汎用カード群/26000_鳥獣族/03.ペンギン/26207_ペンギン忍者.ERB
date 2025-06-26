@@ -1,0 +1,132 @@
+@CARDNAME_26207,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 펭귄 닌자
+	CASE "略称"
+RESULTS = 펭귄 닌자
+	CASE "カテゴリ"
+RESULTS:0 = 펭귄
+RESULTS:1 = 닌자
+ENDSELECT
+
+
+@CARD_26207(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 700
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26207(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1회밖에 사용할 수 없다.
+SIF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == 戦闘→묘지
+	SETCOLOR C_YELLOW
+CALLFORM CARD_ABLE(0,소환時 ,특수소환時 ,戦闘→묘지)
+PRINTL ①: 이 카드가 소환 특수 소환했을 경우, 또는 전투로 파괴된 경우,
+PRINTL 상대 필드의 마법 / 함정 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드를 주인의 패로 되돌린다.
+RESETCOLOR
+SIF 종류 == 필드起動
+	SETCOLOR C_YELLOW
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신 필드의 "펭귄" 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터를 패로 되돌리고, 패에서 "펭귄" 몬스터 1장을 특수 소환한다.
+RESETCOLOR
+
+@CARDCAN_26207(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26207)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == 戦闘→묘지
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,26207)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 펭귄
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26207(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 除去種
+
+IF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26207)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+효과条件名前 = 부정펭귄
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			除去種 = 제외
+		ELSE
+			除去種 = 손패
+		ENDIF
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,除去種)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26207,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 펭귄
+		효과条件行先플래그 = 손패行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			;패에서 펭귄を소환
+			효과範囲손패 = 1
+			효과条件カテゴリ = 펭귄
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)	
+		ENDIF
+	ENDIF
+ENDIF
+

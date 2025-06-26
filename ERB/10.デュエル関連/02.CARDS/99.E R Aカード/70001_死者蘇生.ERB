@@ -1,0 +1,106 @@
+﻿@CARDNAME_79616,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 죽은 자의 모독
+	CASE "略称"
+		RESULTS = 죽은 자의 모독
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79616(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79616(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①：자신 / 상대 묘지의 암컷 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터를 자신 필드에 효과를 무효로 하고 특수 소환한다.
+PRINTL 그 몬스터는 언데드족 몬스터로 취급한다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79616(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79616)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	;最低でもモンスター1枚あればOK
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲상대묘지 = 1
+	효과条件종류 = モン全般
+	효과条件성별 = 牝性
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79616(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードレベル
+#DIM DYNAMIC 조교대상
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79616)
+	IF RESULT == 0
+		;通常마법汎用발동後묘지送り処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과条件성별 = 牝性
+		효과추가종류:0 = 695
+		효과추가종류:1 = 100 + 언데드족
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL CARD_EROTICS(RESULT:1)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML 
+			PRINTFORMW %NAME:조교대상%은 “우~아~아...” 하는 신음소리를 내며 불완전하게 소생했다。
+			PRINTFORML 
+			CALL EROTIC_MOVE("노출単発",조교대상,-1,100)
+			WAIT
+		ENDIF
+
+
+	ENDIF
+ENDIF

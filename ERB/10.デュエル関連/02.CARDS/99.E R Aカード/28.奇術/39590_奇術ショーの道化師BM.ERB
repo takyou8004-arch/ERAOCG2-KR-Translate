@@ -1,0 +1,229 @@
+@CARDNAME_39590,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마술쇼의 도화사：블랙 매지션
+	CASE "略称"
+		RESULTS = 기술의도화사B.M
+	CASE "カテゴリ"
+		RESULTS:1 = 기술
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39590(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 7
+	CASE "Xレベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2100
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250415
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39590(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+;開幕尊厳破壊
+SETCOLOR C_YELLOW
+PRINTL 
+PRINTL 이 카드는 룰 상 "블랙 매지션" 및 "블랙 매지션" 카드로 취급할수 없다。
+PRINTL 
+RESETCOLOR
+PRINTL 이 카드명의  ①③의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①：이 카드가 패 / 묘지에 존재하는 경우、"기술"카드 １장을 패 / 덱에서 묘지로 보내고 발동할 수 있다。
+PRINTL 그 카드를 어디에서 묘지로 보냈는가에 의해 이하의 효과를 적용한다。
+PRINTL ●패：이 카드를 특수 소환한다。
+PRINTL ●덱：이 카드를 덱 가장 아래로 되돌린다。패에서 되돌린 경우、추가로 자신은 １장 드로우한다。
+PRINTL 이 효과의 발동 후、턴 종료시까지 자신은 ＥＸ덱에서 Ｘ몬스터밖에 특수 소환할 수 없다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드를 Ｘ소환에 사용하는 경우、이 카드의 레벨을 ６으로 취급할 수 있다。
+CALLFORM CARD_ABLE(3,제외時)
+PRINTL ③：이 카드가 제외될 경우에 발동할 수 있다。자신의 묘지 / 제외 상태인、
+PRINTL "마술쇼의 도화사：블랙 매지션" 이외의 "기술" 카드를 ３장까지 골라 덱으로 되돌린다。
+PRINTL 그 후、자신은 １장 드로우 한다。
+CALL TEXT_DECORATION("ROGUE")
+
+;기술の重要な初動札なんだけど、実際の活躍としては손패コストで使われたり、손패や묘지에서 덱에 戻ったり。
+;필드에 出ても엑시즈素材としてガ-ルに踏みつけにされる。제외時의 효과도 リソ-ス回復に優秀なので、
+;手招きや天秤の묘지コストとして積極的に제외されるという散々な扱いを受ける。マハ-ド（블랙 매지션）ではない存在
+
+;イメ-ジとしては「パンドラ」の名前を騙って最高のマジシャン使い（마스터オブマジシャン）を自称してたERAグ-ルズ幹部が、
+;「あなた」 또는 それに似た천년아이템所持者との어둠의 デュエルで패배し、なんやかんやあってカードにされたというような설정。
+;原作遊戯王初期みたいなキツめの罰ゲ-ムを喰らってカードになり、過去に散々な扱い（イカサマのためにカード切ったりとか）をした
+;판도라 매지션 걸に苛められる役割を持った存在と定義された。（そういうフレ-バ-があの世界のVBには記載されてるらしい）
+;『판도라 매지션 걸に苛められる無様な캐릭터クタ-』という설정に従うしか할 수 없으며、屈辱にまみれた日々を強いられている。
+;でもPMGに女王様気質があるのは、道化師がそういう妖艶な女を기술ショ-のアシスタントとして好んでたのが原因。ある意味で因果応報。
+
+
+@CARDCAN_39590(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39590)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,39590)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件カテゴリ = 기술
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;黒衣룡アルビオン효과は손패起動じゃないとうらら反応しないとか難しすぎる
+	;プレイヤー側は気にせずうらら投げれば덱에서 落とす処理を止められるはず
+	SIF ゾーン != "손패"
+		CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 제외時
+	SIF 발동済_3(듀얼리스트,39590)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件他所 = 1
+	효과条件カテゴリ = 기술
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39590(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 추가효과플래그 = 0
+#DIM DYNAMIC 손패枚数＿前
+#DIM DYNAMIC 손패枚数＿後
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39590,1)
+	SIF ゾーン == "손패"
+		추가효과플래그 = 1
+	손패枚数＿前 = 손패数(듀얼리스트)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과条件カテゴリ = 기술
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			손패枚数＿後 = 손패数(듀얼리스트)
+			IF 손패枚数＿前 == 손패枚数＿後
+				CALL FULLRESET
+				CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,2)
+				SIF 추가효과플래그 == 1
+					CALL CARDDRAW_BASIC(듀얼리스트,1)
+			ELSE
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+		
+		;엑시즈縛りをつける
+		EX소환可能종류 = 엑시즈
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+	ENDIF
+ELSEIF 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39590,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 기술
+		효과条件固名前 = 마술쇼의 도화사：블랙 매지션
+		효과条件行先플래그 = 덱行き
+		효과条件複数 = 97
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			;필드에 PMGが存在している경우、フレ-バ-を流す。
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ = 기술
+			효과条件종류 = 엑시즈
+			효과条件スーパー名前 = 마술쇼의 조수：판도라 매지션 걸
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1 && !발동済_D1(듀얼리스트,39590)
+				;フレ-バ-
+				CUSTOMDRAWLINE -
+				PRINTL 
+				PRINTW 마력도 지위도 빼앗겨、도화사로 전락해버린 남자가 이차원에 매장되지 않으려 필사적으로 발버둥치고있다・・・
+				PRINTL 그 모습을 필드에서 냉랭히 보고있던 판도라 매지션 걸 이었지만、
+				PRINTW 무언가를 생각해낸듯한 얼굴이 되어、도움을 구하고 있는 도화사쪽으로 날아갔다。
+				PRINTL 파멸한 『전 스승』을 구출（매지션즈 샐베이션）하려 하는것인가？
+				PRINTW 
+				PRINTW ・・・도화사를 보는 소녀의 얼굴은、그런 따뜻한 감정을 느끼게하지는 않았다。
+				PRINTL 체념하지 못함에 불쾌함을 드러낸 판도라 매지션 걸은、이차원의 심연에 필사적으로 매달리는
+				PRINTW 도화사의、상품도구라고도 할수 있는 중요한 오른손을、용서없이 날카롭게 깎인 힐로 밟아뭉갰다！
+				PRINTL 지금까지 카드를 업신여겨온 보상을 받은 도화사는 아픔과 굴욕에 비통한 신음을 흘리지만、
+				PRINTW 이를 악물고『전 제자』에게、과거의 비도를 사과하고 도움을 구하는 목소리를 올린다・・・
+				PRINTL ・・・
+				;一般通過シャ-ディ-「お前の心の部屋に真実はない。あるのは욕망のみ。よって裁きを受けるがいい」
+				PRINTW 
+				PRINTL 하지만、그 흉한 모습을 놀리던 소녀에겐、이 남자의 말엔 진실은 아무것도 없으며、
+				PRINTW 필사적으로 건네온 대사도、그저 도움받고싶을뿐인 겉뿐일 것이라고「알아버리고 말았다」
+				PRINTW 희미하게   정말 희미하게 슬픈듯한 색이 섞인 표정으로、남자의 오른손을 향해 완드를 휘둘렀다。
+				PRINTW 도화사의 손가락이、그의 의지에 반해 하나 하나、이차원의 심연에서 손가락을 떼어간다！
+				PRINTL 영겁이라고도 생각되는 몇초 후、도화사가 되어버린 남자는 이차원의 그녀에게 삼켜져、어둠 속으로 사라졌다・・・
+				PRINTL 
+				CUSTOMDRAWLINE -
+				PRINTW 
+				
+				;듀얼중에 1回だけ표시としたいが、デュエル1의 효과발동の판정で代用できないか試行
+				CALL CARD_EFFECT_D1USE(듀얼리스트,39590)
+				;CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39590,20)
+			ENDIF
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ENDIF
+

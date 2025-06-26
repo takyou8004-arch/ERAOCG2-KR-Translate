@@ -1,0 +1,167 @@
+﻿@CARDNAME_4823,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+;ユクモ出身
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 진오우 카타나 헌터
+	CASE "略称"
+RESULTS = 뇌랑의 태도 헌터
+	CASE "カテゴリ"
+RESULTS:0 = 몬스터 헌터
+ENDSELECT
+
+
+@CARD_4823(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4823(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드를 특수 소환하고, 효과를 발동하고 있었다면 그 효과를 무효로 하고,
+;太刀によるIAI!
+CALLFORM CARD_ABLE(1,攻撃時誘発)
+PRINTL ① : 상대의 『렵수』인 몬스터가 효과를 발동했을 경우 또는 공격 선언 시에 발동할 수 있다.
+SETCOLOR C_D_GRAY
+PRINT （곤충족 제외)
+RESETCOLOR
+PRINTL 공격 선언 중이라면 공격 대상을 이 카드로 옮긴다.
+PRINTL 이렇게 특수 소환한 이 카드의 공격력은 턴 종료 시까지 1000 올린다.
+PRINTL ②: 2턴째 이후의 자신 메인 페이즈에 발동할 수 있다.
+;力の開放
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL 이 카드는 턴 종료 시까지 각성 상태가 되고, 전투 저해를 얻으며, 공격력은 턴 종료 시까지 1000 올린다.
+PRINTL 그 후, 이 카드의 공격력 이하의 상대 몬스터는 모두 수비 표시가 된다.
+PRINTL 「각성」은 1턴에 1번만 할 수 있다.
+PRINTL 「각성」은 1턴에 1번밖에 할 수 없다.
+
+@CARDCAN_4823(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4823)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,覚醒발동)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,4823,"손패",1)
+	SIF RESULT == 1
+		RETURN 
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALLFORM CARD_{戦闘カードID(듀얼리스트,1)}("종족")
+	SIF !GROUPMATCH(RESULT,드래곤족,야수족,비행야수족,비늘야수족,악마족,바다생물족,미확인족,원소정령족)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,1283)
+		RETURN 0
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL FULLRESET
+	CALL SET_MONSTER_HUNTER
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF ターン数 == 1
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,覚醒발동)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4823(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4823,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 1000 + 効追一攻
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		IF RESULT == 1
+			CALL COVER_ATTACK(듀얼리스트,カード소환先)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4823,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 1000 + 効追一攻
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,覚醒발동,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",1,1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",1000)
+		CALL FULLRESET
+		효과条件守備力 = GETVAR(@"%듀얼리스트%_MZ_攻:場所")
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"표시변경")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦阻")
+ENDIF

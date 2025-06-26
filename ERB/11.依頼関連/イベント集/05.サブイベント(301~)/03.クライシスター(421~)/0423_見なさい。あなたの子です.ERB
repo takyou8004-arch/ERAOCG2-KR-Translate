@@ -1,0 +1,347 @@
+@IRAI_EVENT_423(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+;・アドリブバチバチねじ込んであります。
+;・セリフとかのところはコピペしてもらって大丈夫です。
+;(むしろ分かんないところをお任せしてしまうような形になってしまってスイマセン…)
+;・不明点、解釈違いによる文章改良点があれば是非ご相談ください。
+;都合에 의해 マルファ 이외의 シスターたちのセリフは省略しております
+
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP-CRS3)보십시오。당신의 아이입니다
+	CASE "이벤트種"
+		RETURN 이벤트_ＲＥ
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL 어둠의 中から手招くものは好機か、それとも危機か。
+		PRINTL それを知る者は誰もいない。
+		PRINTL 答えが明かされるのは、
+		PRINTL 振り返ることを忘れた時なのだから･･･
+		PRINTL 
+		SETCOLOR C_RED
+		PRINTFORML 《注意》特定の캐릭터に大きな変化が起こります！
+		RESETCOLOR
+		PRINTL 報酬：？
+	CASE "条件"
+		SIF 依頼_完了횟수:422 == 0
+			RETURN 0
+		SIF 依頼_完了횟수:425 != 0
+			RETURN 0
+		SIF NAME:NO_TO_CHARANUM(2100) == "크라이시스터・エリス" && NAME:NO_TO_CHARANUM(2101) == "크라이시스터・ステラ" && NAME:NO_TO_CHARANUM(2102) == "크라이시스터・ソフィア" && NAME:NO_TO_CHARANUM(2103) == "크라이시스터・イレーヌ"
+			RETURN 0
+		SIF (ITEM:2100 >= 3 && NAME:NO_TO_CHARANUM(2100) == "엑소시스터・エリス")|| (ITEM:2101 >= 3 && NAME:NO_TO_CHARANUM(2101) == "엑소시스터・ステラ") || (ITEM:2102 >= 3 && NAME:NO_TO_CHARANUM(2102) == "엑소시스터・ソフィア") || (ITEM:2103 >= 3 && NAME:NO_TO_CHARANUM(2103) == "엑소시스터・イレーヌ")
+			RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_423(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(2100)
+이벤트主:1 = NO_TO_CHARANUM(2101)
+이벤트主:2 = NO_TO_CHARANUM(2102)
+이벤트主:3 = NO_TO_CHARANUM(2103)
+이벤트主:4 = NO_TO_CHARANUM(2104)
+
+IF 依頼_달성상황 == 0
+;始まり
+	SIF ITEM:2100 < 3 || ITEM:2101 < 3 || ITEM:2102 < 3 || ITEM:2103 < 3
+	PRINT 一部の종류だけではあるが、
+	PRINTFORMW 必要な分の「엑소시스터」の몬스터 카드 を揃えた。
+	PRINTFORMW マルファにも連絡を入れたので、準備が済んだら裏通りのビルに向かおう。
+	PRINTFORMW 『………！………！』
+	PRINTFORMW ……？
+	PRINTFORMW 今、덱ケースから声が聞こえた気がするが……、気のせいか。
+	TIME += 10
+	依頼_場所 = 場所_裏通り
+	依頼_달성상황 ++
+
+ELSEIF 依頼_달성상황 == 1
+;本題
+	PRINTFORMW 例のビルに入ると、マルファは一人でこちらを待っていた。
+	PRINTFORMW 「いらっしゃいませ、%NAME:MASTER%様」
+	PRINTFORMW マルファは恭しく頭を下げる。
+	PRINTFORMW 彼女に、카드를 揃えた事を告げた。
+	PRINTFORMW 「そうですか。では、どの카드를 キョウカいたしますか？」
+	IF (ITEM:2100 >= 3 && ITEM:2101 >= 3 && ITEM:2102 >= 3 && ITEM:2103 >= 3) && 依頼_完了횟수:423 == 0
+		PRINTFORMW 全部を同時にとはいかないのだろうか？
+		PRINTFORMW 「申し訳ございません。こちらの都合で、一回の의식で一종류のカードしかキョウカできないのです」
+		PRINTFORMW それなら仕方ない。一回に一종류ずつ選ぶとしよう。
+		PRINTFORMW 「ご理解いただけて幸いです」
+	ENDIF
+	PRINTFORML では、どの카드를 크라이시스터カードにしようか？
+	PRINTFORML 
+	SIF ITEM:2100 >= 3 && NAME:(이벤트主:0) == "엑소시스터・エリス"
+		PRINTFORML [0] - %NAME:(이벤트主:0)%
+	SIF ITEM:2101 >= 3 && NAME:(이벤트主:1) == "엑소시스터・ステラ"
+		PRINTFORML [1] - %NAME:(이벤트主:1)%
+	SIF ITEM:2102 >= 3 && NAME:(이벤트主:2) == "엑소시스터・ソフィア"
+		PRINTFORML [2] - %NAME:(이벤트主:2)%
+	SIF ITEM:2103 >= 3 && NAME:(이벤트主:3) == "엑소시스터・イレーヌ"
+		PRINTFORML [3] - %NAME:(이벤트主:3)%
+	PRINTFORML [4] - ちょっと考え直す
+	BINPUT
+	IF RESULT == 0
+		PRINTFORMW 「エリスですか。……ええ、もちろん構いません」
+		PRINTFORMW 気のせいか、微笑むマルファの笑顔が歪んでいるように見える。
+		PRINTFORMW 「ではこちらへ」
+		PRINTFORMW マルファに前回練習デュエルをした時とは別の部屋に案内された。
+		PRINTFORMW その部屋には、人を拘束する道具が並んでた。
+		PRINTFORMW 「この場でエリスを소환してください」
+		PRINTFORMW マルファに言われるまま、 %CALLNAME:(이벤트主:0)%を  소환한다。
+		PRINTFORMW すると、 %CALLNAME:(이벤트主:0)%が部屋の拘束具に拘束されたまま소환된 ！
+		PRINTFORMW 「！……！……！」
+		PRINTFORMW %CALLNAME:(이벤트主:0)%는身悶えながら何か叫んでいる。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW 의식ってここから何をすればいいのか、マルファに聞いてみた。
+			PRINTFORMW 「難しい事はありません。%NAME:MASTER%様の욕망をエリスに解き放って染め上げればいいのです」
+			PRINTFORMW マルファの説明に %CALLNAME:(이벤트主:0)%는반발しようとするが、拘束されたままなので身動きが取れない。
+			PRINTFORM そういう事なら、と
+		ENDIF
+		PRINTFORMW %NAME:MASTER%는 %CALLNAME:(이벤트主:0)%に近づく。
+		PRINTFORMW %CALLNAME:(이벤트主:0)%는止めるように懇願する目でこちらを見てくるが、ここまで来たからには引き下がる気はない。
+		PRINTFORMW %NAME:MASTER%는拘束具の上から %CALLNAME:(이벤트主:0)%の服を引き裂いた。
+		;ここで시간경과や굴복각인とかで終了条件付けたりと色々조교の演出させたいけど、やり方が分からないので取りあえず普通に
+		VARSET 依頼조교대상,-1
+		依頼조교대상 = 이벤트主:0
+		CALL EVENT_TRAIN
+		SETBIT CFLAG:이벤트主:0,0
+		PRINTFORMW この辺でいいだろう……と、만족した%NAME:MASTER%는一回エリスから離れた。
+		PRINTFORMW すると、 %CALLNAME:(이벤트主:0)%が光り出しー
+		PRINTFORMW 消えた。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW びっくりしたが、소환が解除されただけみたいだ。
+		ENDIF
+		PRINTFORMW 同時に %CALLNAME:(이벤트主:0)%がいた場所に３장의 카드가 舞い落ちたので拾い集める。
+		CALL CARD_GET_SINGLE(39780)
+		ITEM:39780 += 2
+		TRYCALLFORM CARD_UI(39780)
+		PRINTFORMW 
+		CALL CHAR_CHANGE_423(이벤트主:0)
+		PRINTFORMW 「お疲れ様でした」
+		PRINTFORMW こちらを見守っていたマルファが近寄って来て、こちらの身だしなみを整えてくれた。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW 所で「엑소시스터」の方のカードも그대로 残ったみたいだが？
+			PRINTFORML 「そちらは抜け殻ですが、普通にデュエルで使えて、
+			PRINTFORMW 　その카드를 通してエリスを呼び出す事もできますので、お気になさらずとも大丈夫です」
+			PRINTFORMW それならいいか。
+		ENDIF
+		PRINTFORMW 「では、産まれ変わったエリスを、存分に使ってください」
+		PRINTFORMW 今回の所は帰る事にした。
+		PRINTFORMW 다른 카드를 「크라이시스터」に変えるのはまた次にしよう。
+		RETURN 2
+	ELSEIF RESULT == 1
+		PRINTFORMW 「ステラですね。ではこちらへ」
+		PRINTFORMW マルファに前回練習デュエルをした時とは別の部屋に案内された。
+		PRINTFORMW その部屋には、人を拘束する道具が並んでた。
+		PRINTFORMW 「この場でステラを소환してください」
+		PRINTFORMW マルファに言われるまま、 %CALLNAME:(이벤트主:1)%を  소환한다。
+		PRINTFORMW すると、 %CALLNAME:(이벤트主:1)%が部屋の拘束具に拘束されたまま소환된 ！
+		PRINTFORMW 「！……！……！」
+		PRINTFORMW %CALLNAME:(이벤트主:1)%는身悶えながら何か叫んでいる。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW 의식ってここから何をすればいいのか、マルファに聞いてみた。
+			PRINTFORMW 「難しい事はありません。%NAME:MASTER%様の욕망をステラに解き放って染め上げればいいのです」
+			PRINTFORMW マルファの説明に %CALLNAME:(이벤트主:1)%는반발しようとするが、拘束されたままなので身動きが取れない。
+			PRINTFORM そういう事なら、と
+		ENDIF
+		PRINTFORMW %NAME:MASTER%는 %CALLNAME:(이벤트主:1)%に近づく。
+		PRINTFORMW %CALLNAME:(이벤트主:1)%는止めるように懇願する目でこちらを見てくるが、ここまで来たからには引き下がる気はない。
+		PRINTFORMW %NAME:MASTER%는拘束具の上から %CALLNAME:(이벤트主:1)%の服を引き裂いた。
+		VARSET 依頼조교대상,-1
+		依頼조교대상 = 이벤트主:1
+		CALL EVENT_TRAIN
+		SETBIT CFLAG:이벤트主:1,0
+		PRINTFORMW この辺でいいだろう……と、만족した%NAME:MASTER%는一回ステラから離れた。
+		PRINTFORMW すると、 %CALLNAME:(이벤트主:1)%が光り出しー
+		PRINTFORMW 消えた。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW びっくりしたが、소환が解除されただけみたいだ。
+		ENDIF
+		PRINTFORMW 同時に %CALLNAME:(이벤트主:1)%がいた場所に３장의 카드가 舞い落ちたので拾い集める。
+		CALL CARD_GET_SINGLE(39781)
+		ITEM:39781 += 2
+		TRYCALLFORM CARD_UI(39781)
+		PRINTFORMW 
+		CALL CHAR_CHANGE_423(이벤트主:1)
+		PRINTFORMW 「お疲れ様でした」
+		PRINTFORMW こちらを見守っていたマルファが近寄って来て、こちらの身だしなみを整えてくれた。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW 所で「엑소시스터」の方のカードも그대로 残ったみたいだが？
+			PRINTFORML 「そちらは抜け殻ですが、普通にデュエルで使えて、
+			PRINTFORMW 　その카드를 通してステラを呼び出す事もできますので、お気になさらずとも大丈夫です」
+			PRINTFORMW それならいいか。
+		ENDIF
+		PRINTFORMW 「では、産まれ変わったステラを、存分に使ってください」
+		PRINTFORMW 今回の所は帰る事にした。
+		PRINTFORMW 다른 카드를 「크라이시스터」に変えるのはまた次にしよう。
+		RETURN 2
+	ELSEIF RESULT == 2
+		PRINTFORMW 「ソフィアですね。ではこちらへ」
+		PRINTFORMW マルファに前回練習デュエルをした時とは別の部屋に案内された。
+		PRINTFORMW その部屋には、人を拘束する道具が並んでた。
+		PRINTFORMW 「この場でソフィアを소환してください」
+		PRINTFORMW マルファに言われるまま、 %CALLNAME:(이벤트主:2)%を  소환한다。
+		PRINTFORMW すると、 %CALLNAME:(이벤트主:2)%が部屋の拘束具に拘束されたまま소환된 ！
+		PRINTFORMW 「！……！……！」
+		PRINTFORMW %CALLNAME:(이벤트主:2)%는身悶えながら何か叫んでいる。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW 의식ってここから何をすればいいのか、マルファに聞いてみた。
+			PRINTFORMW 「難しい事はありません。%NAME:MASTER%様の욕망をソフィアに解き放って染め上げればいいのです」
+			PRINTFORMW マルファの説明に %CALLNAME:(이벤트主:2)%는반발しようとするが、拘束されたままなので身動きが取れない。
+			PRINTFORM そういう事なら、と
+		ENDIF
+		PRINTFORMW %NAME:MASTER%는 %CALLNAME:(이벤트主:2)%に近づく。
+		PRINTFORMW %CALLNAME:(이벤트主:2)%는止めるように懇願する目でこちらを見てくるが、ここまで来たからには引き下がる気はない。
+		PRINTFORMW %NAME:MASTER%는拘束具の上から %CALLNAME:(이벤트主:2)%の服を引き裂いた。
+		VARSET 依頼조교대상,-1
+		依頼조교대상 = 이벤트主:2
+		CALL EVENT_TRAIN
+		SETBIT CFLAG:이벤트主:2,0
+		PRINTFORMW この辺でいいだろう……と、만족した%NAME:MASTER%는一回ソフィアから離れた。
+		PRINTFORMW すると、 %CALLNAME:(이벤트主:2)%が光り出しー
+		PRINTFORMW 消えた。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW びっくりしたが、소환が解除されただけみたいだ。
+		ENDIF
+		PRINTFORMW 同時に %CALLNAME:(이벤트主:2)%がいた場所に３장의 카드가 舞い落ちたので拾い集める。
+		CALL CARD_GET_SINGLE(39782)
+		ITEM:39782 += 2
+		TRYCALLFORM CARD_UI(39782)
+		PRINTFORMW 
+		CALL CHAR_CHANGE_423(이벤트主:2)
+		PRINTFORMW 「お疲れ様でした」
+		PRINTFORMW こちらを見守っていたマルファが近寄って来て、こちらの身だしなみを整えてくれた。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW 所で「엑소시스터」の方のカードも그대로 残ったみたいだが？
+			PRINTFORML 「そちらは抜け殻ですが、普通にデュエルで使えて、
+			PRINTFORMW 　その카드를 通してソフィアを呼び出す事もできますので、お気になさらずとも大丈夫です」
+			PRINTFORMW それならいいか。
+		ENDIF
+		PRINTFORMW 「では、産まれ変わったソフィアを、存分に使ってください」
+		PRINTFORMW 今回の所は帰る事にした。
+		PRINTFORMW 다른 카드를 「크라이시스터」に変えるのはまた次にしよう。
+		RETURN 2
+	ELSEIF RESULT == 3
+		PRINTFORMW 「イレーヌですね。ではこちらへ」
+		PRINTFORMW マルファに前回練習デュエルをした時とは別の部屋に案内された。
+		PRINTFORMW その部屋には、人を拘束する道具が並んでた。
+		PRINTFORMW 「この場でイレーヌを소환してください」
+		PRINTFORMW マルファに言われるまま、 %CALLNAME:(이벤트主:3)%を  소환한다。
+		PRINTFORMW すると、 %CALLNAME:(이벤트主:3)%が部屋の拘束具に拘束されたまま소환된 ！
+		PRINTFORMW 「！……！……！」
+		PRINTFORMW %CALLNAME:(이벤트主:3)%는身悶えながら何か叫んでいる。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW 의식ってここから何をすればいいのか、マルファに聞いてみた。
+			PRINTFORMW 「難しい事はありません。%NAME:MASTER%様の욕망をイレーヌに解き放って染め上げればいいのです」
+			PRINTFORMW マルファの説明に %CALLNAME:(이벤트主:3)%는반발しようとするが、拘束されたままなので身動きが取れない。
+			PRINTFORM そういう事なら、と
+		ENDIF
+		PRINTFORMW %NAME:MASTER%는 %CALLNAME:(이벤트主:3)%に近づく。
+		PRINTFORMW %CALLNAME:(이벤트主:3)%는止めるように懇願する目でこちらを見てくるが、ここまで来たからには引き下がる気はない。
+		PRINTFORMW %NAME:MASTER%는拘束具の上から %CALLNAME:(이벤트主:3)%の服を引き裂いた。
+		VARSET 依頼조교대상,-1
+		依頼조교대상 = 이벤트主:3
+		CALL EVENT_TRAIN
+		SETBIT CFLAG:이벤트主:3,0
+		PRINTFORMW この辺でいいだろう……と、만족した%NAME:MASTER%는一回イレーヌから離れた。
+		PRINTFORMW すると、 %CALLNAME:(이벤트主:3)%が光り出しー
+		PRINTFORMW 消えた。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW びっくりしたが、소환が解除されただけみたいだ。
+		ENDIF
+		PRINTFORMW 同時に %CALLNAME:(이벤트主:3)%がいた場所に３장의 카드가 舞い落ちたので拾い集める。
+		CALL CARD_GET_SINGLE(39783)
+		ITEM:39783 += 2
+		TRYCALLFORM CARD_UI(39783)
+		PRINTFORMW 
+		;조교＆캐릭터変化の演出
+		CALL CHAR_CHANGE_423(이벤트主:3)
+		PRINTFORMW 「お疲れ様でした」
+		PRINTFORMW こちらを見守っていたマルファが近寄って来て、こちらの身だしなみを整えてくれた。
+		IF 依頼_完了횟수:423 == 0
+			PRINTFORMW 所で「엑소시스터」の方のカードも그대로 残ったみたいだが？
+			PRINTFORML 「そちらは抜け殻ですが、普通にデュエルで使えて、
+			PRINTFORMW 　その카드를 通してイレーヌを呼び出す事もできますので、お気になさらずとも大丈夫です」
+			PRINTFORMW それならいいか。
+		ENDIF
+		PRINTFORMW 「では、産まれ変わったイレーヌを、存分に使ってください」
+		PRINTFORMW 今回の所は帰る事にした。
+		PRINTFORMW 다른 카드를 「크라이시스터」に変えるのはまた次にしよう。
+		RETURN 2
+	ELSEIF RESULT == 4
+		PRINTFORMW いや、ちょっと都合が悪いかも知れない。
+		PRINTFORMW マルファに考え直すと伝えてビルを出た。
+		RETURN
+	ENDIF
+ENDIF	
+
+
+
+
+
+
+
+
+
+@CHAR_CHANGE_423(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+
+IF 캐릭터_ID != NO_TO_CHARANUM(2104)
+	PRINTFORML
+	PRINTFORML
+	SETCOLOR C_PINK
+	PRINTFORMW 크라이시스터となった %CALLNAME:캐릭터_ID%는今までの価値観を파괴된 ようだ。
+	RESETCOLOR
+	PRINTFORML
+	PRINTFORML
+ENDIF
+
+IF 캐릭터_ID == NO_TO_CHARANUM(2100)
+	NAME:캐릭터_ID = 크라이시스터・エリス
+ELSEIF 캐릭터_ID == NO_TO_CHARANUM(2101)
+	NAME:캐릭터_ID = 크라이시스터・ステラ
+ELSEIF 캐릭터_ID == NO_TO_CHARANUM(2102)
+	NAME:캐릭터_ID = 크라이시스터・ソフィア
+ELSEIF 캐릭터_ID == NO_TO_CHARANUM(2103)
+	NAME:캐릭터_ID = 크라이시스터・イレーヌ
+ELSEIF 캐릭터_ID == NO_TO_CHARANUM(2104)
+	NAME:캐릭터_ID = 크라이시스터・マルファ
+ENDIF
+
+MARK:캐릭터_ID:굴복각인 = 3
+MARK:캐릭터_ID:반발각인 = 0
+TALENT:캐릭터_ID:20 = 0
+TALENT:캐릭터_ID:23 = 1
+TALENT:캐릭터_ID:24 = -1
+TALENT:캐릭터_ID:25 = 0
+TALENT:캐릭터_ID:30 = -1
+TALENT:캐릭터_ID:33 = -1
+TALENT:캐릭터_ID:34 = -1
+TALENT:캐릭터_ID:70 = 1
+TALENT:캐릭터_ID:71 = 1
+TALENT:캐릭터_ID:81 = 0
+TALENT:캐릭터_ID:83 = 1
+TALENT:캐릭터_ID:86 = 1
+TALENT:캐릭터_ID:93 = 1
+TALENT:캐릭터_ID:116 = 1
+TALENT:캐릭터_ID:굴복됨 = 1
+ABL:캐릭터_ID:욕망 += 3
+ABL:캐릭터_ID:친밀 += 3
+ABL:캐릭터_ID:순종 += 3
+ABL:캐릭터_ID:기교 += 3
+ABL:캐릭터_ID:봉사정신 += 3
+ABL:캐릭터_ID:노출증 += 3
+ABL:캐릭터_ID:마조끼 += 3
+ABL:캐릭터_ID:레즈끼 += 3
+

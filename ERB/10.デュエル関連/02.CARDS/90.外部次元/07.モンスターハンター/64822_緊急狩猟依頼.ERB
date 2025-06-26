@@ -1,0 +1,153 @@
+﻿@CARDNAME_64822,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 긴급 헌터
+	CASE "略称"
+RESULTS = 난입연속수렵
+	CASE "カテゴリ"
+RESULTS:0 = 헌터
+RESULTS:2 = 몬스터 헌터
+ENDSELECT
+
+@CARD_64822(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_64822(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(1,마함起動, 손패起動,フリー誘発)
+PRINTL ①: 자신 필드에 「헌터」 카드가 앞면 표시로 존재할 경우, 메인 페이즈에 발동할 수 있다.
+PRINTL 상대는 자신의 EX덱에서 레벨 6 이상의 『렵수』인 몬스터를 3장까지 고르고,
+PRINTL 그 중에서 1장을 무작위로 고른 후, 그 몬스터를 상대 필드에 공격 표시로 특수 소환한다.
+PRINTL 그 후 자신의 제외되어 있는 『렵수』 몬스터를 상대 필드에 공격 표시로 특수 소환할 수 있다.
+PRINTL 그럴 경우, 상대 필드의 『렵수』 몬스터 이외의 카드를 모두 패로 되돌린다.
+PRINTL (『렵수』란, 드래곤족 야수족 비행야수족 비늘야수족 악마족 곤충족 바다생물족 미확인족 원소정령족 몬스터를 가리킨다.)
+
+
+
+@CARDCAN_64822(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,64822)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0		
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,64822)
+		RETURN 0
+
+
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	CALL SET_MONSTER_HUNTER
+	CALL 효과条件レベル_ADV(6, "以上")
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 2
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 헌터
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_64822(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード,10
+#DIM DYNAMIC ランダム
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,64822,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件複数 = 3
+		CALL SET_MONSTER_HUNTER
+		CALL 효과条件レベル_ADV(6, "以上")
+		효과条件固名前選択 = 1
+		CALL CARD_CHOOSE_BASIC(対面者,"상대EX덱",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード:0 = RESULT:0
+			選択カード:1 = RESULT:1
+			選択カード:2 = RESULT:2
+			IF 選択カード != 9999
+				ランダム = RAND:3
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트, "EX덱", 選択カード:ランダム,"攻撃표시",1)
+
+				CALL FULLRESET
+				효과範囲제외 = 1
+				CALL SET_MONSTER_HUNTER
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"攻撃표시",1)
+				IF RESULT == 1
+
+					CALL FULLRESET
+
+					효과条件종족:0 = 마법사족
+					효과条件종족:1 = 언데드족
+					효과条件종족:2 = 전사족
+					효과条件종족:3 = 기계족
+					효과条件종족:4 = 악마족
+					효과条件종족:5 = 천사족
+					효과条件종족:6 = 식물족
+					효과条件종족:7 = 사이킥족
+					효과条件종족:8 = 사이버스족
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"손패")
+				ENDIF
+			ENDIF
+		ENDIF	
+	ENDIF
+ENDIF

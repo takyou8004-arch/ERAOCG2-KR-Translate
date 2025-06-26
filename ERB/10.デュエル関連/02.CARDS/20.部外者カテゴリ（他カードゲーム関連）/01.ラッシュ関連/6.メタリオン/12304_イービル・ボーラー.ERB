@@ -1,0 +1,152 @@
+﻿@CARDNAME_12304,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 이블 볼러
+	CASE "略称"
+RESULTS = E 볼러
+	CASE "カテゴリ"
+RESULTS:0 = 이매지너리
+ENDSELECT
+
+
+@CARD_12304(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_12304(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①：1턴에 1번, 패의 몬스터(빛 속성 / 수비력 500) 1장을 상대에게 보여주고 발동할 수 있다.
+PRINTL 상대 필드의 앞면 표시 몬스터 1장을 고르고,
+PRINTL 그 종족을 턴 종료시까지 악마족 또는 보여준 몬스터와 같은 종족으로 한다.
+CALLFORM CARD_ABLE(2,F素材時효과)
+PRINTL ②：이 카드가 융합 소환의 소재가 되었을 경우에 발동할 수 있다.
+PRINTL 자신 묘지의 「이블 볼러」 이외의 「이매지너리」 카드 1장을 패에 넣는다.
+
+@CARDCAN_12304(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,12304)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件속성 = 빛속성
+	효과条件固守備力 = 500
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == F素材時효과
+	SIF 발동済_2(듀얼리스트,12304)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 이매지너리
+	효과条件固名前 = 이블 볼러
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_12304(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択종족
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,12304,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件속성 = 빛속성
+		효과条件固守備力 = 500
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT != 9999
+			TRYCALLFORM CARD_{RESULT:99},"종족"
+			選択종족 = RESULT
+
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+			IF RESULT != 9999
+				IF 듀얼리스트 == "자신"
+PRINTL 보여준 몬스터와 같은 종족으로 할까요?
+					CALL YN_CHOICE(듀얼리스트)
+				ELSE
+					RESULT = いいえ
+				ENDIF
+
+				IF RESULT == はい
+					CALL SET_FIELD_INFO(対面者,"필드",選択カード,"一種",選択종족,1)
+				ELSEIF RESULT == いいえ
+					CALL SET_FIELD_INFO(対面者,"필드",選択カード,"一種",악마족,1)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == F素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,12304,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 이매지너리
+		효과条件固名前 = 이블 볼러
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

@@ -1,0 +1,205 @@
+﻿@CARDNAME_52023,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = Ａ Ｏ Ｊ 디사이시브 암즈
+	CASE "略称"
+RESULTS = 디사이시브 ARMS
+	CASE "カテゴリ"
+RESULTS:0 = Ａ Ｏ Ｊ
+ENDSELECT
+
+
+@CARD_52023(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3300
+	CASE "守備力"
+		RETURN 3300
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52023(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52023) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52023(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너＋튜너 이외의 몬스터 1체 이상
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 이하의 효과에서 1개를 선택하여 발동할 수 있다.
+PRINTL ●상대 필드 위에 세트된 몬스터와 마법 / 함정 카드를 전부 파괴한다.
+PRINTL ●자신의 손패를 전부 묘지로 보내고,
+PRINTL 상대의 필드와 손패를 확인하여 그 중에서 빛 속성 몬스터를 전부 묘지로 보낸다.
+PRINTL 그 후, 상대 묘지의 빛 속성 몬스터의 공격력 합계만큼의 데미지를 상대 라이프에 준다.
+
+@CARDCAN_52023(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과使用불가,10
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52023)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 裏側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		효과使用불가:0 = 1
+
+	SIF 손패数(듀얼리스트) == 0
+		효과使用불가:1 = 1
+
+	IF  손패数(対面者) == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대묘지 = 1
+		효과条件속성 = 빛속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			효과使用불가:1 = 1
+	ENDIF
+	SIF 효과使用불가:0 == 1 && 효과使用불가:1 == 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_52023(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+#DIM DYNAMIC 효과使用불가,10
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52023,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件표시 = 裏側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			효과使用불가:0 = 1
+
+		SIF 손패数(듀얼리스트) == 0
+			효과使用불가:1 = 1
+
+		IF  손패数(対面者) == 0
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과範囲상대묘지 = 1
+			효과条件속성 = 빛속성
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 1
+				효과使用불가:1 = 1
+		ENDIF
+
+		IF 효과使用불가:0 != 1 && 효과使用불가:1 != 1
+PRINTL 어느 쪽을 섬멸하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트,"セットカード 마법 / 함정 카드 ","빛속성モンスター")
+		ELSEIF 효과使用불가:0 != 1 && 효과使用불가:1 == 1
+			RESULT = 0
+		ELSE
+			RESULT = 1
+		ENDIF
+
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함全体",場所,"묘지")
+			CALL FULLRESET
+			효과条件표시 = 裏側표시
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+		ELSE
+
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") == -1
+					CONTINUE
+				CALL CARD_DISPOSE(듀얼리스트,"손패",カウンタ)
+			NEXT
+			CALL FULLRESET
+			효과条件속성 = 빛속성
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+			FOR カウンタ, 0, 99
+				IF GETVAR(@"%対面者%_손패:カウンタ") == -1
+					CONTINUE
+				ENDIF
+				TRYCALLFORM CARD_{GETVAR(@"%対面者%_손패:カウンタ")}, "속성"
+				IF RESULT != 빛속성
+					CONTINUE
+				ENDIF
+				CALL CARD_DISPOSE(対面者,"손패",カウンタ)
+			NEXT
+
+			CALL FULLRESET
+			효과範囲상대묘지 = 1
+			효과条件속성 = 빛속성
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",(RESULT:3),1)	
+		ENDIF
+	ENDIF
+ENDIF

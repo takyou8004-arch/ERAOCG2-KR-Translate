@@ -1,0 +1,135 @@
+﻿@CARDNAME_1110,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 가가가가-걸
+	CASE "略称"
+RESULTS = 가가가가-걸
+	CASE "カテゴリ"
+RESULTS:0 = 가가가
+RESULTS:1 = 오노마토
+
+ENDSELECT
+
+
+@CARD_1110(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족 
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1110(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한, 자신은 일반 소환에 더해 1번만,
+PRINTL 자신 메인 페이즈에 「가가가」 몬스터 1장을 소환할 수 있다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 이 카드 이외의 자신 필드의 「오노마토」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 이 카드의 레벨은 그 몬스터와 같아진다.
+CALLFORM CARD_ABLE(0,X素材時효과)
+PRINTL ③: 이 카드가 엑시즈 소재로 사용되었을 경우, 이하의 효과를 적용할 수 있다.
+PRINTL ● 상대 필드의 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 공격력을 0으로 한다.
+
+
+@CARDCAN_1110(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1110)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 오노마토
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == X素材時효과
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1110(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 설정レベル
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1110,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 오노마토
+		효과条件他所 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "필드",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			설정レベル = GETVAR(@"%듀얼리스트%_MZ_星:選択カード")
+			CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"一星",설정レベル,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == X素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1110)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"永攻DOWN",99999)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 가가가
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+ENDIF
+

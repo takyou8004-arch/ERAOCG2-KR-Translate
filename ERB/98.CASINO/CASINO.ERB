@@ -1,0 +1,1437 @@
+﻿;紅魔카지노
+;とりあえず格好だけ作ったが景品がないのはどうしたもんか
+;為替市場もここにいれてます
+;各ゲームコーナーで保有ＤＰを確認できないのはＤＰを搾取するための함정である
+
+@CASINO_ENTRANCE
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIM EXIT
+EXIT = 0
+CALL CASINO_CHECK_EVENT("ENTRANCE")
+CUSTOMDRAWLINE ―
+PRINTFORML 
+PRINTFORML ～홍마 카지노～
+PRINTFORML 　당신의 보유 ￥　　　　{MONEY, 10, RIGHT}
+PRINTFORML 　당신의 보유 ＤＰ　{FLAG:듀얼포인트, 10, RIGHT}
+PRINTFORML 
+CUSTOMDRAWLINE ―
+;SIF ITEM:紅魔카지노VIP会員証
+;	PRINTFORML [6] - VIP룸
+;PRINTFORML [5] - 경품 교환
+PRINTFORML [6] - 슬롯에서 놀기
+PRINTFORML [5] - 포커에서 놀기
+PRINTFORML [4] - 블랙잭에서 놀기
+PRINTFORML [3] - 카드에서 놀기
+PRINTFORML [2] - 다이스에서 놀기
+;PRINTFORML [1] - 퀴즈에서 놀기(개수중)
+CUSTOMDRAWLINE ―
+PRINTFORML 
+PRINTFORML [0] - 돌아가기　　　　　　　　　 [9] - 설명
+
+BINPUT
+;休業中はゲーム系は閉まってる
+SIF FUNC_CASINO("CLOSE_CASINO") && INRANGE(RESULT, 1, 6)
+	GOTO RETRY
+SELECTCASE RESULT
+CASE 9
+	CALL CASINO_CHECK_EVENT("HELP")
+CASE 0
+	;IF FLAG:듀얼포인트 >= TFLAG:카지노입장시ＤＰ + 100
+	;	PRINTFORML 「ＤＰを現金に交換しますか？」
+	;	PRINTFORML 「今ですと手数料がお得ですよ」
+	;ENDIF
+	EXIT = 1
+CASE 6
+	CALL CASINO_SLOT
+CASE 5
+	CALL CASINO_POKER
+CASE 4
+	CALL CASINO_BLACKJACK
+CASE 3
+	CALL CASINO_CARD
+CASE 2
+	CALL CASINO_DICE
+CASE 1
+	CALL CASINO_QUIZ
+CASEELSE
+	$RETRY
+	REUSELASTLINE 無効な入力です
+ENDSELECT
+SIF NEMUKE() >= 700
+	EXIT = 1
+
+SIF !EXIT
+	RESTART
+CALL CASINO_CHECK_EVENT("EXIT")
+
+;카지노系이벤트の独自関数化
+;説明パネルもここに突っ込んだ
+;可読性の確保のためにマジックナンバーを無理矢理排除した結果珍妙な構文になりますた
+@CASINO_CHECK_EVENT(TYPE)
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIMS TYPE
+#DIM COUNT_ENTER ;本日入店した횟수
+#DIM COUNT_EXIT  ;本日店を出た횟수
+SELECTCASE TYPE
+CASE "ENTRANCE"
+	;紅魔館メンバーに対してそっけない反応ってどうなのよって思った
+	;金銭的に盛りすぎなのは承知だが
+	;ロールプレイ的にはこうなる気がする
+	IF !FLAG:카지노방문일
+		;初回
+		PRINTFORML 
+		PRINTFORML 　홍마 카지노에 오신 것을 환영합니다。손님은 처음 방문이시죠？
+	ELSEIF DAY - FLAG:카지노방문일
+	;1日1回だけ
+		PRINTFORML 
+		SELECTCASE DAY - FLAG:카지노방문일
+		CASE 1 TO 5
+				PRINTFORML 　어서 오세요
+				PRINTFORMW 　즐겁게 이용해주셔서 감사합니다
+		CASEELSE
+				PRINTFORML 　어서 오세요
+				PRINTFORMW 　편히 즐기다 가세요
+		ENDSELECT
+		COUNT_EXIT = 0
+		COUNT_ENTER = 1
+	ELSEIF COUNT_ENTER == COUNT_EXIT
+	;再来店時
+		PRINTFORML 
+		PRINTFORML 　돌아오셨군요
+		PRINTFORMW 　편히 즐기다 가세요
+		COUNT_ENTER ++
+	ENDIF
+	FLAG:카지노방문일 = DAY
+CASE "EXIT"
+	COUNT_EXIT ++
+	CALL CASINO_MEMBER_RANKUP
+	PRINTFORML 
+	PRINTFORML 딜러
+	PRINTFORML 　이용해 주셔서 감사합니다
+	PRINTDATAW
+		DATAFORM 　조심히 돌아가세요
+		DATAFORM 　또 방문해 주세요
+		DATAFORM 　다시 오시길 기다리고 있습니다
+	ENDDATA
+CASE "HELP"
+;へるぷ機能
+	PRINTFORML 
+	PRINTFORML 카지노 입구에 설명 패널이 있습니다
+	PRINTFORML 
+	PRINTFORML [9] - 민폐 행위에 대해
+	PRINTFORML [8] - DP에 대해
+	PRINTFORML 
+	PRINTFORML [6] - 슬롯 게임에 대해
+	PRINTFORML [4] - 블랙잭에 대해
+	PRINTFORML [3] - 카드 게임에 대해
+	PRINTFORML [2] - 주사위 게임에 대해
+	PRINTFORML [1] - 퀴즈 게임에 대해
+	PRINTFORML 
+	PRINTFORML [0] - 돌아가기
+	BINPUT
+	SELECTCASE RESULT
+	CASE 9
+		;마리사분기を仕込んだことで注意書きに「窃盗」が無かったなと気づく
+		PRINTFORML ☆민폐 행위에 대해
+		PRINTFORML 　마법/특수능력 사용, 위조화폐, 절도, 사기, 폭력, 협박, 성희롱,
+		PRINTFORML 　매장 내 탄막놀이, 스펠카드 사용, 졸음, 파티, 독경, 청소, 목욕, 다도 등
+		PRINTFORML 　매장 질서를 현저히 해치는 고객에게는
+		PRINTFORML 　오죠사마의 식사 초대 또는 여동생님의 놀잇감이 될 수 있으니 주의 바랍니다
+		PRINTFORML 
+		PRINTFORML 　꼭 예의 바르게 즐겨주시길
+		PRINTFORMW 　직원 일동, 진심으로 부탁드립니다
+	CASE 8
+		PRINTFORML ☆DP에 대해
+		PRINTFORML 　본 카지노에서는 부정행위 방지를 위해 전용 통화 “DP”만을 사용합니다
+		PRINTFORML 　프론트에서 언제든지 구입 가능합니다
+		PRINTFORMW 　현금을 직접 사용해 게임할 수는 없으니 미리 양해 바랍니다
+		PRINTFORML 
+		PRINTFORML 　현재 DP 결제 가능한 점포
+		PRINTFORML 　・정직한 “문문.신문”
+		PRINTFORML 　・인간마을 대출서점 “스즈나안”
+		PRINTFORML 　・효험 보장 “모리야 추첨”
+		PRINTFORML 　・절경 “모리야 신사 케이블카”
+		PRINTFORML 　・낙원의 멋진 운세뽑기 “하쿠레이 신사”
+		PRINTFORML 　・우나기 포장마차 “대나무숲 야작야타이”
+		PRINTFORML 　・잃어버린 물건 찾기 “다우저 나즈린”
+		PRINTFORML 
+		PRINTFORML 　이 외에 홍마관 홉고블린 출장 서비스도 있습니다
+		PRINTFORML 　・홍마관 홉고블린 물주기 대행
+		PRINTFORMW 　・홍마관 홉고블린 출장 청소 서비스
+	CASE 6
+		CALL HELP_SLOT()
+		RESTART
+	CASE 4
+		PRINTFORML ☆블랙잭에 대해
+		PRINTFORML 　※현실 블랙잭과는 규칙이 다릅니다
+		PRINTFORML 　카드 점수를 겨루며, 더 높은 점수를 내는 쪽이 승리합니다
+		PRINTFORML 　단, 21점을 넘으면 안 됩니다
+		PRINTFORML 　21점을 넘은 플레이어는 패배입니다
+		PRINTFORML 　
+		PRINTFORML 　점수 계산은 아래와 같습니다
+		PRINTFORML 　　1~10: 숫자 그대로
+		PRINTFORML 　　JQK: 10점
+		PRINTFORML 　　　A: 21점 초과 아니면 10점, 초과 시 1점
+		PRINTFORMW 　
+		PRINTFORML ─────────────────────────────
+		PRINTFORML 　먼저 딜러와 당신에게 2장씩 카드를 나눠줍니다
+		PRINTFORML 　이때 딜러의 카드 한 장은 오픈됩니다
+		PRINTFORML 　당신에게는 아래 선택지가 주어집니다
+		PRINTFORML 　　　　히트: 카드 1장 추가 후 승부
+		PRINTFORML 　　　스탠드: 카드 추가 없이 승부
+		PRINTFORML 　　　　더블: 배팅을 2배로, 카드 1장 추가 후 승부
+		PRINTFORML 　　서렌더: 배팅의 절반 받고 게임 포기
+		PRINTFORML 　
+		PRINTFORML 　카드를 뽑아 21점을 넘으면 즉시 패배입니다
+		PRINTFORML 　그 외엔 딜러의 뒷면 카드를 오픈합니다
+		PRINTFORML 　딜러 점수가 17점 미만이면 반드시 카드 1장 추가합니다
+		PRINTFORML 　딜러가 21점을 넘으면 당신 승리입니다
+		PRINTFORML 　
+		PRINTFORML 　딜러 점수가 17점 이상, 혹은 21점 이하가 되면
+		PRINTFORML 　점수가 높은 쪽이 승리합니다
+		PRINTFORML 　비기면 배팅금 환급
+		PRINTFORMW 　
+		PRINTFORML ─────────────────────────────
+		PRINTFORML 　카드 2장(A+10점 카드)로 21점: 블랙잭 성립
+		PRINTFORML 　블랙잭은 3장 21점에 승리
+		PRINTFORML 　블랙잭 승리시 보너스
+		PRINTFORML 　
+		PRINTFORML 　딜러 오픈카드가 A일 때, INS(보험) 선택 가능
+		PRINTFORML 　INS는 배팅의 절반 추가 베팅
+		PRINTFORML 　딜러가 블랙잭, 당신이 INS한 경우, 배팅과 보험금 반환
+		PRINTFORML 　딜러가 블랙잭 아니면 보험금 소멸
+		PRINTFORML 　
+		PRINTFORML 　INS 선택 가능+당신이 블랙잭이면, 이븐머니 선택 가능
+		PRINTFORML 　이븐머니는 배팅의 2배 지급 후 게임 종료
+		PRINTFORMW 　
+		PRINTFORML ─────────────────────────────
+		PRINTFORML 　배당은 아래와 같습니다
+		PRINTFORML 　　블랙잭 승: 2.5배
+		PRINTFORML 　　　승리: 2.0배
+		PRINTFORML 　　　패배: 0.0배
+		PRINTFORML 　서렌더: 0.5배
+		PRINTFORML 　INS 성공: 1.0배
+		PRINTFORMW ※속임수는 미구현입니다
+	CASE 3
+		PRINTFORML ☆카드 게임에 대해
+		PRINTFORML 　속임수 있는 트럼프 게임입니다
+		PRINTFORML 　이 저택의 메이드장이 감수한 게임입니다
+		PRINTFORML 　각자 세 번 행동 후 승패 결과 확정 및 정산
+		PRINTFORML 　게임 시작 시 1~50DP를 배팅,
+		PRINTFORML 　딜러를 이기면 베팅의 2.5배를 즉시 받습니다
+		PRINTFORML 
+		PRINTFORML 　게임 중에는 3종류 행동을 선택 가능,
+		PRINTFORML 　이들은 삼각관계(속임수 > 정정당당 > 주시 > 속임수)
+		PRINTFORML 　　속임수: 속임수로 유리하게 진행
+		PRINTFORML 　　정정당당: 규칙대로 진행
+		PRINTFORML 　　　주시: 상대 속임수 방지
+		PRINTFORMW 　참고로 속임수는 요리 기술, 속임수 간파는 청소 기술 사용
+	CASE 2
+		PRINTFORML ☆주사위 게임에 대해
+		PRINTFORML 　이른바 '쪼개기/짝홀 맞추기' 도박
+		PRINTFORML 　저택 주인이 직접 감수한 게임입니다
+		PRINTFORML 　게임 시작 시 100DP 배팅,
+		PRINTFORML 　정답 맞추면 배당금이 1.5배씩 증가, 틀리면 0
+		PRINTFORML 　매번 100DP를 지불해야 계속 가능
+		PRINTFORML 　
+		PRINTFORML 　딜러는 답을 정확히 알려주지만 거짓말일 수도 있습니다
+		PRINTFORMW 　화술 능력이 높으면 거짓말을 간파할 수 있습니다
+	CASE 1
+		PRINTFORML ☆퀴즈 게임에 대해
+		PRINTFORML 　특별한 점 없는 퀴즈 게임입니다
+		PRINTFORML 　저택 주인의 친구가 감수한 게임입니다
+		PRINTFORML 　난이도와 무관하게 문제당 5DP
+		PRINTFORML 　정답 시 난이도별 상금 지급, 다음 문제 난이도 공개
+		PRINTFORMW 　딱히 심리전 요소 없이 순수 지식이 요구됩니다
+	CASE 0
+		RETURN
+	CASEELSE
+		REUSELASTLINE 잘못된 입력입니다
+	ENDSELECT
+	RESTART
+ENDSELECT
+
+
+
+;D/Pは딜러、プレイヤー
+;딜러の能力は사쿠야さんより少し弱いくらいでかなり優秀
+;POINT 注:9、正:12、イ:15
+;戦闘収支
+;　注　vs正＝-3、vsイ＝-6or+9
+;　正　vs注＝+3、vsイ＝-3
+;　イ　vs注＝+6or-9、vs正＝+3
+;注視には청소、イカサマには요리が必要
+;当然ながら対応기능が딜러を下回ってると全然成功しない
+;
+;じゃんけんとして捉えるとわかりやすいが
+;システム上、対応기능が4以下で挑むと長期的な損益は必ず마이너스になる
+;イカサマ関連の仕様で「グーがチョキに勝てなかったりする」ことがあるためである
+;あんま詳しく検証してないがたぶん기능が拮抗しているときの勝率が1/3未満
+
+@CASINO_CARD
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIM LCOUNT
+#DIM D_POINT
+#DIM D_ACT
+#DIM D_STOP_IKASAMA
+#DIM D_DO_IKASAMA
+#DIM P_BET
+#DIM P_POINT
+#DIM P_ACT
+#DIM P_STOP_IKASAMA
+#DIM P_DO_IKASAMA
+D_STOP_IKASAMA = POWER(4, 3)
+D_DO_IKASAMA = POWER(4, 3)
+P_STOP_IKASAMA = POWER(MAX(1, ABL:MASTER:청소기능), 3)
+P_DO_IKASAMA = POWER(MAX(1, ABL:MASTER:요리기능), 3)
+IF FLAG:듀얼포인트 <= 0
+	PRINTFORML 딜러
+	PRINTFORML 　손님, 이 카지노에서는 전용 통화 'DP'만 사용할 수 있습니다
+	PRINTFORMW 　불편하시겠지만 먼저 DP를 구매해 주세요
+	RETURN
+ENDIF
+PRINTFORML 딜러
+PRINTFORML 　카드 게임 코너에 오신 것을 환영합니다
+PRINTFORML 　이 게임은 손님과 이 저택 메이드장의 기술을 전수받은 저와의
+PRINTFORMW 　환상향 최고의 '집안일 대결'입니다
+PRINTFORML 
+PRINTFORML 딜러
+PRINTFORML 　손님의 실력이 저를 뛰어넘으면, 베팅 금액의 3배를 돌려드립니다
+PRINTFORML 　먼저 배팅할 금액을 입력해 주세요
+PRINTFORML 
+CALL CASINO_INPUTLOOP("カード賭け金")
+IF !RESULT
+	GOTO CANCEL
+ELSE
+	P_BET = RESULT
+	CALL CASINO_MONEY("ＤＰ", -P_BET)
+	CALL CASINO_MONEY("カモ", P_BET)
+ENDIF
+PRINTFORML 딜러
+PRINTFORML 　확인했습니다
+PRINTFORML 　그럼 시작하겠습니다
+PRINTFORMW 　잘 부탁드립니다
+TIME += 5
+D_POINT = 0
+P_POINT = 0
+PRINTFORML 
+FOR LCOUNT, 1, 4
+	PRINTFORML ～{LCOUNT}번째 라운드～
+	;[3]イカサマ[2]正々堂々[1]注視
+	CALL CASINO_INPUTLOOP("カード戦術")
+	P_ACT = RESULT
+	D_ACT = RAND(1, 4)
+	SELECTCASE P_ACT
+	CASE 1
+	;注視
+		P_POINT += 9
+		SELECTCASE D_ACT
+		CASE 1
+		;注視
+			D_POINT += 9
+			PRINTFORML 당신은 딜러와 눈을 마주쳤다
+			PRINTFORML 딜러는 볼이 붉어지며 시선을 피했다
+		CASE 2
+		;正々堂々
+			D_POINT += 12
+			PRINTFORML 딜러는 딱히 신경 쓰는 기색이 없다
+		CASE 3
+		;イカサマ
+			PRINTFORML 뭔가 수상한 행동을 하는 딜러를 주시했다
+			LOCAL = D_DO_IKASAMA + P_STOP_IKASAMA
+			IF RAND:LOCAL <= D_DO_IKASAMA
+				D_POINT += 15
+				PRINTFORML 딜러는 여유만만한 표정이다
+			ELSE
+				PRINTFORML 딜러는 짜증난 표정이다
+			ENDIF
+		ENDSELECT
+	CASE 2
+	;正々堂々
+	P_POINT += 12
+		SELECTCASE D_ACT
+		CASE 1
+		;注視
+			D_POINT += 9
+			PRINTFORML 딜러의 시선을 느끼며 당당하게 게임을 진행했다
+		CASE 2
+		;정정당당
+			D_POINT += 12
+			PRINTFORML 게임은 무리 없이 진행된다
+		CASE 3
+		;속임수
+			D_POINT += 15
+			PRINTFORML 미소를 짓는 딜러를 무시하고 평범하게 게임을 진행했다
+		ENDSELECT
+	CASE 3
+	;イカサマ
+		SELECTCASE D_ACT
+		CASE 1
+		;注視
+			D_POINT += 9
+			LOCAL = D_STOP_IKASAMA + P_DO_IKASAMA
+			PRINTFORML 딜러의 시선을 느끼며 속임수를 시도했다
+			IF RAND:LOCAL <= D_STOP_IKASAMA
+				PRINTFORML 하지만 실패했다
+			ELSE
+				P_POINT += 15
+				PRINTFORML 속임수에 성공했다
+			ENDIF
+		CASE 2
+		;正々堂々
+			D_POINT += 12
+			P_POINT += 15
+			PRINTFORML 능숙하게 진행하는 딜러의 눈을 피해 속임수를 섞었다
+		CASE 3
+		;속임수
+			D_POINT += 15
+			P_POINT += 15
+			PRINTFORML 딜러와 당신, 사이좋게 속임수를 썼다
+		ENDSELECT
+	ENDSELECT
+	WAIT
+NEXT
+PRINTFORML 
+PRINTFORML ～ゲーム結果～
+IF D_POINT >= P_POINT
+	PRINTFORMW 당신은 패배했습니다
+ELSE
+	PRINTFORMW 당신의 승리입니다!
+	PRINTFORML 
+	PRINTFORML 딜러
+	PRINTFORML 　축하드립니다
+	PRINTFORML 　약속대로, 이쪽을 받아주세요
+	PRINTFORML 
+	PRINTFORMW 보유 DP가 {P_BET * 3} 증가했습니다
+	CALL CASINO_MONEY("DP", P_BET * 3)
+ENDIF
+IF NEMUKE() >= 700
+	PRINTFORML 
+	PRINTFORML 딜러
+	PRINTFORML 　저기, 손님?
+	PRINTFORML 　무척 피곤해보이시네요
+	PRINTFORML 　오늘은 이쯤에서 게임을 마치시는 게 어떨까요
+	PRINTFORMW 　다음에 또 방문해 주세요
+	RETURN
+ELSEIF FLAG:듀얼포인트 <= 0
+	PRINTFORML 
+	PRINTFORML 딜러
+	PRINTFORML 　DP가 모두 소진된 것 같네요
+	PRINTFORMW 　다음에 또 방문해 주세요
+	RETURN
+ENDIF
+PRINTFORML 
+PRINTFORML 딜러
+PRINTFORML 　아직 계속 하시겠습니까?
+PRINTFORML 
+;[2]賭け金の再설정[1]続行[0]やめる
+CALL CASINO_INPUTLOOP("カード続行")
+SELECTCASE RESULT
+CASE 0
+	GOTO CANCEL
+CASE 1
+	IF FLAG:듀얼포인트 < P_BET
+		PRINTFORML 　DP가 부족한 것 같네요
+		PRINTFORML 　배팅 금액을 다시 설정해 주세요
+		PRINTFORML 
+		CALL CASINO_INPUTLOOP("カード賭け金")
+		IF !RESULT
+			GOTO CANCEL
+		ELSE
+			P_BET = RESULT
+			PRINTFORML 
+		ENDIF
+	ENDIF
+CASE 2
+	PRINTFORML 딜러
+	PRINTFORML 　그럼 배팅 금액을 입력해 주세요
+	PRINTFORML 
+	CALL CASINO_INPUTLOOP("カード賭け金")
+	IF !RESULT
+		GOTO CANCEL
+	ELSE
+		P_BET = RESULT
+		PRINTFORML 
+	ENDIF
+ENDSELECT
+CALL CASINO_MONEY("ＤＰ", -P_BET)
+CALL CASINO_MONEY("カモ", P_BET)
+PRINTFORML 딜러
+PRINTFORML 　네、배팅금 {P_BET}ＤＰ확실히 받았습니다
+PRINTFORMW 　계속 잘 부탁드립니다
+$CANCEL
+PRINTFORML 
+PRINTFORML 　알겠습니다
+PRINTFORMW 　다음에 또 방문해 주세요
+
+
+
+;D/Pは딜러とプレイヤー
+;
+;適当に作ったがコレかなり巧妙な手口だなぁ……
+;・実は2勝、3勝の賞金よりも1勝の賞金が多い
+;・획득機会の多いであろう3勝이하의 賞金は雀の涙
+;・不規則なタイミングで正解が判明するためワンチャンあるかもと錯覚する
+;
+;賞金×1.5の操作とプレイヤー収入
+;01回_150　__50
+;02回_225　__25
+;03回_337　__37
+;04回_506　_106
+;05回_759　_259
+;06回1139　_539
+;07回1708　1008
+;08回2562　1762
+;09回3840　2940
+;10回5766　4766
+;
+;딜러の화술は4、これもわりとぶっ飛んだ性能の人だ
+;
+;プレイヤーの能力に応じた正誤検知率と誤答率
+;화술1＝_1→検知率_1/16＝_6％、不明率94％÷2＝誤答率47％
+;화술2＝_4→検知率_4/17＝23.5％、不明率76.5％÷2＝誤答率38％
+;화술3＝_9→検知率_9/_25＝36％、不明率64％÷2＝誤答率32％
+;화술4＝16→検知率_16/32＝50％、不明率50％÷2＝誤答率25％
+;화술5＝25→検知率25/41＝61％、不明率39％÷2＝誤答率20％
+;화술6＝36→検知率_36/_52＝69％、不明率31％÷2＝誤答率16％
+
+;カンストでの10連勝率 17.4%
+
+;2乗ではなく単純計算だと
+
+;화술1→検知率_1/5＝_20％、不明率80％÷2＝誤答率40％
+;화술2→検知率_2/6＝33.3％、不明率66.6％÷2＝誤答率33.3％
+;화술3→検知率_3/_7＝36％、不明率42.8％÷2＝誤答率21.4％
+;화술4→検知率_4/8＝50％、不明率50％÷2＝誤答率25％
+;화술5→検知率5/9＝55.6％、不明率44.4％÷2＝誤答率22.2％
+;화술6→検知率6/10＝60％、不明率40％÷2＝誤答率20％
+
+;カンストでの10連勝率 10.7%
+
+
+;単純計算で딜러を5に
+
+;화술1→検知率_1/6 不明率83％÷2＝誤答率41.5％
+;화술2→検知率_2/7 不明率71.4％÷2＝誤答率35.7％
+;화술3→検知率_3/8 不明率62.5％÷2＝誤答率31.3％
+;화술4→検知率_4/9 不明率55.6％÷2＝誤答率27.8％
+;화술5→検知率5/10 不明率50％÷2＝誤答率25％
+;화술6→検知率6/11 不明率45.5％÷2＝誤答率22.8％
+
+;カンストでの10連勝率 7.5%
+
+;
+
+;
+;화술6で200回くらいやれば当たることは当たるのかな
+;額面は4766だが2000を引いたら儲けは半分くらいだ
+@CASINO_DICE
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIM HAITOU
+#DIM DICE_1
+#DIM DICE_2
+#DIM DICE_SUM
+#DIM D_YOSOU
+#DIM D_TALK
+#DIM P_YOSOU
+#DIM P_TALK
+D_TALK = POWER(4, 2)
+P_TALK = POWER(MAX(ABL:MASTER:화술기능, 1), 2)
+IF FLAG:듀얼포인트 <= 0
+	PRINTFORML 딜러
+	PRINTFORML 　이런ー、손님 ＤＰ 없잖아
+	PRINTFORMW 　먼저 사오지 않으면 놀지 못한다구
+	RETURN
+ELSEIF FLAG:듀얼포인트 < 100
+	PRINTFORML 딜러
+	PRINTFORML 　이거 1번에 100ＤＰ란말이지ー
+	PRINTFORMW 　미안해ー
+	RETURN
+ENDIF
+PRINTFORML 딜러
+PRINTFORML 　주사위 게임 코너입니다
+PRINTFORMW 　아무 데나 앉아주세요
+HAITOU = 100
+TIME += 5
+PRINTFORML 
+PRINTFORML 딜러
+PRINTFORML 　그럼일단 게임의 참가비 100ＤＰ를 받을게요ー
+CALL CASINO_MONEY("ＤＰ", -100)
+CALL CASINO_MONEY("カモ", 100)
+DICE_1 = FUNC_CASINO("DICE", 1, 6)
+DICE_2 = FUNC_CASINO("DICE", 1, 6)
+DICE_SUM = DICE_1 + DICE_2
+D_YOSOU = RAND(1, 3)
+PRINTFORML 
+PRINTFORML 딜러
+PRINTFORML 　자ー적당히 데굴데굴
+PRINTFORML 　네ー에、홀 짝 어디일까요
+IF D_YOSOU % 2
+	PRINTFORML 　그럼 나의 예상、홀
+ELSE
+	PRINTFORML 　그럼 나의 예상、짝
+ENDIF
+WAIT
+PRINTFORML 
+LOCAL = D_TALK + P_TALK
+IF RAND:LOCAL <= D_TALK
+	PRINTDATAL
+		DATAFORM 이건 거짓말일까？
+		DATAFORM 진실일까？……아니、잘모르겠다
+		DATAFORM 눈썹이 수상하다、거짓말인가？？？
+		DATAFORM 생각할수록 더 헷갈리기 시작했다
+		DATAFORM 딜러는 후아암～하며 크게 하품을 했다
+		DATAFORM 딜러는 멍ー한 얼굴로 이쪽을 바라보고있다
+		DATAFORM 딜러는 피곤해보여 뭘 생각하는지 잘 모르겠다
+		DATAFORM 딜러의 작은 코가 움찔움찔하고있다……라고 생각했더니 귀엽게 재채기했다
+	ENDDATA
+ELSE
+	IF DICE_SUM % 2 == D_YOSOU % 2
+		PRINTFORML 이 요정의 말은 진짜다!
+	ELSE
+		PRINTFORML 이 요정은 거짓말을 하고 있다!
+	ENDIF
+ENDIF
+PRINTFORML 
+;[2]丁[1]半
+CALL CASINO_INPUTLOOP("丁半予想")
+P_YOSOU = RESULT
+PRINTFORML 
+PRINTFORML 딜러
+PRINTFORML 　그러면ー결과 발표의 시간입니다ー
+PRINTFORML 　자 열어보면……결과는？
+PRINTFORML 
+PRINTFORML ～결과～
+IF DICE_SUM % 2
+	PRINTFORML 나온 눈은{DICE_1}과 {DICE_2}로 홀입니다
+ELSE
+	PRINTFORML 나온 눈은{DICE_1}과 {DICE_2}로 짝입니다
+ENDIF
+
+IF DICE_SUM % 2 == P_YOSOU % 2
+;客の勝ち
+	TIMES HAITOU, 1.50
+	PRINTFORML 딜러
+	PRINTFORML 　오ー맞췄네、배당금이 1.5배인 {HAITOU}가 됩니다
+	IF FLAG:듀얼포인트 < 100
+		PRINTFORML 　손님은 계솔할 요금을 못내니까 이쯤에서 정산이네
+		CALL CASINO_MONEY("ＤＰ", HAITOU)
+
+		PRINTFORML 　자 그럼、아직 계속 하실건가요？아니면 그만두실건가요？
+		;[1]続行[0]やめる
+		CALL CASINO_INPUTLOOP("続行")
+		IF !RESULT
+				PRINTFORMW 　또와주세요
+			RETURN
+		ELSE
+				PRINTFORMW 　그ー래요、그ー렇게 나와야지
+			HAITOU = 100
+		ENDIF
+	ELSEIF NEMUKE() >= 700
+		CALL CASINO_MONEY("ＤＰ", HAITOU)
+		$EXIT_NEMUI
+		PRINTFORML 
+		PRINTFORML 　음～、손님도 졸린걸까
+		PRINTFORML 　오늘 게임은 여기까지 하는걸로
+		PRINTFORMW 　또봐～
+		RETURN
+	ELSE
+		PRINTFORML 　자 그럼、아직 계속 하실건가요？아니면 그만두실건가요？
+		;[2]続行[1]精算して続行[0]精算してやめる
+		CALL CASINO_INPUTLOOP("ダイス続行")
+		SELECTCASE RESULT
+		CASE 0
+				PRINTFORML 　그럼 배당금{HAITOU}ＤＰ를 받아주세요
+			PRINTFORMW 　또 와주세요
+			CALL CASINO_MONEY("ＤＰ", HAITOU)
+			RETURN
+		CASE 1
+				PRINTFORML 　신중하시네요
+			PRINTFORMW 　그럼 배당금{HAITOU}ＤＰ를 받아주세요
+			CALL CASINO_MONEY("ＤＰ", HAITOU)
+			HAITOU = 100
+		CASE 2
+				PRINTFORMW 　그ー래요、그ー렇게 나와야지
+		ENDSELECT
+	ENDIF
+ELSE
+;客の負け
+	PRINTFORML 딜러
+	PRINTFORML 　어머 아쉽네요
+	IF FLAG:듀얼포인트 < 100
+		PRINTFORMW 　ＤＰ가 없으면 계속할수 없는걸요
+		RETURN
+	ELSEIF NEMUKE() >= 700
+		WAIT
+		GOTO EXIT_NEMUI
+	ELSE
+		PRINTFORML 　100ＤＰ내고 계속 하실건가요？
+		;[1]続行[0]やめる
+		CALL CASINO_INPUTLOOP("続行")
+		IF !RESULT
+				PRINTFORMW 　또 와주세요
+			RETURN
+		ELSE
+				PRINTFORMW 　그ー래요、그ー렇게 나와야지
+			HAITOU = 100
+		ENDIF
+	ENDIF
+ENDIF
+
+
+;D/Pは딜러とプレイヤー
+;最高賞金は90で消費ＤＰの4.5倍という屈손가락のコスパを誇るも교양6でようやく正答率50％
+;さらに動く額面が固定して小さいため大して稼げない
+;確率で正解が결정するためいかに교양を上げても誤答率は0にはならないという땅味な함정もある
+@CASINO_QUIZ
+#LOCALSIZE 1
+#LOCALSSIZE 10
+#DIM Q_LV
+#DIM Q_COUNT
+#DIM Q_CHECK
+Q_COUNT = 1
+SIF !STRLENS(LOCALS)
+	SPLIT "/妖精でもわかる問題/ふつうの人間むきな問題/ふつうでない人間むきの問題/마법사ならわかってほしい問題/마법사も頭を抱える難問/誰もが唸る奇問", "/", LOCALS
+PRINTFORML 딜러
+PRINTFORML 　자 자 시작했습니다！
+PRINTFORML 　『움직이지 않는 대도서관』인 마법사 파츄리・널리지님 완전검수！
+PRINTFORMW 　“파츄리 퀴즈”의 시간입니다！！
+IF FLAG:듀얼포인트 < 5
+	PRINTFORMW 　……어라ー、손님 ＤＰ부족하다구요ー
+	RETURN
+ENDIF
+
+Q_LV = 1
+PRINTFORML 딜러
+PRINTFORMW 　그렇다면 빠르게 첫번째 문제！
+TIME += 5
+CALL CASINO_MONEY("ＤＰ", -5)
+CALL CASINO_MONEY("カモ", 5)
+PRINTFORML 　・
+PRINTFORML 　・
+PRINTFORML 　・
+PRINTFORML 
+PRINTFORMW 당신은 퀴즈에 답했다
+PRINTFORML 
+
+Q_CHECK = POWER(Q_LV, 3)
+LOCAL = Q_CHECK + POWER(MAX(ABL:MASTER:교양, 1), 3)
+IF RAND:LOCAL <= Q_CHECK
+	PRINTFORML 딜러
+	PRINTFORML 　아쉽네요ー！땡입니다ー
+ELSE
+	PRINTFORML 딜러
+	PRINTFORML 　대단해ー、대정답！
+	PRINTFORML 　상금 {Q_LV * 5}가져가ー！！！
+	CALL CASINO_MONEY("ＤＰ", Q_LV * 5)
+ENDIF
+WAIT
+PRINTFORML 
+IF FLAG:듀얼포인트 < 5
+	PRINTFORML 딜러
+	PRINTFORML 　오ー이런、여기서 손님의 ＤＰ가 떨어졌다ー！！
+	PRINTFORMW 　또 놀러와주세요～
+	RETURN
+ELSEIF FUNC_CASINO("CLOSE_CASINO")
+	PRINTFORML 딜러
+	PRINTFORML 　오ー이런、오늘은 여기서 폐점인듯 합니다！！
+	PRINTFORMW 　또 놀러와주세요～
+	RETURN
+ELSEIF NEMUKE() >= 700
+	PRINTFORML 딜러
+	PRINTFORML 　이런이런？손님 꽤나 피곤하신모양이네요！！
+	PRINTFORMW 　또 놀러와주세요～
+	RETURN
+ENDIF
+
+Q_COUNT ++
+SELECTCASE RAND(1, 101)
+CASE 1 TO 8
+	Q_LV = 1
+CASE 9 TO 22
+	Q_LV = 2
+CASE 23 TO 50
+	Q_LV = 3
+CASE 51 TO 78
+	Q_LV = 4
+CASE 79 TO 92
+	Q_LV = 5
+CASE 93 TO 100
+	Q_LV = 6
+ENDSELECT
+PRINTFORML 딜러
+PRINTFORML 　계속해서 {Q_COUNT}번째 문제！
+PRINTFORML 　이 문제는%LOCALS:Q_LV%입니다
+PRINTFORML 　여기서 똘아서 멈춰도 괜찮다구요～
+PRINTFORML 　어떻게 하시겠습니까ー！？
+PRINTFORML 
+;[1]続行[0]やめる
+CALL CASINO_INPUTLOOP("続行")
+IF !RESULT
+	PRINTFORML 딜러
+	PRINTFORML 　이용 감사합니다ー！！
+	PRINTFORMW 　또 놀러와주세요～
+	RETURN
+ENDIF
+PRINTFORML 딜러
+PRINTFORMW 　그럼 다음 문제를 읽어드리겠습니다！
+
+
+
+;카지노用ファンクション
+@FUNC_CASINO(TYPE, ARG, ARG:1)
+#FUNCTION
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIMS TYPE
+#DIM LCOUNT
+#DIM YEN
+#DIM CHARISMA
+SELECTCASE TYPE
+CASE "DICE"
+;汎用で使えるがダイス関数
+;個人的に改造のたびになんやかんや毎回作って入れてるような気がする
+	LOCAL = 0
+	FOR LCOUNT, 0, ARG
+		LOCAL += RAND(1, ARG:1)
+	NEXT
+CASE "TRADE"
+;紅魔館用の為替取引レート
+;基本レート￥200 == 1ＤＰ
+;	LOCAL = CHARISMA_NOW()
+
+ENDSELECT
+RETURNF LOCAL
+
+
+
+;카지노金銭取引関数
+;あなたが1万￥を得た場合には
+;CALL CASINO_MONEY("￥", 10000)
+;あなたが100ＤＰを失った場合には
+;CALL CASINO_MONEY("ＤＰ", -100)
+;
+;あなたの最高収入はたぶん一ヶ月で100万には届かない
+;紅魔館側で1億＄と50万ＤＰを用意
+@CASINO_MONEY(TYPE, ARG)
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIMS TYPE
+SELECTCASE TYPE
+CASE "￥"
+	;払い戻し上限
+	IF ARG > 0
+		LOCAL = MIN(ARG, 100000000 - FLAG:￥유통)
+		SIF LOCAL < 0
+			LOCAL = 0
+	ELSE
+		LOCAL = ARG
+	ENDIF
+	CALL MONEY_GET(LOCAL)
+	FLAG:￥유통 += LOCAL
+CASE "ＤＰ"
+	;払い戻し上限
+	IF ARG > 0
+		LOCAL = ARG
+		SIF LOCAL < 0
+			LOCAL = 0
+	ELSE
+		LOCAL = ARG
+	ENDIF
+	FLAG:듀얼포인트 += LOCAL
+CASE "カモ"
+	FLAG:호구지수 += ARG
+ENDSELECT
+
+
+
+;汎用性もクソもねぇ
+;さして意味もないDO-LOOPがうざかった
+@CASINO_INPUTLOOP(TYPE)
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIMS TYPE
+#DIM C_MAX
+#DIM LCOUNT
+SELECTCASE TYPE
+CASE "カード賭け金"
+	IF FLAG:듀얼포인트 <= 99
+		PRINTFORML 이런、내기금이 부족한것같네요？
+		PRINTFORML 그럼……올인 해버릴까요♪
+		RETURN FLAG:듀얼포인트
+	ENDIF
+	DRAWLINEFORM ━
+	PRINTFORML １００ＤＰ부터 걸수 있습니다
+	PRINTFORML 소지ＤＰ：{FLAG:듀얼포인트}DP
+	DRAWLINEFORM ━
+	SIF FLAG:듀얼포인트 >= 100
+		PRINTFORML [{100} ] - 100ＤＰ를 건다
+	SIF FLAG:듀얼포인트 >= 500
+		PRINTFORML [{500} ] - 500ＤＰ를 건다
+	SIF FLAG:듀얼포인트 >= 1000
+		PRINTFORML [{1000}] - 1000ＤＰ를 건다
+	SIF FLAG:듀얼포인트 >= 3000
+		PRINTFORML [{3000}] - 3000ＤＰ를 건다
+
+CASE "カード戦術"
+	PRINTFORML 당신의 전술은……
+	PRINTFORML [3] - 사기
+	PRINTFORML [2] - 정정당당
+	PRINTFORML [1] - 주시
+CASE "カード続行"
+	PRINTFORML [2] - 내기금 변경
+	PRINTFORML [1] - 속행
+	PRINTFORML [0] - 그만둔다
+CASE "続行"
+	PRINTFORML [1] - 계속한다
+	PRINTFORML [0] - 그만둔다
+CASE "丁半予想"
+	PRINTFORML ～당신의 예상～
+	PRINTFORML [2] - 짝
+	PRINTFORML [1] - 홀
+CASE "ダイス続行"
+	PRINTFORML [2] - 속행
+	PRINTFORML [1] - 정산하고 계속
+	PRINTFORML [0] - 정산하고 그만둔다
+ENDSELECT
+BINPUT
+RETURN RESULT
+
+
+
+;카지노用情報표시関数
+;主にブラックジャック関連
+@CASINO_DISP(TYPE, ARG, ARG:1)
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIMS TYPE
+#DIM PL
+#DIMS HAND_OP
+SELECTCASE TYPE
+CASE "BJ_CLOSE"
+;	DRAWLINEFORM ━
+;	PRINTFORML 山札残り{52 - CARD_DECK:0}
+	DRAWLINEFORM ━
+	PRINTFORML 【딜러】
+	CALL CARD_DISP("CARD", CARD_HAND:0:0)
+	CALL CARD_DISP("CARD_L")
+	DRAWLINEFORM ━
+	CALL CASINO_DISP("BJ_PL_HAND")
+	DRAWLINEFORM ━
+CASE "BJ_OPEN"
+	DRAWLINEFORM ━
+	CALL CASINO_DISP("BJ_DL_HAND")
+	DRAWLINEFORM ━
+	CALL CASINO_DISP("BJ_PL_HAND")
+	DRAWLINEFORM ━
+CASE "BJ_PL_HAND"
+	PRINTFORML 【 %CALLNAME:MASTER%】
+	CALL CARD_DISP("HAND", 1)
+	PRINTFORML 
+	CALL CASINO_DISP("BJ_POINT", 1)
+	PRINTFORML 
+CASE "BJ_DL_HAND"
+	PRINTFORML 【딜러】
+	CALL CARD_DISP("HAND", 0)
+	PRINTFORML 
+	CALL CASINO_DISP("BJ_POINT", 0)
+	PRINTFORML 
+CASE "BJ_POINT"
+	PL = ARG
+	PRINTFORM 　점수：
+	;情報更新のタイミングに注意
+	IF CARD_PLAYER("GET_BJ_BUST", PL)
+		SETCOLOR 255, 0, 0
+		PRINTFORM %TOSTR(CARD_PLAYER("GET_BJ_POINT", PL)), 2% BUST!!
+		RESETCOLOR
+	ELSEIF CARD_PLAYER("GET_BJ_BJ", PL)
+		SETCOLOR 255, 255, 0
+		PRINTFORM %TOSTR(CARD_PLAYER("GET_BJ_POINT", PL)), 2% BLACK JACK!!
+		RESETCOLOR
+	ELSE 
+		PRINTFORM %TOSTR(CARD_PLAYER("GET_BJ_POINT", PL)), 2%
+	ENDIF
+CASE "RESULT"
+	IF ARG
+		PRINTL
+		PRINTFORML ～결과～
+		PRINTFORML 　내기금 총액： {ARG:0, 10}
+		PRINTFORML 　　배당총액： {ARG:1, 10}
+		PRINTFORML 　　　　수지：\@ ARG:1 - ARG:0 >= 0 ? + #   \@{ARG:1 - ARG:0, 10}
+		PRINTW
+	ENDIF
+ENDSELECT
+
+
+
+;ここからカード関連関数群
+;카지노以外でも使えることは使えるはず
+
+;カードゲーム系は汎用化する旨味が大きいと思った
+
+
+;カード（トランプ）用汎用関数
+@PLAY_CARDS(TYPE, ARG:0, ARG:1)
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIMS TYPE
+#DIM  PL_ID
+SELECTCASE TYPE
+CASE "SHUFFLE"
+;カードの山札をシャッフルする
+;引数＝使用するジョーカーの数（上限8）
+	VARSET CARD_DECK
+	NUM_JOKER = LIMIT((ARG:0), 0, MAX_JOKER)
+	NUM_CARD  = 52 + NUM_JOKER
+	;0～52までつくって0を除去する
+	CALL FISHER_YATES_SHAFFLE(NUM_CARD + 1)
+	ARRAYREMOVE SHAFFLE_ARRAY, FINDELEMENT(SHAFFLE_ARRAY, 0), 1
+	ARRAYCOPY "SHAFFLE_ARRAY", "CARD_DECK"
+	NEW_CARD = 0
+CASE "RESET_HAND"
+;모든プレイヤーの패를 破棄する
+;NEW_CARD의 수치はリセットしない
+	VARSET NUM_HAND
+	VARSET CARD_HAND
+CASE "HIT"
+;特定プレイヤーが카드를 山札から引く
+;引数＝プレイヤー番号
+	CARD_HAND:(ARG:0):(NUM_HAND:(ARG:0)) = CARD_DECK:NEW_CARD
+	NUM_HAND:(ARG:0) ++
+	NEW_CARD ++
+CASE "HIT_BJ"
+;ブラックジャック用
+	CALL PLAY_CARDS("HIT", (ARG:0))
+	CALLF CARD_PLAYER("RENEW_BJ_POINT", (ARG:0))
+
+CASE "NUM_HIT"
+;ARG:0のプレイヤーの패를 ARG:1枚だけ補充する
+	FOR LOCAL, NUM_HAND:(ARG:0) , NUM_HAND:(ARG:0) + ARG:1
+		CALL PLAY_CARDS("HIT", ARG)
+	NEXT
+CASE "REHIT"
+;ARG:0のプレイヤーの손패、ARG:1を「上書き」する
+;元の손패は参照できない（「捨てる」ではない）
+;손패枚数は変わらない
+;現状で捨て札の기록が必要になるシステムは無いのでとりあえずこれで実装
+	CARD_HAND:(ARG:0):(ARG:1) = CARD_DECK:NEW_CARD
+	NEW_CARD ++
+
+CASE "POKER_FIRST_HAND"
+;ポーカーの最初の손패、ARG:0のプレイヤーの패를 5枚
+	CALL PLAY_CARDS("NUM_HIT", ARG:0, 5)
+
+ENDSELECT
+
+
+
+;カード표시関数
+@CARD_DISP(TYPE, ARG)
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIMS TYPE
+#DIM PL
+#DIMS HAND_OP
+#DIM C_HAND
+
+SELECTCASE TYPE
+CASE "CARD", "CARD_L"
+;汎用のカード표시용
+	;0とJKは別扱い
+	IF !ARG
+		PRINT ［ ？ ］
+		SIF TYPE == "CARD_L"
+			PRINTL
+		RETURN
+	ELSEIF CARD_CHECK("JOKER", ARG)
+		PRINT ［ JK ］
+		SIF TYPE == "CARD_L"
+			PRINTL
+		RETURN
+	ENDIF
+	PRINT ［
+	;スート표시, スペード, クラブ, ハート, ダイヤの順
+	SELECTCASE CARD_CHECK("SUIT", ARG)
+	CASE 1
+		SETCOLOR C_BLUE
+	CASE 2
+		SETCOLOR C_GREEN
+	CASE 3
+		SETCOLOR C_RED
+	CASE 4
+		SETCOLOR C_YELLOW
+	ENDSELECT
+	PRINTFORM %CARD_SUIT:CARD_CHECK("SUIT", ARG)% 
+	RESETCOLOR
+	;数字표시, あまり0は13, 遊びで９を⑨にしたり色を変えたりしてます
+	;記号やＡＡで絵札を表現するのも面白そう（めんどくさい）
+	SELECTCASE CARD_CHECK("RANK", ARG)
+	CASE 1
+		SETCOLOR 255, 0, 0
+		PRINTFORM %CARD_RANK:CARD_CHECK("RANK", ARG)%
+		RESETCOLOR
+	CASE 9
+		SETCOLOR 0, 255, 255
+		PRINTFORM %CARD_RANK:CARD_CHECK("RANK", ARG)%
+		RESETCOLOR
+	CASEELSE
+		PRINTFORM %CARD_RANK:CARD_CHECK("RANK", ARG)%
+	ENDSELECT
+	PRINT ］　
+	SIF TYPE == "CARD_L"
+		PRINTL
+CASE "HAND", "HAND_L", "HAND_BUTTON"
+;汎用の손패표시용
+	PL = ARG
+	HAND_OP = %TYPE%
+	FOR C_HAND, 0, NUM_HAND:PL
+		SIF CARD_HAND:PL:C_HAND == 0
+			BREAK
+		SIF HAND_OP == "HAND_BUTTON"
+;			PRINTFORM [{C_HAND, 2}]
+			PRINTFORM 　　
+
+		IF HAND_OP == "HAND_L"
+			CALL CARD_DISP("CARD_L", CARD_HAND:PL:C_HAND)
+		ELSE
+			CALL CARD_DISP("CARD", CARD_HAND:PL:C_HAND)
+		ENDIF
+	NEXT
+ENDSELECT
+
+
+
+;カードのプレイヤー変数の관리用F関数
+;"GET"のないTYPEはCALLFで使う
+@CARD_PLAYER(TYPE, PL)
+#FUNCTION
+#DIMS TYPE     ;処理内容
+#DIM DYNAMIC PL;판정대상プレイヤー
+#DIM PL_HAND   ;손패판정ループ用
+#DIM PL_ID     ;プレイヤー판정ループ用
+
+;ブラックジャック用変数
+;バースト・ブラックジャックあたりはBITつかえば1変数で済むけどこれでいいや
+#DIM P_BJ,    MAX_CARD_PL ;各プレイヤーの得点
+#DIM BJ_ACE,  MAX_CARD_PL ;所持するエースの数
+#DIM BJ_BJ,   MAX_CARD_PL ;ブラックジャックを달성しているかどうか
+#DIM BJ_BUST, MAX_CARD_PL ;バーストしたかどうか
+
+;ポーカー用変数
+;とりあえず複数人プレイは考慮していない
+#DIM PL_RANK,  5  ;손패情報の一時취득用
+#DIM PL_SUIT,  5  ;손패情報の一時취득用
+#DIM PK_GROUP     ;連番판정用
+#DIM CNT_RANK, 14 ;各数字の枚数취득
+#DIM CNT_SUIT, 5  ;各スートの枚数취득
+#DIM PK_RATE      ;得られた倍率、戻り値として使用（％）
+SELECTCASE TYPE
+
+;こっからブラックジャック用
+CASE "CLEAR_BJ_ALL"
+;計算用数値の初期化
+	VARSET P_BJ
+	VARSET BJ_ACE
+	VARSET BJ_BJ
+	VARSET BJ_BUST
+CASE "CLEAR_BJ"
+;特定プレイヤー向け
+	P_BJ:PL = 0
+	BJ_ACE:PL = 0
+	BJ_BJ:PL = 0
+	BJ_BUST:PL = 0
+CASE "RENEW_BJ_POINT_ALL"
+;全プレイヤーの상황を再計算
+	CALLF CARD_PLAYER("CLEAR_BJ_ALL", PL)
+	FOR PL_ID, 0, NUM_CARD_PL
+		CALLF CARD_PLAYER("CALC_BJ_POINT", PL_ID)
+	NEXT
+CASE "RENEW_BJ_POINT"
+;特定プレイヤーの상황を再計算
+	CALLF CARD_PLAYER("CLEAR_BJ", PL)
+	CALLF CARD_PLAYER("CALC_BJ_POINT", PL)
+CASE "CALC_BJ_POINT"
+;ブラックジャックの点数計算用
+;特定のプレイヤーの현재의 패의 得点を計算する
+	;12枚で確実にバーストするが一応計算はする
+	FOR PL_HAND, 0, NUM_HAND:PL
+		;引いてない（ありえなそうだが一応）
+		SIF CARD_HAND:PL:PL_HAND == 0
+			BREAK
+		;ジョーカー분기だけつくったけどちょっとまだ対応してないよ
+		IF CARD_CHECK("JOKER", CARD_HAND:PL:PL_HAND)
+		ELSEIF CARD_CHECK("RANK", CARD_HAND:PL:PL_HAND) == 1
+			BJ_ACE:PL ++
+		ELSE
+			P_BJ:PL += CARD_CHECK("BJ_POINT", CARD_CHECK("RANK", CARD_HAND:PL:PL_HAND))
+		ENDIF
+	NEXT
+	IF BJ_ACE:PL
+	;4パターン、1or11,2or12,3or13,4or14
+	;2장 이상 を11扱いするとそれだけでバーストなので考慮する必要はない
+		IF P_BJ:PL + 10 + BJ_ACE:PL <= 21
+			P_BJ:PL += 10 + BJ_ACE:PL
+		ELSE
+			P_BJ:PL += BJ_ACE:PL
+		ENDIF
+	ENDIF
+	SIF NUM_HAND:PL == 2 && P_BJ:PL == 21
+		BJ_BJ:PL = 1
+	SIF P_BJ:PL > 21
+		BJ_BUST:PL = 1
+CASE "GET_BJ_POINT"
+;特定のプレイヤーの得点
+	RETURNF P_BJ:PL
+CASE "GET_BJ_BJ"
+;特定のプレイヤーがブラックジャックを달성しているかどうか
+	RETURNF BJ_BJ:PL
+CASE "GET_BJ_BUST"
+;特定のプレイヤーがバーストしたかどうか
+	RETURNF BJ_BUST:PL
+
+
+CASE "GET_POKER_RATE"
+;ポーカーのレート計算
+;いまんとこ손패5장의 1人プレイしか想定してない
+;ベットが出来たほうが「らしい」けどAIとか평가関数とか考えたくないよ
+	VARSET PL_RANK
+	VARSET PL_SUIT
+	VARSET PK_GROUP
+	VARSET CNT_RANK
+	VARSET CNT_SUIT
+	VARSET PK_RATE
+	;손패配列のコピー
+	FOR PL_HAND, 0, NUM_HAND:PL
+		PL_RANK:PL_HAND = CARD_CHECK("RANK", CARD_HAND:PL:PL_HAND)
+		PL_SUIT:PL_HAND = CARD_CHECK("SUIT", CARD_HAND:PL:PL_HAND)
+	NEXT
+	PK_GROUP = 0
+	
+	;枚数カウント
+	FOR LOCAL, 1, 14
+		;ランクの枚数취득
+		CNT_RANK:LOCAL = MATCH(PL_RANK, LOCAL)
+		;ついでにスートのカウントもやっちゃう
+		SIF !INRANGE(LOCAL, 1, 4)
+			CONTINUE
+		CNT_SUIT:LOCAL = MATCH(PL_SUIT, LOCAL)
+	NEXT
+	
+	;ストレート판정処理
+	;10, J, Q, K, Aはストレート扱い
+	IF GROUPMATCH(1, CNT_RANK:1, CNT_RANK:10, CNT_RANK:11, CNT_RANK:12, CNT_RANK:13) == 5
+		PK_GROUP = 5
+	ELSEIF MATCH(CNT_RANK, 1) == 5
+		;ペア無しかつ「손패最大値 - 손패最小値 == 4」がストレート판정条件
+		;A～5、9～Kなど
+		SIF FINDLASTELEMENT(CNT_RANK, 1) - FINDELEMENT(CNT_RANK, 1) == 4
+			PK_GROUP = 5
+	ENDIF
+	
+	;レートは％表記デス（小数は返せないので）
+	IF MATCH(CNT_SUIT, 5) && GROUPMATCH(1, CNT_RANK:1, CNT_RANK:10, CNT_RANK:11, CNT_RANK:12, CNT_RANK:13) == 5
+	;Royal Straight
+		PK_RATE = 30000
+	ELSEIF MATCH(CNT_SUIT, 5) && PK_GROUP == 5
+	;Straight Flush
+		PK_RATE = 5000
+	ELSEIF MATCH(CNT_RANK, 4)
+	;Four of a Kind
+		PK_RATE = 3000
+	ELSEIF MATCH(CNT_RANK, 3) && MATCH(CNT_RANK, 2)
+	;Full House
+		PK_RATE = 2000
+	ELSEIF MATCH(CNT_SUIT, 5)
+	;Flush
+		PK_RATE = 1000
+	ELSEIF PK_GROUP == 5
+	;Straight
+		PK_RATE = 500
+	ELSEIF MATCH(CNT_RANK, 3)
+	;Three of a Kind
+		PK_RATE = 300
+	ELSEIF MATCH(CNT_RANK, 2) == 2
+	;Two Pair
+		PK_RATE = 100
+	ELSEIF MATCH(CNT_RANK, 2)
+	;One Pair
+		PK_RATE = 50
+	ELSE
+	;No Pair
+		PK_RATE = 0
+	ENDIF
+	RETURNF PK_RATE
+ENDSELECT
+
+
+
+;カードゲーム판정F関数
+;カードの一枚一枚に対する판정
+@CARD_CHECK(TYPE, D_ARG)
+#FUNCTION
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIMS TYPE
+#DIM DYNAMIC D_ARG ;適当にDYNAMIC化したかっただけなんだどいい名前が思いつかない
+#DIM P_BJ
+#DIM ACE_COUNT
+#DIM C_HAND
+SELECTCASE TYPE
+CASE "JOKER"
+;RANK/SUITは戻り値0でジョーカー/数値無しの判別が不能のため
+;先にJOKERをチェックして下さい
+	SIF D_ARG > 52
+		RETURNF 1
+	RETURNF 0
+CASE "RANK"
+;戻り値1～13
+;ジョーカーのとき0
+	SIF !D_ARG
+		RETURNF
+	SIF D_ARG > 52
+		RETURNF 0
+	SIF !(D_ARG % 13)
+		RETURNF 13
+	RETURNF D_ARG % 13
+CASE "SUIT"
+;戻り値1～4
+;ジョーカーのとき0
+	SIF !D_ARG
+		RETURNF
+	SIF D_ARG > 52
+		RETURNF 0
+	RETURNF (D_ARG - 1) / 13 + 1
+
+CASE "BJ_POINT"
+;ブラックジャックの点数計算用
+;ACEのポイントが손패次第で変わってしまってこの関수만큼 では扱えない
+;変数の上書き問題が面倒なので独立させた
+;引数はRANKにして下さい
+;ちなジョーカー非対応
+	SIF GROUPMATCH(D_ARG, 11, 12, 13)
+		RETURNF 10
+	RETURNF D_ARG
+
+CASE "BJ_BUST"
+	SIF D_ARG > 21
+		RETURNF 1
+	RETURNF 0
+ENDSELECT
+
+
+@CASINO_MEMBER_RANKUP
+
+
+IF FLAG:호구지수 >= 100 && FLAG:회원랭크 < 1
+	PRINTFORMW 가게를 나가려는데 딜러가 당신을 불러 세웠다
+	PRINTFORML 「항상 저희 카지노를 애용해주셔서 진심으로 감사합니다.」
+	PRINTFORM 「지금부터 고객님의 회원 등급이 」
+	CALL COLORMESSAGE("브론즈 DP 회원",C_YELLOW)
+	PRINTFORML 「이(가) 되어, DP 보유 한도가 상승하고 DP 판매가 가능해졌습니다.」
+	PRINTFORMW 「앞으로도 많은 이용 부탁드립니다.」
+	FLAG:회원랭크 = 1
+	FLAG:호구지수 = 0
+ENDIF
+IF FLAG:호구지수 >= 3000 && FLAG:회원랭크 < 2
+	PRINTFORMW 가게를 나가려는데 딜러가 당신을 불러 세웠다
+	PRINTFORML 「항상 저희 카지노를 애용해주셔서 진심으로 감사합니다.」
+	PRINTFORM 「지금부터 고객님의 회원 등급이 」
+	CALL COLORMESSAGE("실버 DP 회원",C_YELLOW)
+	PRINTFORML 「이(가) 되어, DP 보유 한도 상승과 DP 판매 수수료 인하가 적용됩니다.」
+	PRINTFORMW 「앞으로도 많은 이용 부탁드립니다.」
+	FLAG:회원랭크 = 2
+	FLAG:호구지수 = 0
+ENDIF
+
+IF FLAG:호구지수 >= 10000 && FLAG:회원랭크 < 3
+	PRINTFORMW 가게를 나가려는데 딜러가 당신을 불러 세웠다
+	PRINTFORML 「항상 저희 카지노를 애용해주셔서 진심으로 감사합니다.」
+	PRINTFORM 「지금부터 고객님의 회원 등급이 」
+	CALL COLORMESSAGE("골드 DP 회원",C_YELLOW)
+	PRINTFORML 「이(가) 되어, 더 높은 DP 보유 한도와 DP 판매 수수료 인하가 적용됩니다.」
+	PRINTFORMW 「앞으로도 많은 이용 부탁드립니다.」
+	FLAG:회원랭크 = 3
+	FLAG:호구지수 = 0
+ENDIF
+[SKIPSTART]
+IF !ITEM:紅魔카지노VIP会員証
+PRINTFORML 
+PRINTFORMW 가게를 나가려는데 딜러가 당신을 불러 세웠다
+PRINTFORML 
+;VIPるーむの仕様が固まりきらないので封印
+;封印しといて文章だけ拡充するのってどうなんだ
+;れみふらさくやは顔パスでも良さそうだけどな
+	SELECTCASE CSVCALLNAME(FLAG:변장)
+	CASE "レミリア", "フラン", "パチュリー"
+		PRINTFORML 딜러
+		PRINTFORML 　「 %CALLNAME:MASTER%님, 잠시 시간 괜찮으신가요?」
+		PRINTFORML 　「이미 알고 계실 수도 있지만, 저희 가게에는 VIP룸이 있습니다」
+		PRINTFORML 　「카지노를 꽤 마음에 들어하신 것 같아서, VIP 회원증을 준비해 두었습니다」
+	CASE "사쿠야"
+		PRINTFORML 딜러
+		PRINTFORML 　 %CALLNAME:MASTER%님、VIP 회원증을 준비해 왔습니다
+		PRINTFORMW 　VIP룸으로 안내해드리겠습니다
+	CASE "美鈴", "소악마"
+		PRINTFORML 딜러
+		PRINTFORML 　 %CALLNAME:MASTER%님, 완전히 빠지신 것 같네요
+		PRINTFORML 　네, 여기 VIP 회원증입니다
+		PRINTFORMW 　VIP룸으로 안내해드릴 테니 따라오세요
+	CASE "あなた"
+		IF MAIN_MAP == 3
+			PRINTFORML 　이제 완전히 단골이시네요
+			PRINTFORML 　우리 딜러가 되어보실래요？
+			PRINTFORML 　네, 여기 VIP 회원증입니다
+			PRINTFORMW 　VIP룸으로 안내해드릴 테니 따라오세요
+		ELSE
+			PRINTFORML 　잠시 시간 괜찮으신가요？
+			PRINTFORML 　항상 저희 가게를 이용해주셔서 감사합니다
+			PRINTFORML 　고객님은 저희 VIP 회원으로 인정되었습니다
+			PRINTFORMW 　이쪽이 VIP 회원증입니다
+		ENDIF
+	CASEELSE
+			PRINTFORML 　잠시 시간 괜찮으신가요？
+			PRINTFORML 　항상 저희 가게를 이용해주셔서 감사합니다
+			PRINTFORML 　고객님은 저희 VIP 회원으로 인정되었습니다
+			PRINTFORMW 　이쪽이 VIP 회원증입니다
+	ENDSELECT
+	PRINTFORML 
+	PRINTFORML 딜러가 당신에게 회원증을 건네며 따라오라고 손짓했다
+	PRINTFORMW 안내받은 곳은 아무 변화도 없는 붉은 벽 앞이었지만……？
+	PRINTFORML 
+	SELECTCASE CSVCALLNAME(FLAG:변장)
+	CASE "レミリア", "フラン", "パチュリー"
+		PRINTFORML 딜러
+		PRINTFORMW 　 %CALLNAME:MASTER%님、아까 드린 회원증을 이 벽 앞에 대어주세요
+	CASE "사쿠야"
+		PRINTFORML 딜러
+		PRINTFORMW 　 %CALLNAME:MASTER%님, 아까 드린 회원증을 이 벽 앞에 대어보세요
+	CASE "美鈴", "소악마"
+		PRINTFORML 딜러
+		PRINTFORMW 　 %CALLNAME:MASTER%님, 방금 받은 회원증을 이 벽 앞에 대보세요
+	CASE "あなた"
+		IF MAIN_MAP == 3
+			PRINTFORMW 　방금 받은 회원증을 이 벽 앞에 대보세요
+		ELSE
+			PRINTFORMW 　고객님、아까 드린 회원증을 이 벽 앞에 대어주세요
+		ENDIF
+	CASEELSE
+			PRINTFORMW 　고객님、아까 드린 회원증을 이 벽 앞에 대어주세요
+	ENDSELECT
+	PRINTFORML 
+	PRINTFORMW %CALLNAME:MASTER%가 안내받은 대로 하자、희미한 기계음과 함께 눈앞의 벽이 열렸다
+	PRINTFORML 
+	PRINTFORML 딜러
+	PRINTFORML 　여기가 저희 가게 자랑의 VIP룸입니다
+	PRINTFORML 　VIP룸 안에서는 다양한 서비스를 제공하고 있습니다
+	PRINTFORML 　귀중한 시간 내주셔서 감사합니다
+	PRINTFORML 　안전하게 돌아가시길 바랍니다
+	PRINTFORMW 　직원 일동、다시 방문해주시는 것을 진심으로 기다리고 있습니다
+	PRINTFORML 
+	PRINTFORMW VIP룸이 이용 가능하게 되었습니다
+	ITEM:紅魔카지노VIP会員証 = 1
+ENDIF
+[SKIPEND]

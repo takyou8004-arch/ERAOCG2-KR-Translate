@@ -1,0 +1,163 @@
+﻿@CARDNAME_20201,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = EM 스컬뱃 조커
+	CASE "略称"
+RESULTS = EM 스컬뱃
+	CASE "カテゴリ"
+RESULTS:0 = 엔터메이트
+ENDSELECT
+
+
+@CARD_20201(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 100
+	CASE "성별"
+		RETURN 雄性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_20201(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 ①의 펜듈럼 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 패 / 엑스트라 덱에서 엑스트라 몬스터 이외의 "EM", "마술사", "오드아이즈" 몬스터 1장을 특수 소환한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환했을 경우에 발동할 수 있다.
+PRINTL 이 카드명 이외의 "EM", "마술사", "오드아이즈" 몬스터 1장을 덱에서 패에 추가한다.
+
+
+
+@CARDSUMMON_AA_20201
+
+
+@CARDCAN_20201(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20201)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,20201)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ:0 = 엔터메이트
+	효과条件カテゴリ:1 = 마술사
+	효과条件カテゴリ:2 = 오드아이즈
+	효과条件종류 = EX以外全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件固名前 = EM 스컬뱃 조커
+	효과条件カテゴリ:0 = 엔터메이트
+	효과条件カテゴリ:1 = 마술사
+	효과条件カテゴリ:2 = 오드아이즈
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20201(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20201)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20201,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ:0 = 엔터메이트
+		효과条件カテゴリ:1 = 마술사
+		효과条件カテゴリ:2 = 오드아이즈
+		효과条件종류 = EX以外全般
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20201)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件固名前 = EM 스컬뱃 조커
+		효과条件カテゴリ:0 = 엔터메이트
+		효과条件カテゴリ:1 = 마술사
+		효과条件カテゴリ:2 = 오드아이즈
+		효과条件종류 = モン全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+

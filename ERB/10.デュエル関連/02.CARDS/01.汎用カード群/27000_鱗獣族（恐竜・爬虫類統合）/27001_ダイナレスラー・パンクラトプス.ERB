@@ -1,0 +1,128 @@
+﻿@CARDNAME_27001,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 다이너 레슬러 판크라톱스
+	CASE "略称"
+RESULTS = 판크라톱스
+	CASE "カテゴリ"
+RESULTS:0 = 다이너 레슬러
+ENDSELECT
+
+
+@CARD_27001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_27001(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①: 상대 필드의 몬스터의 수가 자신 필드의 몬스터보다 많을 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALL CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ②: 자신 / 상대 턴에, 자신 필드의 「다이너 레슬러」 몬스터 1장을 릴리스하고, 상대 필드의 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+PRINTL
+
+@CARDCAN_27001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,27001)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,27001)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,27001,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	SIF モンスター数(対面者) <= モンスター数(듀얼리스트)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,27001)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_27001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27001,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27001,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 다이너 레슬러
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		ENDIF
+	ENDIF
+ENDIF

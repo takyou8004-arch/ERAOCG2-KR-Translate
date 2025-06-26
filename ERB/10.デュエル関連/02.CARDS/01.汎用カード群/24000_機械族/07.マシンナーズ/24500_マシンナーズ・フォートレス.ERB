@@ -1,0 +1,148 @@
+﻿@CARDNAME_24500,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마시나즈 포트리스
+	CASE "略称"
+RESULTS = 포트리스
+	CASE "カテゴリ"
+RESULTS:0 = 마시나즈
+ENDSELECT
+
+
+@CARD_24500(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 1600
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24500(종류)
+#DIM DYNAMIC 종류
+
+
+CALLFORM CARD_ABLE(0,손패起動 ,묘지起動)
+PRINTL ①: 레벨의 합계가 8 이상이 되도록 패의 기계족 몬스터를 버리고, 발동할 수 있다.
+PRINTL 패 / 묘지에서 「마시나즈 포트리스」 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 대상 내성을 가진다.
+CALLFORM CARD_ABLE(0,破壊→묘지 ,戦闘→묘지)
+PRINTL ③: 이 카드가 파괴되었을 경우, 상대 필드의 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+
+@CARDCAN_24500(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24500)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24500)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종족 = 기계족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT:2 < 8
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24500(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 묘지送りレベル
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24500)
+	IF RESULT == 0
+		$INPUT_LOOP
+		CALL FULLRESET
+		효과条件종족 = 기계족
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALLFORM CARD_{RESULT:1}, "レベル"
+			IF RESULT + 묘지送りレベル >= 8
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과範囲묘지 = 1
+효과条件名前 = 머시너즈 포트리스
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)	
+			ELSE
+				묘지送りレベル += RESULT
+				GOTO INPUT_LOOP
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24500)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+ENDIF
+
+

@@ -1,0 +1,211 @@
+﻿@CARDNAME_29006,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 코이츠
+	CASE "略称"
+RESULTS = 코이츠
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_29006(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 200
+	CASE "守備力"
+		RETURN 100
+	CASE "分割"
+		RETURN 유니온
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_29006(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "코이츠"의 3번 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,필드起動,손패起動 ,묘지起動)
+PRINTL 1: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 손패, 필드, 묘지에서 "코이츠"를 자신 필드의 "아이츠"나 "소이츠"에 장착한다.
+PRINTL 장착 몬스터가 전투 / 효과로 파괴될 경우, 대신 이 카드를 파괴할 수 있다.
+CALLFORM CARD_ABLE(0,攻守変動,지속효과)
+PRINTL 2: "코이츠"를 장착하고 있는 몬스터의 공격력은 3000 올리고, 그 공격은 관통한다.
+CALLFORM CARD_ABLE(1,ライフ変強制誘発)
+PRINTL 3: "코이츠"를 장착한 몬스터가 상대에게 전투 데미지를 입혔을 경우에 발동할 수 있다.
+PRINTL 덱에서 천사족 몬스터 1장을 패에 추가한다.
+PRINTL "코이츠"가 "아이츠"에 장착되어 있을 경우, 패에 추가하지 않고 특수 소환할 수 있다.
+
+@CARDCAN_29006(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29006)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 필드起動 || 종류 == 손패起動 || 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前:0 = 아이츠
+	효과条件名前:1 = 코이츠
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == バトル開始時強制
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	TRYCALLFORM CARDNAME_{GETVAR(@"%装備者%_필드:装備先")}, "名前"
+	SIF RESULTS != "아이츠" && RESULTS != "코이츠"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ライフ変強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ダメージ受者 == 듀얼리스트
+		RETURN 0
+	SIF !GROUPMATCH(ダメージ종류,"戦闘", "直接戦闘")
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 装備先
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,29006)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 천사족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29006(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 필드起動 || 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29006)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前:0 = 아이츠
+		효과条件名前:1 = 코이츠
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			IF 종류 == 필드起動
+				CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,"필드",場所,(4))
+			ELSEIF 종류 == 손패起動
+				CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,"손패",場所,(4))
+			ELSEIF 종류 == 묘지起動
+				CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,"묘지",場所,(4))
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == バトル開始時強制
+	IF 발동済_2(듀얼리스트,29005)
+		PRINTW これで最後！コイツパワーで攻撃횟수＋１！
+	ELSEIF 발동済_1(듀얼리스트,29005)
+		PRINTW コイツパワーでさらに攻撃횟수＋１！
+		CALL CARD_EFFECT_USE(듀얼리스트,29005,2)
+	ELSE
+		PRINTW コイツパワーで攻撃횟수＋１！
+		CALL CARD_EFFECT_USE(듀얼리스트,29005,1)
+	ENDIF
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",装備先,"戦",1)
+
+ELSEIF 종류 == ライフ変強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29006,1)
+	IF RESULT == 0
+		TRYCALLFORM CARDNAME_{GETVAR(@"%装備者%_필드:装備先")}, "名前"
+		IF RESULTS == "아이츠" && モンスター数(듀얼리스트) < 5
+			SIF 듀얼리스트 == "자신"
+PRINTL 몬스터를 특수 소환하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+		ELSE
+			RESULT = 1
+		ENDIF
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종족 = 천사족
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ELSEIF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종족 = 천사족
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,3000)
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"貫通")
+ENDIF
+

@@ -1,0 +1,165 @@
+@CARDNAME_98700,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 受け継がれるアミュレット
+	CASE "略称"
+		RESULTS = MSアミュレット
+	CASE "カテゴリ"
+		RESULTS:0 = HERO
+		RESULTS:1 = I・HERO
+		RESULTS:2 = THE IDOLM@STER
+		; RESULTS:4 = MILLION LIVE!
+ENDSELECT
+
+@CARD_98700(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_98700(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_98700(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①：자신의 「I・HERO」モンスターが戦闘・상대의 효과에 의해 파괴된 場合に발동할 수 있다。
+PRINTL 묘지の파괴된 몬스터 １体と、패 / 필드의 「I・HERO」몬스터 １体を제외하고、
+PRINTL ＥＸ덱에서 이 효과로 제외한 カード名以外で、레벨６이하의 「I・HERO」융합몬스터 １体を융합소환 취급으로 특수  소환한다。
+
+@CARDCAN_98700(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,98700)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,98700)
+		RETURN 0	
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = I・HERO
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+	효과条件カテゴリ = I・HERO
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = I・HERO
+	CALLFORM 효과条件レベル_ADV(6, "以下")
+	효과条件종류 = 융합
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_98700(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+
+#DIM DYNAMIC 破壊カードID,100
+#DIM DYNAMIC 破壊カウンタ
+#DIM DYNAMIC 選択カードＢID
+#DIM DYNAMIC 설정レベル
+#DIM DYNAMIC 選択カードＣ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,98700,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = I・HERO
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般",0,1)
+		破壊カウンタ = RESULT
+		FOR カウンタ,0,破壊カウンタ
+			破壊カードID:カウンタ = RESULT:(カウンタ+1)
+		NEXT
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件行先플래그 = 제외行き
+		효과条件ID = 999999
+		FOR カウンタ,0,破壊カウンタ
+			효과条件ID:カウンタ = 破壊カードID:カウンタ
+		NEXT
+		IF 효과条件ID != 999999
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			選択カードID = RESULT:1
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과範囲필드 = 1
+				효과条件カテゴリ = I・HERO
+				효과条件종류 = モン全般
+				효과条件行先플래그 = 제외行き
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+				選択カードＢID = RESULT:1
+				IF RESULT == 1
+					CALL FULLRESET
+					효과条件固ID:0 = 選択カードID
+					효과条件固ID:1 = 選択カードＢID
+					CALLFORM 효과条件レベル_ADV(6, "以下")
+					효과条件종류 = 융합
+					효과条件カテゴリ = I・HERO
+					CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+					選択カードＣ = RESULT
+					IF 選択カードＣ != 9999
+						CALL CARD_EX_SUMMON(듀얼리스트, "EX덱", 選択カードＣ)
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

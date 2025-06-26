@@ -1,0 +1,119 @@
+﻿@CARDNAME_26154,参照先
+;ココで지정 카드의 名前、略称を返す予定26154
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 가스타 베즐
+	CASE "略称"
+		RESULTS = 베즐
+	CASE "カテゴリ"
+		RESULTS:0 = 가스타
+ENDSELECT
+
+
+@CARD_26154(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1500
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26154(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  ①②의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ①："가스타 베즐" 이외의 자신 "가스타" 몬스터의 효과가 발동했을 경우에 발동할 수 있다。
+PRINTL 이 카드를 패에서 특수 소환한다。
+CALLFORM CARD_ABLE(1,소환時 ,특수소환時)
+PRINTL ②：이 카드가 소환 / 특수소환에 성공한 경우에 발동할 수 있다。
+PRINTL 덱에서 "가스타" 몬스터 １장을 묘지로 보낸다。
+PRINTL 그 후、패에서 "가스타" 몬스터 １장을 특수 소환할 수 있다。
+
+
+@CARDCAN_26154(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26154)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,26154)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,26154)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,26154,"손패")
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과条件固名前 = 가스타 베즐
+	효과条件カテゴリ = 가스타
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26154(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26154,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 가스타
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 가스타
+		효과条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)		
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26154,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+ENDIF
+

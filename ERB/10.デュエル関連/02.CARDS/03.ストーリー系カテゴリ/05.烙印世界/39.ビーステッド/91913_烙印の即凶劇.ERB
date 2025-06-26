@@ -1,0 +1,140 @@
+﻿@CARDNAME_91913,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 낙인의 에튀드
+	CASE "略称"
+RESULTS = 낙인의 즉흥극
+	CASE "カテゴリ"
+RESULTS:0 = 낙인
+ENDSELECT
+
+
+@CARD_91913(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+@CARD_EXPLANATION_91913(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①: 자신 필드에 드래곤족 몬스터가 존재할 경우에 발동할 수 있다.
+PRINTL 자신 필드의 몬스터를 소재로 하여 S소환을 실행한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신 필드에 레벨 8 이상의 「비-스테드」 몬스터가 존재하는 한,
+PRINTL 상대 필드에서 묘지로 보내지는 카드는 묘지로 가지 않고 제외된다.
+
+
+
+@CARDCAN_91913(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC EX条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91913)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF (종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1) || (종류 == フリー誘発 && ゾーン == "마함" && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1)
+	SIF 발동済_1(듀얼리스트,91913)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,0)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 드래곤족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL RESETAREA_MAT
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 싱크로
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 비스테드
+	CALLFORM 효과条件レベル_ADV(8,"以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_91913(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 설정종족
+#DIM DYNAMIC 選択효과
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF (종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1) || (종류 == フリー誘発 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91913,1)
+	IF RESULT == 0
+		CALL RESETAREA_MAT
+		CALL FULLRESET
+		효과条件종류 = 싱크로
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL SYNSUMMON(듀얼리스트,選択カード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"땅제외置換",3,1)
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91913)
+	IF RESULT == 0
+	ENDIF
+ENDIF

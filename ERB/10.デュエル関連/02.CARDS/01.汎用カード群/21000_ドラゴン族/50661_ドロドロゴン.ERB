@@ -1,0 +1,150 @@
+﻿@CARDNAME_50661,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 도로도로곤
+	CASE "略称"
+RESULTS = 도로도로곤
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_50661(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 2200
+	CASE "융합代用"
+		RETURN 10
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50661(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 6
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50661) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50661(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너＋튜너 이외의 몬스터 1체 이상
+PRINTL ①：이 카드는 융합 소재의 대용 카드로 사용할 수 있다.
+PRINTL （소재 대용 카드는 두 번째 이후의 어떤 융합 소재로서도 대용할 수 있다）
+CALL CARD_ABLE(2,필드起動)
+PRINTL ②：이 카드가 S소환되어 있는 경우, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 자신 필드의 몬스터를 융합 소재로 하여, 융합 몬스터 1장을 융합 소환한다.
+PRINTL 그 때, 두 번째 융합 소재는 이 카드명이어야 한다.
+
+@CARDCAN_50661(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50661)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時強制
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,50661)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,0)
+	SIF RESULT == 1
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	強制素材場所２ = 지정場所(場所,ゾーン)
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50661(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃횟수
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50661,2)
+	IF RESULT == 0
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件소환可 = 1
+		強制素材場所２ = 지정場所(場所,ゾーン)
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL FUSSUMMON(듀얼리스트, 選択カード)
+		ENDIF
+	ENDIF
+ENDIF

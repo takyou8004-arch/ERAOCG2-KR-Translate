@@ -1,0 +1,126 @@
+﻿@CARDNAME_93431,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 사라마그레이트 레이지
+	CASE "略称"
+RESULTS = 전생 레이지
+	CASE "カテゴリ"
+RESULTS:0 = 사라마그레이트
+ENDSELECT
+
+
+@CARD_93431(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93431(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,フリー誘発)
+PRINTL ①: 이하의 효과에서 1개를 선택하여 발동할 수 있다.
+PRINTL ●손패 및 자신 필드의 앞면 표시 몬스터 중에서,
+PRINTL 「사라마그레이트」 몬스터 1장을 묘지로 보내고, 필드의 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+PRINTL ●각성 상태인 「사라마그레이트」 링크 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터의 링크 수까지, 상대 필드의 카드를 골라 파괴한다.
+
+@CARDCAN_93431(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIMS DYNAMIC 효과条件보존,10
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,93431)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,93431)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲손패 = 1
+	효과条件カテゴリ = 샐러맨그레이트
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_93431(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 링크値
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93431,1)
+	IF RESULT == 0
+PRINTL 효과를 선택해 주세요
+		CALL YN_CHOICE(듀얼리스트,"●複数破壊。","●１장 파괴。")
+		IF RESULT == 0
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+			효과条件カテゴリ = 샐러맨그레이트
+			효과条件종류 = 링크
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				選択カード_ID = RESULT:99
+				CALLFORM CARD_{選択カード_ID}("レベル")
+				링크値 = RESULT
+				SIF 링크値 >= 10
+					링크値 = 10
+				CALL FULLRESET
+				효과条件任意 = 1
+				효과条件複数 = 100 - 링크値
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+			ENDIF
+		ELSEIF RESULT == 1
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲손패 = 1
+			효과条件カテゴリ = 샐러맨그레이트
+			효과条件종류 = モン全般
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

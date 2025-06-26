@@ -1,0 +1,219 @@
+﻿@CARDNAME_50788,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 환룡성－조호
+	CASE "略称"
+RESULTS = 환룡성 조호
+	CASE "カテゴリ"
+RESULTS:0 = 룡성
+ENDSELECT
+
+
+@CARD_50788(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2200
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50788(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 9
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50788) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50788(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1체 이상
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: EX덱에서 특수 소환한 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 상대는 자신의 묘지의 「룡성」 몬스터와 같은 속성의 몬스터의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,破壊→묘지 ,戦闘→묘지)
+PRINTL ②: 이 카드가 전투 / 효과로 파괴되어 묘지로 보내졌을 때 발동할 수 있다.
+PRINTL 덱에서 튜너 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(10,효과後誘発)
+PRINTL ③: 1턴에 1번, 상대 필드의 몬스터가 전투 / 효과로 파괴되었을 경우 발동할 수 있다.
+PRINTL 상대의 묘지의 몬스터 1체와 원래 속성이 같은 드래곤족 몬스터 1장을 덱에서 특수 소환한다.
+
+
+@CARDCAN_50788(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50788)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種EX덱
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 룡성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件튜너 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 드래곤족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(対面者,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_50788(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+#DIM 選択속성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 룡성
+	효과条件속성 = 빛속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		CALL SET_PLAYER_INFO(対面者,"빛속성효과無効",1)
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 룡성
+	효과条件속성 = 바람속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		CALL SET_PLAYER_INFO(対面者,"바람속성효과無効",1)
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 룡성
+	효과条件속성 = 물속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		CALL SET_PLAYER_INFO(対面者,"물속성효과無効",1)
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 룡성
+	효과条件속성 = 땅속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		CALL SET_PLAYER_INFO(対面者,"땅속성효과無効",1)
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 룡성
+	효과条件속성 = 화염속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		CALL SET_PLAYER_INFO(対面者,"화염속성효과無効",1)
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 룡성
+	효과条件속성 = 어둠속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		CALL SET_PLAYER_INFO(対面者,"어둠속성효과無効",1)
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50788)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件튜너 = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50788,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과条件종류 = モン全般
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT 
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			
+			TRYCALLFORM CARD_{GETVAR(@"%대상者（CS）%_묘지:選択カード（CS）")},"속성"
+			選択속성 = RESULT
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종족 = 드래곤족
+			효과条件속성 = 選択속성
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,)
+		ENDIF
+	ENDIF
+ENDIF

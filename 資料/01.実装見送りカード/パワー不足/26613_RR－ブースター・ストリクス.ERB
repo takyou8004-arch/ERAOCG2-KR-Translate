@@ -1,0 +1,92 @@
+﻿@CARDNAME_26613,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = RR－ブースター・ストリクス
+	CASE "略称"
+		RESULTS = ブースター・Ｓ
+	CASE "カテゴリ"
+		RESULTS:0 = レイドラプターズ
+ENDSELECT
+
+
+@CARD_26613(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 1700
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26613(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①：자신의 「RR」モンスターが공격 대상にされた時、
+PRINTL この카드를 패에서 제외하고 발동할 수 있다。
+PRINTL 攻撃몬스터를 破壊する。
+
+@CARDCAN_26613(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26613)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF RESULTS != "レイドラプターズ"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26613(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26501)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘場所(듀얼리스트,1),"묘지")
+	ENDIF
+ENDIF

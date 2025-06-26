@@ -1,0 +1,138 @@
+﻿@CARDNAME_1625,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 이괴의 요정 엘포비아
+	CASE "略称"
+RESULTS = 엘포비아
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1625(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 900
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1625(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 덱에서 「신비의 요정 엘피리아」 1장을 패에 추가한다.
+
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ②: 상대 메인 페이즈에, 패의 바람 속성 몬스터 1장을 상대에게 보여주고 발동할 수 있다.
+PRINTL 보여준 몬스터의 레벨 이외의 상대 필드 위의 몬스터의 효과는 무효가 된다.
+PRINTL 
+
+@CARDCAN_1625(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1625)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件名前 = 신비의 요정 엘피리아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,1625)
+		RETURN 00
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件속성 = 바람속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1625(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択レベル
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1625)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件名前 = 신비의 요정 엘피리아
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1625,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件속성 = 바람속성
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_손패:選択カード")}, "レベル"
+			選択レベル = RESULT
+			CALL FULLRESET
+			CALLFORM 효과条件レベル_ADV(選択レベル, "以外")
+			CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効",1,1625)
+		ENDIF
+	ENDIF
+ENDIF

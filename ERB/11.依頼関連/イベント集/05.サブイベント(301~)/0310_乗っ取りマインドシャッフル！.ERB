@@ -1,0 +1,157 @@
+@IRAI_EVENT_310(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP-MJ)탈취 마인드 셔플！
+	CASE "이벤트種"
+		RETURN 이벤트_通常
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL マインド・キャスリンの他人と정신を入れ替える力
+		PRINTL これで楽しめないだろうか？
+		PRINTL
+		SETCOLOR C_RED 
+		PRINTL 要：マインド・キャスリンが연모以上
+		RESETCOLOR
+		PRINTL 
+		PRINTL 報酬：？
+	CASE "条件"
+		;マインド・キャスリンを所有
+		SIF CFLAG:NO_TO_CHARANUM(1655):소유함 == 0
+			RETURN 0
+		;ERAパック解放済み
+		SIF パック_解放:99 == 0
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_310(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC 条件달성
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主 = NO_TO_CHARANUM(1655)
+
+IF 依頼_달성상황 == 0
+	PRINTFORML 
+	PRINTFORMW マインド・キャスリンは他人と정신を入れ替えることができる
+	CALL CARD_UI(1655,1)
+	PRINTFORMW キャスリンは다른 体に宿り勝手に動かすことができるわけだ
+	PRINTFORMW これを使えば⋯⋯
+	PRINTL
+	PRINTL [0] - 悪用はやめておく
+	IF FLAG:악랄치 > 65
+		PRINTL [1] - 色んな女の子の体使い放題！
+	ELSE
+		PRINTL [1] - 다른 女の子の体でエッチできる⋯？
+	ENDIF
+	BINPUT
+	IF RESULT == 0
+		PRINTL
+		PRINTFORMW やめておこう…
+		PRINTFORMW そんなことよりデュエルしに行くか！
+		TIME += 5
+		RETURN 3
+	ELSEIF RESULT == 1
+		PRINTL
+		PRINTFORMW よし
+		PRINTFORMW 早速キャスリンを呼んで頼んでみよう…
+		CFLAG:(이벤트主):현재위치 = CFLAG:MASTER:현재위치
+		TIME += 5
+		依頼_場所 = 場所_寝室
+		依頼_달성상황 ++
+	ENDIF
+
+ELSEIF 依頼_달성상황 == 1
+	PRINTFORMW キャスリンに頼んでみよう…
+	PRINTFORMW ⋯⋯⋯⋯
+	PRINTFORMW ⋯⋯⋯
+	PRINTFORMW ⋯⋯
+	IF TALENT:이벤트主:연모 > 0 || デバッグシステム
+		PRINTFORMW キャスリンは %CALLNAME:MASTER%の頼みならと、顔を赤らめながら引き受けてくれた！
+	ELSE
+		PRINTFORMW 断られた…
+		SETCOLOR C_YELLOW
+		PRINTFORMW キャスリンともっと仲良くなったら頼みを聞いてくれるかもしれない
+		RESETCOLOR
+		TIME += 5
+		RETURN 3
+	ENDIF
+	PRINTFORML
+	PRINTFORMW 適当な女の子を소환して試してみよう
+	$DUEL_LOOP
+	TARGET = -1
+	詰め플래그 = 1
+	CALL DUEL_SYSTEM(1,310,,1)
+	IF RESULT != 1
+		PRINTFORMW もう一回！
+		GOTO DUEL_LOOP
+	ENDIF
+	PRINTFORML
+	PRINTFORMW この辺にしておこう
+	PRINTFORMW キャスリンは今後も色んなカラダでさせてくれるようだ…
+	SETCOLOR C_YELLOW
+	PRINTFORML 
+	CALL CARD_GET_SINGLE(59640)
+	ITEM:59640 += 2
+	RESETCOLOR
+	CALL EVILTY_POINT(30)
+	TIME += 60
+	RETURN 2
+ENDIF
+
+;듀얼상황の설정：ここでフィールドや패의 状態설정などを行う。
+@IRAI_DUEL_INTERMISSION_310
+;ライフなども調整出来る、例：ライフ_상대 = 4300、ライフ_자신 = 100
+
+CALL FULLRESET
+CALL CARD_MAKE_FIELD("자신",59640)
+CALL CARD_MAKE_FIELD("상대",1000)
+CALL CARD_MAKE_FIELD("상대",2100)
+CALL CARD_MAKE_FIELD("상대",2110)
+CALL CARD_MAKE_FIELD("상대",1263)
+CALL CARD_MAKE_FIELD("상대",2000)
+
+SETVAR @"자신_손패:0", 70003
+
+
+
+;勝利条件の설정、ここで詰めデュエルの勝利条件を설치絵할 수 있다。
+@IRAI_DUEL_CONDVIC_310
+VARSET RESULT
+SIF 발동済_2("자신",59640)
+	RETURN 1
+SIF 발동済_1("자신",59640)
+	RETURN 2
+RETURN 0
+
+;メッセージの설정
+@IRAI_DUEL_MESSAGE_310(存在確認)
+#DIM DYNAMIC 存在確認
+VARSET RESULT
+
+IF 存在確認 == 1
+	RETURN 1
+ENDIF
+
+CALL IRAI_DUEL_CONDVIC_310
+IF RESULT == 2
+	PRINTFORML 상대 필드의 キャスリンを破壊して②의 효과를 使おう
+	PRINTFORML リトライしたい場合は　[999] - 降参　を押そう
+ELSEIF RESULT == 1
+	PRINTFORML 終わりたい場合は　[9013] - 勝利条件달성　を押そう
+	PRINTFORML リトライしたい場合は　[999] - 降参　を押そう
+ELSE
+	PRINTFORML 마인드잭・캐스린의 효과를 試してみよう
+	PRINTFORML リトライしたい場合は　[999] - 降参　を押そう
+ENDIF

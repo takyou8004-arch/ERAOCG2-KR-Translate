@@ -1,0 +1,139 @@
+﻿@CARDNAME_62317,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 보이드베르그 튀르핑
+	CASE "略称"
+RESULTS = 보이드 티르핑
+	CASE "カテゴリ"
+RESULTS:0 = 보이드베르그
+ENDSELECT
+
+
+@CARD_62317(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 装備마법
+	CASE "추가日"
+		RETURN 250608
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_62317(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 미확인족・어둠 속성 몬스터에게만 장착 가능.
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 장착 몬스터의 공격력은 400 오르고, 그 공격은 관통한다.
+CALLFORM CARD_ABLE(1,ライフ変強制誘発)
+PRINTL ②: 장착 몬스터의 공격으로 상대에게 전투 데미지를 주었을 경우에 발동할 수 있다.
+PRINTL 손패가 5장이 되도록 덱에서 드로우한다.
+
+@CARDCAN_62317(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,62317)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 어둠속성
+	효과条件종족 = 미확인족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ライフ変強制誘発 && GETVAR(@"%듀얼리스트%_필드:装備先") != -1
+	SIF 발동済_1(듀얼리스트,62317)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ダメージ受者 == 듀얼리스트
+		RETURN 0
+	SIF 손패数(듀얼리스트) >= 5
+		RETURN 0
+	SIF !GROUPMATCH(ダメージ종류,"戦闘", "直接戦闘")
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 装備先
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_62317(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC ドロー枚数
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62317)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 어둠속성
+		효과条件종족 = 미확인족
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,400)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"貫通")
+
+ELSEIF 종류 == ライフ変強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62317,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		IF  손패数(듀얼리스트) < 5
+			ドロー枚数 = 5 - 손패数(듀얼리스트)
+			CALL CARDDRAW_BASIC(듀얼리스트,ドロー枚数)
+		ENDIF
+	ENDIF
+ENDIF

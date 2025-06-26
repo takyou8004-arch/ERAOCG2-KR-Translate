@@ -1,0 +1,190 @@
+﻿@CARDNAME_99586,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 패러사이트 바이올레이션
+	CASE "略称"
+		RESULTS = 패러사이트 Ｖ
+	CASE "カテゴリ"
+		RESULTS:0 = 패러사이트
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_99586(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99586(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①：상대 필드의 앞면 표시 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 덱에서 '패러사이트' 몬스터 1장을 선택해 그 몬스터에 장착하고, 그 몬스터의 효과를 턴 종료시까지 무효로 한다.
+PRINTL 또한, 대상이 암컷 몬스터일 경우, 그 몬스터의 컨트롤을 빼앗을 수 있다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신 메인 페이즈에 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 자신의 마법 & 함정 존에 존재하는 '패러사이트' 몬스터 카드 1장을 주인의 패로 되돌릴 수 있다.
+CALL TEXT_DECORATION("ROGUE")
+
+;「御巫かみくらべ」의 효과無効限定のような함정。牝性몬스터를 狙えばコントロールも奪えて효과は強力。
+;패러사이트モンスター装備状態ではリアクション효과が発生するので、奪った牝性モンスターへの패러사이트조교효과도 ついでに得られる。
+;자신의 ＥＸ덱を上手いこと構築して、묘지효과で패에 戻した패러사이트몬스터를 使って展開できるようにするのが活用するのに良い。
+;「패러사이트 싱크론」を用いて레벨을 持つ牝性몬스터를 狙って「バロネス」を立てたりするのが実戦では無難か。
+
+;덱에서 直接대상に装備させて무효로 하고 コントロールを奪取。と했을 경우、コントロール奪取すると장착 몬스터가 묘지送りとなった。
+;そのため実際의 효과処理は１．이 카드를 묘지로 보내고 、２．덱에서 패러사이트몬스터 １장을 마함に앞면 표시로 置き、
+;３．상대 몬스터 １장을 대상にとって무효로 하고 、４．대상 몬스터가 牝性であれば任意で強奪。
+;５．대상にした상대 몬스터와 덱에서 마함に置いた패러사이트 몬스터의 間に装備状態を作る。という順序になっている。
+
+@CARDCAN_99586(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99586)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	SIF 발동済_1(듀얼리스트,99586)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 패러사이트
+	효과条件종류 = モン全般
+	효과条件うらら解除 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,99586)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0	
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件カテゴリ = 패러사이트
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99586(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードA
+#DIM DYNAMIC セット先A
+#DIM DYNAMIC 選択カードB
+#DIM DYNAMIC セット先B
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 条件달성 = 0
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99586,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		
+		;상대 필드에 無効로할 수 있다 몬스터가 居ないと패러사이트몬스터를 出す処理から行わない。
+		;발동条件で処理は通っているが、효과処理までに場が変わった時に処理が中途半端で終わるため。
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件표시 = 表側표시
+		효과条件除去種 = 無効
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 패러사이트
+		효과条件종류 = モン全般
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+		選択カードA = RESULT:1
+		セット先A = 場所
+		;PRINTFORMW 選択カードA={選択カードA}　セット先：{セット先A}
+		IF 選択カードA != 9999
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"無効")
+			選択カード_ID = RESULT:2
+			セット先B = 他参照選択カード
+			;PRINTFORMW 選択カードID={選択カード_ID}　セット先：{他参照選択カード}
+			IF RESULT == 1
+				;대상카드가 牝性かどうかチェックし、牝性なら任意で強奪可能
+				;자신의 필드が満杯だと불가能
+				IF モンスター数(듀얼리스트) < 5
+					TRYCALLFORM CARD_{選択カード_ID}("성별")
+					IF RESULT == 牝性
+						TRYCALLFORM CARDNAME_{選択カード_ID}("名前")
+						PRINTFORMW %RESULTS%의 컨트롤을 빼앗습니까？
+						CALL YN_CHOICE(듀얼리스트)
+						IF RESULT == はい
+							CALL CARD_GET_CONTROL(듀얼리스트,他参照選択カード)
+							CALL SET_FIELD_INFO(듀얼리스트,"마함",セット先A,"装",コントロール先,1)
+							条件달성 = 1
+						ENDIF
+					ENDIF
+				ENDIF
+				;条件달성=0の場合（コントロール奪取後の装備を行ってない場合）は、ここで装備処理を入れる。
+				IF 条件달성 == 0
+					CALL SET_FIELD_INFO(듀얼리스트,"마함",セット先A,"装",セット先B,1)
+				ENDIF
+			ELSE
+				;無効に失敗했을 경우、패러사이트몬스터를 自壊させる
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"魔自動処理",セット先A,"묘지")
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99586,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 패러사이트
+		효과条件종류 = モン全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"마함",ゾーン,場所)
+	ENDIF
+ENDIF
+

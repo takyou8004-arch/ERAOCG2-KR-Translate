@@ -1,0 +1,170 @@
+﻿@CARDNAME_39823,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 레이쨩.zin
+	CASE "略称"
+		RESULTS = SSA-Raye.zin
+	CASE "カテゴリ"
+		RESULTS:0 = 닷진
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39823(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39823(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：이 카드가 패에 존재할 경우, 필드의 “.zin” 몬스터 1장을 패로 돌려보내고 발동할 수 있다.
+PRINTL 이 카드를 패에서 상대 필드로 공격 표시로 특수 소환한다.
+PRINTL 그 후, 덱에서 “.zin” 마법 / 함정 카드 1장을 패에 넣는다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드는 표시 형식을 변경할 수 없고,
+PRINTL “E.R.A” 카드와 전투할 경우, 이 카드는 전투 내성을 얻는다.
+
+
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39823(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39823)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,39823)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39823,"손패",1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	SIF モンスター数(対面者) < 5
+		효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件カテゴリ = 닷진
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = 마함全般
+	효과条件カテゴリ = 닷진
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL CAT_CHECK("E.R.A",듀얼리스트,戦闘場所(듀얼리스트,1),1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39823(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상 
+#DIM DYNAMIC 対面대상
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39823,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과条件カテゴリ = 닷진
+		효과条件종류 = モン全般
+		효과条件行先플래그 = 손패行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과추가종류 = 695
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所, "攻撃표시",1)
+
+			CALL CARD_EROTICS(39823)
+			IF RESULT != -1
+				조교대상 = RESULT
+				PRINTFORMW %CALLNAME:조교대상%는 음란한 수영복 같은 장비를 입고 그 육체를 드러낸다.
+				PRINTFORMW 그러나 자금 마련을 위해 부끄러워하면서도 강제로 웃으며 자신의 육체를 이용해 자금을 모았다.
+				CALL EROTIC_MOVE("晒しもの",조교대상)
+			ENDIF
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = 마함全般
+			효과条件カテゴリ = 닷진
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"表固")
+	IF 戦闘場所(듀얼리스트) == 場所 && 戦闘場所(듀얼리스트,1) != 5
+		CALL CAT_CHECK("E.R.A",듀얼리스트,戦闘場所(듀얼리스트,1),1)
+		SIF RESULT == 1
+			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"戦耐")
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL DOT_ZIN_ACT(듀얼리스트,39823,戦闘カードID(듀얼리스트,1))
+ENDIF
+

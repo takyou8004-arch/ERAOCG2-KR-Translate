@@ -1,0 +1,159 @@
+@CARDNAME_31054,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 그레이돌 코브라
+	CASE "略称"
+		RESULTS = 그레이돌 코브라
+	CASE "カテゴリ"
+		RESULTS:0 = 그레이돌
+ENDSELECT
+
+
+@CARD_31054(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_31054(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  ①의 효과는 1턴에 1번밖에 사용할 수 없다.。
+CALLFORM CARD_ABLE(1,戦破壊→묘지,효과後誘発)
+PRINTL ① : 필드의 이 카드가 파괴되어 묘지로 보내졌을 때,
+PRINTL 또는 상대방이 함정 카드의 효과를 발동 할 경우
+PRINTL 상대 필드의 앞면 표시 몬스터 1장을 대상으로 발동할 수 있다。
+PRINTL 이 카드를 장착 카드로 취급하여 그 상대 몬스터에 장착한다。
+PRINTL ②： 이 카드의 효과로 이 카드가 장착되어 있을 경우,
+PRINTL 장착 몬스터의 컨트롤을 얻는다。
+PRINTL 이 카드가 필드에서 벗어났을 때에 장착 몬스터는 파괴된다。
+PRINTL 
+
+@CARDCAN_31054(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 효과使用불가,3
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31054)
+SIF RESULT == 1
+	RETURN 0
+;戦闘破壊時의 효과
+;参考：애플 매지션 걸（발동条件部分のみ）、御巫の誘い輪舞
+IF 종류 == 戦破壊→묘지
+	SIF 발동済_1(듀얼리스트,31054)
+		RETURN 0
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊")
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+;상대의 효과에 誘発する
+;参考：凶導の白기사
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,31054)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+    CALL FULLRESET
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31054(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC セット先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 戦破壊→묘지
+    ;발동チェック
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31054,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前 = 그레이돌 코브라
+		효과条件종류 = モン全般
+	
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+        	CALL CARD_DISPOSE(듀얼리스트,"묘지",選択カード,마함行き)
+        	セット先 = カード설치先
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			효과추가종류 = 50 + セット先
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+			CALL SET_FIELD_INFO(듀얼리스트,"마함",セット先,"装",コントロール先,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31054,1)
+	IF RESULT == 0
+        CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+        セット先 = カード설치先
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과추가종류 = 50 + セット先
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",セット先,"装",コントロール先,1)
+	ENDIF
+ENDIF

@@ -1,0 +1,104 @@
+﻿@CARDNAME_27008,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 자이언트 렉스
+	CASE "略称"
+RESULTS = 자이언트 R
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_27008(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1200
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_27008(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 직접 공격할 수 없다.
+CALL CARD_ABLE(1,제외時)
+PRINTL ②: 이 카드가 제외되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 이 카드의 공격력은, 제외되어 있는 자신의 비늘야수족 몬스터의 수× 200 올린다.
+PRINTL
+PRINTL 
+
+@CARDCAN_27008(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,27008)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 제외時
+	SIF 발동済_1(듀얼리스트,27008)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,27008,"제외")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_27008(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+
+IF 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27008,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件종족 = 비늘야수족
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		攻撃力修正 = 200 * (RESULT - 1)
+
+
+		CALL FULLRESET
+		효과範囲제외 = 1
+효과条件名前 = 자이언트 렉스
+		효과추가종류 = 100000 + 攻撃力修正
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直無")
+ENDIF

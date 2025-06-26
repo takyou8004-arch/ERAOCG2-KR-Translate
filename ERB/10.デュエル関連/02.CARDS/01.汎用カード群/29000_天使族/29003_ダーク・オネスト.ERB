@@ -1,0 +1,115 @@
+﻿@CARDNAME_29003,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 다크 오네스트
+	CASE "略称"
+RESULTS = 다크 오네스트
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_29003(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1100
+	CASE "守備力"
+		RETURN 1900
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_29003(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ①: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 필드의 앞면 표시의 이 카드를 패로 되돌린다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ②: 자신의 어둠 속성 몬스터가 전투를 실행할 경우, 이 카드를 패에서 묘지로 보내고 발동할 수 있다.
+PRINTL 그 상대 몬스터의 공격력은 턴 종료시까지 0이 된다.
+
+
+
+@CARDCAN_29003(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29003)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1	
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	CALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("속성")
+	SIF !MATCH(RESULT, 빛속성)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29003(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力상승
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 対戦カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29003)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,손패行き)
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29003)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		戦闘カード = 戦闘場所(듀얼리스트)
+		対戦カード = 戦闘場所(듀얼리스트,1)
+		CALL SET_FIELD_INFO(対面者,"필드",対戦カード,"一時",-99999)
+	ENDIF
+ENDIF
+
+

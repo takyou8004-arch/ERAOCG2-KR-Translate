@@ -1,0 +1,155 @@
+﻿@CARDNAME_50223,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = Altergeist Administratia
+	CASE "略称"
+RESULTS = Og Administratia
+	CASE "カテゴリ"
+RESULTS:0 = Altergeist
+ENDSELECT
+
+
+@CARD_50223(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_50223(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 「Altergeist」 몬스터 2체 이상
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 L 소환했을 경우에 발동할 수 있다.
+PRINTL 덱에서 「Altergeist」 함정 카드 1장을 자신 필드에 세트한다.
+CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ②：이 카드가 앞면 표시로 존재하는 한 1번만, 자신 / 상대의 메인 페이즈에, 자신 필드의 카드 1장을 묘지로 보내고,
+PRINTL 상대 필드의 효과 몬스터 1장을 대상으로 하여 발동할 수 있다. 그 효과 몬스터의 컨트롤을 얻는다.
+PRINTL 그 몬스터는 「Altergeist」 몬스터로도 취급한다.
+
+@CARDSUMMON_50223(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 条件달성
+;素材条件
+
+
+CALL RESETCONDITION_MAT
+必要링크数 = 4
+
+素材条件カテゴリ = 얼터가이스트
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,50223) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50223(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50223)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,50223)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,50223)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50223(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 選択カード名前
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50223,1)
+	IF RESULT == 0	
+		CALL FULLRESET
+		효과条件カテゴリ = 얼터가이스트
+		효과条件종류 = 함정全般
+		CALL CARD_SET_BASIC(듀얼리스트,"덱",ゾーン,場所,"裏側표시")
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50223,2)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"効済",2)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件他所 = 1	
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件종류 = 효과全般
+			효과추가カテ = 얼터가이스트
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+

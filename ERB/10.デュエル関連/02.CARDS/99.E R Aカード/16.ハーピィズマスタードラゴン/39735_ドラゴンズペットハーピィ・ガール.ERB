@@ -1,0 +1,147 @@
+﻿@CARDNAME_39735,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 드래곤의 애완 해피 걸
+	CASE "略称"
+		RESULTS = 해피 걸
+	CASE "カテゴリ"
+		RESULTS:0 = 해피
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39735(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 牝性
+	CASE "別途ID"
+		RETURN 1056
+	CASE "連動ID"
+		RETURN 1056
+ENDSELECT
+
+@CARD_EXPLANATION_39735(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드는 룰상 "해피 걸" 로 취급한다。
+PRINTL 이 카드명의  ①의 방법에 의한 특수 소환은 １턴에 １번밖에 할 수 없다。
+CALL CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①：자신 필드에 수컷인 "해피" 몬스터가 존재하는 경우에 발동할 수 있다。
+PRINTL 이 카드를 패 / 묘지에서 특수 소환한다。
+CALL CARD_ABLE(2,攻守変動)
+PRINTL ②：자신 필드의 수컷인 "해피" 몬스터의 공격력은、
+PRINTL 자신 필드 / 묘지의 암컷인 "해피" 몬스터의 수×１００ 올린다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39735(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1056)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,1056)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39735,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 해피
+	효과条件성별 = 雄性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == リアクション효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 해피
+	효과条件성별 = 雄性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_39735(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39735,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 해피
+	효과条件성별 = 牝性
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 100
+	CALL FULLRESET
+	효과条件カテゴリ = 해피
+	효과条件성별 = 雄性
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻撃力修正)
+ELSEIF 종류 == リアクション효과
+	IF GETVAR(@"%듀얼리스트%_MZ_リ数:場所") < 4
+		PRINTFORML
+		PRINTFORML 해피들은 줄을세워 드래곤에게 봉사하고있다。
+		CALL CARD_EROTICS(1056,듀얼리스트)
+		CALL EROTIC_MOVE("펠라치오",RESULT,-1,100)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"リ数",1)
+	ENDIF
+ENDIF

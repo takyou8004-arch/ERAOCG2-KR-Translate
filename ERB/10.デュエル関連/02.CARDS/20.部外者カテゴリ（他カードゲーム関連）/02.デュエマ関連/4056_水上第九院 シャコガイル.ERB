@@ -1,0 +1,126 @@
+﻿@CARDNAME_4056,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 물상 제9원 샤코가일
+	CASE "略称"
+RESULTS = 샤코가일
+	CASE "カテゴリ"
+RESULTS:0 = 무토피아
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_4056(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 2900
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4056(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ② 효과는 1턴에 1번만 사용할 수 있다.
+PRINTL 자신의 덱이 0장인 경우, 자신은 듀얼에서 승리한다.
+CALLFORM CARD_ABLE(0,소환時強制,특수소환時強制)
+PRINTL ①: 이 카드가 소환·특수 소환했을 경우에 발동한다.
+PRINTL 자신은 묘지·제외 상태의 카드를 전부 덱으로 되돌리고 셔플한다.
+CALLFORM CARD_ABLE(1,ターン開始時)
+PRINTL ②: 상대의 턴 개시 시에 발동할 수 있다. 자신은 카드를 5장 드로우한다.
+PRINTL 그 후, 자신의 손패가 5장 이상일 경우, 손패를 3장 골라 버린다.
+
+@CARDCAN_4056(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4056)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時強制 || 종류 == 특수소환時強制
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,4056)
+		RETURN 
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT > 0
+		RETURN 0
+	CALL SET_PLAYER_INFO(듀얼리스트,"듀얼패배플래그",6,1)
+ENDIF
+
+@CARDEFFECT_4056(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 소환時強制 || 종류 == 특수소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4056)
+	IF RESULT == 0
+		FOR カウンタ,0,紙束最大値
+			SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"묘지",カウンタ,덱行き)
+		NEXT
+		FOR カウンタ,0,紙束最大値
+			SIF GETVAR(@"%듀얼리스트%_제외:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"제외",カウンタ,덱行き)
+		NEXT
+	ENDIF
+ELSEIF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4056,1)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,5)
+		IF 손패数(듀얼리스트) >= 5
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과条件複数 = 3
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

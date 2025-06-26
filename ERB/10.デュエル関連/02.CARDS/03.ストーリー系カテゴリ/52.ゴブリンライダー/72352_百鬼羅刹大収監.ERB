@@ -1,0 +1,197 @@
+﻿@CARDNAME_72352,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 고블린라이더 대수감
+	CASE "略称"
+		RESULTS = 백귀나찰대수감
+	CASE "カテゴリ"
+		RESULTS:0 = 고블린
+		RESULTS:1 = 고블린라이더
+ENDSELECT
+
+
+@CARD_72352(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72352(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動 ,フリー誘発)
+PRINTL ①: 자신 필드의 몬스터 1장을 릴리스하고 발동할 수 있다.
+PRINTL 덱에서 "고블린" 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터는 이 턴에 공격할 수 없다.
+CALLFORM CARD_ABLE(2,攻撃時誘発)
+PRINTL ②: 자신이나 상대 몬스터의 공격 선언시, 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 아래 효과를 원하는 만큼 반복해서 적용한다.
+PRINTL ●자신 필드의 '고블린' X 몬스터의 X 소재를 1개 제거하고,
+PRINTL 상대 필드의 모든 몬스터의 공격력은 턴 종료시까지 1000 내린다.
+
+
+@CARDCAN_72352(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72352)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72352)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 고블린
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+    CALL FULLRESET
+    효과範囲필드 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+    SIF ゾーン != "묘지"
+        RETURN 0
+	SIF 발동済_2(듀얼리스트,72352)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	효과条件カテゴリ = 고블린라이더
+	효과条件Ｘ素所持 = 999
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件以攻撃力 = 100
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_72352(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72352,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+	    CALL FULLRESET
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+	    IF RESULT == 1
+		    CALL FULLRESET
+			효과範囲덱 = 1
+			효과추가종류 = 効追戦無
+			효과条件カテゴリ = 고블린
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72352,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;ここをル-プ地点に
+		$LOOP_START
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 엑시즈
+		효과条件カテゴリ = 고블린
+		효과条件Ｘ素所持 = 999
+		;下のYNチェックをしないなら、ここで任意でX소재를 取り除かない選択で止められるように
+		효과条件任意 = 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		;SIFからIFに
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = RESULT
+			CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"Ｘ",-1)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"攻一DOWN",1000)
+			;繰り返し발동할 수 있다かチェック
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件종류 = 엑시즈
+			효과条件カテゴリ = 고블린
+			효과条件Ｘ素所持 = 999
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件달성++
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과条件以攻撃力 = 100
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件달성++
+			IF 条件달성 == 2
+				;ル-プ中のトラブル回避に条件달성変数をリセット
+				条件달성 = 0
+				;一応分かりやすくYNチェック、上의 효과条件任意 = 1と択
+				;YNチェックをしないなら、GOTO LOOP_STARTだけでOK
+				;確認텍스트は상대(CPU)が使う際は非표시に
+				SIF 듀얼리스트 == "자신"
+					PRINTFORML 효과를 다시 적용할까요?
+				CALL YN_CHOICE(듀얼리스트)
+				IF RESULT == 0
+					;はい(0)
+					;ル-プ地点にGO
+					GOTO LOOP_START
+				ELSEIF RESULT == 1
+					;いいえ(1)
+					;なにもしないと、그대로 処理が終わるので、空白でも良し
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

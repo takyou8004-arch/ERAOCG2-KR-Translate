@@ -1,0 +1,211 @@
+﻿@CARDNAME_57852,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 용의 극한 도기라골든
+	CASE "略称"
+RESULTS = 도기라골든
+	CASE "カテゴリ"
+RESULTS:0 = 햄카츠단
+RESULTS:1 = 혁명군
+RESULTS:2 = 도기라곤
+RESULTS:3 = 커맨드
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_57852(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RESULT:1 = 바람속성
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수불가"
+		RETURN 1
+
+ENDSELECT
+
+RETURN 0
+
+
+@CARDSUMMON_57852(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+
+CALL RESETCONDITION_MAT
+必要素材数 = 1
+素材条件カテゴリ = 도기라곤
+
+IF EX参照 == 1
+	CALL STRIDECAN(듀얼리스트,소환カード,57852) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_57852(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 『DM초월』 「도기라곤」 몬스터
+PRINTL 자신 패에서 몬스터 1장을 제외하고 발동할 수 있다.
+PRINTL 자신 필드의 「도기라곤」 몬스터 1장을 묘지로 보내고, 이 카드를 EX덱에서 특수 소환한다.
+PRINTL  『DM초월』은 1턴에 1번밖에 할 수 없으며, 선공 1턴째에는 사용할 수 없다)
+CALLFORM CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：이 카드가 『초월』했을 경우에 발동할 수 있다.
+PRINTL 상대 필드의 카드 1장을 주인의 덱으로 되돌린다. 그 후, 상대 필드의 「금단」 몬스터 1장을 파괴한다.
+CALLFORM CARD_ABLE(20,ターン開始時)
+PRINTL ②：『극한 파이널 혁명』
+PRINTL 상대의 턴 개시 시에 발동할 수 있다.
+PRINTL 이 턴, 상대는 공격력 100000 이하의 몬스터로 공격 선언할 수 없다.
+PRINTL 『극한 파이널 혁명』은 듀얼 중에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②：이 카드의 공격력은, 자신 필드의 「햄카츠단」 몬스터의 종류 × 1000 상승한다.
+
+@CARDCAN_57852(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57852)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+ 	SIF 발동済_1(듀얼리스트,52082)
+ 		RETURN 0
+ 	SIF メインフェイズ != 1
+ 		RETURN 0
+ 	SIF ターンプレイヤー != 듀얼리스트
+ 		RETURN 0
+ 	TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:場所")}(듀얼리스트,場所,1)
+ 	SIF RESULT != 1
+ 		RETURN 0
+ 	RETURN 1
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,57852)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 발동済_D1(듀얼리스트,57852)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 短紋章起動
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_57852(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC 攻撃力상승
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52082,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件カテゴリ = 도기라곤
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲EX덱 = 1
+효과条件名前 = 용의 극한 도기라골든
+				효과条件特不無視 = 1
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57852,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"덱")
+
+		CALL FULLRESET
+		효과条件カテゴリ = 금단
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57852,20)
+	IF RESULT == 0
+		CALL CARD_RESERV(듀얼리스트,57852,短紋章予約)
+	ENDIF
+ELSEIF 종류 == 短紋章起動
+	CALL FULLRESET
+	효과条件攻撃力 = 100000
+	CALL STATCHANGE_EFFECT(対面者,"필드",場所,"戦無")
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 햄카츠단
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力상승 = RESULT * 1000
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力상승)
+ENDIF
+
+
+
+

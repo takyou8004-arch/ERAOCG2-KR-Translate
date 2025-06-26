@@ -1,0 +1,138 @@
+﻿@CARDNAME_1901,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 히스이제 코스모클로아
+	CASE "略称"
+RESULTS = 코스모클로아
+	CASE "カテゴリ"
+RESULTS:0 = 히스이
+ENDSELECT
+
+
+@CARD_1901(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1901(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 방법에 의한 특수 소환은 1턴에 1번밖에 할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 필드 마법 카드가 앞면 표시로 존재할 경우, 이 카드는 패에서 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,常在無効)
+PRINTL ②: 자신 필드가 「히스이저 이니온 크레이들」인 한, 특수 소환된 상대 몬스터의 효과는 무효화된다.
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ③: 자신의 「히스이」 몬스터가 상대 몬스터와 전투를 실행할 때,
+PRINTL 그 상대 몬스터의 공격력은 1000 감소한다.
+
+
+@CARDSUMMON_AA_1901
+
+
+@CARDCAN_1901(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1901)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,1901)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,1901,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件종류 = フィールド
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 常在無効
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVARS(@"%듀얼리스트%_フィールド名") !=  "히스이底イニオン クレイドル"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF !MATCH(RESULTS,"히스이")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1901(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1901,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+	ENDIF
+ELSEIF 종류 == 常在無効
+	CALL FULLRESET
+;	효과元カードID = 1901
+	효과条件召種 = 召種全특수
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効",0,1901)
+ELSEIF 종류 == 攻撃時強制誘発
+	選択カード = 戦闘場所(듀얼리스트,1)
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",選択カード,"一攻",-1000)
+ENDIF

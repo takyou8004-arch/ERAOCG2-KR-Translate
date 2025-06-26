@@ -1,0 +1,120 @@
+﻿@CARDNAME_74232,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 기황제의 하사
+	CASE "略称"
+RESULTS = 기황제의 하사
+	CASE "カテゴリ"
+RESULTS:0 = 기황
+		RESULTS:1 = 기황제
+ENDSELECT
+
+
+@CARD_74232(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250602
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_74232(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 자신 메인 페이즈 1에 발동할 수 있다
+PRINTL (이 효과를 발동하는 턴, 자신은 배틀 페이즈를 실행할 수 없다).
+PRINTL 자신은 덱에서 2장 드로우한다.
+PRINTL 그 후, 자신 필드에 「기황」 몬스터가 1체 이하인 경우, 이하의 효과를 적용한다.
+PRINTL ●자신의 패 / 필드에 다른 「기황」 카드가 존재할 경우, 그 중 1장을 고르고 파괴한다.
+PRINTL 존재하지 않을 경우, 손패를 전부 제외한다.
+
+@CARDCAN_74232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,74232)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,74232)
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_74232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 選択カード
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,74232,1)
+	IF RESULT == 0
+		;通常마법汎用발동後묘지送り処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL CARDDRAW_BASIC(듀얼리스트,2)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件표시 = 表側표시
+효과条件カテゴリ = 기황
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT < 2
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과範囲손패 = 1
+			효과条件他所 = 1
+효과条件カテゴリ = 기황
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT != 1
+				FOR カウンタ,0,紙束最大値
+					SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") == -1
+						CONTINUE
+					CALL CARD_DISPOSE(듀얼리스트,"손패",カウンタ,제외行き)
+				NEXT
+			ELSE
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과範囲마함 = 1
+				효과範囲손패 = 1
+				효과条件他所 = 1
+효과条件カテゴリ = 기황
+				효과条件行先플래그 = 破壊行き
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+		CALL SET_PLAYER_INFO(듀얼리스트,"バトルスキップ", 1)
+	ENDIF
+ENDIF

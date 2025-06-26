@@ -1,0 +1,227 @@
+﻿@CARDNAME_52175,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 분보그 제트
+	CASE "略称"
+RESULTS = 분보그 제트
+	CASE "カテゴリ"
+RESULTS:0 = 분보그
+ENDSELECT
+
+
+@CARD_52175(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 500
+	CASE "レア度"
+		RETURN CMN
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52175(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52175) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52175(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 공격력 / 수비력은, 필드의 「분보그」 카드 수× 500 올린다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ②: 서로의 메인 페이즈에 발동할 수 있다.
+PRINTL 자신 필드의 「분보그」 카드 1장을 파괴하고, 이하의 효과에서 1개를 골라 적용한다.
+PRINTL ● 덱에서 「분보그」 몬스터 1장을 특수 소환한다.
+PRINTL ● 필드의 앞면 표시의 카드 1장을 파괴한다.
+
+
+@CARDCAN_52175(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 발동불가,2
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52175)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,52175)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	IF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+	ENDIF
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 表側표시
+	효과条件除去種 = 묘지
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:0 = 1
+	
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 분보그
+	효과条件소환可 = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:1 = 1
+	
+	SIF 발동불가:0 == 1 && 발동불가:1 == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52175(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 발동불가,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52175,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		IF 듀얼리스트 == "자신"
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+		ENDIF
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件표시 = 表側표시
+		효과条件除去種 = 묘지
+		효과条件他所 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			발동불가:0 = 1
+		
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 분보그
+		효과条件소환可 = 2
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			발동불가:1 = 1
+		
+		IF 발동불가:0 == 0 && 발동불가:1 == 0
+			IF 듀얼리스트 == "자신"
+				CALL YN_CHOICE(듀얼리스트,"●덱에서 「분보그」モンスター１体を특수소환する","●필드의 앞면 표시인 카드 １장을 破壊する")
+			ELSE
+				IF ターンプレイヤー == 듀얼리스트
+					RESULT = 0
+				ELSE
+					RESULT = 1
+				ENDIF
+			ENDIF
+		ELSEIF 발동불가:0 == 0
+			RESULT = 0
+		ELSEIF 발동불가:1 == 0
+			RESULT = 1
+		ENDIF
+
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲필드 = 1
+			SIF モンスター数(듀얼리스트) < 5
+				효과範囲마함 = 1
+			효과条件カテゴリ = 분보그
+			효과条件行先플래그 = 破壊行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과条件カテゴリ = 분보그
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+			
+		ELSEIF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과条件カテゴリ = 분보그
+			효과条件行先플래그 = 破壊行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과条件표시 = 表側표시
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場単体",場所,"묘지")
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 분보그
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 500
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正,攻撃力修正)
+ENDIF

@@ -1,0 +1,75 @@
+﻿;손가락삽입れ
+@COM316
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+;파과억제
+TFLAG:2 = 1
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 30
+DOWNBASE:기력 += 80
+
+IF !TALENT:처녀
+	CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER, 120)
+ELSE
+	CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER, 30)
+ENDIF
+CALL SOURCE_CALC_노출(TARGET, MASTER, 120)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 200)
+
+;고통
+LOCAL = 80 * PAIN_CHECK_V(TARGET) / 1000
+SIF TALENT:처녀
+	TIMES LOCAL , 1.50
+
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;奴隷の질내⇔조교者の손가락の汚れが이동
+	STAIN:6 |= STAIN:MASTER:1
+	STAIN:MASTER:1 |= STAIN:6
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 1
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 1
+ENDIF
+
+TIME += 10
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;손가락삽입れ
+@COM_ABLE316
+;손가락삽입れ実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(316)
+	RETURN RESULT
+;친밀감강도2
+SIF TCVAR:MASTER:친밀감 < 2
+	RETURN 0
+;수면中
+SIF CFLAG:수면
+	RETURN 0
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+;女か후타나리じゃないとダメ
+SIF !(TALENT:2 & 1)
+	RETURN 0
+;腕사용중
+SIF TFLAG:61 && MASTER_POSE(2,3) != TARGET && MASTER_POSE(1,3) != TARGET && MASTER_POSE(6,3) != TARGET && MASTER_POSE(7,3) != TARGET
+	RETURN 0
+SIF GETBIT (TCVAR:26,5)
+	RETURN 0
+RETURN 1

@@ -1,0 +1,197 @@
+﻿@CARDNAME_41925,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 하얀 숲의 환요
+	CASE "略称"
+RESULTS = 하얀 숲의 환요
+	CASE "カテゴリ"
+RESULTS:0 = 하얀 숲
+ENDSELECT
+
+
+@CARD_41925(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 700
+	CASE "守備力"
+		RETURN 2000
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_41925(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 + 튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①: 이 카드가 특수 소환했을 경우, 자신 묘지의 "하얀 숲" 몬스터가 2장 존재하고 있다면 발동할 수 있다.
+PRINTL 자신 마법 & 함정 존에 "하얀 숲 토큰" 2장을 앞면 표시로 놓는다.
+CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ②: 상대 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드를 포함하는 자신 필드의 몬스터를 소재로 싱크로 소환을 실행한다.
+
+
+@CARDSUMMON_41925(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 4
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,41925) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_41925(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,41925)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,41925)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 4
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 하얀 숲
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_2(듀얼리스트,41925)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,0)
+	SIF RESULT == 1
+		RETURN 0
+	CALL RESETAREA_MAT
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 싱크로
+	強制素材場所 = 지정場所(場所,ゾーン)
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_41925(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41925,1)
+	IF RESULT == 0
+		CALL CARD_GENERATE_MAGIC(듀얼리스트,141925,1)
+		CALL CARD_GENERATE_MAGIC(듀얼리스트,141925,1)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41925,2)
+	IF RESULT == 0
+		CALL RESETAREA_MAT
+		CALL FULLRESET
+		효과条件종류 = 싱크로
+		強制素材場所 = 지정場所(場所,ゾーン)
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL SYNSUMMON(듀얼리스트,選択カード)
+		ENDIF
+	ENDIF
+ENDIF
+
+@CARDNAME_141925,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 하얀 숲 토큰
+	CASE "略称"
+RESULTS = 하얀 숲 토큰
+	CASE "カテゴリ"
+RESULTS:0 = 하얀 숲
+ENDSELECT
+
+
+@CARD_141925(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+RETURN 0
+

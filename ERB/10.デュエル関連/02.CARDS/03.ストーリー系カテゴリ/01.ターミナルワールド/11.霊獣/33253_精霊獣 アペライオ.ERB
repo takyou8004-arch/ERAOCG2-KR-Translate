@@ -1,0 +1,105 @@
+﻿@CARDNAME_33253,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 정령수 아페라이오
+	CASE "略称"
+RESULTS = 아페라이오
+	CASE "カテゴリ"
+RESULTS:0 = 령수
+RESULTS:1 = 정령수
+ENDSELECT
+
+
+@CARD_33253(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 200
+	CASE "특수制限"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_33253(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신은 「정령수 아페라이오」를 1턴에 1번만 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ①: 자신 상대 턴에 1번, 자신의 묘지의 「령수」 카드 1장을 제외하고 발동할 수 있다.
+PRINTL 이 턴, 자신 필드의 「령수」 몬스터의 공격력 / 수비력은 500 올린다.
+
+
+@CARDCAN_33253(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,33253)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 령수
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻紋章起動
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_33253(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33253,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 령수
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		SIF RESULT
+			CALL CARD_RESERV(듀얼리스트,33253,攻紋章予約)
+	ENDIF
+ELSEIF 종류 == 攻紋章起動
+	CALL FULLRESET
+	효과条件カテゴリ = 령수
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",500,500)
+ENDIF
+

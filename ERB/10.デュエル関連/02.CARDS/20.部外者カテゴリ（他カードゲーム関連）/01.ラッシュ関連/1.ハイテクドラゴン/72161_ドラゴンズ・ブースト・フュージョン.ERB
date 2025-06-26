@@ -1,0 +1,148 @@
+﻿@CARDNAME_72161,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 드래곤즈 부스트 퓨전
+	CASE "略称"
+RESULTS = 격속룡융합
+	CASE "カテゴリ"
+RESULTS:0 = 하이테크 드래곤
+RESULTS:1 = 융합
+RESULTS:2 = 버스트 융합
+ENDSELECT
+
+
+@CARD_72161(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_72161(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①: 자신의 손패 필드의 드래곤족 몬스터를 소재로서 묘지로 보내,
+PRINTL EX덱에서 「하이테크 드래곤」 융합 몬스터를 융합 소환한다.
+PRINTL 이 효과로 어둠속성 몬스터를 융합 소환했을 경우,
+PRINTL 서로의 플레이어는 자신의 덱 위에서 카드를 7장 묘지로 보낸다.
+PRINTL 이 효과로 묘지로 보내진 카드의 효과는 유발하지 않는다.
+CALLFORM CARD_ABLE(2,ターン開始時)
+PRINTL ②: 자신의 턴 개시 시에 이 카드가 묘지에 존재할 경우 발동할 수 있다.
+PRINTL 이 카드를 덱 맨 아래로 되돌리고, 자신은 1장 드로우한다.
+
+
+@CARDCAN_72161(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC EX条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72161)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,0)
+	SIF RESULT == 1
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲손패 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	효과条件カテゴリ = 하이테크 드래곤
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF 발동済_2(듀얼리스트,72161)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72161(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 묘지送カード,10
+#DIM DYNAMIC 손패묘지送カード,10
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択済カード
+#DIM DYNAMIC EX条件달성
+;융합소환
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72161,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;EX덱確認
+		CALL RESETAREA_MAT	
+		素材範囲필드 = 1
+		素材範囲손패 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件カテゴリ = 하이테크 드래곤
+		효과条件소환可 = 1	
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")},"속성"
+			SIF RESULT == 어둠속성
+				EX条件달성 = 1
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL FUSSUMMON(듀얼리스트,選択カード)
+			IF RESULT == 1 && EX条件달성 == 1
+				CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",7,完全묘지行き)
+				CALL CARD_DECK_DISPOSE(対面者,"덱",7,完全묘지行き)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72161,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ENDIF

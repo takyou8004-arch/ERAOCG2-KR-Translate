@@ -1,0 +1,367 @@
+﻿@CARDNAME_39551,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아누스피어─빅 테일
+	CASE "略称"
+RESULTS = AnS─다람쥐꼬리
+	CASE "カテゴリ"
+RESULTS:0 = 아누스피어
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39551(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 0
+	CASE "튜너"
+		RETURN 1
+	CASE "分割"
+		RETURN 유니온
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39551(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ④의 효과는 １턴에 １번밖에 사용할 수 없다.
+PRINTL ①："아누스피어─빅 테일"은 필드 위에 １장밖에 앞면 표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ②：패의 이 카드는 장착카드로서 상대 필드의 암컷 몬스터에게 장착할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드를 장착한 몬스터는 전투 / 효과로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ④：자신 메인 페이즈에 발동할 수 있다.
+PRINTL 장착상태인 이 카드를 특수 소환하고、장착 되어있던 몬스터의 효과를 무효화한다.
+PRINTL 그 후、덱에서 "원래주인"을 특수 소환할 수 있다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39551)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF RESULT == 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+효과条件名前 = 아누스피어─빅 테일
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,39551)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39551,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 装備先カード名
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39551)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件성별 = 牝性
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+		選択カード = RESULT:2
+		選択カードID = RESULT:1
+		IF RESULT == 1
+			TRYCALLFORM CARDNAME_{選択カードID},"略称"
+			PRINTFORML %RESULTS%의 엉덩이구멍에 커다란 꼬리가 잠입했다！
+			PRINTFORMW 팽팽하게 엉덩이구멍이 넓어지는 감각에 몸부림친다…
+			PRINTFORML 
+			;PRINTFORML あなたの手には확장스위치が握られている...
+			;CALL CARD_GENERATE_HAND(듀얼리스트,139551)
+			
+			CALL CARD_EROTICS(選択カードID)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL EROTIC_MOVE("애널解し",조교대상,-1,300)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39551,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		
+		IF 装備者 == 対面者
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:装備先")},"略称"
+		ELSE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:装備先")},"略称"
+		ENDIF
+		装備先カード名 = %RESULTS%
+		PRINTFORML 당신이 스위치를 누르니、빅 테일은 커다랗게 부풀어올라、%装備先カード名%는 괴로워하기 시작했다！
+		PRINTFORMW 엉덩이구멍에 다 담기지 못하게 된 그것은、툭…하는 소리를 내며 굴러 떨어져、
+		PRINTFORMW %装備先カード名%의 엉덩이 구멍은 쩍 벌어진 채였다… 잠시동안 원래 형태로는 돌아가지 않겠지…
+		
+		
+		
+		IF 装備者 == 対面者
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",装備先,1)
+		ELSE
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",装備先)
+		ENDIF
+		IF RESULT != -1
+			조교대상 = RESULT
+			CALL EROTIC_MOVE("애널解し",조교대상,-1,300)
+		ENDIF
+		
+		CALL SET_FIELD_INFO(対面者,"필드",装備先,"無効",2)
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"마함",場所)
+		
+		CALL FULLRESET
+		효과範囲덱 = 1
+효과条件名前 = 가스타의 무녀 윈다
+		효과条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 0
+			PRINTFORML 
+			PRINTFORMW 빅 테일의 "원래 주인"은、일을 끝낸 빅 테일을 안아올리니 위로하는듯이 키스를 했다……
+			PRINTFORMW 「수고하셨습니다。다음은 저에게도 부탁드릴게요……❤」
+		ENDIF
+		
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"戦耐")
+	
+ENDIF
+
+
+
+@CARDNAME_139551,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = AnS─다람쥐 구멍 확장
+	CASE "略称"
+RESULTS = AnS─다람쥐 구멍 확장
+	CASE "カテゴリ"
+RESULTS:0 = 아누스피어
+ENDSELECT
+
+
+@CARD_139551(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_139551(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 １턴에 １번밖에 사용할 수 없다.
+PRINTL ①：상대의 마법＆함정존의 "아누스피어─빅 테일" １장을 특수 소환하고、
+PRINTL 장착하고있던 몬스터의 효과를 무효로 한다.
+PRINTL 그 후、덱에서 "원래 주인"을 특수 소환할 수 있다.
+
+
+@CARDCAN_139551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,139551)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,139551)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;モンスターおすぎ,NG
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	;最低でもモンスター1枚あればOK
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+효과条件名前 = 아누스피어─빅 테일
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_139551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 소환カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 装備カード
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,139551,1)
+	IF RESULT == 0
+		;通常마법汎用발동後묘지送り処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+		CALL FULLRESET
+		효과範囲상대마함 = 1
+효과条件名前 = 아누스피어─빅 테일
+		;CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		
+		CALL CARD_CHOOSE_BASIC(対面者,"마함",ゾーン,場所,39551)
+		
+		IF RESULT != -1
+			装備カード = RESULT
+			;紐づいている子を持ってきて、次に꼬리を持ってくる
+			CALL 装備판정(対面者,装備カード,"마함")
+			装備者 = %RESULTS%
+			装備先 = RESULT
+			
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:装備先")},"略称"
+			PRINTFORML 당신이 스위치를 누르니、빅 테일은 커다랗게 부풀어올라、%装備先カード名%는 괴로워하기 시작했다！
+			PRINTFORMW 엉덩이구멍에 다 담기지 못하게 된 그것은、툭…하는 소리를 내며 굴러 떨어져、
+			PRINTFORMW %装備先カード名%의 엉덩이 구멍은 쩍 벌어진 채였다… 잠시동안 원래 형태로는 돌아가지 않겠지…
+			
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",装備先,1)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL EROTIC_MOVE("애널解し",조교대상,-1,300)
+			ENDIF
+			CALL FULLRESET
+			
+			효과範囲상대마함 = 1
+효과条件名前 = 아누스피어─빅 테일
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,"상대마함",装備カード,"守備표시")
+			CALL SET_FIELD_INFO(対面者,"필드",装備先,"無効",2,1)
+			
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲덱 = 1
+			;효과範囲묘지 = 1
+			효과条件レベル = 2
+			효과条件성별 = 牝性
+효과条件カテゴリ = 가스타
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+			
+			IF RESULT != 0
+				PRINTFORML 
+				PRINTFORMW 빅 테일의 "원래 주인"은、일을 끝낸 빅 테일을 안아올리니 위로하는듯이 키스를 했다……
+				PRINTFORMW 「수고하셨습니다。다음은 저에게도 부탁드릴게요……❤」
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

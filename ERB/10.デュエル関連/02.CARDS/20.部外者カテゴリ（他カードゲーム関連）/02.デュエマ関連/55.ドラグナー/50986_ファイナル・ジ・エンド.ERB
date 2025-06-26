@@ -1,0 +1,242 @@
+﻿@CARDNAME_50986,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마지막의 천마룡 파이널 디 엔드
+	CASE "略称"
+RESULTS = F 디 엔드
+
+	CASE "武装名"
+RESULTS = 시작의 룡장구 비기닝 스타트
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:1 = 드래그하트
+RESULTS:2 = 웨폰
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_50986(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 5
+	CASE "コスト"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50986(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+RETURN 0
+
+@CARD_EXPLANATION_50986(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 『초차원』에 의해 강림.
+PRINTL (이 카드는 카드 효과로만 EX덱에서 필드에 특수 소환 마함 존에 놓을 수 있다)
+CALL TEXT_DECORATION("D_HEART_W")
+PRINTL 웨폰 측 《시작의 룡장구 비기닝 스타트》 코스트: 3
+PRINTL 이 카드의 ①의 마법 효과는 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,他효과起動)
+PRINTL ①: 이 카드가 장착되었을 경우에 발동할 수 있다.
+PRINTL 덱에서 「드래그너」 몬스터 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(0,攻守変動,지속효과)
+PRINTL ②: 이 카드를 장착한 몬스터에 의해 이하의 효과를 얻는다.
+PRINTL ●화염 속성: 장착 몬스터의 공격력을 500 올린다.
+PRINTL ●빛 속성: 장착 몬스터는 공격 유도를 얻는다.
+PRINTL ●어둠 속성: 장착 몬스터와 전투를 실행한 몬스터를, 그 데미지 스텝 종료시에 파괴한다.
+CALLFORM CARD_ABLE(0,バトル開始時)
+PRINTL ③: 자신 필드에 다른 「드래그하트」가 존재할 경우, 자신의 배틀 페이즈 개시시에 발동할 수 있다.
+PRINTL 이 카드를 몬스터로서 필드에 특수 소환한다.
+CALL TEXT_DECORATION("D_HEART_2")
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 공격 유도를 가진다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 자신 필드의 몬스터의 공격력은 500 올린다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 이 카드와 전투를 실행한 몬스터를, 그 데미지 스텝 종료시에 파괴한다.
+
+@CARDCAN_50986(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50986)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 他효과起動
+	SIF 발동済_1(듀얼리스트,50986)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 드래그너
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	IF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+			RETURN 0
+		SIF 装備先 == 5
+			RETURN 0
+	ELSEIF ゾーン == "필드"
+	ELSE
+		RETURN 0
+	ENDIF
+
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	IF ゾーン == "마함"
+		SIF 装備先 == 5
+			RETURN 0
+	ELSEIF ゾーン == "필드"
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時強制誘発
+	IF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+			RETURN 0
+		SIF 装備先 == 5
+			RETURN 0
+		SIF GETVAR(@"%装備者%_戦闘カード") != 装備先
+			RETURN 0
+		TRYCALLFORM CARD_{GETVAR(@"%装備者%_필드:装備先")}, "속성"
+		SIF RESULT != 어둠속성
+			RETURN 0
+
+	ELSEIF ゾーン == "필드"
+		SIF 戦闘場所(듀얼리스트) != 場所
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == バトル開始時
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件他所 = 1
+	효과条件カテゴリ = 드래그하트
+	효과条件종류 = 초차원
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,50986,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50986(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 破壊カード
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 他효과起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50986,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 드래그너
+		효과条件종류 = モン全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF	
+
+ELSEIF 종류 == 攻守変動
+	IF ゾーン == "마함"
+		TRYCALLFORM CARD_{GETVAR(@"%装備者%_필드:装備先")}, "속성"
+		SIF RESULT == 화염속성
+			CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,500)
+	ELSEIF ゾーン == "필드"	
+		CALL FULLRESET
+		CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,500)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	IF ゾーン == "마함"
+		TRYCALLFORM CARD_{GETVAR(@"%装備者%_필드:装備先")}, "속성"
+		SIF RESULT == 빛속성
+			CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"攻誘")
+	ELSEIF ゾーン == "필드"	
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻誘")
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	破壊カード = 戦闘場所(듀얼리스트,1)
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",破壊カード,"終戦",破壊行き,1)
+	
+ELSEIF 종류 == バトル開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50986)
+	IF RESULT == 0
+		PRINTFORMW 他の드래그하트に共鳴し、드래그하트웨폰が변형をはじめた！！
+		PRINTFORML 『終わりの天魔龍 ファイナル ジ エンド　龍　解　！！』
+		CALL RESETCONDITION
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

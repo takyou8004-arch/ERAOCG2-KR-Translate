@@ -1,0 +1,104 @@
+﻿@CARDNAME_72951,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 타락천사의 계단
+	CASE "略称"
+RESULTS = 타락천사의 계단
+	CASE "カテゴリ"
+RESULTS:0 = 타락천사
+ENDSELECT
+
+
+@CARD_72951(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72951(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 자신의 묘지의 '타락천사' 몬스터 1장을 선택하여 수비 표시로 특수 소환한다.
+RESETCOLOR
+PRINTL 
+
+@CARDCAN_72951(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72951)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,72951)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 타락천사
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 他효과起動
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_72951(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;上級타락천사효과時は필드起動で処理し、묘지送り処理を防ぐ
+	;カード발동確認　※필드起動時はターン1制限を回避
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72951,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 타락천사
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+ELSEIF 종류 == 他효과起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72951)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 타락천사
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+ENDIF

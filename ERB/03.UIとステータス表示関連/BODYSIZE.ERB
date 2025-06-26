@@ -1,0 +1,712 @@
+﻿@SET_BODYSIZE(대상,セット위치=0,強制セット=0)
+#DIM DYNAMIC 대상
+#DIM DYNAMIC セット위치
+#DIM DYNAMIC 強制セット
+;強制セット変数は2でCSV基準にリセット(CSVに記述がない場合は強制セットと同じ)
+
+;ビット関数でセット위치を見てる(0101=신장とウェストをセット)
+SIF GETBIT(セット위치,0) || セット위치 == 0
+	CALL SET_BODYSIZE_HEIGHT(대상,強制セット)
+
+SIF GETBIT(セット위치,1) || セット위치 == 0
+	CALL SET_BODYSIZE_BUST(대상,強制セット)
+
+SIF GETBIT(セット위치,2) || セット위치 == 0
+	CALL SET_BODYSIZE_WEIST(대상,強制セット)
+
+SIF GETBIT(セット위치,3) || セット위치 == 0
+	CALL SET_BODYSIZE_HIP(대상,強制セット)
+
+;-------------------------
+;신장の설정
+;-------------------------
+@SET_BODYSIZE_HEIGHT(대상,強制セット)
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 強制セット
+#DIM DYNAMIC ＣＳＶ値
+
+IF 強制セット == 1
+	CFLAG:대상:신장초기치 = CALC_BODYSIZE_HEIGHT(대상)
+ELSEIF EXISTCSV(NO:대상)
+	ＣＳＶ値 = CSVCFLAG(NO:대상,420)
+	IF ＣＳＶ値 < 1 ;CSVに記述がないなら必ず설정
+		CFLAG:대상:신장초기치 = CALC_BODYSIZE_HEIGHT(대상)
+	ELSE ;CSVに記述がある
+		IF 強制セット == 2 ;CSV記述にリセットする場合
+			CFLAG:대상:신장초기치 = ＣＳＶ値
+		;CSVと既に値が違うなら関数に従い再설정
+		ELSEIF ＣＳＶ値 != CFLAG:대상:신장초기치
+			CFLAG:대상:신장초기치 = CALC_BODYSIZE_HEIGHT(대상)
+		ENDIF ;それ以外はCSVの値を優先
+	ENDIF
+ELSE ;CSVがないなら必ず설정
+	CFLAG:대상:신장초기치 = CALC_BODYSIZE_HEIGHT(대상)
+ENDIF
+
+@CALC_BODYSIZE_HEIGHT(대상)
+#FUNCTION
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 基礎値
+#DIM DYNAMIC 体格値
+
+
+体格値 = TALENT:대상:체형
+;子供かつ、体系が小柄체형(-1)より大きかったら、연령による補正が入る（子供用の補正）
+;子供で普通体系（0）は小柄体系に、子供で小柄体系(-1)なら幼児체형に
+IF TALENT:대상:연령 == -2 && 体格値 >= -1
+	体格値 -= 1
+ENDIF
+SELECTCASE 体格値
+	CASE -4 ;手平体系(16cm～)
+		基礎値 = IS_MALE(대상) && !TALENT:대상:낭자애 ? 1600 # 1500
+		基礎値 += RAND:500
+	CASE -3 ;小人体系(50cm～60cm)
+		基礎値 = IS_MALE(대상) && !TALENT:대상:낭자애 ? 5000 # 5000
+		基礎値 += RAND:1000
+	CASE -2 ;幼児체형（115cm～135cm）
+		基礎値 = IS_MALE(대상) && !TALENT:대상:낭자애 ? 13000 # 12500
+		基礎値 += RAND:1500
+	CASE -1 ;小柄체형（130cm～150cm）
+		基礎値 = IS_MALE(대상) && !TALENT:대상:낭자애 ? 14000 # 13000
+		;大人は10cm分の補正が入る
+		IF TALENT:대상:연령 >= 1
+			基礎値 += 1000
+		ENDIF
+		基礎値 += RAND:1500
+	CASE 0 ;普通체형（150cm～170cm）
+		基礎値 = IS_MALE(대상) && !TALENT:대상:낭자애 ? 16000 # 15000
+		基礎値 += RAND:2000
+	CASE 1 ;長身체형（165cm～175cm）
+		基礎値 = IS_MALE(대상) && !TALENT:대상:낭자애 ? 18000 # 16500
+		IF IS_MALE(대상)
+			基礎値 += RAND:1500
+		ELSE
+			基礎値 += RAND:1000
+		ENDIF
+	CASE 2 ;大柄체형175cm～200cm）
+		基礎値 = IS_MALE(대상) ? 19500 + RAND:2000 # 17500 + RAND:2500
+	CASE 3 ;巨人(3m～4m)
+		基礎値 = 30000 + RAND:10000
+ENDSELECT
+
+RETURNF 基礎値
+
+
+
+;-------------------------
+;ウェストの설정
+;-------------------------
+@SET_BODYSIZE_WEIST(대상,強制セット)
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 強制セット
+#DIM DYNAMIC ＣＳＶ値
+
+IF 強制セット == 1
+	CFLAG:대상:몸무게초기치 = CALC_BODYSIZE_WEIST(대상)
+ELSEIF EXISTCSV(NO:대상)
+	ＣＳＶ値 = CSVCFLAG(NO:대상,421)
+	IF ＣＳＶ値 < 1 ;CSVに記述がないなら必ず설정
+		CFLAG:대상:몸무게초기치 = CALC_BODYSIZE_WEIST(대상)
+	ELSE ;CSVに記述がある
+		IF 強制セット == 2 ;CSV記述にリセットする場合
+			CFLAG:대상:몸무게초기치 = ＣＳＶ値
+		;CSVと既に値が違うなら関数に従い再설정
+		ELSEIF ＣＳＶ値 != CFLAG:대상:몸무게초기치
+			CFLAG:대상:몸무게초기치 = CALC_BODYSIZE_WEIST(대상)
+		ENDIF ;それ以外はCSVの値を優先
+	ENDIF
+ELSE ;CSVがないなら必ず설정
+	CFLAG:대상:몸무게초기치 = CALC_BODYSIZE_WEIST(대상)
+ENDIF
+
+@CALC_BODYSIZE_WEIST(대상)
+#FUNCTION
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 基礎値
+基礎値 = (CFLAG:대상:신장초기치 * (IS_MALE(대상) ? 42 # 37 + TALENT:대상:몸두께)) / 100
+
+SELECTCASE TALENT:대상:체형
+	CASE -3 ;小人
+		TIMES 基礎値, 1.07
+	CASE -2 ;幼児체형
+		TIMES 基礎値, 1.07
+	CASE -1 ;小柄체형
+		TIMES 基礎値, 1.03
+	CASE 0 ;普通
+	CASE 1 ;長身
+	CASE 2 ;大柄
+		TIMES 基礎値, 1.03
+	CASE 3 ;巨人
+		TIMES 基礎値, 1.10
+ENDSELECT
+
+SELECTCASE TALENT:대상:몸두께
+	CASE 0 ;標準
+	CASE 1 ;太り気味
+		TIMES 基礎値, 1.08
+	CASE 2 ;むちむち
+		TIMES 基礎値, 1.15
+	CASE 3 ;むっちり
+		TIMES 基礎値, 1.2
+	CASE 4 ;ぽってり
+		TIMES 基礎値, 1.25
+	CASE 5 ;운동しろ
+		TIMES 基礎値, 1.3
+ENDSELECT
+
+基礎値 = 基礎値 * RAND(97, 104) / 100
+
+RETURNF 基礎値
+
+;-------------------------
+;가슴사이즈の설정
+;-------------------------
+@SET_BODYSIZE_BUST(대상,強制セット)
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 強制セット
+#DIM DYNAMIC ＣＳＶ値
+
+IF 強制セット == 1
+	CFLAG:대상:가슴초기치 = CALC_BODYSIZE_BUST(대상)
+ELSEIF EXISTCSV(NO:대상)
+	ＣＳＶ値 = CSVCFLAG(NO:대상,402)
+	IF ＣＳＶ値 < 1 ;CSVに記述がないなら必ず설정
+		CFLAG:대상:가슴초기치 = CALC_BODYSIZE_BUST(대상)
+	ELSE ;CSVに記述がある
+		IF 強制セット == 2 ;CSV記述にリセットする場合
+			CFLAG:대상:가슴초기치 = ＣＳＶ値
+		;CSVと既に値が違うなら関数に従い再설정
+		ELSEIF ＣＳＶ値 != CFLAG:대상:가슴초기치
+			CFLAG:대상:가슴초기치 = CALC_BODYSIZE_BUST(대상)
+		ENDIF ;それ以外はCSVの値を優先
+	ENDIF
+ELSE ;CSVがないなら必ず설정
+	CFLAG:대상:가슴초기치 = CALC_BODYSIZE_BUST(대상)
+ENDIF
+
+@CALC_BODYSIZE_BUST(대상)
+#FUNCTION
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 基礎値
+#DIM DYNAMIC トップバスト
+#DIM DYNAMIC 最小値
+
+基礎値 = CALC_BODYSIZE_UNDERBUST(대상)
+
+SELECTCASE BUST_SIZE(대상)
+	CASE -3 ;虚胸(--)
+		トップバスト = RAND:450
+	CASE -2 ;絶壁(--~AA)
+		トップバスト = RAND:300 + 450
+	CASE -1 ;貧乳(AA~B)
+		トップバスト = RAND:500 + 750
+	CASE 0 ;普乳(B~D)
+		トップバスト = RAND:500 + 1250
+	CASE 1 ;巨乳(D~G)
+		トップバスト = RAND:750 + 1750
+	CASE 2 ;爆乳(G~L)
+		トップバスト = RAND:1250 + 2500
+	CASE 3 ;ウシ乳(L~R)
+		トップバスト = RAND:1500 + 3750
+	CASE 4 ;魔乳(R~Z)
+		トップバスト = MAX(RAND:2000 - RAND:1000 - RAND:500 - RAND:250, 0) + 5250
+	CASE IS >= 5 ;規格外（乳）(Z~)
+		トップバスト = MAX(RAND:3000 - RAND:1500 - RAND:750 - RAND:300 - RAND:250, 0) + 7250
+ENDSELECT
+
+SIF TALENT:대상:성별 == 雄性 && BUST_SIZE(대상) < 1
+	トップバスト = RAND:450
+
+
+最小値 = 10
+;小柄体系はステータスに合うよう半分にする
+IF TALENT:대상:체형 == -4
+    TIMES トップバスト, 0.2
+    TIMES 最小値, 0.2
+ENDIF
+
+基礎値 = MAX(基礎値 + トップバスト,基礎値 + 最小値)
+
+CFLAG:대상:가슴성장 = 0
+
+RETURNF 基礎値
+
+;-------------------------
+;アンダーバストの算出
+;-------------------------
+@CALC_BODYSIZE_UNDERBUST(대상)
+#FUNCTION
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 基礎値
+
+基礎値 = CFLAG:대상:신장초기치 * (IS_FEMALE(대상) ? 43 # 50) / 100
+
+SELECTCASE TALENT:대상:체형
+	CASE -3 ;小人
+		TIMES 基礎値, 1.10
+	CASE -2 ;幼児체형
+		TIMES 基礎値, 1.05
+	CASE -1 ;小柄체형
+		TIMES 基礎値, 0.95
+	CASE 0 ;普通
+	CASE 1 ;長身
+		TIMES 基礎値, 1.03
+	CASE 2 ;大柄
+		TIMES 基礎値, 1.07
+	CASE 3 ;巨人
+		TIMES 基礎値, 1.15
+ENDSELECT
+
+SELECTCASE TALENT:대상:몸두께
+	CASE 0 ;標準
+	CASE 1 ;太り気味
+		TIMES 基礎値, 1.08
+	CASE 2 ;むちむち
+		TIMES 基礎値, 1.15
+	CASE 3 ;むっちり
+		TIMES 基礎値, 1.2
+	CASE 4 ;ぽってり
+		TIMES 基礎値, 1.25
+	CASE 5 ;운동しろ
+		TIMES 基礎値, 1.3
+ENDSELECT
+
+RETURNF 基礎値
+
+;-------------------------
+;ヒップサイズの설정
+;-------------------------
+@SET_BODYSIZE_HIP(대상,強制セット)
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 強制セット
+#DIM DYNAMIC ＣＳＶ値
+
+IF 強制セット == 1
+	CFLAG:대상:엉덩이초기치 = CALC_BODYSIZE_HIP(대상)
+ELSEIF EXISTCSV(NO:대상)
+	ＣＳＶ値 = CSVCFLAG(NO:대상,403)
+	IF ＣＳＶ値 < 1 ;CSVに記述がないなら必ず설정
+		CFLAG:대상:엉덩이초기치 = CALC_BODYSIZE_HIP(대상)
+	ELSE ;CSVに記述がある
+		IF 強制セット == 2 ;CSV記述にリセットする場合
+			CFLAG:대상:엉덩이초기치 = ＣＳＶ値
+		;CSVと既に値が違うなら関数に従い再설정
+		ELSEIF ＣＳＶ値 != CFLAG:대상:엉덩이초기치
+			CFLAG:대상:엉덩이초기치 = CALC_BODYSIZE_HIP(대상)
+		ENDIF ;それ以外はCSVの値を優先
+	ENDIF
+ELSE ;CSVがないなら必ず설정
+	CFLAG:대상:엉덩이초기치 = CALC_BODYSIZE_HIP(대상)
+ENDIF
+
+
+
+@CALC_BODYSIZE_HIP(대상)
+#FUNCTION
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 基礎値
+
+基礎値 = CFLAG:대상:신장초기치 * (IS_MALE(대상) ? 51 # 53) / 100
+
+SELECTCASE TALENT:대상:체형
+	CASE -3 ;小人
+		TIMES 基礎値, 1.00
+	CASE -2 ;幼児체형
+		TIMES 基礎値, 1.05
+	CASE -1 ;小柄체형
+		TIMES 基礎値, 0.95
+	CASE 0 ;普通
+	CASE 1 ;長身
+		TIMES 基礎値, 1.02
+	CASE 2 ;大柄
+		TIMES 基礎値, 1.04
+	CASE 3 ;巨人
+		TIMES 基礎値, 1.07
+ENDSELECT
+
+SELECTCASE TALENT:대상:엉덩이사이즈
+	CASE -1 ;貧尻
+		TIMES 基礎値, 0.94
+	CASE 0 ;普尻
+	CASE 1 ;安産型
+		TIMES 基礎値, 1.06
+	CASE 2 ;デカ尻
+		TIMES 基礎値, 1.10
+	CASE 3 ;質量兵器
+		TIMES 基礎値, 1.20
+ENDSELECT
+
+SELECTCASE TALENT:대상:몸두께
+	CASE 0 ;標準
+	CASE 1 ;太り気味
+		TIMES 基礎値, 1.08
+	CASE 2 ;むちむち
+		TIMES 基礎値, 1.15
+	CASE 3 ;むっちり
+		TIMES 基礎値, 1.2
+	CASE 4 ;ぽってり
+		TIMES 基礎値, 1.25
+	CASE 5 ;운동しろ
+		TIMES 基礎値, 1.3
+ENDSELECT
+
+基礎値 = 基礎値 * RAND(100, 110) / 100
+CFLAG:대상:엉덩이성장 = 0
+
+RETURNF 基礎値
+
+;-------------------------
+;아이의サイズの취득（임신時のウェストに加算）
+;-------------------------
+@GET_BABY_SIZE(대상)
+#FUNCTION
+#DIM DYNAMIC 대상
+RETURNF TALENT:대상:임신 ? (CFLAG:대상:몸무게초기치 / 200) * (CFLAG:대상:임신경과 / 6) # 0
+
+;-------------------------
+;임신していることによるバストの膨らみ
+;ワコール曰く「2カップ程度」とのことなので5センチ程度？
+;-------------------------
+@GET_BABY_BUST(대상)
+#FUNCTION
+#DIM DYNAMIC 대상
+RETURNF TALENT:대상:임신 ? ((CFLAG:대상:가슴초기치 + CFLAG:대상:가슴성장) / 1000) * (CFLAG:대상:임신경과 / 6) # 0
+
+;-------------------------
+;スリーサイズ그 밖의 표시
+;-------------------------
+@SHOW_BODYSIZE(대상)
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 子供サイズ
+#DIM DYNAMIC 子供バスト
+#DIM DYNAMIC バストカップ
+
+子供サイズ = GET_BABY_SIZE(대상)
+子供バスト = GET_BABY_BUST(대상)
+
+	PRINTFORM ・신장:
+	SELECTCASE TALENT:대상:체형
+		CASE -3 ;小人
+			SETCOLOR C_WOODS_G
+		CASE -2 ;幼児체형
+			SETCOLOR C_M_GREEN
+		CASE -1 ;小柄체형
+			SETCOLOR C_L_GREEN
+		CASE 0 ;普通
+		CASE 1 ;長身
+			SETCOLOR C_YELLOW_2
+		CASE 2 ;大柄
+			SETCOLOR C_ORANGE
+		CASE 3 ;巨人
+			SETCOLOR C_RED
+	ENDSELECT
+	PRINTFORM %DECIMAL_STRING(CFLAG:대상:신장초기치,2), 6, RIGHT%cm
+	RESETCOLOR
+	IF TALENT:대상:성별 != 雄性 || TALENT:대상:낭자애
+		PRINTFORM  /
+		SELECTCASE TOINT_CUPSIZE(대상)
+			CASE IS >= 21
+				SETCOLOR C_D_PINK
+			CASE IS >= 15
+				SETCOLOR C_V_PINK
+			CASE IS >= 10
+				SETCOLOR C_H_PINK
+			CASE IS >= 7
+				SETCOLOR C_PINK
+		ENDSELECT
+		PRINTFORM  B:%DECIMAL_STRING(CFLAG:대상:가슴초기치 + CFLAG:대상:가슴성장 + 子供バスト,2), 6, RIGHT%cm 
+		CALL PRINT_CUPSIZE(대상)
+		RESETCOLOR
+		PRINTFORM  / W:%DECIMAL_STRING(CFLAG:대상:몸무게초기치 + 子供サイズ,2), 6, RIGHT%cm
+		PRINTFORM  / 
+		; CALL CALC_HIPSIZE_HIGHLIGHT(대상)
+		; SELECTCASE (CFLAG:대상:엉덩이초기치 + CFLAG:대상:엉덩이성장)
+		; 	CASE IS >= RESULT:3
+		; 		SETCOLOR C_V_PINK
+		; 	CASE IS >= RESULT:2
+		; 		SETCOLOR C_H_PINK
+		; 	CASE IS >= RESULT:1
+		; 		SETCOLOR C_PINK
+		; ENDSELECT
+		SELECTCASE TALENT:대상:엉덩이사이즈
+			CASE 1 ;安産型
+				SETCOLOR C_PINK
+			CASE 2 ;デカ尻
+				SETCOLOR C_H_PINK
+			CASE 3 ;質量兵器
+				SETCOLOR C_V_PINK
+		ENDSELECT
+		PRINTFORM H:%DECIMAL_STRING(CFLAG:대상:엉덩이초기치 + CFLAG:대상:엉덩이성장,2), 6, RIGHT%cm 
+		RESETCOLOR
+	ENDIF
+
+
+;-------------------------------------------------
+;カップサイズをアルファベットで返す関数
+;-------------------------------------------------
+@TOSTR_CUPSIZE(대상)
+#FUNCTIONS
+#DIM DYNAMIC 대상
+#DIMS CONST SIZES = "-","AAA","AA","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","Z+", 
+#DIMS DYNAMIC サイズ
+#DIM DYNAMIC サイズ数字
+
+サイズ数字 = TOINT_CUPSIZE(대상)
+
+;溢れないようにしておく
+サイズ数字 = MAX(サイズ数字 , 0)
+IF サイズ数字 > 28
+	サイズ = {サイズ数字 - 27}Z
+ELSE
+	サイズ = %SIZES:サイズ数字%
+ENDIF
+RETURNF サイズ
+
+;-------------------------------------------------
+;カップサイズを数字で返す変数
+;-------------------------------------------------
+@TOINT_CUPSIZE(대상)
+#FUNCTION
+#DIM DYNAMIC 대상
+
+RETURNF (CFLAG:대상:가슴초기치 + CFLAG:대상:가슴성장 + GET_BABY_BUST(대상) - CALC_BODYSIZE_UNDERBUST(대상)) / 250
+
+;-------------------------------------------------
+;カップサイズを(アルファベット)で표시する変数
+;-------------------------------------------------
+@PRINT_CUPSIZE(대상)
+#DIM DYNAMIC 대상
+PRINTFORM (%TOSTR_CUPSIZE(대상)%)
+
+;-------------------------------------------------
+;お尻の強調표시基準サイズを配列で返す変数(女性専用)
+;-------------------------------------------------
+@CALC_HIPSIZE_HIGHLIGHT(대상)
+#DIM DYNAMIC 대상
+#DIM DYNAMIC 基礎値
+基礎値 = CFLAG:대상:신장초기치 * 53 / 100
+
+SELECTCASE TALENT:대상:체형
+	CASE -3 ;小人
+		TIMES 基礎値, 1.00
+	CASE -2 ;幼児체형
+		TIMES 基礎値, 1.05
+	CASE -1 ;小柄체형
+		TIMES 基礎値, 0.95
+	CASE 0 ;普通
+	CASE 1 ;長身
+		TIMES 基礎値, 1.02
+	CASE 2 ;大柄
+		TIMES 基礎値, 1.04
+	CASE 3 ;巨人
+		TIMES 基礎値, 1.07
+ENDSELECT
+
+SELECTCASE TALENT:대상:몸두께
+	CASE 0 ;標準
+	CASE 1 ;太り気味
+		TIMES 基礎値, 1.08
+	CASE 2 ;むちむち
+		TIMES 基礎値, 1.15
+	CASE 3 ;むっちり
+		TIMES 基礎値, 1.2
+	CASE 4 ;ぽってり
+		TIMES 基礎値, 1.25
+	CASE 5 ;運動しろ
+		TIMES 基礎値, 1.3
+ENDSELECT
+
+RESULT:1 = 基礎値
+RESULT:2 = 基礎値
+RESULT:3 = 基礎値
+TIMES RESULT:1, 1.06
+TIMES RESULT:2, 1.10
+TIMES RESULT:3, 1.20
+
+;-------------------------------------------------
+;整数ARG:0の下からARG:1番目に小数点を打ち、その値を文字列として返す関数
+;-------------------------------------------------
+@DECIMAL_STRING(ARG:0, ARG:1)
+#FUNCTIONS
+IF ARG:1 <= 0
+	THROW "@DECIMAL_STRINGの二番目の引数に0이하의 値が지정されました({ARG:1})"
+ENDIF
+
+LOCAL:4 = ARG:0
+
+LOCAL:2 = POWER(10, ARG:1)
+LOCAL:3 = LOCAL:4 / LOCAL:2
+LOCAL:4 = LOCAL:4 - LOCAL:3 * LOCAL:2
+LOCALS:0 = {LOCAL:3}.
+
+FOR LOCAL:0, ARG:1 - 1, 0, -1
+	LOCAL:2 = POWER(10, LOCAL:0)
+	LOCAL:3 = LOCAL:4 / LOCAL:2
+	LOCAL:4 = LOCAL:4 - LOCAL:3 * LOCAL:2
+	LOCALS:0 = %LOCALS:0%{LOCAL:3}
+NEXT
+LOCALS:0 = %LOCALS:0%{LOCAL:4}
+RETURNF LOCALS:0
+
+;-------------------------------------------------
+;가슴사이즈(素質)を数値から文字列に変換して返す式中関数
+;-------------------------------------------------
+@TOSTR_BUSTSIZE(대상)
+#FUNCTIONS
+#DIM DYNAMIC 대상
+#DIMS DYNAMIC 가슴사이즈
+
+SELECTCASE BUST_SIZE(대상)
+	CASE -3 ;虚가슴(--)
+		가슴사이즈 = 虚가슴
+	CASE -2 ;絶壁(--~AA)
+		가슴사이즈 = 絶壁
+	CASE -1 ;貧乳(AA~B)
+		가슴사이즈 = 貧乳
+	CASE 0 ;普乳(B~D)
+		가슴사이즈 = 普乳
+	CASE 1 ;巨乳(D~G)
+		가슴사이즈 = 巨乳
+	CASE 2 ;爆乳(G~L)
+		가슴사이즈 = 爆乳
+	CASE 3 ;ウシ乳(L~R)
+		가슴사이즈 = ウシ乳
+	CASE 4 ;魔乳(R~Z)
+		가슴사이즈 = 魔乳
+	CASE 5 ;規格外（乳）(Z~)
+		가슴사이즈 = 規格外（乳）
+ENDSELECT
+
+RETURNF 가슴사이즈
+
+;-------------------------------------------------
+;가슴성장
+;-------------------------------------------------
+@BUST_UP_BODYSIZE()
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カップ
+
+;絶壁 AAA~
+;貧乳 A~
+;普乳 C~
+;巨乳 E~
+;爆乳 H~
+;ウシ乳 M~
+;魔乳 S~
+;規格外 Z+~
+IF オプション_가슴AWS == 1
+	FOR 캐릭터_ID,0,CHARANUM
+		SIF TALENT:캐릭터_ID:성별 == 2
+			CONTINUE
+		SIF CFLAG:캐릭터_ID:가슴성장 < 1
+			CONTINUE
+		カップ = TOINT_CUPSIZE(캐릭터_ID)
+		IF カップ >= 1 && BUST_SIZE(캐릭터_ID) == -3
+			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 6000
+				TALENT:캐릭터_ID:가슴사이즈 = -2
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【절벽】이 되었다
+			ENDIF
+		ELSEIF カップ >= 3 && BUST_SIZE(캐릭터_ID) == -2
+			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 6500
+				TALENT:캐릭터_ID:가슴사이즈 = -1
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【빈유】가 되었다
+			ENDIF
+		ELSEIF カップ >= 5 && BUST_SIZE(캐릭터_ID) == -1
+			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 7000
+				TALENT:캐릭터_ID:가슴사이즈 = 0
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【평유】가 되었다
+			ENDIF
+		ELSEIF カップ >= 7 && BUST_SIZE(캐릭터_ID) == 0
+			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 8000
+				TALENT:캐릭터_ID:가슴사이즈 = 1
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【거유】가 되었다
+			ENDIF
+		ELSEIF カップ >= 10 && BUST_SIZE(캐릭터_ID) == 1
+			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 9500
+				TALENT:캐릭터_ID:가슴사이즈 = 2
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【폭유】가 되었다
+			ENDIF
+		ELSEIF カップ >= 15 && BUST_SIZE(캐릭터_ID) == 2
+			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 12000
+				TALENT:캐릭터_ID:가슴사이즈 = 3
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【소젖】이 되었다
+
+				IF RAND:3 == 0
+					TALENT:캐릭터_ID:함몰유두 = 1
+					PRINTFORMW 거기에、 %CALLNAME:캐릭터_ID%의 젖꼭지는 함몰되어 버렸다……。
+				ENDIF
+			ENDIF
+		ELSEIF カップ >= 18 && BUST_SIZE(캐릭터_ID) == 3 && CFLAG:캐릭터_ID:가슴성장 < 1000
+			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 15000
+				TALENT:캐릭터_ID:모유체질 = 1
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은 우유가 떨어지게 되었다
+			ENDIF
+		ELSEIF カップ >= 21 && BUST_SIZE(캐릭터_ID) == 3
+			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 15000
+				TALENT:캐릭터_ID:가슴사이즈 = 4
+				PRINTFORML %CALLNAME:캐릭터_ID%의 가슴은【마유】가 되었다
+			ENDIF
+		ELSEIF カップ >= 29 && BUST_SIZE(캐릭터_ID) == 4
+			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 20000
+				TALENT:캐릭터_ID:가슴사이즈 = 5
+				PRINTFORML %CALLNAME:캐릭터_ID%의 가슴은 이미【규격외】이다！
+			ENDIF
+		ENDIF
+	NEXT
+ENDIF
+
+;-------------------------------------------------
+;ケツ成長
+;-------------------------------------------------
+@BUTT_UP_BODYSIZE()
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC お尻
+#DIM DYNAMIC 基準値
+#DIM DYNAMIC お尻レベル
+
+IF オプション_尻AWS == 1
+	FOR 캐릭터_ID,0,CHARANUM
+		SIF TALENT:캐릭터_ID:성별 == 2
+			CONTINUE
+		SIF CFLAG:캐릭터_ID:엉덩이성장 < 1
+			CONTINUE
+		お尻 = (CFLAG:캐릭터_ID:엉덩이초기치 + CFLAG:캐릭터_ID:엉덩이성장)
+		基準値 = CFLAG:캐릭터_ID:신장초기치 * 53 / 100
+		SIF 基準値 > 0
+			お尻レベル = お尻 * 100 / 基準値
+		IF お尻レベル >= 100 && TALENT:캐릭터_ID:엉덩이사이즈 == -1
+			IF 限界値_尻AWS == 0 || 限界値_尻AWS >= 7000
+				TALENT:캐릭터_ID:엉덩이사이즈 = 0
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 엉덩이는【빈약한 엉덩이】가 되었다
+			ENDIF
+		ELSEIF お尻レベル >= 108 && TALENT:캐릭터_ID:엉덩이사이즈 == 0
+			IF 限界値_尻AWS == 0 || 限界値_尻AWS >= 8000
+				TALENT:캐릭터_ID:엉덩이사이즈 = 1
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 엉덩이는【순산형】이 되었다
+				IF TALENT:캐릭터_ID:허벅지사이즈 < 1
+					PRINTFORMW 거기에 %CALLNAME:캐릭터_ID%의 허벅지는【커다란 허벅지】가 되었다
+				ENDIF
+			ENDIF
+		ELSEIF お尻レベル >= 115 && TALENT:캐릭터_ID:엉덩이사이즈 == 1
+			IF 限界値_尻AWS == 0 || 限界値_尻AWS >= 9500
+				TALENT:캐릭터_ID:엉덩이사이즈 = 2
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 엉덩이는【커다란 엉덩이】가 되었다
+				IF TALENT:캐릭터_ID:허벅지사이즈 < 2
+					PRINTFORMW 거기에 %CALLNAME:캐릭터_ID%의 허벅지는【두툼한 허벅지】가 되었다
+				ENDIF
+			ENDIF
+		ELSEIF お尻レベル >= 130 && TALENT:캐릭터_ID:엉덩이사이즈 == 2
+			IF 限界値_尻AWS == 0 || 限界値_尻AWS >= 12000
+				TALENT:캐릭터_ID:엉덩이사이즈 = 3
+				PRINTFORMW %CALLNAME:캐릭터_ID%의 엉덩이는 이제【질량병기】이다！
+				PRINTFORMW 본인 앞에서 말했더니 혼났다………。
+				IF TALENT:캐릭터_ID:허벅지사이즈 < 3
+					PRINTFORMW 거기에 %CALLNAME:캐릭터_ID%의 허벅지는【두꺼운 허벅지】가 되었다！
+					PRINTFORMW 또 혼났다……。
+				ENDIF
+			ENDIF
+		ENDIF
+	NEXT
+ENDIF
+
+

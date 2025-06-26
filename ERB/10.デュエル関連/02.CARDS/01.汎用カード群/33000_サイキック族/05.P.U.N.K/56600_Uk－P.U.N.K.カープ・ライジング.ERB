@@ -1,0 +1,183 @@
+﻿@CARDNAME_56600,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = Uk－P.U.N.K. 카프 라이징
+	CASE "略称"
+RESULTS = Carp 라이징
+	CASE "カテゴリ"
+RESULTS:0 = P.U.N.K.
+ENDSELECT
+
+
+@CARD_56600(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 2600
+
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_56600(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「P.U.N.K.」 몬스터 2체
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 융합 소환한 이 카드를 릴리스하고 발동할 수 있다.
+PRINTL 패/덱에서 레벨 8 이외의 「P.U.N.K.」 몬스터를 2체까지 수비 표시로 특수 소환한다.
+CALLFORM CARD_ABLE(2,戦破壊→묘지)
+PRINTL ②: 이 카드가 필드에서 묘지로 보내졌을 때,
+PRINTL 자신 필드의 「P.U.N.K.」 S 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 이 턴에, 그 몬스터는 1번의 배틀 페이즈 중에 2회 공격할 수 있다.
+PRINTL 
+
+
+
+@CARDSUMMON_56600(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = P.U.N.K.
+ELSEIF EX参照 >= 10
+	素材条件カテゴリ = P.U.N.K.
+ENDIF
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,56600) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_56600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 使用済み
+#DIM DYNAMIC 효과使用불가,3
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,56600)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,56600)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種EX덱
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件カテゴリ = P.U.N.K.
+	CALL 효과条件レベル_ADV(8, "以外")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,56600)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 싱크로
+	효과条件カテゴリ = P.U.N.K.
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_56600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 条件달성,3
+#DIM DYNAMIC 選択肢표시
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 破壊カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,56600,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과条件カテゴリ = P.U.N.K.
+		CALL 효과条件レベル_ADV(8, "以外")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲덱 = 1
+			효과条件カテゴリ = P.U.N.K.
+			CALL 효과条件レベル_ADV(8, "以外")
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,56600,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 싱크로
+		효과条件カテゴリ = P.U.N.K.
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "필드",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"戦",2,1)
+		ENDIF
+	ENDIF
+ENDIF
+

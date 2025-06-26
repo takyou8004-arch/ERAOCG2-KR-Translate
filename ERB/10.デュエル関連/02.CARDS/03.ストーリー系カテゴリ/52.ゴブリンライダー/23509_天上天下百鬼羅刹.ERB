@@ -1,0 +1,168 @@
+﻿@CARDNAME_23509,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 배드 애스 고블린라이더즈
+	CASE "略称"
+		RESULTS = 천상천하백귀나찰
+	CASE "カテゴリ"
+		RESULTS:0 = 고블린
+		RESULTS:1 = 고블린라이더
+ENDSELECT
+
+
+@CARD_23509(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+	    RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23509(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,효과소환)
+PRINTL ①: 자신 필드의 몬스터가, 존재하지 않을 경우 또는 "고블린" 몬스터뿐일 경우,
+PRINTL 이 카드는 릴리스 없이 일반 소환할 수 있다.
+CALLFORM CARD_ABLE(2,소환時 ,특수소환時)
+PRINTL ②: 이 카드를 일반 일반 소환 / 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 덱에서 레벨 4 이하의 "고블린" 몬스터 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(3,필드→묘지 ,손패→묘지 ,덱→묘지 ,破壊→묘지 ,戦闘→묘지)
+PRINTL ③: 이 카드가 묘지로 보내졌을 경우 발동할 수 있다.
+PRINTL 필드의 카드 1장을 묘지로 보내고 "고블린" 엑시즈 몬스터 1장의 엑시즈 소재를 1 늘린다.
+
+@CARDCAN_23509(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24102)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과소환
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+    SIF モンスター数(듀얼리스트) == 0
+	    RETURN 1
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件固カテゴリ = 고블린
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 1
+	RETURN 0
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+    SIF 발동済_2(듀얼리스트,23509)
+        RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 고블린
+	CALL 효과条件レベル_ADV(4,"以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_3(듀얼리스트,23509)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	효과条件カテゴリ = 고블린라이더
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23509(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 횟수制限
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 효과소환
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23509,2)
+    IF RESULT == 0
+	    CALL FULLRESET
+	    효과範囲덱 = 1
+	    효과条件カテゴリ = 고블린
+	    CALL 효과条件レベル_ADV(4,"以下")
+	    CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23509,3)
+    IF RESULT == 0
+		CUSTOMDRAWLINE —
+		PRINTFORML 【X소재를 추가する 카드를 골라주세요】
+		CUSTOMDRAWLINE —
+		CALL FULLRESET
+	    효과範囲필드 = 1
+		효과条件カテゴリ = 고블린
+		효과条件종류 = 엑시즈
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDNAME_{RESULT:99},"名前"
+			選択カード名前 = %RESULTS%
+			CALL FULLRESET
+			효과条件종류 = 엑시즈以外
+			효과条件固名前 = %選択カード名前%
+	    	CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場単体",場所,"リリース")
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"Ｘ",1)
+		ENDIF
+	ENDIF
+ENDIF

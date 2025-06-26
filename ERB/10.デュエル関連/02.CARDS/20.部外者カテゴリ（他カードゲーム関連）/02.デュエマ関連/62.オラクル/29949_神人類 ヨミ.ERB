@@ -1,0 +1,169 @@
+﻿@CARDNAME_29949,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신인류 요미
+	CASE "略称"
+RESULTS = 신인류요미
+	CASE "カテゴリ"
+RESULTS:0 = 오라클
+RESULTS:1 = 갓
+RESULTS:2 = 갓 노바
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_29949(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수불가"
+		RETURN 1
+	CASE "소환불가"
+		RETURN 1
+	CASE "レア度"
+		RETURN SPR
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29949(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드명의 ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+PRINTL 이 카드는 일반 소환할 수 없고, 이 카드의 효과로만 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 자신 필드의 「오라클」 몬스터 2장을 릴리스하고 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(2,특수소환時)
+PRINTL ②: 이 카드가 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 자신은 덱에서 2장 드로우한다.
+CALLFORM CARD_ABLE(3,필드→묘지 ,손패→묘지 ,덱→묘지 ,破壊→묘지 ,戦闘→묘지)
+PRINTL ③: 이 카드가 묘지로 보내졌을 경우, 자신의 마법 & 함정 존에 앞면 표시의 「갓 노바」 카드가 2장 이상 존재하고 있다면 발동할 수 있다.
+PRINTL 이 카드를 패에 넣는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ④: 이 카드는 공격 유도를 가지고, 다른 「오라클」 몬스터는 대상 내성을 얻는다.
+
+
+@CARDCAN_29949(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29949)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,29949,"손패",1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 오라클
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,29949)
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_3(듀얼리스트,29949)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件カテゴリ = 갓 노바
+	효과条件표시 = 表側표시
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29949(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29949)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = 오라클
+		효과条件複数 = 2
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		ENDIF
+	ENDIF
+ELSEIF  종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29949,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARDDRAW_BASIC(듀얼리스트,2)
+	ENDIF
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29949,3)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件名前 = 신인류
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 오라클
+	효과条件他所 = 1
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻誘")
+ENDIF
+

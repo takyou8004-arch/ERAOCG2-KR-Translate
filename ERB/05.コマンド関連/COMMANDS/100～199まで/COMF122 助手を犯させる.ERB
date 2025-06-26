@@ -1,0 +1,232 @@
+;-------------------------------------------------
+;조수를 범하게한다
+;助手によるコマンド、及び레즈プレイ、レベル4
+;-------------------------------------------------
+@COM122
+#DIM DYNAMIC 素質確認
+#DIM DYNAMIC 판정値
+#DIM DYNAMIC 汚れ値
+#DIM DYNAMIC 実行値
+
+PRINTL 조수를 범하게한다
+;-------------------------------------------------
+;実行판정処理
+;-------------------------------------------------
+
+
+;すべての命令に共通の要素を考慮
+;(순종が高いと命令に従いやすいなど)
+CALL COM_ORDER
+素質確認 = RESULT:1
+판정値 += RESULT
+;ABL:욕망
+IF ABL:욕망
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:욕망 * 2
+	PRINT 욕망
+	PRINTV 'LV,ABL:욕망,'(,ABL:욕망 * 2,')
+	素質確認 = 1
+ENDIF
+;ABL:봉사정신
+IF ABL:봉사정신
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:봉사정신 * 4
+	PRINT 봉사정신
+	PRINTV 'LV,ABL:봉사정신,'(,ABL:봉사정신 * 4,')
+	素質確認 = 1
+ENDIF
+
+IF MARK:쾌락각인
+	SIF 素質確認
+		PRINT  + 
+	판정値 += MARK:쾌락각인 * 2
+	PRINT 쾌락각인
+	PRINTV 'LV,MARK:쾌락각인,'(,MARK:쾌락각인 * 2,')
+	素質確認 = 1
+ENDIF
+;PALAM:욕정
+IF GETPALAMLV(PALAM:욕정,5)
+	SIF 素質確認
+		PRINT  + 
+	판정値 += GETPALAMLV(PALAM:욕정,5) * 2
+	PRINT 욕정
+	PRINTV 'LV,GETPALAMLV(PALAM:욕정,5),'(,GETPALAMLV(PALAM:욕정,5) * 2,')
+	素質確認 = 1
+ENDIF
+;부끄럼쟁이
+IF TALENT:수치심 > 0
+	PRINT  - 
+	판정値 -= 1
+	PRINT 부끄럼쟁이
+	PRINTV '(,1,')
+	素質確認 = 1
+ENDIF
+;헌신적
+IF TALENT:헌신적
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 6
+	PRINT 헌신적
+	PRINTV '(,6,')
+	素質確認 = 1
+ENDIF
+;쾌감에 솔직
+IF TALENT:쾌감반응 > 0
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 2
+	PRINT 쾌감에 솔직
+	PRINTV '(,2,')
+	素質確認 = 1
+ENDIF
+;쾌감의 부정（음란、쾌락광で無効）
+IF TALENT:쾌감반응 < 0 && !TALENT:음란
+	PRINT  - 
+	판정値 -= 2
+	PRINT 쾌감의 부정
+	PRINTV '(,2,')
+	素質確認 = 1
+ENDIF
+;음란
+IF TALENT:음란
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 5
+	PRINT 음란
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+;쾌락광
+IF TALENT:음란 > 1
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 5
+	PRINT 쾌락광
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+
+;조수가 처녀
+IF TALENT:MASTER:처녀
+	PRINT  - 
+	판정値 -= 15
+	PRINT 조수가 처녀
+	PRINTV '(,15,')
+	素質確認 = 1
+ENDIF
+
+;合計を표시(40以上で実行)
+PRINT  = 
+PRINTV 판정値
+
+実行値 = 40
+SIF 판정値 < 実行値
+	PRINT  < 
+SIF 판정値 == 実行値
+	PRINT  = 
+SIF 판정値 > 実行値
+	PRINT  > 
+PRINT 実行値
+PRINTV 実行値
+
+WAIT
+
+;実行できない
+SIF 판정値 < 実行値
+	RETURN 0
+
+;-------------------------------------------------
+;実行결정
+;-------------------------------------------------
+STR:0 = 조수를 범하게한다
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+;行為者
+TCVAR:116 = TARGET
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 50
+DOWNBASE:기력 += 150
+
+SOURCE:쾌Ｃ = 400
+SOURCE:성행동 = 500
+SOURCE:달성 = 400
+SOURCE:굴종 = 700
+SOURCE:일탈 = 500
+SOURCE:반감 = 500
+
+
+;-------------------------------------------------
+;특수ソース処理
+;-------------------------------------------------
+;抑圧、저항持ちには、억울ソース추가
+SIF TALENT:자기애 < 0 || TALENT:저항
+	SOURCE:울굴 += 500
+
+;조수가 처녀の경우、굴복逸脱が倍化し、순종が2になる。ただし一度きり
+IF TALENT:MASTER:처녀 == 1
+	TIMES SOURCE:굴종 , 5.00
+	TIMES SOURCE:일탈 , 3.00
+	TALENT:MASTER:처녀 = 0
+	IF !GETBIT(CFLAG:3,4)
+		;이상경험추가（一回きり）
+		EXP:이상경험 += 1
+		SETBIT CFLAG:3,4
+	ENDIF
+	IF ABL:순종 < 2
+		PRINTFORML 그리고 %ABLNAME:0%가 2가 되었다
+		ABL:순종 = 2
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;사정に관계なく行われる処理はここから
+IF TALENT:2 & 2
+	;奴隷のＰ⇔조교者のＶの汚れが이동
+	STAIN:2 |= STAIN:MASTER:3
+	STAIN:MASTER:3 |= STAIN:2
+ENDIF
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;同性愛　레즈なら戻り値1게이なら戻り値2
+SIF HETEROSEX(TARGET,ASSI)
+	EXP:(50 + HETEROSEX(TARGET,ASSI)) += 10
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE122
+;조수를 범하게한다実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(122)
+	RETURN RESULT
+;助手じゃないとダメ
+SIF MASTER != ASSI
+	RETURN 0
+;オトコ、半人半妖、후타나리、もしくは페니스バンドがないとダメ
+SIF HAS_PENIS(TARGET) == 0 && ITEM:PBAND == 0
+	RETURN 0
+;오나홀사용중はダメ
+SIF TEQUIP:12
+	RETURN 0
+;하반신속옷착의
+SIF TEQUIP:0 & 4
+	RETURN 0
+;목욕탕플레이 중は플레이매트が無いとダメ
+IF TEQUIP:목욕탕플레이
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ENDIF
+RETURN 1

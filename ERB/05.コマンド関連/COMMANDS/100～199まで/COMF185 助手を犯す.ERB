@@ -1,0 +1,203 @@
+﻿;-------------------------------------------------
+;조수를 범한다
+;특수コマンド
+;-------------------------------------------------
+@COM185
+#DIM DYNAMIC 素質確認
+#DIM DYNAMIC 판정値
+#DIM DYNAMIC 汚れ値
+#DIM DYNAMIC 実行値
+
+PRINTL 조수를 범한다
+;-------------------------------------------------
+;実行판정処理
+;-------------------------------------------------
+
+
+;すべての命令に共通の要素を考慮
+;(순종が高いと命令に従いやすいなど)
+CALL COM_ORDER
+素質確認 = RESULT:1
+판정値 += RESULT
+;ABL:욕망
+IF ABL:욕망
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:욕망 * 2
+	PRINT 욕망
+	PRINTV 'LV,ABL:욕망,'(,ABL:욕망 * 2,')
+	素質確認 = 1
+ENDIF
+
+IF MARK:쾌락각인
+	SIF 素質確認
+		PRINT  + 
+	판정値 += MARK:쾌락각인 * 2
+	PRINT 쾌락각인
+	PRINTV 'LV,MARK:쾌락각인,'(,MARK:쾌락각인 * 2,')
+	素質確認 = 1
+ENDIF
+;PALAM:욕정
+IF GETPALAMLV(PALAM:욕정,5)
+	SIF 素質確認
+		PRINT  + 
+	판정値 += GETPALAMLV(PALAM:욕정,5) * 2
+	PRINT 욕정
+	PRINTV 'LV,GETPALAMLV(PALAM:욕정,5),'(,GETPALAMLV(PALAM:욕정,5) * 2,')
+	素質確認 = 1
+ENDIF
+;助手のABL:노출증
+IF ABL:ASSI:노출증
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:ASSI:노출증 * 2
+	PRINT 助手の노출증
+	PRINTV 'LV,ABL:ASSI:노출증,'(,ABL:ASSI:노출증 * 2,')
+	素質確認 = 1
+ENDIF
+
+;助手が연모
+IF TALENT:ASSI:연모
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 10
+	PRINT 助手が연모
+	PRINTV '(,10,')
+	素質確認 = 1
+ENDIF
+
+;助手が친애
+IF TALENT:ASSI:연모 > 1
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 15
+	PRINT 助手が친애
+	PRINTV '(,15,')
+	素質確認 = 1
+ENDIF
+
+;조수가 처녀
+IF TALENT:ASSI:처녀 == 1
+	PRINT  - 
+	판정値 -= 50
+	PRINT 조수가 처녀
+	PRINTV '(,50,')
+	素質確認 = 1
+ENDIF
+
+;合計を표시(40以上で実行)
+PRINT  = 
+PRINTV 판정値
+
+実行値 = 40
+SIF 판정値 < 実行値
+	PRINT  < 
+SIF 판정値 == 実行値
+	PRINT  = 
+SIF 판정値 > 実行値
+	PRINT  > 
+PRINT 実行値
+PRINTV 実行値
+
+WAIT
+
+;実行できない
+SIF 판정値 < 実行値
+	RETURN 0
+
+
+;-------------------------------------------------
+;実行결정
+;-------------------------------------------------
+STR:0 = 조수를 범한다
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+;行為者
+TCVAR:116 = MASTER
+TEQUIP:ASSI:50 = MASTER
+
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 0
+DOWNBASE:기력 += 250
+
+SOURCE:정애 = 200
+SOURCE:액체 = 100
+SOURCE:굴종 = 1500
+SOURCE:일탈 = 700
+SOURCE:반감 = 700
+
+;-------------------------------------------------
+;특수ソース処理
+;-------------------------------------------------
+;抑圧、저항持ちには、억울ソース추가
+SIF TALENT:자기애 < 0 || TALENT:저항
+	SOURCE:울굴 += 700
+
+;조수가 처녀喪失を했을 경우、굴복と逸脱を増加
+IF TALENT:ASSI:처녀 == 1
+	TIMES SOURCE:일탈 , 20.00
+	TIMES SOURCE:굴종 , 3.00
+ENDIF
+
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;사정に관계なく行われる処理はここから
+IF TALENT:MASTER:성별 & 2
+	;主人のＰ⇔助手のＶの汚れが이동
+	STAIN:MASTER:2 |= STAIN:ASSI:3
+	STAIN:ASSI:3 |= STAIN:MASTER:2
+ENDIF
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;助手のＶ경험
+EXP:ASSI:Ｖ경험 += 1
+
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE185
+LOCAL = 0
+;조수를 범한다実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(185)
+	RETURN RESULT
+;助手がいないとダメ
+SIF ASSI < 1
+	RETURN 0
+;主人じゃないとダメ
+SIF ASSIPLAY
+	RETURN 0
+;助手がオトコだとダメ
+SIF !(TALENT:ASSI:2 & 1)
+	RETURN 0
+;体格差がある場合は主人が금단의지식持ちじゃないとダメ
+SIF ABS(TALENT:체형 - TALENT:ASSI:체형) > 2 && (TALENT:MASTER:금단의지식 == 0)
+	RETURN 0
+;主人がオトコ、半人半妖、후타나리、もしくは페니스バンドがないとダメ
+SIF !(TALENT:MASTER:성별 & 2) && ITEM:PBAND == 0
+	RETURN 0
+;밧줄사용중か순종が3以上ないとダメ
+SIF TEQUIP:밧줄 || TEQUIP:사지없음 == 0 && ABL:순종 < 3
+	RETURN 0
+;목욕탕플레이 중は플레이매트が無いとダメ
+IF TEQUIP:목욕탕플레이
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ENDIF
+;새댁플레이 중はダメ
+SIF TEQUIP:새댁플레이
+	RETURN 0
+RETURN 1

@@ -1,0 +1,172 @@
+﻿@CARDNAME_52820,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 십이수 와일드보우
+	CASE "略称"
+RESULTS = 와일드보우
+	CASE "カテゴリ"
+RESULTS:0 = 십이수
+ENDSELECT
+
+
+@CARD_52820(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52820(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件レベル = 4
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,52820) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_52820(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 레벨 4 몬스터 × 5
+CALLFORM CARD_ABLE(1,EX덱起動)
+PRINTL 「십이수 와일드보우」는 1턴에 1번, 동명 카드 이외의 자신 필드의 「십이수」 몬스터 위에 겹쳐 엑시즈 소환할 수도 있다.
+CALLFORM CARD_ABLE(0,攻守変動,지속효과)
+PRINTL ①: 이 카드의 공격력 / 수비력은, 이 카드의 엑시즈 소재의 수× 300 올리고, 상대에게 직접 공격할 수 있다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ②: 가지고 있는 엑시즈 소재의 수가 12개 이상인 이 카드의 공격 선언 시에 발동할 수 있다.
+PRINTL 상대의 패 / 필드의 카드를 전부 묘지로 보낸다. 그 후, 이 카드는 수비 표시가 된다.
+
+
+
+@CARDCAN_52820(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52820)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,52820)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 십이수
+	효과条件固名前 = 십이수 와일드보우
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,52820)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") < 11
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+
+
+@CARDEFFECT_52820(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52820,1)
+	IF RESULT == 0
+		CALL RESETCONDITION_MAT
+		必要素材数 = 1
+		素材条件カテゴリ = 십이수
+		素材条件固名前 = 십이수 와일드보우
+		重ねてＸ = 1
+		TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52820)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"リリース")
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"손패全体",場所,"リリース")
+		CALL FULLRESET
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",2,1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直攻")
+ELSEIF 종류 == 攻守変動
+	攻撃力修正 = (GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") + 1) * 300
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正,攻撃力修正)	
+ENDIF
+

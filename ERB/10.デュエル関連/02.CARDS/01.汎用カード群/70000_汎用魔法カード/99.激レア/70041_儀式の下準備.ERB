@@ -1,0 +1,137 @@
+﻿@CARDNAME_70041,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 의식의 사전준비
+	CASE "略称"
+		RESULTS = 의식의 사전준비
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_70041(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_70041(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의  카드는 1턴에 1장 밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：덱으로부터 의식 마법 카드 1장을 고르고 패로 넣는다.
+PRINTL 그 후, 그 의식 마법 카드에 카드명이 기록된 의식 몬스터 1장을,
+PRINTL 자신의 덱으로부터 고르고 패에 넣는다.
+PRINTL 
+
+@CARDCAN_70041(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,70041)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,70041)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 의식마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_70041(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70041,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 의식마법
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		CALL URARA_CHANCE(듀얼리스트,処理中_효과ID,"雑多")
+		IF RESULT == 0
+			IF INRANGE (選択カード , 300, 399)
+				選択カード -= 300
+				選択カード_ID = GETVAR(@"%듀얼리스트%_덱:選択カード")
+				CALL CARD_ADD(듀얼리스트, "덱", "손패", 選択カード)
+
+				CALL FULLRESET
+				CALLFORM CARDNAME_{選択カード_ID}, "名前"
+				SELECTCASE RESULTS
+					CASE "エンド・オブ・ザ・ワールド"
+						효과条件名前:0 = 종언의 왕 데미스
+						효과条件名前:1 = 破滅の女신ルイン
+					CASE "救世の의식"
+						효과条件名前:0 = 救世の美신ノースウェムコ
+					CASE "聖占術の의식"
+						효과条件名前:0 = 聖占術姫タロットレイ
+					CASE "ネフティスの輪廻"
+						효과条件名前:0 = ネフティスの祀り手
+						효과条件名前:1 = ネフティスの蒼凰신
+					CASE "드래그마カブル"
+						효과条件名前:0 = 드래그마 アルバス ナイト
+						효과条件名前:1 = 드래그마 アルバス セイント
+					CASE "光子룡降臨"
+						효과条件名前:0 = ナイト オブ フォトンドラゴン
+					CASE "ハンバーガーのレシピ"
+						효과条件名前:0 = ハングリ-バ-ガ-
+					CASE "デクレアラー・プロフェシー"
+						효과条件名前:0 = 신光の宣告者
+						효과条件名前:1 = 崇光なる宣告者
+					CASE "デクレアラー・オラクル"
+						효과条件名前 = 崇光なる宣告者
+					CASE "イリュージョンの의식"
+						효과条件名前 = サクリファイス
+					CASE "일식의 잉카구라"
+						효과条件名前 = 오오히메의 미캉코
+					CASE "ドリアードの祈り"
+						효과条件名前 = エレメンタル마스터 ドリア-ド
+					CASEELSE
+						CALL SHUFFLE(듀얼리스트)
+						RETURN 0
+				ENDSELECT				
+				CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+				CALL SHUFFLE(듀얼리스트)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

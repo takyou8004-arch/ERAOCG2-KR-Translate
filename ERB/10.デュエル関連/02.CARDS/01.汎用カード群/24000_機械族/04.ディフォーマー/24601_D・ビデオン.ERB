@@ -1,0 +1,112 @@
+﻿;守備力だけ上げる方法わっかんね、とりあえず統合すっぺ
+@CARDNAME_24601,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = D 비디오 온
+	CASE "略称"
+RESULTS = D 비디오 온
+	CASE "カテゴリ"
+RESULTS:0 = 디포머
+ENDSELECT
+
+
+@CARD_24601(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24601(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드는 표시 형식에 따라 다음의 효과를 얻는다.
+PRINTL ●공격 표시: 이 카드의 공격력은 이 카드에 장비되어 있는 카드의 수× 800만큼 상승한다.
+PRINTL ●수비 표시: 이 카드의 수비력은 이 카드에 장비되어 있는 카드의 수× 800만큼 상승한다.
+
+@CARDCAN_24601(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24601)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	;装備確認、FA어둠기사から
+	CALL FULLRESET
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24601(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 装備枚数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 攻守変動
+	IF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 1
+		;装備確認、リボルバ-から
+		CALL FULLRESET
+		효과条件CNT = 1
+		CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+		;攻撃力상승、ア-マリ-から
+		装備枚数 = RESULT * 800
+		CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,装備枚数,0)
+
+	ELSEIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 2
+		;装備確認、リボルバ-から
+		CALL FULLRESET
+		효과条件CNT = 1
+		CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+		;守備力상승、バスブレから
+		装備枚数 = RESULT * 800
+		CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,0,装備枚数)
+	ENDIF
+ENDIF
+
+
+

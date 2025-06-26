@@ -1,0 +1,170 @@
+﻿@CARDNAME_41455,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 크로노다이버 더블 배럴
+	CASE "略称"
+RESULTS = 더블 배럴
+	CASE "カテゴリ"
+RESULTS:0 = 크로노다이버
+ENDSELECT
+
+
+@CARD_41455(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 2200
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_41455(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+
+;추가효과用00
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,41455) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_41455(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 몬스터 2장
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時 ,특수소환時)
+PRINTL ①: 이 카드가 특수 소환에 성공했을 경우 발동할 수 있다.
+PRINTL 상대 덱의 위에서 3장 제외한다.
+CALLFORM CARD_ABLE(2,필드起動 ,フリー誘発)
+PRINTL ②: 자신·상대 턴에 발동할 수 있다.
+PRINTL 이 카드의 X 소재를 제거하고, 자신·상대의 제외 상태의 카드를 1장까지 묘지로 되돌린다.
+PRINTL 그 후, 이 효과로 되돌린 카드의 종류에 따라 이하의 효과를 적용한다.
+PRINTL ●몬스터: 이 턴 자신 필드의 '크로노다이버' 카드는 효과로는 파괴되지 않는다.
+PRINTL ●마법: 상대 필드의 앞면 표시 몬스터 1장을 고르고, 엔드 페이즈까지 제외한다.
+PRINTL ●함정: 필드의 효과 몬스터 1장을 고르고, 그 효과를 턴 종료시까지 무효로 한다.
+
+
+@CARDCAN_41455(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,41455)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX소환時 || 종류 == 특수소환時
+
+	SIF 발동済_1(듀얼리스트,41455)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,41455)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과範囲상대제외 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_41455(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 소환효과ID
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41455,1)
+	IF RESULT == 0
+		CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",3,제외行き,1)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41455,2,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과範囲상대제외 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			소환효과ID = RESULT:1
+			TRYCALLFORM CARD_{소환효과ID}, "종류"
+			IF INRANGE(RESULT,0,10)
+				CALL FULLRESET
+				효과条件カテゴリ = 크로노 다이버
+				효과条件표시 = 表側표시
+				CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐",1)
+				CALL FULLRESET
+				효과条件カテゴリ = 크로노 다이버
+				효과条件표시 = 表側표시
+				CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐",1)
+			ELSEIF INRANGE(RESULT,20,29)
+				CALL FULLRESET
+				효과추가종류 = 1
+				효과条件표시 = 表側표시
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"제외")
+			ELSEIF INRANGE(RESULT,30,40)
+				CALL FULLRESET
+				효과条件표시 = 表側표시
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"無効")
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

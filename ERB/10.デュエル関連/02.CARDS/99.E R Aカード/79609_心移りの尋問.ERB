@@ -1,0 +1,230 @@
+﻿@CARDNAME_79609,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마음의 변심 심문
+	CASE "略称"
+RESULTS = 마음의 변심 심문
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79609(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79609(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 효과 ①②는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 상대 묘지에 존재하는 암컷 카드 1장을 자신 묘지에 놓고, 상대의 패를 확인한다.
+PRINTL 　이 효과의 발동시에 패 / 덱에서 "마음의 변심" 1장을 묘지로 보내는 것으로, 추가로 상대의 덱을 확인할 수 있다.
+	SETCOLOR C_YELLOW
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊！！주의！！＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL "마음의 변심"을 묘지로 보냈을 경우, 버그로 카드의 주인이 바뀔 수 있습니다!
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊！！주의！！＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+	RESETCOLOR
+CALL CARD_ABLE(2,묘지起動)
+PRINTL ②: 자신 묘지에서 이 카드와 "마음의 변심" 1장을 제외하고 발동할 수 있다.
+PRINTL 　자신 묘지에서 암컷 카드 1장을 패에 넣는다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79609(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79609)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79609)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,79609)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件名前 = 마음의 변심
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79609(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC レイプ횟수
+#DIM DYNAMIC 寝取り成功
+#DIM DYNAMIC 절정횟수
+#DIMS DYNAMIC 이동カード名
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79609,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+효과条件名前 = 마음의 변심
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			SIF 듀얼리스트 == "자신"
+				PRINTFORMW 패 / 덱의 '마음의 변심'을 묘지로 보내겠습니까？
+			CALL YN_CHOICE(듀얼리스트)
+			IF RESULT == 0
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과範囲덱 = 1
+효과条件名前 = 마음의 변심
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+				SIF RESULT == 1
+					条件달성 = 1
+			ENDIF
+		ENDIF
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과条件성별 = 牝性
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			選択カード = RESULT
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARDNAME_{選択カード_ID}, "名前"
+			이동カード名 = %RESULTS%
+			CALL CARD_RECONSTRUCT(듀얼리스트,"묘지",現묘지数(듀얼리스트),選択カード_ID)
+			CALL CARD_RECONSTRUCT(対面者,"묘지",選択カード,-1)
+			PRINTFORML %듀얼리스트%는  %이동カード名%을 자신의 묘지로 납치했습니다。
+			CALL CARD_EROTICS(選択カード_ID)
+			조교대상 = RESULT
+			IF 조교대상 != -1
+				PRINTFORML 신체의 자유를 빼앗긴 %CALLNAME:조교대상%은 %CALLNAME:MASTER%을 원망스러운 눈빛으로 쳐다보면서도
+				PRINTFORM 이제부터 자신을 심문하려는 %CALLNAME:MASTER%의
+				IF TALENT:MASTER:형태 == 0 || TALENT:MASTER:형태 == 4
+					PRINTFORM 立派な
+				ELSEIF TALENT:MASTER:형태 <= 3
+					PRINTFORM お粗末な
+				ELSEIF TALENT:MASTER:형태 >= 5
+					PRINTFORM 大きな
+				ENDIF
+				PRINTFORML 육봉 앞에서 군침을 삼켰습니다.
+				IF TALENT:MASTER:형태 == 0
+					レイプ횟수 = 4
+				ELSE
+					レイプ횟수 = (TALENT:MASTER:형태) - 1
+				ENDIF
+				;PRINTFORML {レイプ횟수}
+				FOR カウンタ,0,レイプ횟수
+					CALL EROTIC_MOVE("前穴凌辱",조교대상,MASTER,200)
+					;PRINTFORMW 절정횟수:{RESULT:1}		
+					절정횟수 += RESULT:1
+					SIF 절정횟수 >= 10
+						寝取り成功 = 1
+				NEXT
+				IF 寝取り成功 == 1 && 条件달성 == 1
+					SETCOLOR C_PINK
+					PRINTFORML 
+					PRINTFORMW ………
+					PRINTFORMW %CALLNAME:조교대상%은 %CALLNAME:MASTER%의 자지에 완전히 패배하여 %CALLNAME:MASTER%에게 아첨하기 위해 상대의 정보를 모두 털어놓았습니다.
+					RESETCOLOR
+					MARK:조교대상:반발각인 = 0
+					IF 選択カード_ID < 100000
+						IF 듀얼리스트 == "자신"
+							CALL CARD_GET_SINGLE(選択カード_ID,1)
+							PRINTFORML
+						ENDIF
+					ENDIF
+				ELSE
+					PRINTFORML 
+					PRINTFORMW ………
+					PRINTFORMW 심문에 굴복한 %CALLNAME:조교대상%은 상대의 패 정보를 털어놓았다.
+				ENDIF
+			ENDIF
+			CALL FULLRESET
+			효과範囲상대손패 = 1
+			SIF 条件달성 == 1
+				효과範囲상대덱 = 1
+			효과条件任意 = 1
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79609,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 마음의 변심
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件성별 = 牝性
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+
+	ENDIF
+ENDIF
+
+

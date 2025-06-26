@@ -1,0 +1,77 @@
+﻿;로터삽입한다
+@COM317
+IF CFLAG:TARGET:로터삽입
+	TEQUIP:TARGET:로터 = 0
+	CFLAG:TARGET:로터삽입 = 0
+ELSE
+	TEQUIP:TARGET:로터 = 1
+	CFLAG:TARGET:로터삽입 = 240
+ENDIF
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+;파과억제
+TFLAG:2 = 1
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 30
+DOWNBASE:기력 += 80
+
+
+IF !TALENT:처녀
+	CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER, 120)
+ELSE
+	CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER, 30)
+ENDIF
+CALL SOURCE_CALC_노출(TARGET, MASTER, 120)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 200)
+
+;고통
+LOCAL = 80 * PAIN_CHECK_V(TARGET) / 1000
+SIF TALENT:처녀
+	TIMES LOCAL , 1.50
+
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 1
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 1
+ENDIF
+
+TIME += 10
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE317
+;로터実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(317)
+	RETURN RESULT
+;친밀감강도2
+SIF TCVAR:MASTER:친밀감 < 2
+	RETURN 0
+;연모か굴복됨みじゃないとダメ
+SIF TALENT:TARGET:연모 != 0 && TALENT:TARGET:굴복됨 != 0
+	RETURN 0
+;押し倒されてとダメ
+SIF CFLAG:우후후 == 2
+	RETURN 0
+;수면中
+SIF CFLAG:수면
+	RETURN 0
+;女か후타나리じゃないとダメ
+SIF !(TALENT:2 & 1)
+	RETURN 0
+;아이템を持っているか、아이템あり설정でないとダメ
+SIF ITEM:0 == 0 && NOITEM == 0
+	RETURN 0
+RETURN 1

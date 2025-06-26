@@ -1,0 +1,71 @@
+﻿;-------------------------------------------------
+;방뇨
+;ハードな조교コマンド、レベル2
+;-------------------------------------------------
+@COM144
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 10
+DOWNBASE:기력 += 200
+
+;野外
+IF TEQUIP:야외플레이
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 2000)
+;鏡の前（수치플레이）
+ELSEIF TEQUIP:수치플레이
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 1200)
+;목욕場
+ELSEIF TEQUIP:목욕탕플레이
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 400)
+ELSE
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 800)
+ENDIF
+CALL SOURCE_CALC_불결(TARGET, MASTER, 500)
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;방뇨경험
+EXP:방뇨경험 += 2
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 2
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 2
+ENDIF
+
+;野外방뇨で이상경험
+IF TEQUIP:야외플레이 && !GETBIT(CFLAG:3,6)
+	EXP:이상경험 += 1
+	SETBIT CFLAG:3,6
+ENDIF
+
+TEQUIP:이뇨제 = 0
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE144
+;방뇨実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(144)
+	RETURN RESULT
+;이뇨제사용중か실금벽ありでないとダメ
+SIF TEQUIP:27 == 0 && TALENT:실금벽 == 0
+	RETURN 0
+;순종３以上でないとダメ（お목욕場ならＯＫ）
+IF TEQUIP:목욕탕플레이 == 0
+	SIF ABL:순종 <= 2
+		RETURN 0
+ENDIF
+
+;하반신착의
+SIF TEQUIP:0 > 1
+	RETURN 0
+RETURN 1

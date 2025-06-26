@@ -1,0 +1,134 @@
+﻿@CARDNAME_25502,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 무신－아라스다
+	CASE "略称"
+RESULTS = 무신 아라스다
+	CASE "カテゴリ"
+RESULTS:0 = 무신
+ENDSELECT
+
+
+@CARD_25502(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1900
+	CASE "単一存在"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_25502(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL ①: 「무신－아라스다」는 자신 필드에 1장밖에 앞면 표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②: 자신의 「무신」 또는 「무신기」 몬스터가 제외되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에서 수비 표시로 특수 소환한다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ③: 이 카드가 필드에 앞면 표시로 존재하고,
+PRINTL 「무신」 또는 「무신기」 카드가 드로우 이외의 방법으로 자신의 패에 더해졌을 경우에 발동할 수 있다.
+PRINTL 자신은 덱에서 카드를 1장 드로우하고, 그 후 패를 1장 고르고 버린다.
+
+@CARDCAN_25502(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25502)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	IF ゾーン == "손패"
+		CALL CARD_SS_CHECK(듀얼리스트,25502,"손패")
+		SIF RESULT == 1
+			RETURN 0
+		CALL FULLRESET
+		효과条件カテゴリ:0 = 무신
+		효과条件カテゴリ:1 = 무신기
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과除送")
+		SIF RESULT != 1
+			RETURN 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+효과条件名前 = 무신－아라스다
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+		RETURN 1
+		
+	ELSEIF ゾーン == "필드"
+		SIF 발동済_1(듀얼리스트,25502)
+			RETURN 0
+		CALL FULLRESET
+		효과条件カテゴリ:0 = 무신
+		효과条件カテゴリ:1 = 무신기
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"손패취득")
+		SIF RESULT != 1
+			RETURN 0
+		CALL CARD_DRAW_CHECK
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+@CARDEFFECT_25502(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	IF ゾーン == "손패"
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25502)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所,"守備표시")
+		ENDIF
+
+	ELSEIF ゾーン == "필드"
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25502,1)
+		IF RESULT == 0
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+			CALL FULLRESET
+			효과範囲손패 = 1
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+

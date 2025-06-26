@@ -1,0 +1,274 @@
+﻿;-------------------------------------------------
+;자위
+;애무계커맨드、レベル3
+;-------------------------------------------------
+@COM9
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 5
+DOWNBASE:기력 += 50
+
+;쾌Ｃ計算
+LOCAL:0 = 80
+;쾌Ｂ計算
+LOCAL:1 = 80
+
+CALL SOURCE_CALC_노출(TARGET, MASTER, 400)
+;바이브
+IF TEQUIP:바이브
+	CALL SOURCE_CALC_쾌Ｖ(TARGET, TARGET, 80)
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 50)
+	;고통
+	LOCAL:2 = 80 * PAIN_CHECK_V(TARGET) / 1000
+	CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+	TIMES LOCAL:0 , 0.70
+	TIMES LOCAL:1 , 0.70
+ENDIF
+;애널바이브
+IF TEQUIP:애널바이브
+	CALL SOURCE_CALC_쾌Ａ(TARGET, TARGET, 80)
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 50)
+	;고통
+	LOCAL:2 = 100 * PAIN_CHECK_A(TARGET) / 1000
+	CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+	TIMES LOCAL:0 , 0.70
+	TIMES LOCAL:1 , 0.70
+ENDIF
+;샤워
+IF TEQUIP:32
+	CALL SOURCE_CALC_쾌Ｃ(TARGET, TARGET, 80)
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 100)
+ENDIF
+;ビデオ
+IF TEQUIP:28
+	CALL SOURCE_CALC_액체(TARGET, MASTER, 50)
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 300)
+ENDIF
+CALL SOURCE_CALC_쾌Ｂ(TARGET, TARGET, LOCAL:0)
+CALL SOURCE_CALC_쾌Ｃ(TARGET, TARGET, LOCAL:1)
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;奴隷の손가락⇔奴隷のＢの汚れが이동
+STAIN:1 |= STAIN:5
+STAIN:5 |= STAIN:1
+
+;奴隷の손가락⇔奴隷のＶの汚れが이동
+STAIN:1 |= STAIN:3
+STAIN:3 |= STAIN:1
+
+;샤워オナニーの場合汚れをリセット、윤활更に半分。
+IF TEQUIP:32 == 1
+	STAIN:1 = 0
+	STAIN:2 = 2
+	STAIN:3 = 1
+	STAIN:4 = 8
+	PALAM:4 /= 2
+ENDIF
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;비디오촬영時は경험にプラス
+IF TEQUIP:비디오촬영
+	EXP:자위경험 += 2
+	EXP:조교자위경험 += 2
+ELSE
+	EXP:자위경험 += 1
+	EXP:조교자위경험 += 1
+ENDIF
+;公開オナニー時は이상경험付加
+IF TEQUIP:비디오촬영 && !GETBIT(CFLAG:3,0)
+	EXP:이상경험 ++
+	SETBIT CFLAG:3,0
+ENDIF
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 4
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 4
+ENDIF
+RETURN 1
+
+
+@CAN_COM9(ARG)
+#DIM DYNAMIC 素質確認
+#DIM DYNAMIC 판정値
+#DIM DYNAMIC 汚れ値
+#DIM DYNAMIC 実行値
+SKIPDISP ARG
+SIF TEQUIP:비디오촬영
+	PRINT 공개
+SIF TEQUIP:샤워
+	PRINT 샤워
+IF TEQUIP:바이브 && TEQUIP:애널바이브
+	PRINT 두 구멍 바이브
+ELSEIF TEQUIP:바이브
+	PRINT 바이브
+ELSEIF TEQUIP:애널바이브
+	PRINT 애널바이브
+ENDIF
+
+IF TEQUIP:비디오촬영 || TEQUIP:샤워 || TEQUIP:바이브 || TEQUIP:애널바이브
+	PRINTL 자위
+ELSE
+	PRINTL 자위
+ENDIF
+;-------------------------------------------------
+;実行できるかの판정
+;-------------------------------------------------
+VARSET A
+;すべての命令に共通の要素を考慮
+;(순종が高いと命令に従いやすいなど)
+CALL COM_ORDER
+素質確認 = RESULT:1
+판정値 += RESULT
+;ABL:욕망
+IF ABL:욕망
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:욕망 * 3
+	PRINT 욕망
+	PRINTV 'LV,ABL:욕망,'(,ABL:욕망 * 3,')
+	素質確認 = 1
+ENDIF
+;ABL:노출증
+IF ABL:노출증
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:노출증 * 4
+	PRINT 노출증
+	PRINTV 'LV,ABL:노출증,'(,ABL:노출증 * 4,')
+	素質確認 = 1
+ENDIF
+;ABL:자위중독
+IF ABL:자위중독
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:자위중독 * 3
+	PRINT 자위중독
+	PRINTV 'LV,ABL:자위중독,'(,ABL:자위중독 * 3,')
+	素質確認 = 1
+ENDIF
+
+IF MARK:쾌락각인
+	SIF 素質確認
+		PRINT  + 
+	판정値 += MARK:쾌락각인 * 3
+	PRINT 쾌락각인
+	PRINTV 'LV,MARK:쾌락각인,'(,MARK:쾌락각인 * 3,')
+	素質確認 = 1
+ENDIF
+
+;자제심
+IF TALENT:자제심
+	PRINT  - 
+	판정値 -= 5
+	PRINT 자제심
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+;부끄럼쟁이
+IF TALENT:수치심 > 0
+	PRINT  - 
+	판정値 -= 5
+	PRINT 부끄러움
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+;恥薄い
+IF TALENT:수치심 < 0
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 2
+	PRINT 恥薄い
+	PRINTV '(,2,')
+	素質確認 = 1
+ENDIF
+;자위しやすい
+IF TALENT:자위하기쉬움
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 5
+	PRINT 자위しやすい
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+;쾌감에 솔직
+IF TALENT:쾌감반응 > 0
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 5
+	PRINT 쾌감에 솔직
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+;쾌감의 부정（음란、쾌락광で無効）
+IF TALENT:쾌감반응 < 0 && !TALENT:음란
+	PRINT  - 
+	판정値 -= 5
+	PRINT 쾌감의 부정
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+
+;미약
+IF TEQUIP:미약
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 8
+	PRINT 미약
+	PRINTV '(,8,')
+	素質確認 = 1
+ENDIF
+
+;合計を표시(33以上で実行)
+PRINT  = 
+PRINTV 판정値
+
+;난이도상승
+;公開で+10、바이브で+5、애널바이브で+5、샤워で＋3
+実行値 = 33
+SIF TEQUIP:비디오촬영
+	V += 10
+SIF TEQUIP:샤워
+	V += 3
+SIF TEQUIP:바이브
+	V += 5
+SIF TEQUIP:애널바이브
+	V += 5
+
+SIF 판정値 < 実行値
+	PRINT  < 
+SIF 판정値 == 実行値
+	PRINT  = 
+SIF 판정値 > 実行値
+	PRINT  > 
+PRINT 실행치
+PRINTV 実行値
+
+WAIT
+SKIPDISP 0
+;実行できない
+SIF 판정値 < 実行値
+	RETURN 0
+RETURN 1
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+
+@COM_ABLE9
+;자위実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(9)
+	RETURN RESULT
+
+;밧줄사용중/手足が使えないと불가
+SIF TEQUIP:밧줄 || TEQUIP:사지없음
+	RETURN 0
+RETURN 1

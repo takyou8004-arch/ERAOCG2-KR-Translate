@@ -1,0 +1,198 @@
+﻿@CARDNAME_33255,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 어둠 령수사－세피라 웬디
+	CASE "略称"
+RESULTS = 세피라 웬
+	CASE "カテゴリ"
+RESULTS:0 = 령수
+RESULTS:1 = 령수사
+RESULTS:2 = 세피라
+ENDSELECT
+
+
+@CARD_33255(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "특수制限"
+		RETURN 1
+ENDSELECT
+
+@CARD_EXPLANATION_33255(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL 이 카드명의 P효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL ①: 자신 마법 & 함정 존에 이 카드명 이외의 P 몬스터 카드가 존재할 경우, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 패 / EX덱에서 EX 몬스터 이외의 「령수」「세피라」 몬스터 1장을 특수 소환한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 자신은 「어둠 령수사－세피라 웬디」를 1턴에 1번밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,소환時,특수소환時)
+PRINTL ①: 자신 마법 & 함정 존에 「세피라」 P 몬스터 카드가 존재하고, 이 카드가 특수 소환되었을 경우,
+PRINTL 또는 이 카드가 소환되었을 때 발동할 수 있다.
+PRINTL 자신 EX덱 / 묘지 / 제외 상태의 카드에서, 「어둠 령수사－세피라 웬디」 이외의,
+PRINTL EX 몬스터 이외의 「령수」「세피라」 몬스터 1장을 패에 넣는다.
+
+
+@CARDCAN_33255(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,33255)
+SIF RESULT == 1
+	RETURN 0
+;P
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件名前 = 어둠 령수사－세피라 웬디
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,33255)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件固名前 = 어둠 령수사－세피라 웬디
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ:0 = 령수
+	효과条件カテゴリ:1 = 세피라
+	효과条件종류 = 효과モン
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+;M
+ELSEIF 종류 == 특수소환時 || 종류 == 소환時
+	IF 종류 == 특수소환時
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件分割 = 펜듈럼
+		효과条件カテゴリ = 세피라
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ:0 = 령수
+	효과条件カテゴリ:1 = 세피라
+	효과条件종류 = 효과モン
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_33255(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;P
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33255)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33255,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ:0 = 령수
+		효과条件カテゴリ:1 = 세피라
+		효과条件종류 = 효과モン
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+;モンスター효과-------------------------
+ELSEIF 종류 == 특수소환時 || 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33255)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ:0 = 령수
+		효과条件カテゴリ:1 = 세피라
+		효과条件종류 = 효과モン
+		효과条件固名前 = 어둠 령수사－세피라 웬디
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

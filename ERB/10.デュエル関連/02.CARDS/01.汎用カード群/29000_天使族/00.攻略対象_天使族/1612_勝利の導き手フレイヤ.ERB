@@ -1,0 +1,107 @@
+﻿@CARDNAME_1612,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 승리의 인도자 프레이야
+	CASE "略称"
+RESULTS = 프레이야
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1612(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 100
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1612(종류)
+#DIM DYNAMIC 종류
+
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①: 자신 필드 상에 다른 천사족 몬스터가 앞면 표시로 존재할 경우,
+PRINTL 이 카드는 공격받지 않는다.
+CALL CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드가 자신 필드 상에 앞면 표시로 존재하는 한,
+PRINTL 자신 필드 상에 앞면 표시로 존재하는 천사족 몬스터의 공격력·수비력은 400 포인트 상승한다.
+PRINTL 
+PRINTL 
+PRINTL 
+
+@CARDSUMMON_AA_1612
+
+
+@CARDCAN_1612(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1612)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件표시 = 表側표시
+	효과条件他所 = 1
+	효과条件종족 = 천사족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1612(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 現在最大攻撃力
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 攻守変動 
+	CALL FULLRESET
+	효과条件종족 = 천사족
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,400,400)
+ELSEIF 종류 == 지속효과
+
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻避")
+ENDIF
+
+

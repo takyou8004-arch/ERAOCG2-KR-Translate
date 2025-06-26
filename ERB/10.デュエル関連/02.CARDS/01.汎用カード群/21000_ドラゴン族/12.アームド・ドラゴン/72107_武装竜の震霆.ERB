@@ -1,0 +1,161 @@
+﻿@CARDNAME_72107,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 암드 드래곤 뇌정
+	CASE "略称"
+RESULTS = 암드드래곤 뇌정
+	CASE "カテゴリ"
+RESULTS:0 = 암드 드래곤
+ENDSELECT
+
+
+@CARD_72107(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "추가日"
+		RETURN 250406
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72107(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①: 자신 필드의 「암드 드래곤」 몬스터 1장을 대상으로 하여,
+PRINTL 이하의 효과에서 1개를 선택하고 발동할 수 있다.
+PRINTL ● 그 몬스터의 공격력은, 그 몬스터의 레벨 × 100 올린다.
+PRINTL ● 그 몬스터의 레벨 이하의 「암드 드래곤」 몬스터를 2장까지 자신 묘지에서 선택하고 패에 넣는다 (같은 이름의 카드는 1장까지).
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ②: 자신 필드의 「암드 드래곤」 몬스터가 필드를 떠날 경우,
+PRINTL 대신 이 카드를 묘지로 보낼 수 있다.
+ 
+
+@CARDCAN_72107(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72107)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,72107)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 암드 드래곤
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	TRYCALLFORM CARDNAME_{破壊대상ID},"カテゴリ"
+	SIF !GROUPMATCH(RESULTS,"암드 드래곤")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_72107(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードレベル
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72107,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 암드 드래곤
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			選択カードレベル = GETVAR(@"%듀얼리스트%_MZ_星:選択カード")
+
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 암드 드래곤
+			CALLFORM 효과条件レベル_ADV(選択カードレベル,"以下")
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				CALL YN_CHOICE(듀얼리스트,"●：대상の몬스터의 攻撃力をアップする","●：묘지から「암드 드래곤」몬스터를 손패に加える")
+			ELSE
+				RESULT = 0
+			ENDIF
+
+			IF RESULT == 0
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永攻",選択カードレベル*100)
+			ELSEIF RESULT == 1
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 암드 드래곤
+				CALLFORM 효과条件レベル_ADV(選択カードレベル,"以下")
+				효과条件複数 = 98
+				효과条件固名前選択 = 1
+				CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72107)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72107)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

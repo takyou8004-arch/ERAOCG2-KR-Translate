@@ -1,0 +1,149 @@
+﻿@CARDNAME_81251,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 빙의 해방
+	CASE "略称"
+RESULTS = 빙의 해방
+	CASE "カテゴリ"
+RESULTS:0 = 령사
+ENDSELECT
+
+
+@CARD_81251(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_81251(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 자신의 「령사」 몬스터는 전투로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ②: 자신의 「령사」 몬스터의 공격력은, 상대 몬스터에게 공격하는 데미지 계산 시에만 800 올린다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ③: 이 카드가 이미 마법 & 함정 존에 존재하는 상태에서, 자신 필드의 몬스터가 전투 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 수비력 1500인 마법사족 몬스터 1장을 덱에서 앞면 공격 표시 또는 뒷면 수비 표시로 특수 소환한다.
+
+@CARDCAN_81251(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,81251)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,81251)
+		RETURN 0	
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2	
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 마법사족
+	효과条件守備力 = 1500
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2	
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0	
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0	
+	CALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	SIF RESULTS != "령사"
+		RETURN 0
+
+
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_81251(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 속성数
+#DIM DYNAMIC 戦闘カード
+
+
+IF 종류 == 마함起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81251)
+	IF RESULT == 0
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81251,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종족 = 마법사족
+		효과条件守備力 = 1500
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	;耐性付与
+	CALL FULLRESET
+	효과条件カテゴリ = 령사
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐")
+ELSEIF 종류 == 攻撃時強制誘発
+	戦闘カード = 戦闘場所(듀얼리스트)
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘カード,"一時",800)
+ENDIF

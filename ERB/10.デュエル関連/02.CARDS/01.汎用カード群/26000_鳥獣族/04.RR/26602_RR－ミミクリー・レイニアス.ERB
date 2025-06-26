@@ -1,0 +1,115 @@
+﻿@CARDNAME_26602,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = RR－미미크리－레이니아스
+	CASE "略称"
+RESULTS = RR미미크리- L
+	CASE "カテゴリ"
+RESULTS:0 = 레이드 랩터스
+ENDSELECT
+
+
+@CARD_26602(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 300
+	CASE "守備力"
+		RETURN 1900
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26602(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,소환時 ,특수소환時)
+PRINTL ①：이 카드가 소환 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 자신 필드의 모든 'RR' 몬스터의 레벨을 1개 올린다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：묘지의 이 카드를 제외하여 발동할 수 있다.
+PRINTL 덱에서 이 카드명 이외의 'RR' 카드 1장을 패에 넣는다.
+
+@CARDCAN_26602(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26602)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,26602)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 레이드 랩터즈
+	효과条件固名前 = RR－미미크리－레이니아스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26602(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26602)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "カテゴリ"	
+			SIF !MATCH(RESULTS, "레이드 랩터즈")
+				CONTINUE
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")},"종류"
+			SIF MATCH(RESULT,엑시즈) || MATCH(RESULT,링크)
+				CONTINUE
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"永星",1)
+		NEXT
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26602,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 레이드 랩터즈
+		효과条件固名前 = RR－미미크리－레이니아스
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF

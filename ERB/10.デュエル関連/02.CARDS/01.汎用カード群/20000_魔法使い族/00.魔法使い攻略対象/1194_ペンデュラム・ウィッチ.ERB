@@ -1,0 +1,211 @@
+﻿@CARDNAME_1194,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 펜듈럼 마녀
+	CASE "略称"
+RESULTS =  P 마녀
+	CASE "カテゴリ"
+RESULTS:0 = 펜듈럼
+ENDSELECT
+
+
+@CARD_1194(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1194(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 ①②의 P효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①: 이 카드가 마법 & 함정 존에 존재하는 상태에서, 자신 필드의 앞면 표시의 융합 / 싱크로 / 엑시즈 몬스터가
+PRINTL 전투 / 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL P 몬스터 1장을 덱에서 EX덱에 앞면 표시로 넣는다.
+
+CALLFORM CARD_ABLE(2,마함起動)
+PRINTL ②: 자신의 마법 & 함정 존에 이 카드 이외의 P 몬스터가 존재할 경우에 발동할 수 있다.
+PRINTL 자신의 패 / EX덱에서 레벨 4 이하의 P 몬스터 1장을 특수 소환한다.
+
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 카드명의 ①의 몬스터 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①: 이 카드가 일반 소환 / 특수 소환에 성공했을 경우, 자신의 마법 & 함정 존의 카드(앞면 표시) 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 카드와 이 카드를 파괴하고, 덱에서 레벨 4 이하의 P 몬스터 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②: 몬스터 존의 이 카드가 파괴되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 자신의 마법 & 함정 존에 놓는다.
+
+@CARDSUMMON_AA_1194
+
+
+@CARDCAN_1194(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1194)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,1194)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류:0 = 융합
+	효과条件종류:1 = 싱크로
+	효과条件종류:2 = 엑시즈
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_2(듀얼리스트,1194)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件종류 = モン全般
+	효과条件分割 = 펜듈럼
+	CALLFORM 효과条件レベル_ADV(4, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_3(듀얼리스트,1194)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊")
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1194(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1194)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1194,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件分割 = 펜듈럼
+		효과条件行先플래그 = EX덱行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1194,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲EX덱 = 1
+		효과条件종류 = モン全般
+		효과条件分割 = 펜듈럼
+		CALLFORM 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1194,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件표시 = 表側표시
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+			CALL FULLRESET
+			효과条件分割 = 펜듈럼
+			CALLFORM 효과条件レベル_ADV(4, "以下")
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1194)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件名前 = 펜듈럼 마녀
+		CALL CARD_SET_BASIC(듀얼리스트,"EX덱",ゾーン,場所,"表側표시")
+	ENDIF
+ENDIF

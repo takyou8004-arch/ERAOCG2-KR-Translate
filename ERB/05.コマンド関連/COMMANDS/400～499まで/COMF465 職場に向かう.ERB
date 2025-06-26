@@ -1,0 +1,100 @@
+﻿;-------------------------------------------------
+;일
+;-------------------------------------------------
+@COM465
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 캐릭터セット,1000
+#DIM DYNAMIC 지정캐릭터
+#DIM DYNAMIC 지정캐릭터_ID
+#DIM DYNAMIC ランダムセット
+#DIM DYNAMIC 成功率
+#DIM DYNAMIC 失敗率
+#DIM DYNAMIC 成功판정
+;大人は仕事
+IF TALENT:MASTER:연령 >= 0
+	IF GROUPMATCH(GET_DAY(), "土", "日")
+		PRINTL
+		RETURN 0
+	ELSEIF 仕事_出席 >= 1
+		PRINTL
+	ELSE
+		PRINTFORML %CALLNAME:MASTER%는 직장으로 향했다
+		CALL RECOVER_PERMIL(MASTER,-100,"체력")
+		CALL RECOVER_PERMIL(MASTER,-100,"기력")
+		FOR 캐릭터_ID,1,CHARANUM
+			CFLAG:캐릭터_ID:동행 = 0
+		NEXT
+		CFLAG:MASTER:현재위치 = 場所_직장
+		仕事_出席 = 1
+	ENDIF
+;子供は学校
+ELSE
+	IF GROUPMATCH(GET_DAY(), "土", "日")
+		PRINTL 
+		RETURN 0
+	ELSEIF TIME <= 360 || TIME >= 720   
+		PRINTL 
+	ELSE
+		PRINTFORML %CALLNAME:MASTER%는 아카데미아로 향했다
+		CALL RECOVER_PERMIL(MASTER,-50,"체력")
+		CALL RECOVER_PERMIL(MASTER,-50,"기력")
+
+		FOR 캐릭터_ID,1,CHARANUM
+			CFLAG:캐릭터_ID:동행 = 0
+		NEXT
+		CFLAG:MASTER:현재위치 = 場所_学校教室
+		仕事_出席 = 1
+	ENDIF
+ENDIF
+
+;애처도시락이벤트
+FOR 캐릭터_ID,1,CHARANUM
+	SIF CFLAG:캐릭터_ID:현재위치 >= 20
+		CONTINUE
+	IF CFLAG:캐릭터_ID:시작위치 == CFLAG:MASTER:시작위치
+		캐릭터セット:カウンタ = 캐릭터_ID
+		カウンタ ++
+	ENDIF
+NEXT
+IF カウンタ >= 1
+	지정캐릭터 = RAND:カウンタ
+	지정캐릭터_ID = 캐릭터セット:지정캐릭터
+	PRINTFORML
+	PRINTFORM 떨떠름하게
+	IF TALENT:MASTER:연령 >= 0
+		PRINTFORM 직장
+	ELSE
+		PRINTFORM 학교
+	ENDIF
+	PRINTFORMW 로 갈 준비를 하고 있던 중、 %CALLNAME:지정캐릭터_ID%는 도시락을 가져와 주었다。
+	PRINTFORMW 오늘은 무척이나 힘낼 수 있을 것 같다！！
+	EXP:지정캐릭터_ID:요리경험 += 10
+	CALL SOURCE_CALC_환락(지정캐릭터_ID, MASTER, 500)
+	CFLAG:MASTER:애처도시락 = 지정캐릭터_ID
+ENDIF
+
+TIME += 60
+RETURN 1
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;일하러간다
+@COM_ABLE465
+;大人の特権
+SIF TALENT:MASTER:연령 < 0 && INRANGE(TIME,900,1439)
+	RETURN 0
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(465)
+	RETURN RESULT
+;玄関
+SIF CFLAG:MASTER:현재위치 != 場所_玄関
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

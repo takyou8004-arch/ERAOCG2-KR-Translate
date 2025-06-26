@@ -1,0 +1,195 @@
+﻿@CARDNAME_2399,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 열중의 로자리아
+	CASE "略称"
+RESULTS = 로자리아
+	CASE "カテゴリ"
+RESULTS:0 = 열중
+ENDSELECT
+
+
+@CARD_2399(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 곤충족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2399(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ②③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①：자신 메인 페이즈에 발동할 수 있다.
+PRINTL 자신 필드의 몬스터(곤충족) 2장을 릴리스하고, 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ②：이 카드가 소환 / 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 패에서 몬스터(곤충족) 1장을 묘지로 보내고, 자신은 덱에서 2장 드로우한다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ③：자신 메인 페이즈에 발동할 수 있다.
+PRINTL 자신의 묘지의 "열중" 카드 1장을 고르고 패에 넣는다.
+PRINTL 그 후, "열중" 몬스터 1장의 소환을 실행할 수 있다.
+
+
+@CARDCAN_2399(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2399)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	CALL CARD_SS_CHECK(듀얼리스트,2399,"손패",1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 곤충족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,2399)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종족 = 곤충족
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,2399)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 꿈속
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2399(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名前
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2399)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 곤충족
+		효과条件複数 = 2
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2399,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종족 = 곤충족
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2399,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 꿈속
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件カテゴリ = 꿈속
+			효과条件종류 = モン全般
+			효과条件任意 = 1
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			IF RESULT != 9999
+				選択カード = RESULT
+				TRYCALLFORM CARDNAME_{RESULT:99},"名前"
+				IF RESULTS == "꿈속のシルビクス"
+					CALL FULLRESET
+					효과範囲필드 = 1
+					효과条件속성 = 빛속성
+					효과条件종족 = 곤충족
+					CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+					IF RESULT == 1
+						CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",1)
+					ENDIF
+				ELSE
+					IF 選択カード != 9999
+						追소환権 ++
+						CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",3)
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件悪Ｃ所持 = 999
+	CALL STATCHANGE_OTHER(듀얼리스트,"상대필드",場所,"種",곤충족)
+ENDIF
+

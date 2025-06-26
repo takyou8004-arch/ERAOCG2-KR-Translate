@@ -1,0 +1,111 @@
+﻿@CARDNAME_2032,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아름다운 마요괴 - 달희
+	CASE "略称"
+RESULTS = 마요괴 - 달희
+	CASE "カテゴリ"
+RESULTS:0 = 마요괴
+ENDSELECT
+
+
+@CARD_2032(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 0
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_2032(종류)
+#DIM DYNAMIC 종류
+
+PRINTL ①: 「아름다운 마요괴 - 달희」는 자신 필드에 1체밖에 앞면 표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②: 이 카드가 묘지에 존재하고,
+PRINTL 「마요괴」 몬스터가 엑스트라 덱에서 자신 필드에 특수 소환되었을 때에 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+PRINTL 이 효과를 발동한 턴에, 자신은 「마요괴」 몬스터밖에 엑스트라 덱에서 특수 소환할 수 없다.
+
+
+
+@CARDSUMMON_AA_2032
+
+
+@CARDCAN_2032(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2032)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,2032,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 마요괴
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件固カテゴリ = 마요괴
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX이력")
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2032(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2032)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"묘지",場所)
+
+		CALL CARD_EX_RESTRICTION(듀얼리스트,"마요괴")
+	ENDIF
+ENDIF

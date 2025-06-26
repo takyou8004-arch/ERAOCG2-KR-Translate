@@ -1,0 +1,149 @@
+@CARDNAME_25312,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 콘 필드 코아틀
+	CASE "略称"
+RESULTS = Cf 코아틀
+	CASE "カテゴリ"
+RESULTS:0 = 합성수융합
+ENDSELECT
+
+
+@CARD_25312(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 1700
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_25312(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：이 카드를 패에서 버리고 발동할 수 있다.
+PRINTL 「콘 필드 코아틀」 이외의 「합성수융합」 카테고리에 속하는 몬스터 1장을 덱에서 패로 가져온다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드가 몬스터와 전투를 실행할 경우, 그 2체는 그 전투로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ③：자신 필드에 「유익환상수 키메라」 몬스터가 존재하고, 상대가 카드의 효과를 발동했을 때,
+PRINTL 필드 / 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 자신 필드의 모든 카드는 턴 종료시까지 대상 내성을 얻는다.
+
+
+@CARDCAN_25312(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25312)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,25312)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 합성수융합
+	효과条件固名前 = 콘 필드 코아틀
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,25312)
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"필드","묘지")
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 유익환상수 키메라
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25312(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25312,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 합성수융합
+		효과条件固名前 = 콘 필드 코아틀
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(対面者,"自身",戦闘場所(듀얼리스트,1),"戦耐")
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25312,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き)
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐",1)
+		CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"対耐",1)
+	ENDIF
+ENDIF
+
+

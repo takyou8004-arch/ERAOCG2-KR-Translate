@@ -1,0 +1,106 @@
+﻿@CARDNAME_22200,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 버서크 데드 드래곤
+	CASE "略称"
+RESULTS = 비 데 드래곤
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_22200(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3500
+	CASE "守備力"
+		RETURN 0
+	CASE "소환불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_22200(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드는 일반 소환할 수 없다.
+;PRINTL このカードは「데몬との거래」의 효과でのみ특수 소환할 수 있다。
+PRINTL 이 카드는 「악마와의 거래」의 효과로 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 상대 몬스터 전체에 1번씩 공격할 수 있다.
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ②: 자신의 턴의 엔드 페이즈에 발동한다.
+PRINTL 이 카드의 공격력은 500 포인트 내린다.
+PRINTL 
+
+@CARDCAN_22200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,22200)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF モンスター数(対面者) == 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_22200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦")
+ELSEIF 종류 == ターン終了時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",-500)
+ENDIF

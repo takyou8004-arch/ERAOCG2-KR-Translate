@@ -1,0 +1,163 @@
+﻿@CARDNAME_42049,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신 성마황후 셀레네
+	CASE "略称"
+RESULTS = 셀레네
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:1 = 마력 카운터
+ENDSELECT
+
+
+@CARD_42049(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1850
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_42049(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 마법사족 몬스터를 포함하는 몬스터 2장 이상
+PRINTL 이 카드명의 ①③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時強制)
+PRINTL ①: 이 카드가 링크 소환에 성공했을 경우에 발동한다.
+PRINTL 서로의 필드 및 묘지의 마법 카드의 수만큼 이 카드에 마력 카운터를 놓는다.
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신 필드에 「엔디미온」 카드가 존재하는 한, 상대는 이 카드를 공격 대상으로 선택할 수 없다.
+CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
+PRINTL ③: 자신 상대의 메인 페이즈에, 이 카드의 마력 카운터를 3개 제거하고 발동할 수 있다.
+PRINTL 자신의 패 / 묘지에서 마법사족 몬스터 1장을 고르고, 자신 필드에 특수 소환한다.
+
+
+@CARDSUMMON_42049(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 3
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件종족 = 마법사족
+ELSE
+	PRINT
+ENDIF
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,42049) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_42049(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,42049)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時強制
+	SIF 발동済_1(듀얼리스트,42049)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 엔디미온
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,42049)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_魔Ｃ:場所") <= 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件종족 = 마법사족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_42049(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == EX소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42049,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과範囲묘지 = 1
+		효과範囲상대마함 = 1
+		효과範囲상대묘지 = 1
+		효과条件종류 = 마법全般
+		효과条件CNT = 1		
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"魔Ｃ",RESULT)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻避")
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42049,3)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"魔Ｃ",-3)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件종족 = 마법사족
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+

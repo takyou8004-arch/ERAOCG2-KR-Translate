@@ -1,0 +1,159 @@
+﻿@CARDNAME_1921,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 원죄의 디아벨제
+	CASE "略称"
+RESULTS = 디아벨제
+	CASE "カテゴリ"
+RESULTS:0 = 디아벨
+ENDSELECT
+
+
+@CARD_1921(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1921(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의, ①의 방법에 의한 특수 소환은 1턴에 1번밖에 할 수 없으며,
+PRINTL ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 자신 또는 상대의 묘지에 「죄보」 카드가 존재할 경우,
+PRINTL 이 카드는 패에서 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 상대는 세트되어 있지 않은 마법 / 함정 카드를 발동할 수 없다.
+CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
+PRINTL ③: 필드에 마법 / 함정 카드가 세트되어 있을 경우,
+PRINTL 자신 및 상대 턴에, 자신 및 상대 필드의 카드를 1장씩 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+
+@CARDSUMMON_AA_1921
+
+
+@CARDCAN_1921(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1921)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,1921)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,1921,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲상대묘지 = 1
+	효과条件カテゴリ = 죄보
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_3(듀얼리스트,1921)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 裏側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_1921(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1921,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	;CALL SET_PLAYER_INFO(듀얼리스트,"魔香효과",3)
+	CALL SET_PLAYER_INFO(듀얼리스트,"魔香효과",3,1)
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1921,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		ENDIF
+	ENDIF
+ENDIF
+

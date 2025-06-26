@@ -1,0 +1,421 @@
+﻿@GOOD_MORNING
+#DIM DYNAMIC 朝이벤트
+#DIM DYNAMIC 朝イベ実行者, 99
+#DIM DYNAMIC カウンタ,20
+
+#DIM DYNAMIC 放浪カウンタ
+#DIM DYNAMIC 学生カウンタ
+#DIM DYNAMIC 非カードカウンタ
+#DIM DYNAMIC カードカウンタ
+
+#DIM DYNAMIC 訪問カウンタ
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 入れ替え元
+#DIM DYNAMIC 入れ替え先
+#DIM DYNAMIC 放浪캐릭터,9999
+#DIM DYNAMIC 学生캐릭터,9999
+#DIM DYNAMIC 非カード캐릭터,9999
+#DIM DYNAMIC カード캐릭터,9999
+#DIM DYNAMIC 竿담당자,10
+#DIM DYNAMIC 입담당자,10
+#DIM DYNAMIC 竿담당수
+#DIM DYNAMIC 입담당수
+#DIM DYNAMIC 참가인수
+#DIM DYNAMIC 朝交尾이벤트
+
+FOR 캐릭터_ID,1,CHARANUM
+	IF CFLAG:캐릭터_ID:변기화 == 1
+		CFLAG:캐릭터_ID:현재위치 = 場所_トイレ
+	ELSE
+		CFLAG:캐릭터_ID:현재위치 = CFLAG:캐릭터_ID:시작위치
+	ENDIF
+NEXT
+
+VARSET 放浪캐릭터, -1
+VARSET 学生캐릭터, -1
+VARSET 非カード캐릭터, -1
+VARSET カード캐릭터, -1
+
+;放浪システム
+FOR 캐릭터_ID,1,CHARANUM
+	;同じ場所に住んでる子は除く
+	SIF CFLAG:캐릭터_ID:시작위치 == CFLAG:MASTER:시작위치
+		CONTINUE
+	;외부자はそういう설정がる場合は放浪しない
+	SIF TALENT:캐릭터_ID:외부자 >= 1 && オプション_외부자放浪 == 1
+		CONTINUE
+
+	;듀얼리스트캐릭터の설정、土日に学生以下は学校に설정される
+	IF TALENT:캐릭터_ID:듀얼리스트
+		;듀얼리스트캐릭터を非カード캐릭터に삽입していく。
+		非カード캐릭터:非カードカウンタ = 캐릭터_ID
+		非カードカウンタ ++
+		IF !GROUPMATCH(GET_DAY(), "土", "日")
+			IF TALENT:캐릭터_ID:연령 <= -1 
+				;学生캐릭터
+				学生캐릭터:学生カウンタ = 캐릭터_ID
+				学生カウンタ ++
+			ELSE
+				;他放浪캐릭터
+				放浪캐릭터:放浪カウンタ = 캐릭터_ID
+				放浪カウンタ ++
+			ENDIF
+		ELSE
+			;他放浪캐릭터
+			IF CFLAG:캐릭터_ID:시작위치 == 100
+				放浪캐릭터:放浪カウンタ = 캐릭터_ID
+				放浪カウンタ ++
+			ENDIF
+		ENDIF
+	;それ 이외의 캐릭터
+	ELSE
+		カード캐릭터:カードカウンタ = 캐릭터_ID
+		カードカウンタ ++
+	ENDIF
+NEXT
+
+;リストシャッフル
+FOR 入れ替え元, 放浪カウンタ, 0, -1
+	入れ替え先 = RAND:入れ替え元
+	SWAP 放浪캐릭터:(入れ替え元-1), 放浪캐릭터:入れ替え先
+NEXT
+FOR 入れ替え元, 学生カウンタ, 0, -1
+	入れ替え先 = RAND:入れ替え元
+	SWAP 学生캐릭터:(入れ替え元-1), 学生캐릭터:入れ替え先
+NEXT
+FOR 入れ替え元, 非カードカウンタ, 0, -1
+	入れ替え先 = RAND:入れ替え元
+	SWAP 非カード캐릭터:(入れ替え元-1), 非カード캐릭터:入れ替え先
+NEXT
+
+FOR 入れ替え元, カードカウンタ, 0, -1
+	入れ替え先 = RAND:入れ替え元
+	SWAP カード캐릭터:(入れ替え元-1), カード캐릭터:入れ替え先
+NEXT
+
+;学校行き캐릭터の설정
+IF !GROUPMATCH(GET_DAY(), "土", "日")
+	FOR カウンタ,0,学生カウンタ
+		캐릭터_ID = 学生캐릭터:カウンタ 
+		IF カウンタ <= 4
+			CFLAG:캐릭터_ID:현재위치 = 場所_学校内
+		ELSE
+			放浪캐릭터:放浪カウンタ = 캐릭터_ID
+			放浪カウンタ ++
+		ENDIF
+	NEXT
+ENDIF
+
+
+;訪問캐릭터の설정
+VARSET 訪問캐릭터_ID, -1
+FOR カウンタ,0,非カードカウンタ
+	캐릭터_ID = 非カード캐릭터:カウンタ 
+	SIF CFLAG:캐릭터_ID:호감도 < 1000
+		CONTINUE
+	IF RAND:2 == 0
+		訪問캐릭터_ID:訪問カウンタ = 캐릭터_ID
+		訪問カウンタ ++
+	ENDIF
+	SIF 訪問カウンタ >= 3
+		BREAK
+NEXT
+
+IF FLAG:소원빌기캐릭터 > 0
+	訪問캐릭터_ID:訪問カウンタ = FLAG:소원빌기캐릭터
+	VARSET FLAG:소원빌기캐릭터
+ENDIF
+
+;PRINTFORMW　방랑카운터:{放浪カウンタ}
+FOR カウンタ,0,放浪カウンタ
+	캐릭터_ID = 放浪캐릭터:カウンタ 
+	SIF CFLAG:캐릭터_ID:면식 == 0
+		CONTINUE
+	IF INRANGE (カウンタ, 0, 3)
+		CFLAG:캐릭터_ID:현재위치 = 場所_繁華街
+	ELSEIF INRANGE (カウンタ, 4, 7)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_カフェ
+	ELSEIF INRANGE (カウンタ, 8, 11)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_カドショ
+	ELSEIF INRANGE (カウンタ, 12, 15)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_公園
+	ELSEIF INRANGE (カウンタ, 16, 19)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_ジム
+	ELSEIF INRANGE (カウンタ, 20, 22)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_神社
+	ELSEIF INRANGE (カウンタ, 23, 25)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_教会
+	ELSEIF INRANGE (カウンタ, 26, 29)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_病院
+	ELSEIF INRANGE (カウンタ, 30, 32)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_学校内
+	ELSEIF INRANGE (カウンタ, 33, 36)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_식사通り
+	ELSEIF INRANGE (カウンタ, 37, 38)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_スーパー
+
+
+	ELSEIF INRANGE (カウンタ, 37, 38)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_東駅
+	ELSEIF INRANGE (カウンタ, 39, 41)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_スタジアム
+	ELSEIF INRANGE (カウンタ, 42, 44)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_モール
+	ELSEIF INRANGE (カウンタ, 45, 46)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_南駅
+
+	ELSEIF INRANGE (カウンタ, 47, 49)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_商店街
+	ELSEIF INRANGE (カウンタ, 50, 51)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_牧場
+
+	ELSEIF INRANGE (カウンタ, 52, 53)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_西駅
+	ENDIF
+NEXT
+
+;カード側にいる캐릭터の설정
+FOR カウンタ,0,カードカウンタ
+	캐릭터_ID = カード캐릭터:カウンタ
+	IF カウンタ == 0
+		CFLAG:캐릭터_ID:현재위치 = RAND:12 + 50
+	ELSEIF INRANGE (カウンタ, 1, 4)
+		CFLAG:캐릭터_ID:현재위치 = 場所_中継땅点
+	ELSEIF INRANGE (カウンタ, 5, 8)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_마법都市
+	ELSEIF INRANGE (カウンタ, 9, 12)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_王宮都市
+	ELSEIF INRANGE (カウンタ, 13, 16)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_밧줄張り
+	ELSEIF INRANGE (カウンタ, 17, 20)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_魔界繁華街
+	ELSEIF INRANGE (カウンタ, 21, 23)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_天空の聖域
+	ELSEIF INRANGE (カウンタ, 24, 26)
+ 		CFLAG:캐릭터_ID:현재위치 = 場所_近未来都市
+	ELSEIF カウンタ == 30
+		CFLAG:캐릭터_ID:현재위치 = RAND:10 + 110
+	ELSEIF カウンタ == 40
+		CFLAG:캐릭터_ID:현재위치 = RAND:10 + 150
+	ENDIF
+
+
+NEXT
+IF FLAG:신사방문캐릭터 > 0
+	캐릭터_ID = FLAG:신사방문캐릭터
+	PRINTFORMW %CALLNAME:캐릭터_ID%가 신사에 있는 기분이다……
+	CFLAG:캐릭터_ID:현재위치 = 場所_神社
+	FLAG:신사방문캐릭터 = 0
+ENDIF
+
+
+IF RAND:2 == 0
+	천후설정 = 0
+ELSE
+	천후설정 = RAND:4
+ENDIF
+
+
+@MORNING_COMMUNICATION
+#DIM DYNAMIC 朝이벤트
+#DIM DYNAMIC 朝イベ実行者, 99
+#DIM DYNAMIC カウンタ,20
+#DIM DYNAMIC 訪問カウンタ
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 入れ替え元
+#DIM DYNAMIC 入れ替え先
+#DIM DYNAMIC 放浪캐릭터,9999
+#DIM DYNAMIC 学生캐릭터,9999
+#DIM DYNAMIC 非カード캐릭터,9999
+#DIM DYNAMIC 竿담당자,10
+#DIM DYNAMIC 입담당자,10
+#DIM DYNAMIC 竿담당수
+#DIM DYNAMIC 입담당수
+#DIM DYNAMIC 참가인수
+#DIM DYNAMIC 朝交尾이벤트
+#DIM DYNAMIC 사정量
+
+;部屋内の캐릭터_ID登場処理
+TARGET = 0
+VARSET カウンタ
+FOR 캐릭터_ID,1,CHARANUM
+	SIF CFLAG:캐릭터_ID:호감도 < 5000
+		CONTINUE
+	SIF CFLAG:캐릭터_ID:현재위치 != CFLAG:MASTER:현재위치
+		CONTINUE
+
+	朝イベ実行者:カウンタ = 캐릭터_ID
+	カウンタ ++
+NEXT
+
+FOR 入れ替え元, カウンタ, 0, -1
+	入れ替え先 = RAND:入れ替え元
+	SWAP 朝イベ実行者:(入れ替え元-1), 朝イベ実行者:入れ替え先
+NEXT
+
+SIF カウンタ >= 0
+	TARGET = 朝イベ実行者:0
+
+참가인수 = カウンタ
+VARSET カウンタ
+IF HAS_PENIS(MASTER)
+	SIF 참가인수 >= 3
+		참가인수 = 3
+	REPEAT 참가인수
+		IF RAND:2 == 0 && TALENT:(朝イベ実行者:カウンタ):연모
+			竿담당자:竿담당수 = 朝イベ実行者:カウンタ
+			竿담당수 ++
+		ELSE 
+			입담당자:입담당수 = 朝イベ実行者:カウンタ
+			입담당수 ++
+		ENDIF
+		カウンタ ++
+	REND
+ELSE
+	SIF 참가인수 >= 2
+		참가인수 = 2
+	REPEAT 참가인수
+		입담당자:입담당수 = 朝イベ実行者:カウンタ
+		입담당수 ++
+		カウンタ ++
+	REND
+ENDIF
+
+朝이벤트 = RAND:100
+IF 竿담당수 >= 1 && TALENT:(竿담당자:0):처녀 == 0
+	IF 朝이벤트 >= 80
+		朝交尾이벤트 ++
+	ENDIF
+ENDIF
+
+
+IF TARGET
+	IF CFLAG:TARGET:수면
+		PRINTFORMW %CALLNAME:MASTER%가 눈을 뜨면 옆에서는 아직 %CALLNAME:TARGET%가 새근새근 자고 있었다
+		PRINTFORMW %CALLNAME:MASTER%은 %CALLNAME:TARGET%을 깨우지 않도록\@ BEDROOM(CFLAG:MASTER:현재위치) && !BATHROOM(CFLAG:MASTER:현재위치) ? 침대 # その横 \@을 벗어나 하루의 준비를 시작했다
+		CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 2, 3)
+	ELSEIF 朝이벤트 >= 50 && CFLAG:MASTER:감기플래그 == 0
+		CALL_COMスキップ = 2
+		CFLAG:TARGET:우후후 = 2
+		IF 朝交尾이벤트
+			SELECTCOM = 65
+			TFLAG:SELECTCOM보존 = SELECTCOM
+			PRINTFORMW %CALLNAME:MASTER%가 잠에서 깨어났을 때 아침에 일어서서 허리를 펴고 있는 당신 %CALLNAME:(竿담당자:0)%하고 시선을 주고받았다
+			IF 입담당수 >= 1
+				PRINTFORM 거기에 더해、
+				IF RAND:2 == 0
+					PRINTFORMW 정열적으로 키스하며 %CALLNAME:(입담당자:0)%하고 시선을 주고받았다、
+					EXP:(입담당자:0):키스경험 ++
+					EXP:MASTER:키스경험 ++
+				ELSE
+					PRINTFORMW 자기 젖꼭지를 밀어붙이며 %CALLNAME:(입담당자:0)%하고 시선을 주고받았다、
+				ENDIF			
+				EXP:(입담당자:0):애정경험 ++
+				PRINTFORMW 당신은 그것을 순순히 받아들이고 있었다。
+			ENDIF
+			PRINTFORMW %CALLNAME:(竿담당자:0)%와 시선을 피한 후、그대로 땀투성이인 그녀에게 몸을 맡겼다……
+			PRINTFORMW 요도에 남은 마지막 한 방울까지 짜낸 후、 %CALLNAME:(竿담당자:0)%는 숨을 헐떡이면서도 새삼스럽게 인사를 나누고、하루의 준비를 시작했다。
+			EXP:(竿담당자:0):애정경험 ++
+			EXP:(竿담당자:0):Ｖ성교경험 ++
+			PALAM:(竿담당자:0):윤활 = PALAMLV:5
+			IF TALENT:MASTER:형태 != 0
+				사정量 = RAND:(((TALENT:MASTER:형태) * 3) + (TALENT:MASTER:형태) / 2) + 1
+			ELSE
+				사정量 = RAND:12 + 13
+			ENDIF
+			TCVAR:(竿담당자:0):질내사정횟수 += 사정量
+		ELSEIF 竿담당수 >= 1 || 입담당수 >= 1
+			PRINTFORM %CALLNAME:MASTER%가 눈을 뜨니
+			IF 竿담당수 >= 1
+				PRINTFORM 당신의 아침발기를
+				IF RAND:2 == 0
+					PRINTFORM 가슴에 끼운다 %CALLNAME:(竿담당자:0)%
+					EXP:(竿담당자:0):파이즈리경험 ++
+				ELSE
+					PRINTFORM 혀로 핥다 %CALLNAME:(竿담당자:0)%
+					EXP:(竿담당자:0):펠라경험 ++
+				ENDIF
+				EXP:(竿담당자:0):애정경험 ++
+				EXP:(竿담당자:0):정음경험 ++
+				IF 竿담당수 >= 2
+					SIF 竿담당수 == 2
+						PRINTFORM 또한
+					IF RAND:2 == 0
+						PRINTFORM 、가슴으로 핥는다 %CALLNAME:(竿담당자:1)%
+						EXP:(竿담당자:1):파이즈리경험 ++
+					ELSE
+						PRINTFORM 、음경소대를 핥는다 %CALLNAME:(竿담당자:1)%
+						EXP:(竿담당자:1):펠라경험 ++
+					ENDIF
+					EXP:(竿담당자:1):애정경험 ++
+					EXP:(竿담당자:1):정음경험 ++
+				ENDIF
+				IF 竿담당수 >= 3
+					PRINTFORM 또한、음경을 혀로 핥는다 %CALLNAME:(竿담당자:2)%
+					EXP:(竿담당자:2):펠라경험 ++
+					EXP:(竿담당자:2):애정경험 ++
+					EXP:(竿담당자:2):정음경험 ++
+				ENDIF
+				IF 竿담당수 >= 2
+					PRINTFORMW 의{竿담당수}명과 눈을 마주쳤다。
+				ELSE
+					PRINTFORMW 와 눈이 맞았다。
+				ENDIF
+			ENDIF
+
+			IF 입담당수 >= 1
+				IF 竿담당수 >= 1
+					PRINTFORM 거기에 더해、
+				ENDIF
+				IF RAND:2 == 0
+					PRINTFORMW 정열적으로 키스하며 %CALLNAME:(입담당자:0)%하고 시선을 주고받았다。
+					EXP:(입담당자:0):키스경험 ++
+					EXP:MASTER:키스경험 ++
+				ELSE
+					PRINTFORMW 자기 젖꼭지를 밀어붙이며 %CALLNAME:(입담당자:0)%하고 시선을 주고받았다。
+				ENDIF			
+				EXP:(입담당자:0):애정경험 ++
+				PRINTFORMW 혀의 움직임과 함께 격렬한 물소리가 울리다……。
+			ENDIF
+
+			IF 竿담당수 >= 2 || (竿담당수 >= 1 && 입담당수 >= 1) 
+				PRINTFORMW 잠시동안 동거인들과 시선을 피하고、서먹서먹한 시간이 있기는 했지만 봉사를 재개했다。
+				PRINTFORMW 그 후、참지 못하고 토해낸 백탁액을{竿담당수 + 입담당수}사람마다 사랑스럽게 바라보며、핥아먹었다。
+				PRINTFORMW {竿담당수 + 입담당수}사람마다 요도에 남아있는 마지막 한 방울까지 짜내며、만족한 후、
+			ELSEIF 竿담당수 >= 1
+				PRINTFORMW 잠시동안 동거인들과 시선을 피하고、서먹서먹한 시간이 있기는 했지만 봉사를 재개했다。
+				PRINTFORMW 그 후、참지 못하고 토해낸 백탁액을 사랑스럽게 바라보며、핥아먹었다。
+				PRINTFORMW 요도에 남은 마지막 한 방울까지 짜내며、만족한 후、
+			ELSE
+				PRINTFORMW 잠시 동거인과 시선을 주고받고、어색한 순간은 있었지만 달콤한 순간은 계속되었다。
+			ENDIF
+			PRINTFORMW 그 후、서로 가볍게 인사를 주고받으며、하루의 준비를 시작했다
+		ENDIF
+		CALL SOURCE_CHECK
+		CALL EVENTCOMEND0
+		CALL_COMスキップ = 0
+		CFLAG:TARGET:우후후 = 0
+
+        CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 2, 1)
+		IF 朝이벤트 >= 90
+			CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 2, 2)
+			朝襲われ = 1
+		ENDIF
+	ELSE
+		IF CFLAG:MASTER:감기플래그 >= 1
+			PRINTFORMW %CALLNAME:MASTER%가 감기 기운이 있는 것을 알아채고、 %CALLNAME:TARGET%는 걱정스럽게 말을 걸어 주었다。
+			CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 2, 5, 1)
+		ELSE
+			PRINTFORMW %CALLNAME:MASTER%가 눈을 뜨며 %CALLNAME:TARGET%와 눈이 마주쳤다
+			PRINTFORMW 잠시 %CALLNAME:TARGET%와 시선을 피한 후\@ BEDROOM(CFLAG:MASTER:현재위치) && !BATHROOM(CFLAG:MASTER:현재위치) ? 침대 # 그 옆 \@를 빠져나와 하루를 준비하기 시작했다.
+			CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 2, 4, 1)
+		ENDIF
+	ENDIF	
+	CFLAG:TARGET:인사했음 = 1
+	RETURN HAD_MORNING_EVENTS
+ENDIF
+RETURN NO_MORNING_EVENTS
+
+
+
+

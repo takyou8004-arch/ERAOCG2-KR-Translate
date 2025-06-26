@@ -1,0 +1,113 @@
+﻿;굴복각인を消してみるテスト
+;使う場合は↓をABL.ERBの「PRINTL [100] 能力値アップの終了」の前に삽입すること
+;PRINTFORML [99]%MARKNAME:3%-{MARK:반발각인}LV
+;
+;TRACHECK.ERBも弄ると再度굴복각인が付いたりしないので吉
+;●改変前
+;IF A >= 500 && A < 1200 && MARK:반발각인 <= 0
+;	MARK:반발각인 = 1
+;●改変後
+;IF A >= 500 && A < 1200 && MARK:4 <= 0
+;	MARK:반발각인 = 1
+;	MARK:4 = 1
+;●以上の内容を3LVの3箇所にすること
+;上記の解らないor解ってもやらない場合に再度굴복각인付いた場合の弊害は保証しかねます
+
+
+@ISABLUP99
+IF MARK:반발각인 <= 0
+	RETURN 0
+ENDIF
+
+CALL DECIDE_ABLUP99
+IF RESULT == 0
+	RETURN 0
+ELSE
+	RETURN 1
+ENDIF
+
+
+@ABLUP99
+CUSTOMDRAWLINE —
+IF MARK:반발각인 <= 0
+	PRINTW 반발 각인은 없습니다
+	RETURN 0
+ENDIF
+
+CALL DECIDE_ABLUP99
+
+
+;반발각인Lvと同じLvの굴복각인が必要
+PRINTS MARKNAME:3
+PRINTV MARK:2
+PRINTL LV이상、또한
+
+;반발각인Lvと同じLvの순종が必要
+PRINTS ABLNAME:0
+PRINTV MARK:반발각인
+PRINTL LV이상、또한
+
+PRINTFORM [0] - %PALAMNAME:7%の宝珠×{A}……
+IF I == 0
+	PRINT ＯＫ
+ELSE
+	SIF I & 1
+		PRINT 보주부족 
+	SIF I & 2
+		PRINT 각인부족 
+	SIF I & 4
+		PRINT 능력부족 
+ENDIF
+PRINTL 
+
+PRINTL [100] - 끝내다
+
+INPUT
+IF RESULT != 0 && RESULT != 100
+	RESTART
+ELSEIF I != 0 && RESULT == 0
+	PRINTL 조건을 충족하지 못합니다
+	RESTART
+ELSEIF RESULT == 100
+	RETURN 0
+ENDIF
+
+MARK:반발각인 -= 1
+
+JUEL:7 -= A
+
+PRINTS MARKNAME:3
+PRINT 의 레벨이
+PRINTV MARK:반발각인
+PRINTW 되었습니다
+
+
+;
+@DECIDE_ABLUP99
+#DIM DYNAMIC 반발강도
+
+;条件別にＯＫかダメかを기록する
+I = 0
+
+IF MARK:반발각인 == 1
+	반발강도 = 1000
+ELSEIF MARK:반발각인 == 2
+	반발강도 = 3000
+ELSEIF MARK:반발각인 == 3
+	반발강도 = 5000
+ENDIF
+
+;반발각인Lvと同じLvの굴복각인が必要
+SIF MARK:반발각인 > MARK:2
+	I |= 2
+
+;반발각인Lvと同じLvの순종が必要
+SIF MARK:반발각인 > ABL:0
+	I |= 4
+
+;굴복の宝珠で減らす
+SIF JUEL:7 < 반발강도
+	I |= 1
+
+SIF I == 0
+	RETURN 1

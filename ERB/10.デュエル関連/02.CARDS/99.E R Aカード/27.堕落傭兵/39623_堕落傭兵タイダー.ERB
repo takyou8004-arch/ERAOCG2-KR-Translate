@@ -1,0 +1,204 @@
+@CARDNAME_39623,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 타락용병 타이다
+	CASE "略称"
+		RESULTS = 타락용병 타이다
+	CASE "カテゴリ"
+		RESULTS:0 = 타락용병
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39623(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250412
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39623(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(0,손패起動)
+PRINTL ①：상대 필드에「타락용병 타이다」가 존재하지 않을 경우, 자신의 메인페이즈에 발동할 수 있다. 
+PRINTL 패의 이 카드를 상대 필드 위에 공격표시로 특수 소환한다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드는 소재로 할 수 없고, 특수소환한 턴 공격할 수 없다.
+CALL CARD_ABLE(0,ターン終了時強制)
+PRINTL ③：자신의 엔드페이즈에 발동한다.
+PRINTL 이 카드의 공격력을 500 상승시킨다. 그 후 코인토스를 실시해, 뒷면이 나오면 다음 자신의 배틀페이즈를 스킵한다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39623(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39623)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件名前 = 타락용병 타이다
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_SS_CHECK(듀얼리스트,39623,ゾーン,1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39623(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM サーチカード 
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 전초지효과
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39623,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 695
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所, "攻撃표시",1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"不材")
+ELSEIF 종류 == 특수소환時
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦無",1,1)
+ELSEIF 종류 == ターン終了時強制
+	전초지효과 = 1
+	;前哨땅があれば2回行う。
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 타락용병의 전초지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		전초지효과 = 2
+	REPEAT 전초지효과
+		;攻撃力アップ処理
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",500)
+		;詐欺契約があればコストは상대가 払う。
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件名前 = 타락용병의 사기계약
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT > 0
+			CALL FULLRESET
+			PRINTFORMW 타락용병 타이다는 왼손엔 밧줄을, 오른손에는 코인을 쥐고 코인토스를 권유했다.
+			PRINTFORMW 동전의 뒷면이 나온다면、타락용병 타이다는 계약주를 묶어 다음 배틀페이즈를 실행하지 못하게 끔 약속한다는 것 같다.
+			SELECTCASE RAND:2
+				CASE 0
+					PRINTW 코인은 앞면이다！
+				CASE 1
+					PRINTW 코인은 뒷면이다！
+
+					CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+					IF RESULT != -1
+						조교대상 = RESULT
+						PRINTFORML 
+						SETCOLOR C_PINK 
+						PRINTFORMW 코인토스의 결과로、타락용병 타이다는 %NAME:조교대상%을 묶어 다음 배틀페이즈를 봉쇄했다.
+						RESETCOLOR
+						CALL EROTIC_MOVE("亀甲縛り",조교대상,-1,300)
+					ELSE
+						PRINTFORML 
+						PRINTFORMW 코인토스의 결과로、타락용병 타이다는 상대를 묶어 다음 배틀페이즈를 봉쇄했다.。
+					ENDIF
+					;デメリット효과が발동しない…なんでだろう
+					CALL SET_PLAYER_INFO(듀얼리스트,"バトルスキップ",1,1)
+			ENDSELECT
+		;詐欺契約が無い경우、コストは자신이 払う
+		ELSE
+			CALL FULLRESET
+			PRINTFORMW 타락용병 타이다는 왼손엔 밧줄을, 오른손에는 코인을 쥐고 코인토스를 권유했다.
+			PRINTFORMW 동전의 뒷면이 나온다면、타락용병 타이다는 주인을 묶어 다음배틀페이즈를 실행하지 못하게 끔 약속하는 것 같다.
+			SELECTCASE RAND:2
+				CASE 0
+					PRINTW 코인은 앞면이다！
+				CASE 1
+					PRINTW 코인은 뒷면이다！
+
+					CALL CARD_EROTICS(상대プレイヤー,対面者)
+					IF RESULT != -1
+						조교대상 = RESULT
+						PRINTFORML 
+						SETCOLOR C_PINK 
+						PRINTFORMW 코인토스의 결과로、타락용병 타이다는 %NAME:조교대상%을 묶어 다음 배틀페이즈를 봉쇄했다.
+						RESETCOLOR
+						CALL EROTIC_MOVE("亀甲縛り",조교대상,-1,300)
+					ELSE
+						PRINTFORML 
+						PRINTFORMW 코인토스의 결과로、타락용병 타이다는 주인을 묶어 다음 배틀페이즈를 봉쇄했다.
+					ENDIF
+					;デメリット효과が발동しない…なんでだろう
+					CALL SET_PLAYER_INFO(듀얼리스트,"バトルスキップ", 1)
+			ENDSELECT
+		ENDIF
+	REND
+ENDIF
+

@@ -1,0 +1,118 @@
+﻿@CARDNAME_61050,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 해피의 사냥터
+	CASE "略称"
+		RESULTS = 해피의 사냥터
+	CASE "カテゴリ"
+		RESULTS:0 = 해피
+ENDSELECT
+
+
+@CARD_61050(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61050(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL 자신 필드는 "해피의 사냥터"가 된다。
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①：자신이 "해피" 몬스터의 소환 / 특수소환에 성공한 경우에 발동할 수 있다。
+PRINTL 필드의  마법 / 함정 카드 １장을 파괴한다。
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②：필드의 비행야수족 몬스터의 공격력 / 수비력은 ２００ 올린다。
+
+
+
+@CARDCAN_61050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61050)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 해피
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_61050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61050)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61050)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両마함単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "해피의 사냥터")
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件종족 = 비행야수족
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,200,200)
+ENDIF

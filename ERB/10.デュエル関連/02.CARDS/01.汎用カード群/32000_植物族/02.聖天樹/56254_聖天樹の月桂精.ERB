@@ -1,0 +1,128 @@
+﻿@CARDNAME_56254,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 생아발론 다프네
+	CASE "略称"
+RESULTS = 성천수의 월계정
+	CASE "カテゴリ"
+RESULTS:0 = 생아발론
+ENDSELECT
+
+
+@CARD_56254(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_56254(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件종족 = 식물족
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,56254) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_56254(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 식물족 몬스터 2장
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 공격 회피를 가진다.
+
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신 필드의 몬스터 1장을 릴리스하고, 자신 묘지의 식물족 L 몬스터 2장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 엑스트라 덱으로 되돌린다.
+
+
+@CARDCAN_56254(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,56254)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,56254)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 식물족
+	효과条件종류 = 링크
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_56254(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード_ID
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻避")
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,56254,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件종족 = 식물족
+			효과条件종류 = 링크
+			효과条件複数 = 2
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

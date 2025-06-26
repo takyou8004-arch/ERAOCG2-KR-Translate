@@ -1,0 +1,151 @@
+﻿@CARDNAME_82301,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 임무 완료 - 뉴 스타트 -
+	CASE "略称"
+RESULTS = 임무 완료
+
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_82301(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250612
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_82301(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①: 몬스터가 소환 / 특수 소환되었을 경우,
+PRINTL 자신 몬스터 존/묘지의 이 카드명 이외의 카드 1장을 덱으로 되돌리고 발동할 수 있다.
+PRINTL 필드의 몬스터 전부를 파괴한다.
+PRINTL 이렇게 하여 "핸디 레이디"를 되돌렸을 경우,
+PRINTL 덱에서 "잠입 개시 - 시크릿 오더 -" 1장 및 "핸디 레이디" 1장을 패에 넣을 수 있다.
+CALLFORM CARD_ABLE(2,묘지起動,フリー誘発)
+PRINTL ②: 이 카드가 묘지에 존재하고, 자신 필드에 "핸디 레이디"가 존재할 경우, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드를 필드에 세트한다.
+
+
+@CARDCAN_82301(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,82301)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,82301)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,82301)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般",2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	;自明だが判別用
+	SIF ゾーン != "묘지"
+		RETURN 0
+	;既に使用してるなら
+	SIF 발동済_2(듀얼리스트,82301)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件名前 = 핸디 레이디
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_82301(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,82301,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲묘지 = 1
+효과条件固名前 = 임무 완료 - 뉴 스타트 -
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			選択カードID = RESULT:1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드全体",場所,"묘지")
+			;ハンディーさんのIDなら
+			IF 選択カードID == 2300
+				CALL FULLRESET
+				효과範囲덱 = 1
+효과条件名前 = 잠입 개시 - 시크릿 오더 -
+				효과条件任意 = 1
+				CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+
+				CALL FULLRESET
+				효과範囲덱 = 1
+효과条件名前 = 핸디 레이디
+				효과条件任意 = 1
+				CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,82301,2)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件名前 = 임무 완료 - 뉴 스타트 -
+		CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF

@@ -1,0 +1,202 @@
+﻿@CARDNAME_79581,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 기술카드「어둠으로의 초대」
+	CASE "略称"
+		RESULTS = 어둠으로의 초대
+	CASE "カテゴリ"
+		RESULTS:0 = 기술
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79581(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "추가日"
+		RETURN 250415
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79581(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 １턴에 １번、어느쪽이든 １개밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신 필드에 앞면 표시의 마법사족 몬스터가 존재하는 경우에、
+PRINTL 상대 필드의 몬스터 １장을 대상으로 하고 발동할 수 있다。
+PRINTL （자신 필드가 "P.M.G쇼 타임♪"인 한、이 효과는 상대턴에 패에서 발동할 수 있다）
+PRINTL 그 몬스터를 파괴한다。그 후、자신 묘지의 "기술카드「어둠으로의 초대」" 이외의
+PRINTL "기술" 카드 １장을 제외하는 것으로、상대 필드의 카드 １장을 제외할 수 있다。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신 메인 페이즈에 묘지의 이 카드를 제외하고 발동할 수 있다。
+PRINTL "기술카드「어둠으로의 초대」" 이외의 자신 묘지 / 제외 상태인 "기술"마법 / 함정 카드 １장을 필드에 세트한다。
+PRINTL 이 효과로 세트된 카드는、필드에서 벗어난 경우에 제외된다。
+CALL TEXT_DECORATION("ROGUE")
+
+;モンスター除去의 효과。발동条件に마법사족 몬스터가 必要であるが、
+;速攻마법で상대 몬스터를 １장 除去できる효과はそれなりにパワーがある。
+;손패발동可能な条件、추가효과で更に１除去추가可能と、条件を整えれば非常に高い性能を갖는다
+;いずれかターン１ながら、묘지효과で다른 마법함정の再使用が可能になるのも有能。
+
+@CARDCAN_79581(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79581)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		IF GETVARS(@"%듀얼리스트%_フィールド名") !=  "P.M.G쇼 타임♪"
+			SIF ターンプレイヤー != 듀얼리스트
+				RETURN 0
+		ENDIF
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,79581)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79581)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 마법사족
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,79581)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79581)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 기술
+	효과条件종류 = 마함全般
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79581(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択結果
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79581,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+		IF RESULT == 1
+			;추가효과의 판정
+			IF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+				;제외NGの場合は処理をしない
+			ELSE
+				;추가효과의 판정
+				CALL FULLRESET
+				효과範囲상대필드 = 1
+				효과範囲상대마함 = 1
+				효과条件除去種 = 제외
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF RESULT == 1
+					CALL FULLRESET
+					효과範囲묘지 = 1
+					효과条件カテゴリ = 기술
+					효과条件固名前 = 기술카드「어둠으로의 초대」
+					CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+					IF RESULT == 1
+						;상대 필드의 카드 、자신묘지의 카드 両方の条件を満たしているなら、추가효과를 使うか聞く
+						;CPUは使う
+						IF 듀얼리스트 == "상대"
+							選択結果 = はい
+						ELSE
+							PRINTL 이 카드 이외의 "기술" 카드를 제외하고 상대 필드의 카드를 제외하시겠습니까？
+							CALL YN_CHOICE(듀얼리스트)
+							選択結果 = RESULT
+						ENDIF
+						
+						IF 選択結果 == はい
+							CALL FULLRESET
+							효과範囲묘지 = 1
+							효과条件カテゴリ = 기술
+							효과条件固名前 = 기술카드「어둠으로의 초대」
+							효과条件行先플래그 = 제외行き
+							CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+							IF RESULT == 1
+								CALL FULLRESET
+								CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"제외")
+							ENDIF
+						ENDIF
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79581,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 기술
+		효과条件종류 = 마함全般
+		효과条件固名前 = 기술카드「어둠으로의 초대」
+		효과추가종류 = 500
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF
+

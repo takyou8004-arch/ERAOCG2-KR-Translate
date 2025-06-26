@@ -1,0 +1,175 @@
+@CARDNAME_39751,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 번식하는 슬라임 코어
+	CASE "略称"
+		RESULTS = 슬라임 코어
+	CASE "カテゴリ"
+		RESULTS:0 = 슬라임
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39751(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 500
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39751(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①의 효과는 1턴에 1번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,손패起動,필드起動)
+PRINTL ①：카드가 패 / 필드에 존재할 경우, 자신의 메인 페이즈에 발동할 수 있다。
+PRINTL 자신의 패 /필드 / 마법&함정 존의 몬스터 카드를 융합 소재로 해, 융합 몬스터 1장을 융합 소환한다。
+PRINTL 단, 1번째 융합소재는 。「번식하는 슬라임 코어」 여야 한다。
+CALL CARD_ABLE(2,F素材時효과)
+PRINTL ②：이 카드가 융합 소재로 사용될 경우에 발동할 수 있다。
+PRINTL 자신 / 상대 묘지의 여성 몬스터 1장을, 소유자의 마법 / 함정 존에 앞면 표시로 두고 「묘상」 카테고리를 추가한다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39751(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39751)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 필드起動
+	;효과①발동済みかチェック
+	SIF 발동済_1(듀얼리스트,39751)
+		RETURN 0
+	;コントロ-ラ-のターンかチェック
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;メインフェイズかチェック
+	SIF メインフェイズ != 1
+		RETURN 0
+	;특수 소환할 수 없다かチェック
+	CALL CARD_EX_CHECK(듀얼리스트,0)
+	SIF RESULT == 1
+		RETURN 0
+	;융합소환できる카드가 ないかチェック
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲손패 = 1
+	素材範囲마함 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	強制必要素材名前 = 번식하는 슬라임 코어
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;それ以外ならOK
+	RETURN 1
+ELSEIF 종류 == F素材時효과
+	;両方の묘지에 ♀ 몬스터가 いないかチェック
+	CALL FULLRESET
+	SIF 마함数(듀얼리스트) < 5
+		효과範囲묘지 = 1
+	SIF 마함数(対面者) < 5
+		효과範囲상대묘지 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39751(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 표시形式
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 || 종류 == 필드起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39751,1)
+	IF RESULT == 0
+		;융합소환処理
+		CALL RESETAREA_MAT
+		素材範囲손패 = 1
+		素材範囲필드 = 1
+		素材範囲마함 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件소환可 = 1
+		;一体目の素材は必ず슬라임 코어に
+		強制必要素材名前 = 번식하는 슬라임 코어
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL FUSSUMMON(듀얼리스트,選択カード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == F素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39751)
+	IF RESULT == 0
+		;서로의 묘지에서、♀몬스터를 마함존에 置いて묘상を付与
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과条件성별 = 牝性
+		효과条件任意 = 1
+		효과추가カテ = 묘상
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시",1)
+		;フレ-バ-
+		조교대상 = RESULT:1
+		CALL CARD_EROTICS(조교대상)
+		IF RESULT != -1
+			조교대상 = RESULT
+				SETCOLOR C_PINK
+			PRINTFORML
+			PRINTFORMW 융합 소재의 잔재가 된 슬라임 코어는 쓰러져 있는 %CALLNAME:조교대상%에 기생하여 묘상으로 만들어 버렸다…！
+			PRINTFORML
+				RESETCOLOR
+			CALL EROTIC_MOVE("묘상捕縛",조교대상,-1,200)
+		ENDIF
+	ENDIF
+ENDIF
+

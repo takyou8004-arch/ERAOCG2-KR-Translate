@@ -1,0 +1,173 @@
+﻿@CARDNAME_31174,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = PM 바닛파-
+	CASE "略称"
+RESULTS = PM 바닛파-
+	CASE "カテゴリ"
+RESULTS:0 = 플라즈마틱 모델
+ENDSELECT
+
+
+@CARD_31174(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 800
+	CASE "추가日"
+		RETURN 250531
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_31174(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 패의 이 카드를 묘지로 보내고, 의 마법 & 함정 존의 앞면 표시의 "플라즈마틱 모델" 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 파괴하고, 덱에서 이 카드명 이외의 "플라즈마틱 모델" 몬스터를 2장까지 패에 가져온다(같은 이름은 1장까지).
+CALLFORM CARD_ABLE(0,지속효과,攻守変動)
+PRINTL ②: 이 카드를 장착하고 있는 몬스터의 레벨은 2개 오르고, 1턴에 2회 공격할 수 있다.
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ③: 이 카드를 장착하고 있는 몬스터가 전투로 몬스터를 파괴했을 경우에 발동할 수 있다.
+PRINTL 전투로 파괴한 몬스터의 원래 공격력의 절반만큼의 데미지를 상대에게 준다.
+
+
+@CARDCAN_31174(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31174)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,31174)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+효과条件カテゴリ = 플라즈마틱 모델
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件カテゴリ = 플라즈마틱 모델
+	효과条件종류 = モン全般
+효과条件固名前 = PM 바닛파-
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 装備先
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0	
+	RETURN 1
+
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31174(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC ダメージ量
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31174,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲마함 = 1
+효과条件カテゴリ = 플라즈마틱 모델
+		효과条件표시 = 表側표시
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+효과条件カテゴリ = 플라즈마틱 모델
+			효과条件종류 = モン全般
+효과条件固名前 = PM 바닛파-
+			효과条件複数 = 98
+			효과条件固名前選択 = 1
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31174)
+	IF RESULT == 0
+		CALLFORM CARD_{直前戦闘破壊ID(듀얼리스트,1)}("攻撃力")
+		ダメージ量 = RESULT / 2
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"追戦",1)
+
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_OTHER(듀얼리스트,"装備",場所,"星",2)
+ENDIF
+
+

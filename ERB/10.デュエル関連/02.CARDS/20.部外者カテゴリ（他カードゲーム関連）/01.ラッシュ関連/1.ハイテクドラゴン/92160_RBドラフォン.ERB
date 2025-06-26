@@ -1,0 +1,124 @@
+@CARDNAME_92160,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = RB도라폰
+	CASE "略称"
+RESULTS = RB도라폰
+	CASE "カテゴリ"
+RESULTS:0 = 하이테크 드래곤
+ENDSELECT
+
+
+@CARD_92160(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92160(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,마함起動,フリー誘発)
+PRINTL ①: 자신 상대의 배틀 페이즈에 발동할 수 있다.
+PRINTL 자신의 덱의 위에서부터 카드 2장을 묘지로 보낸다.
+PRINTL 그 후, 자신의 묘지의 「벽아의 폭속룡」 또는 「진홍동의 격속룡」 1장을 자신 필드에 특수 소환한다.
+PRINTL 이 효과로 묘지로 보내진 카드의 효과는 유발하지 않는다.
+CALLFORM CARD_ABLE(2,ターン開始時)
+PRINTL ②: 자신의 턴 개시시에 이 카드가 묘지에 존재할 경우에 발동할 수 있다.
+PRINTL 이 카드를 덱의 아래로 되돌리고, 자신은 1장 드로우한다.
+
+@CARDCAN_92160(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92160)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前:0 = 블루투스 버스트 드래곤
+	효과条件名前:1 = 레드부트 버스트 드래곤
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF 발동済_2(듀얼리스트,92160)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_92160(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92160)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",2,完全묘지行き)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前:0 = 블루투스 버스트 드래곤
+		효과条件名前:1 = 레드부트 버스트 드래곤
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == ターン開始時	
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92160,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ENDIF

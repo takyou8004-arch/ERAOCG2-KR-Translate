@@ -1,0 +1,146 @@
+﻿@CARDNAME_12310,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = CAN：D LIVE
+	CASE "略称"
+		RESULTS = CAN：D LIVE
+	CASE "カテゴリ"
+		RESULTS:0 = CAN：D
+ENDSELECT
+
+
+@CARD_12310(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 2310
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_12310(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件名前 = CAN：D
+ELSEIF EX参照 >= 10
+	素材条件종족 = 사이킥족
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,12310) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_12310(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「CAN：D」＋사이킥족 몬스터 
+PRINTL 이 카드명의 ②의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(0,常在無効)
+PRINTL ①：자신ターン中、상대 필드의 몬스터는 효과를 발동할 수 없다。
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：ライフポイントを２０００払って발동할 수 있다。
+PRINTL 상대 필드의 すべての 몬스터의 공격력은 ３０００ポイント내린다。
+PRINTL 그 후、자신의 묘지에서 레벨７ 사이킥족 몬스터 １장을 자신 필드에 특수 소환한다。
+
+
+@CARDCAN_12310(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,12310)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 常在無効
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,12310)
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 2000
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_12310(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 常在無効
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効",0,12310)
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,12310,2)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",2000)
+		CALL FULLRESET
+		攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_攻:選択カード")
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"永攻DOWN",3000)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 사이킥족
+		효과条件レベル = 7
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

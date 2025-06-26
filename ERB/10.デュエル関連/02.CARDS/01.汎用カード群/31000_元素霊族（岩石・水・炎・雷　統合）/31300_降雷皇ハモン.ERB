@@ -1,0 +1,163 @@
+﻿@CARDNAME_31300,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 강뢰황 하몬
+	CASE "略称"
+RESULTS = 강뢰황 하몬
+	CASE "カテゴリ"
+RESULTS:0 = 하몬
+RESULTS:1 = 환마
+RESULTS:2 = 삼환마
+ENDSELECT
+
+
+@CARD_31300(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+			RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+	CASE "특수불가"
+		RETURN 1
+	CASE "소환불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_31300(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 일반소환할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①：이 카드는 자신 필드의 앞면 표시의 마법 카드 3장을 묘지로 보내고, 패에서 특수 소환할 수 있다.
+PRINTL 이 방법으로의 특수소환은 효과에 의한 제한을 받지 않는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：자신 필드, 묘지, 제외 존, 손패, 덱에 다른 「강뢰황 하몬」이 존재하지 않는 경우,
+PRINTL 이 카드는 완전 내성을 가지고, 자신의 라이프는 변동하지 않는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드는 수비 표시인 한, 공격 유도를 가진다.
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ④：이 카드가 전투로 상대 몬스터를 파괴하고 묘지로 보냈을 경우에 발동할 수 있다.
+PRINTL 상대에게 1000 데미지를 준다.
+PRINTL 
+
+@CARDCAN_31300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31300)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件종류 = 마법全般
+	효과条件표시 = 表側표시
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0	
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31300)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件표시 = 表側표시
+		효과条件종류 = 마법全般
+		효과条件複数 = 3
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31300)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",1000,1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 2
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻誘")
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲묘지 = 1
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲제외 = 1
+효과条件名前 = 강뢰황 하몬
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1 
+		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ無効",3)
+		CALL SET_PLAYER_INFO(듀얼리스트,"コスト無効",3)
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+	ENDIF
+ENDIF
+
+
+

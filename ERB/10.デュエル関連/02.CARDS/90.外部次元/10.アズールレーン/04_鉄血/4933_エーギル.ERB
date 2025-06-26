@@ -1,0 +1,390 @@
+@CARDNAME_4933,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 결전계획 초순양함 에기르
+	CASE "略称"
+RESULTS = 에기르
+	CASE "カテゴリ"
+RESULTS:0 = 벽람항로
+RESULTS:1 = 철혈
+ENDSELECT
+
+@CARD_4933(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3500
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250503
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_4933(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 10
+素材条件カテゴリ = 철혈
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,4933) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_4933(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 10 「철혈」 몬스터 × 3
+PRINTL 이 카드의 ②효과 발동에 대해, 상대는 카드의 효과를 발동할 수 없다.
+PRINTL 이 카드명의 ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(0,필드起動)
+PRINTL ①: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드의 엑시즈 소재를 1개 제거하고, 묘지의 이 카드가 내성을 얻지 않은 종류(마법 / 함정 / 몬스터)의 「철혈」 카드 1장을 제외한다.
+PRINTL 이 카드는 이 효과로 제외한 카드와 원래의 종류(마법 / 함정 / 몬스터)가 같은 카드에 대한 내성을 얻고, 공격력 / 수비력이 500 올린다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ②: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드가 가진 몬스터 내성, 마법 내성, 함정 내성에서 임의의 1개를 골라 잃는다.
+PRINTL 그 후, 상대 몬스터 존의 카드 전부, 또는 상대의 마법 & 함정 존의 카드 전부 중 어느 쪽을 골라 파괴한다.
+CALL CARD_ABLE(2,효과後誘発)
+PRINTL ②: 이 카드 이외의 몬스터가 특수 소환되었을 경우에, 상대 필드의 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드의 공격력 / 수비력을 0으로 하고 소재 불가를 부여한다.
+
+@CARDCAN_4933(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+#DIM DYNAMIC モン可能
+#DIM DYNAMIC 마법可能
+#DIM DYNAMIC 함정可能
+#DIM DYNAMIC モ耐所持
+#DIM DYNAMIC 魔耐所持
+#DIM DYNAMIC 함정耐所持
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4933)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	IF GETVAR(@"%듀얼리스트%_MZ_モ耐:場所") < 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 철혈
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			モン可能 = 1
+	ELSE
+		モ耐所持 = 1
+	ENDIF
+	IF GETVAR(@"%듀얼리스트%_MZ_魔耐:場所") < 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 철혈
+		효과条件종류 = 마법全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			마법可能 = 1
+	ELSE
+		魔耐所持 = 1
+	ENDIF
+	IF GETVAR(@"%듀얼리스트%_MZ_함정耐:場所") < 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 철혈
+		효과条件종류 = 함정全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			함정可能 = 1
+	ELSE
+		함정耐所持 = 1
+	ENDIF
+	IF GROUPMATCH(1,モン可能,마법可能,함정可能) != 0 && GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") > -1
+		条件Ａ = 1
+	ENDIF
+	IF GROUPMATCH(1,モ耐所持,魔耐所持,함정耐所持) != 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1 && !발동済_1(듀얼리스트,4933)
+			条件Ｂ = 1
+	ENDIF
+	SIF 条件Ａ == 0 && 条件Ｂ == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,4933)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환",2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+효과条件名前 = 결전계획 초순양함 에기르
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
+	IF RESULT == 1
+		SIF カード소환先 == 場所
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == チェーン可否
+	SIF !GROUPMATCH(チェーン可否종류, 효과後誘発)
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_4933(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 条件Ａ－１
+#DIM DYNAMIC 条件Ａ－２
+#DIM DYNAMIC 条件Ｂ－１
+#DIM DYNAMIC 条件Ｂ－２
+#DIM DYNAMIC 選択효과Ａ
+#DIM DYNAMIC 選択효과Ｂ
+#DIM DYNAMIC モン可能
+#DIM DYNAMIC 마법可能
+#DIM DYNAMIC 함정可能
+#DIM DYNAMIC モ耐所持
+#DIM DYNAMIC 魔耐所持
+#DIM DYNAMIC 함정耐所持
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 選択カード종류
+#DIMS DYNAMIC 耐性종류
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 필드起動
+	IF GETVAR(@"%듀얼리스트%_MZ_モ耐:場所") < 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 철혈
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			モン可能 = 1
+	ELSE
+		モ耐所持 = 1
+	ENDIF
+	IF GETVAR(@"%듀얼리스트%_MZ_魔耐:場所") < 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 철혈
+		효과条件종류 = 마법全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			마법可能 = 1
+	ELSE
+		魔耐所持 = 1
+	ENDIF
+	IF GETVAR(@"%듀얼리스트%_MZ_함정耐:場所") < 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 철혈
+		효과条件종류 = 함정全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			함정可能 = 1
+	ELSE
+		함정耐所持 = 1
+	ENDIF
+	IF GROUPMATCH(1,モン可能,마법可能,함정可能) != 0 && GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") > -1
+		条件Ａ－１ = 1
+	ENDIF
+	IF GROUPMATCH(1,モ耐所持,魔耐所持,함정耐所持) != 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1 && !발동済_1(듀얼리스트,4933)
+			条件Ａ－２ = 1
+	ENDIF
+	IF 条件Ａ－１ == 1 && 条件Ａ－２ == 1
+		CALL YN_CHOICE(듀얼리스트,"●Ｘ素材－１、「철혈」카드를 제외し、その카드의 종류に対する耐性を得る。","●耐性１つを失い、상대モンスターゾーン 마법＆함정ゾーンいずれか全てのカード破壊")
+		選択효과Ａ = RESULT
+	ELSEIF 条件Ａ－２ == 1
+		選択효과Ａ = いいえ
+	ENDIF
+	IF 選択효과Ａ == はい
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4933,0,1)
+		IF RESULT == 0
+			CALL FULLRESET
+			IF モン可能 == 1 && 마법可能 == 1 && 함정可能 == 1
+				;処理なし(효과条件なし)
+			ELSE
+				IF モン可能 == 1
+					효과条件종류 = モン全般
+					IF 마법可能 == 1
+						FOR カウンタ, 0, 10
+							효과条件종류:(カウンタ+1) = カウンタ+20
+						NEXT
+					ELSEIF 함정可能 == 1
+						FOR カウンタ, 0, 10
+							효과条件종류:(カウンタ+1) = カウンタ+30
+						NEXT
+					ENDIF
+				ELSEIF 마법可能 == 1
+					효과条件종류 = 마법全般
+					IF 함정可能 == 1
+						FOR カウンタ, 0, 10
+							효과条件종류:(カウンタ+1) = カウンタ+30
+						NEXT
+					ENDIF
+				ELSEIF 함정可能 == 1
+					효과条件종류 = 함정全般
+				ENDIF 
+			ENDIF
+			효과範囲묘지 = 1
+			효과条件他所 = 1
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			選択カードID = RESULT:1
+			IF RESULT == 1
+				TRYCALLFORM CARD_{選択カードID}("종류")
+				選択カード종류 = RESULT
+				SELECTCASE 選択カード종류
+					CASE IS < モン全般
+						耐性종류 = モ耐
+					CASE 20 TO 29
+						耐性종류 = 魔耐
+					CASE 30 TO 39
+						耐性종류 = 함정耐
+				ENDSELECT
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,耐性종류,2,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",500)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",500)
+			ENDIF
+		ENDIF
+	ELSEIF 選択효과Ａ == いいえ
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4933,1)
+		IF RESULT == 0
+			IF GROUPMATCH(1,モ耐所持,魔耐所持,함정耐所持) > 1
+				PRINTFORML 失う耐性を選択してください。
+				IF モ耐所持 == 1
+PRINTL [0] - 몬스터 내성
+				ELSE
+					SETCOLOR C_GRAY
+PRINTL (0) - (몬스터 내성은 획득하지 않았습니다)
+					RESETCOLOR
+				ENDIF
+				IF 魔耐所持 == 1
+PRINTL [1] - 마법 내성
+				ELSE
+					SETCOLOR C_GRAY
+PRINTL ① - (마법 내성은 획득하지 않았습니다)
+					RESETCOLOR
+				ENDIF
+				IF 함정耐所持 == 1
+PRINTL [2] - 함정 내성
+				ELSE
+					SETCOLOR C_GRAY
+PRINTL ② - (함정 내성은 획득하지 않았습니다)
+					RESETCOLOR
+				ENDIF
+				PRINTL
+				BINPUT
+				SELECTCASE RESULT
+					CASE 0
+						耐性종류 = モ耐
+					CASE 1
+						耐性종류 = 魔耐
+					CASE 2
+						耐性종류 = 함정耐
+				ENDSELECT
+			ELSEIF モ耐所持 == 1
+				耐性종류 = モ耐
+			ELSEIF 魔耐所持 == 1
+				耐性종류 = 魔耐
+			ELSEIF 함정耐所持 == 1
+				耐性종류 = 함정耐
+			ENDIF
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,耐性종류,0,1)
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件Ｂ－１ = 1
+			CALL FULLRESET
+			효과範囲상대마함 = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件Ｂ－２ = 1
+			IF 条件Ｂ－１ == 1 && 条件Ｂ－２ == 1
+				CALL YN_CHOICE(듀얼리스트,"상대モンスターゾーンのカード全てを破壊する。","상대の마법＆함정ゾーンのカード全てを破壊する。")
+				選択효과Ｂ = RESULT
+			ELSEIF 条件Ｂ－２ == 1
+				選択효과Ｂ = いいえ
+			ENDIF
+			IF 選択효과Ｂ == はい
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+			ELSE
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함全体",場所,"묘지")
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4933,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"選択")
+		選択カード = RESULT:1
+		IF RESULT == 1
+			CALL SET_FIELD_INFO(対面者,"필드",選択カード,"永攻",-999999)
+			CALL SET_FIELD_INFO(対面者,"필드",選択カード,"永守",-999999)
+			CALL SET_FIELD_INFO(対面者,"필드",選択カード,"不材",2,上書きモード)
+		ENDIF
+	ENDIF
+ENDIF

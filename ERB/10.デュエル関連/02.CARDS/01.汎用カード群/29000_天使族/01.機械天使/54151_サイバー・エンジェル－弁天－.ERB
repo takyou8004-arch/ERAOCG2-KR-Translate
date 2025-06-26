@@ -1,0 +1,136 @@
+﻿@CARDNAME_54651,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 사이버 엔젤 -변천-
+	CASE "略称"
+RESULTS = CA-변천-
+	CASE "カテゴリ"
+RESULTS:0 = 사이버 엔젤
+ENDSELECT
+
+
+@CARD_54651(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 의식
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족 
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1500		
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_54651(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 出処
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 6
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,54651) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_54651(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「기계천사의 의식」으로 강림한다.
+CALL CARD_ABLE(0,攻撃後誘発)
+PRINTL ①: 이 카드가 전투로 몬스터를 파괴하고 묘지로 보냈을 경우에 발동할 수 있다.
+PRINTL 그 몬스터의 원래 수비력만큼의 데미지를 상대에게 입힌다.
+CALL CARD_ABLE(0,R素材時효과)
+PRINTL ②: 이 카드가 의식소환을 위해 릴리스되었을 경우에 발동할 수 있다.
+PRINTL 덱에서 천사족 빛 속성 몬스터 1장을 패에 추가한다.
+
+
+
+@CARDCAN_54651(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54651)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0	
+	RETURN 1
+ELSEIF 종류 == R素材時효과
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 천사족
+	효과条件속성 = 빛속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54651(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54651)
+	IF RESULT == 0
+		CALLFORM CARD_{直前戦闘破壊ID(듀얼리스트,1)}("守備力")
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",RESULT,1)
+	ENDIF
+ELSEIF 종류 == R素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54651)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종족 = 천사족
+		효과条件속성 = 빛속성
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF

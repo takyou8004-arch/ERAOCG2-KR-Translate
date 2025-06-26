@@ -1,0 +1,149 @@
+﻿@CARDNAME_93250,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 프레데터 플래닝
+	CASE "略称"
+RESULTS = 포식 계획
+	CASE "カテゴリ"
+RESULTS:0 = 프레데터 플랜츠
+ENDSELECT
+
+
+@CARD_93250(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93250(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ①②의 효과 각각은 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①: 덱에서 "프레데터 플랜츠" 몬스터 1장을 묘지로 보내고 발동할 수 있다.
+PRINTL 필드의 앞면 표시 몬스터 전부에 악성 카운터를 1개씩 놓는다.
+PRINTL 악성 카운터가 놓인 레벨 2 이상의 몬스터의 레벨은 1이 된다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 이 카드가 묘지에 존재하는 상태에서, 자신이 어둠 속성 몬스터의 융합 소환에 성공했을 경우,
+PRINTL 묘지의 이 카드를 제외하고, 상대 필드의 카드 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+
+
+
+@CARDCAN_93250(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,93250)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,93250)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 프레데터 플랜츠
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,93250)
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 프레데터 플랜츠
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_93250(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93250,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 프레데터 플랜츠
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+					CONTINUE
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"悪Ｃ",1) 
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"永星",1,1)
+			NEXT
+
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+					CONTINUE
+				CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"悪Ｃ",1) 
+				CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"永星",1,1)
+			NEXT
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93250,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+ENDIF

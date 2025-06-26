@@ -1,0 +1,245 @@
+﻿@CARDNAME_39574,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 플렉시블 홀－푸티카
+	CASE "略称"
+		RESULTS = 연혈의 푸티카
+	CASE "カテゴリ"
+		RESULTS:0 = 함정 속으로
+		RESULTS:1 = 충혹마
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39574(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 900
+	CASE "守備力"
+		RETURN 1900
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_39574(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,소환時)
+PRINTL ①：이 카드가 소환에 성공했을 때 발동할 수 있다。덱에서"충혹마" 마법 / 함정 카드 １장을 패에 넣는다。
+CALLFORM CARD_ABLE(2,특수소환時)
+PRINTL ②：이 카드가 특수 소환에 성공했을 경우、발동할 수 있다。상대 필드의 특수 소환된 몬스터 １장을 패로 되돌린다。
+PRINTL 자신의 묘지에 "홀" 융합몬스터가 존재하는 경우、상대 필드의 특수 소환된 몬스터 전부를 패로 되돌린다。
+CALLFORM CARD_ABLE(0,지속효과,攻守変動)
+PRINTL ③：이 카드는 함정내성을 갖는다。자신의 필드에 "플렉시블 홀－푸티카"를 제외한 "충혹마" 몬스터의 공격력을 ３００ 올린다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_AA_39574
+
+
+@CARDCAN_39574(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 효과先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39574)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+;シトリス묘지효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 오나 홀－시트리스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+;フレシア묘지효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 글로리 홀－플레시아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	SIF FINAL_SUMMON_TARGET(듀얼리스트,1) == 5 
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時
+	SIF 발동済_1(듀얼리스트,39574)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 충혹마
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,39574)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件召種 = 召種全특수
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+    CALL FULLRESET
+    효과範囲필드 = 1
+    효과条件固名前起動 = 1
+    효과条件종류 = モン全般
+    효과条件カテゴリ = 충혹마
+    효과条件CNT = 1
+    CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+    SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39574(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 媚薬個数
+#DIM DYNAMIC 충혹마数
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 효과先
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"함정耐")
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ = 충혹마
+	효과条件固名前 = 플렉시블 홀－푸티카
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,300)
+
+ELSEIF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39574,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 충혹마
+		효과条件종류 = 마함全般		
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39574,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 융합
+		효과条件カテゴリ = 충혹마
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT != 1
+			CALL FULLRESET
+			효과条件召種 = 召種全특수
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"손패")
+		ELSE
+			CALL FULLRESET
+			효과条件召種 = 召種全특수
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"손패")
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == ターン終了時強制
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}, "カテゴリ"
+			SIF !MATCH(RESULTS, "충혹마")
+				CONTINUE
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+		IF RESULT != -1
+			조교대상 = RESULT
+			SIF 조교대상 == NO_TO_CHARANUM(1373)
+				CONTINUE
+			SETCOLOR C_PINK 
+			PRINTFORMW 푸티카는 %NAME:조교대상%에게 꿀을 빨리고 있다…
+			RESETCOLOR
+			CALL EROTIC_MOVE("全身레즈애무",NO_TO_CHARANUM(1373),조교대상,50)
+		ENDIF
+	NEXT
+ELSEIF 종류 == 攻撃時誘発
+	;シトリス묘지효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39574)
+	IF RESULT == 0
+		;通常마법汎用処理
+		PRINTFORMW 푸티카는 시트리스의 큰 구멍으로 유도했다…
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		戦闘カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		효과추가종류 = 6
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘カード,"永攻DOWN")
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	;フレシア묘지효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39574)
+	IF RESULT == 0
+		PRINTFORMW 푸티카는 플레시아의 큰 구멍으로 유도했다…
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",효과先,"묘지")
+	ENDIF
+ENDIF

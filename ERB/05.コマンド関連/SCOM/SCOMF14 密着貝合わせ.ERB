@@ -1,0 +1,144 @@
+﻿;-------------------------------------------------
+;密着貝合わせ
+;貝合わせ派生コマンド
+;-------------------------------------------------
+@SCOM14
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 60
+DOWNBASE:기력 += 120
+
+;Ｃ部分
+CALL SOURCE_CALC_쾌Ｃ(MASTER, TARGET, 500)
+CALL SOURCE_CALC_쾌Ｃ(TARGET, MASTER, 500)
+IF SCOM14_乳密着()
+	CALL SOURCE_CALC_쾌Ｂ(MASTER, TARGET, 200)
+	CALL SOURCE_CALC_쾌Ｂ(TARGET, MASTER, 200)
+ENDIF
+IF SCOM14_口密着()
+	CALL SOURCE_CALC_쾌Ｍ(MASTER, TARGET, 200)
+	CALL SOURCE_CALC_쾌Ｍ(TARGET, MASTER, 200)
+
+	SIF BASE:TARGET:술기운 >= 500
+		CALL DRUNKEN(MASTER)
+
+	;키스미경험
+	IF TALENT:MASTER:키스미경험
+		CALL SET_FIRSTKISS(MASTER, TARGET, 1)
+		EXP:TARGET:애정경험 += 10
+	ENDIF
+	IF TALENT:TARGET:키스미경험
+		CALL SET_FIRSTKISS(TARGET, MASTER, 1)
+		EXP:TARGET:애정경험 += 10
+	ENDIF
+
+	SIF TALENT:MASTER:고양이혀
+		CALL SOURCE_CALC_고통(TARGET, MASTER, 20)
+ENDIF
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 400)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 100)
+
+;애널、触手粘液、파과血の汚れ
+{
+IF (STAIN:MASTER:Ｖ & 8) || (STAIN:MASTER:Ｖ & 32) || (STAIN:MASTER:Ｖ & 64)
+	|| (SCOM14_口密着() && ((STAIN:MASTER:입 & 8) || (STAIN:MASTER:입 & 32) || (STAIN:MASTER:입 & 64)))
+}
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 600)
+;精液汚れ
+ELSEIF (STAIN:MASTER:Ｖ & 4) || (SCOM14_口密着() && (STAIN:MASTER:입 & 4))
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 300)
+ELSE
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 150)
+ENDIF
+
+IF TALENT:TARGET:스위트바디 && SCOM14_口密着()
+	CALL RECOVER_PERMIL(MASTER, 50, "체력", 1)
+	CALL RECOVER_PERMIL(MASTER, 100, "기력", 1)
+ENDIF
+
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;奴隷のＶ⇔조교者のＶの汚れが이동
+STAIN:TARGET:Ｖ |= STAIN:MASTER:Ｖ
+STAIN:MASTER:Ｖ |= STAIN:TARGET:Ｖ
+;奴隷のＢ⇔조교者のＢの汚れが이동
+STAIN:TARGET:Ｂ |= STAIN:MASTER:Ｂ
+STAIN:MASTER:Ｂ |= STAIN:TARGET:Ｂ
+;奴隷の口⇔조교者の口の汚れが이동（키스可能時のみ）
+IF SCOM14_口密着()
+	STAIN:TARGET:口 |= STAIN:MASTER:口
+	STAIN:MASTER:口 |= STAIN:TARGET:口
+ENDIF
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;同性愛　レズなら戻り値1ゲイなら戻り値2
+IF HETEROSEX(TARGET, MASTER)
+	EXP:TARGET:(50 + HETEROSEX(TARGET, MASTER)) += 12
+	EXP:MASTER:(50 + HETEROSEX(TARGET, MASTER)) += 12
+ENDIF
+;애정경험
+SIF !ASSIPLAY
+	EXP:애정경험 += 2 * TALENT:연모
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE914
+;密着貝あわせ実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(914)
+	RETURN RESULT
+;オトコかふたなりだとダメ
+SIF (TALENT:MASTER:성별 & 2) || (TALENT:TARGET:성별 & 2)
+	RETURN 0
+
+;밧줄使用中/手足が使えないと不可
+SIF TEQUIP:밧줄 || TEQUIP:사지없음
+	RETURN 0
+;下半身下着着衣
+SIF TEQUIP:착의상황하 > 1
+	RETURN 0
+;바이브/딜도/로터삽입中はダメ
+SIF TEQUIP:바이브 || TEQUIP:딜도 || TEQUIP:로터
+	RETURN 0
+;클리캡使用中はダメ
+SIF TEQUIP:클리캡
+	RETURN 0
+;목욕탕플레이中は플레이매트が無いとダメ
+IF TEQUIP:목욕탕플레이
+	SIF ITEM:플레이매트 == 0 && NOITEM == 0
+		RETURN 0
+ENDIF
+;ベッドルームでないとダメ
+SIF !BEDROOM(CFLAG:MASTER:현재위치)
+	RETURN 0
+RETURN 1
+
+
+@SCOM14_乳密着()
+#FUNCTION
+;体格差が少しでもあるとダメ（ただし乳サイズ에 의해 緩和される）
+SIF ABS(TALENT:TARGET:체형 - TALENT:MASTER:체형) > MIN(2, (TALENT:TARGET:가슴사이즈 + TALENT:MASTER:가슴사이즈 + 8) / 6)
+	RETURNF 0
+RETURNF 1
+
+
+@SCOM14_口密着()
+#FUNCTION
+;体格差があるとダメ
+SIF ABS(TALENT:TARGET:체형 - TALENT:MASTER:체형) > 2
+	RETURNF 0
+RETURNF 1

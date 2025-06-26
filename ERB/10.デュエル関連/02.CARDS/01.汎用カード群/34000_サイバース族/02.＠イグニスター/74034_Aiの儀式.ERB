@@ -1,0 +1,123 @@
+﻿@CARDNAME_74034,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아이의 의식
+	CASE "略称"
+RESULTS = 아이의 의식
+	CASE "カテゴリ"
+RESULTS:0 = 아이
+RESULTS:1 = 의식마법
+ENDSELECT
+
+
+@CARD_74034(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_74034(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 사이버스족의 의식 몬스터의 강림에 필요.
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①: 의식 몬스터 이외의 레벨을 가진 「@이그니스터」 몬스터 1장을
+PRINTL 자신의 패/필드에서 릴리스하거나, 또는 자신의 묘지에서 제외하는 것으로,
+PRINTL 패/묘지에서 사이버스족의 의식 몬스터 1장을 의식 소환한다.
+
+
+@CARDCAN_74034(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성,5
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,74034)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	효과条件종류:0 = 효과モン
+	효과条件종류:1 = 通常モン
+	효과条件종류:2 = 융합
+	효과条件종류:3 = 싱크로
+	효과条件カテゴリ = ＠이그니스터
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = 의식
+	효과条件종족 = 사이버스족
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_74034(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,74034,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲필드 = 1
+		효과範囲묘지 = 1
+		효과条件종류:0 = 효과モン
+		효과条件종류:1 = 通常モン
+		효과条件종류:2 = 융합
+		효과条件종류:3 = 싱크로
+		효과条件カテゴリ = ＠이그니스터
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件종류 = 의식
+			효과条件종족 = 사이버스족
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_SELECT(듀얼리스트,RESULT)
+				選択カード = RESULT
+				CALL CARD_EX_SUMMON(듀얼리스트,参照先（CS）,選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

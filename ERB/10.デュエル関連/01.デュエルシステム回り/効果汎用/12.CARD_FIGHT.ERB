@@ -1,0 +1,358 @@
+﻿
+
+
+@SHOW_CARD_FIGHT(듀얼리스트,攻撃元,攻撃先)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 대상者
+#DIM DYNAMIC 攻撃元
+#DIM DYNAMIC 攻撃先
+#DIM DYNAMIC 설정先
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 現攻撃力
+#DIM DYNAMIC 現守備力
+#DIM DYNAMIC 설정色
+#DIM DYNAMIC 설정色２
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+FOR カウンタB,0,10
+
+	FOR カウンタ,0,5
+		SIF カウンタ == 0
+			PRINTFORM 　　　　　
+		IF カウンタ == 1
+			대상者 = %듀얼리스트%
+			설정先 = 攻撃元
+		ELSEIF カウンタ == 3
+			대상者 = %対面者%
+			설정先 = 攻撃先
+		ENDIF
+		VARSET RESULT
+		VARSET RESULTS
+		IF GROUPMATCH(カウンタ,0,4)
+			PRINTFORM 　　　　　　　　　　　　
+		ELSEIF GROUPMATCH(カウンタ,2)
+			SELECTCASE カウンタB
+			CASE 4
+				PRINTFORM 　　　　Ｖ　／　　　　　
+			CASE 5
+				PRINTFORM 　　　　　／　Ｓ　　　　
+			CASEELSE
+				PRINTFORM 　　　　　　　　　　　　
+			ENDSELECT
+		ELSE
+			설정色 = COLOR_FROMRGB(192, 192, 192)
+			설정色２ = COLOR_FROMRGB(192, 192, 192)
+			IF GETVAR(@"%대상者%_필드:설정先") != -1			
+				TRYCALLFORM CARD_{GETVAR(@"%대상者%_필드:설정先")}, "종류"
+				IF RESULT == 0
+					RESETCOLOR
+				ELSEIF RESULT <= 10
+					IF RESULT == 효과モン
+						설정色 = C_MONS_BR
+					ELSEIF RESULT == 通常モン
+						설정色 = C_BASM_BR
+					ELSEIF RESULT == 의식
+						설정色 = C_GISK_BLUE
+					ELSEIF RESULT == 융합
+						설정色 = C_FUSE_PUR
+					ELSEIF RESULT == 싱크로
+						설정色 = C_SYN_WHITE
+					ELSEIF RESULT == 엑시즈
+						설정色 = C_XYZ_BLACK
+					ELSEIF RESULT == 링크
+						설정色 = C_LINK_BLUE
+					ELSEIF RESULT == 초차원
+						설정色 = C_PSY_RED
+					ENDIF
+				ELSEIF RESULT >= 20 && RESULT < 30
+					설정色 = C_MAGIC_G
+				ELSEIF RESULT >= 30
+					설정色 = C_TRAP_PUR
+				ENDIF
+				IF GETVAR(@"%대상者%_MZ_表:설정先") == 3
+					설정色 = C_L_GRAY
+				ENDIF
+				IF GETVAR(@"%대상者%_필드:설정先") == 使用불가ゾーン
+					설정色 = C_L_GRAY
+				ENDIF
+				TRYCALLFORM CARD_{GETVAR(@"%대상者%_필드:설정先")}, "分割"
+				IF RESULT == 0
+					설정色２ = 설정色
+				ELSEIF RESULT <= 10
+					IF RESULT == 효과モン
+						설정色２ = C_MONS_BR
+					ELSEIF RESULT == 通常モン
+						설정色２ = C_BASM_BR
+					ELSEIF RESULT == 의식
+						설정色２ = C_GISK_BLUE
+					ELSEIF RESULT == 융합
+						설정色２ = C_FUSE_PUR
+					ELSEIF RESULT == 싱크로
+						설정色２ = C_SYN_WHITE
+					ELSEIF RESULT == 엑시즈
+						설정色２ = C_XYZ_BLACK
+					ELSEIF RESULT == 링크
+						설정色２ = C_LINK_BLUE
+					ELSEIF RESULT == 초차원 
+						설정色２ = C_PSY_RED
+					ENDIF
+				ELSEIF RESULT >= 20 && RESULT < 30
+					설정色２ = C_MAGIC_G
+					SIF RESULT == 유니온
+						설정色２ = C_ORANGE
+				ELSEIF RESULT >= 30
+					설정色２ = C_TRAP_PUR
+				ENDIF
+				IF GETVAR(@"%대상者%_MZ_表:설정先") == 3
+					설정色２ = C_L_GRAY
+				ENDIF
+			ENDIF
+
+			IF !GROUPMATCH(カウンタB,0,9)
+				VARSET RESULT
+				SIF GROUPMATCH(カウンタB,1,2,3,4)
+					SETCOLOR 설정色
+				SIF GROUPMATCH(カウンタB,5,6,7,8)
+					SETCOLOR 설정色２
+				PRINTFORM ｜
+				RESETCOLOR
+			ENDIF
+
+			IF カウンタB == 0
+				SETCOLOR 설정色
+				PRINTFORM ┌────────────┐
+				RESETCOLOR
+			ELSEIF カウンタB == 1
+				FONTSTYLE 8
+				VARSET RESULT
+				SIF GETVAR(@"%대상者%_MZ_接可:설정先") >= 1 && GETVAR(@"%대상者%_MZ_性:설정先") == 牝性
+					SETCOLOR C_PINK
+
+				TRYCALLFORM CARDCAN_{GETVAR(@"%대상者%_MZ_ID:설정先")}(대상者,필드起動,"필드",설정先)
+				SIF RESULT == 1 && 대상者 == "자신"
+					SETCOLOR C_G_YELLOW
+				;略称
+				IF GETVAR(@"%대상者%_MZ_変化元ID:설정先") >= 1
+					SETCOLOR C_M_GREEN
+					TRYCALLFORM CARDNAME_{GETVAR(@"%대상者%_MZ_変化元ID:설정先")}, "略称"
+				ELSE					
+					TRYCALLFORM CARDNAME_{GETVAR(@"%대상者%_필드:설정先")}, "略称"
+				ENDIF
+				IF 대상者 == "자신"
+					PRINTBUTTON @" %RESULTS,19,LEFT%", (2000 + 설정先)
+				ELSEIF 대상者 == "상대"
+					IF GETVAR(@"%대상者%_MZ_表:설정先") == 3
+						PRINTBUTTON @" %"UNKNOWN",19,LEFT%", (5000 + 설정先)
+					ELSE
+						PRINTBUTTON @" %RESULTS,19,LEFT%", (5000 + 설정先)
+					ENDIF
+				ENDIF
+				RESETCOLOR
+				FONTSTYLE 0
+				SELECTCASE GETVAR(@"%대상者%_MZ_属:설정先") 
+					CASE 1
+						PRINTFORM (%"光",2%)
+					CASE 2
+						PRINTFORM (%"闇",2%)
+					CASE 3
+						PRINTFORM (%"地",2%)
+					CASE 4
+						PRINTFORM (%"水",2%)
+					CASE 5
+						PRINTFORM (%"炎",2%)
+					CASE 6
+						PRINTFORM (%"風",2%)
+					CASE 7
+						PRINTFORM (%"神",2%)
+					CASEELSE
+						PRINTFORM (%"？",2%)
+				ENDSELECT
+				RESETCOLOR
+				FONTSTYLE 0
+			ELSEIF カウンタB == 2
+				;レベル
+				TRYCALLFORM CARD_{GETVAR(@"%대상者%_필드:설정先")}, "종류"
+				IF RESULT == 엑시즈
+					SETCOLOR C_XYZ_LBLACK
+					PRINTFORM %"（☆）",18,RIGHT%× {GETVAR(@"%대상者%_MZ_星:설정先"),3,RIGHT}
+				ELSEIF RESULT == 링크
+					SETCOLOR C_LINK_BLUE
+					TRYCALLFORM CARD_{GETVAR(@"%대상者%_필드:설정先")}, "レベル"
+					PRINTFORM %"LINK －",21,RIGHT% {RESULT,2,RIGHT}
+				ELSE
+					PRINTFORM %"（★）",18,RIGHT%× {GETVAR(@"%대상者%_MZ_星:설정先"),3,RIGHT}
+				ENDIF
+				RESETCOLOR
+
+			ELSEIF カウンタB == 3
+				PRINTFORM %GET_TALENTNAME(191,GETVAR(@"%대상者%_MZ_種:설정先")),15,LEFT%
+				;14が限界、5までOK
+				TRYCALLFORM CARD_{GETVAR(@"%대상者%_필드:설정先")}, "分割"
+				IF RESULT == 0
+					PRINTFORM %"",5%
+				ELSE
+					IF RESULT == デュアル
+						SETCOLOR C_MONS_BR
+						PRINTFORM %"Dual",4%
+					ELSEIF RESULT == 효과なし
+						SETCOLOR C_BASM_BR
+						PRINTFORM %"NoEF",4%
+					ELSEIF RESULT == 디스펙터
+						SETCOLOR C_XYZ_BLACK
+						PRINTFORM %"DIS ",4%
+					ELSEIF RESULT == 유니온
+						SETCOLOR C_ORANGE
+						PRINTFORM %"Uni ",4%
+					ELSEIF RESULT == 펜듈럼
+						SETCOLOR C_MAGIC_G
+						PRINTFORM %"Pend",4%
+					ELSEIF RESULT == クロスギア
+						SETCOLOR C_PSY_RED
+						PRINTFORM %"Xrs",4%
+					ENDIF
+					RESETCOLOR
+					PRINTFORM /
+				ENDIF
+				CALL CARD_SETCOLOR(대상者,"필드",설정先)
+				TRYCALLFORM CARD_{GETVAR(@"%대상者%_필드:설정先")}, "종류"	
+				IF RESULT == 1
+					PRINTFORM %"효과",4%
+				ELSEIF RESULT == 2 || RESULT == 31
+					PRINTFORM %"통상",4%
+				ELSEIF RESULT == 의식
+					PRINTFORM %"의식",4%
+				ELSEIF RESULT == 융합
+					PRINTFORM %"융합",4%
+				ELSEIF RESULT == 싱크로
+					PRINTFORM %"싱",4%
+				ELSEIF RESULT == 엑시즈
+					PRINTFORM %"XYZ ",4%
+				ELSEIF RESULT == 링크
+					PRINTFORM %"LINK",4%
+				ELSEIF RESULT == 초차원
+					PRINTFORM %"PSY",4%
+				ELSEIF INRANGE(RESULT,20,29)
+					PRINTFORM %"마법",4%
+				ELSEIF RESULT >= 30
+					PRINTFORM %"함정",4%
+				ELSEIF RESULT == 0
+					PRINTFORM %"　",4%
+				ENDIF
+				RESETCOLOR
+			ELSEIF カウンタB == 4
+				IF GETVAR(@"%대상者%_MZ_Ｔ:설정先") >= 1
+					PRINTFORM 　튜너
+				ELSE
+					PRINTFORM 　　　　　　
+				ENDIF
+				VARSET RESULT
+				TRYCALLFORM CARD_{GETVAR(@"%대상者%_필드:설정先")}, "トークン"
+				IF RESULT >= 1
+					PRINTFORM 　　 ToK
+				ELSE
+					PRINTFORM 　　　　
+				ENDIF
+				PRINTFORM 　　
+
+			ELSEIF カウンタB == 5
+				IF GETVAR(@"%대상者%_MZ_接可:설정先") >= 1 && GETVAR(@"%대상者%_MZ_性:설정先") == 牝性
+					SETCOLOR C_PINK
+					PRINTFORM 　　　 ❤접촉가능❤ 　　　
+				ELSEIF GETVAR(@"%대상者%_MZ_無効:설정先") >= 1
+					SETCOLOR C_CREAM
+					PRINTFORM 　　　【효과무효】　　　
+				ELSEIF GETVAR(@"%대상者%_MZ_不材:설정先") >= 1
+					SETCOLOR C_CREAM
+					PRINTFORM 　　　【소재불가능】　　　
+				ELSEIF GETVAR(@"%대상者%_MZ_戦狂:설정先") >= 1
+					SETCOLOR C_RED
+					PRINTFORM 　　　【전투광화】　　　
+
+
+				ELSE
+					PRINTFORM 　　　　　　　　　　　　
+				ENDIF
+			ELSEIF カウンタB == 6
+				IF GETVAR(@"%대상者%_MZ_表:설정先") == 1
+					SETCOLOR C_RED
+					PRINTFORM 공격표시
+					CALL CARD_ATK_CHECK(대상者,설정先)
+					IF RESULT == 0
+						PRINTFORM (공격가능)
+						PRINTFORM ：{GETVAR(@"%대상者%_MZ_戦:설정先") + GETVAR(@"%대상者%_MZ_追戦:설정先"),2}회
+						RESETCOLOR
+					ELSE
+						PRINTFORM 　　　　　　　
+					ENDIF
+				ELSEIF GETVAR(@"%대상者%_MZ_表:설정先") == 2
+					SETCOLOR C_AQUA
+					PRINTFORM 　수비표시　　　　　　　
+				ELSEIF GETVAR(@"%대상者%_MZ_表:설정先") == 3
+					PRINTFORM 　뒷면수비표시　　　　　
+				ENDIF
+			ELSEIF カウンタB == 7
+
+
+				IF GETVAR(@"%대상者%_MZ_Ｘ:설정先") != -1 
+					PRINTFORM Ｘ소재:{(GETVAR(@"%대상者%_MZ_Ｘ:설정先") + 1),5,LEFT}　　　　　　
+				ELSE
+					PRINTFORM 　　　　　　　　　　　　
+				ENDIF	
+
+			ELSEIF カウンタB == 8
+				PRINTFORM 【
+				TRYCALLFORM CARD_{GETVAR(@"%대상者%_필드:설정先")}, "攻撃力"
+				SIF GETVAR(@"%대상者%_MZ_攻:설정先") > RESULT
+					SETCOLOR C_GREEN
+				SIF GETVAR(@"%대상者%_MZ_攻:설정先") < RESULT
+					SETCOLOR C_RED
+				PRINTFORM {(GETVAR(@"%대상者%_MZ_攻:설정先")),9,RIGHT}
+				RESETCOLOR
+				PRINTFORM ／
+				TRYCALLFORM CARD_{GETVAR(@"%대상者%_필드:설정先")}, "守備力"
+				SIF GETVAR(@"%대상者%_MZ_守:설정先") > RESULT
+					SETCOLOR C_GREEN
+				SIF GETVAR(@"%대상者%_MZ_守:설정先") < RESULT
+					SETCOLOR C_RED
+				PRINTFORM {(GETVAR(@"%대상者%_MZ_守:설정先")),9,RIGHT}】
+				RESETCOLOR
+			ELSEIF カウンタB == 9
+				SIF GETVAR(@"%대상者%_MZ_接可:설정先") >= 1 && GETVAR(@"%대상者%_MZ_性:설정先") == 牝性
+					SETCOLOR C_PINK
+
+				TRYCALLFORM CARDCAN_{GETVAR(@"%대상者%_MZ_ID:설정先")}(대상者,필드起動,"필드",설정先)
+				SIF RESULT == 1 && 대상者 == "자신"
+					SETCOLOR C_G_YELLOW
+
+				SETCOLOR 설정色２
+				PRINTFORM └────────────┘
+				RESETCOLOR
+			ENDIF
+
+			IF !GROUPMATCH(カウンタB,0,9)
+				SIF GETVAR(@"%대상者%_MZ_接可:설정先") >= 1 && GETVAR(@"%대상者%_MZ_性:설정先") == 牝性
+					SETCOLOR C_PINK
+
+				TRYCALLFORM CARDCAN_{GETVAR(@"%대상者%_MZ_ID:설정先")}(대상者,필드起動,"필드",설정先)
+				SIF RESULT == 1 && 대상者 == "자신"
+					SETCOLOR C_G_YELLOW
+				SIF GROUPMATCH(カウンタB,1,2,3,4)
+					SETCOLOR 설정色
+				SIF GROUPMATCH(カウンタB,5,6,7,8)
+					SETCOLOR 설정色２
+				PRINTFORM ｜
+				RESETCOLOR
+			ENDIF
+		ENDIF
+		PRINT  
+	NEXT
+	PRINTFORM 
+	RESETCOLOR
+	PRINTL
+NEXT
+

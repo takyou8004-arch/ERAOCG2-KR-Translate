@@ -1,0 +1,169 @@
+@CARDNAME_39752,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 번식하는 분열 슬라임
+	CASE "略称"
+		RESULTS = 분열 슬라임
+	CASE "カテゴリ"
+		RESULTS:0 = 슬라임
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39752(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 800
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39752(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.。
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①：자신 메인 페이즈에 발동할 수 있다。
+PRINTL 자신 덱 / 묘지에서 레벨 4 이하의 "슬라임」 몬스터 1장을 특수 소환한다。
+PRINTL 그 후 , 자신은 800 데미지를 받는다。
+CALL CARD_ABLE(2,戦破壊→묘지)
+PRINTL ②：이 카드가 필드에서 묘지로 보내졌을 경우에 발동할 수 있다。
+PRINTL 상대의 덱 맨 위의 카드를 확인해. 그 카드가 여성 몬스터일 경우 상대의 마법 & 함정 존에 앞면 표시로 두고 「묘상」 카테고리를 추가한다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39752(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39752)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	;발동済みかチェック
+	SIF 발동済_1(듀얼리스트,39752)
+		RETURN 0
+	;コントロ-ラ-のターンかチェック
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;メインフェイズかチェック
+	SIF メインフェイズ != 1
+		RETURN 0
+	;특수 소환할 수 없다かチェック
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 800
+		RETURN 0
+	;특수소환できるかチェック
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 슬라임
+	CALL 효과条件レベル_ADV(4, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	;それ以外ならOK
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	;발동済みかチェック
+	SIF 발동済_2(듀얼리스트,39752)
+		RETURN 0
+	SIF 마함数(対面者) >= 5
+		RETURN 0
+	;それ以外ならOK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39752(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 合計攻撃力
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 이동カード名
+#DIM DYNAMIC 캐릭터番号
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39752,1)
+	IF RESULT == 0
+		;덱、묘지에서 레벨４以下슬라임を소환
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 슬라임
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			;フレ-バ-
+			PRINTFORML 슬라임은 자신의 몸을 깍아 다른 슬라임으로 분열하였다…！
+			;자신にダメージ
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",800)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39752,2)
+	IF RESULT == 0
+		TRYCALLFORM CARD_UI(GETVAR(@"%対面者%_덱:0"))
+		WAIT
+		TRYCALLFORM CARD_{GETVAR(@"%対面者%_덱:0")},"성별"
+		IF RESULT == 牝性
+			조교대상 = GETVAR(@"%対面者%_덱:0")
+			CALL FULLRESET
+			효과추가カテ = 묘상
+			CALL CARD_ADD(対面者,"덱","마함",0,"表側표시")
+			CALL CARD_EROTICS(조교대상)
+			IF RESULT != -1
+				조교대상 = RESULT
+				SETCOLOR C_PINK
+				PRINTFORML
+				PRINTFORMW %CALLNAME:조교대상%은 슬라임의 기습을 받아 전신 슬라임 절임으로 묘상이 되어 버렸다…！
+				PRINTFORML
+				RESETCOLOR
+				CALL EROTIC_MOVE("묘상捕縛",조교대상, -1, 300)
+			ENDIF
+		ELSE
+		ENDIF
+	ENDIF
+ENDIF

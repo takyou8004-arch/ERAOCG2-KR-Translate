@@ -1,0 +1,130 @@
+﻿@CARDNAME_11110,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스케반 초 가가가 코트
+	CASE "略称"
+RESULTS = 스케반 GC
+	CASE "カテゴリ"
+RESULTS:0 = 가가가
+RESULTS:1 = 오노마토
+ENDSELECT
+
+
+@CARD_11110(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족 
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_11110(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 "가가가가걸"로도 취급한다.
+CALLFORM CARD_ABLE(0,효과소환)
+PRINTL ①: 상대 필드에 몬스터가 존재할 경우,
+PRINTL 이 카드는 레벨 3 몬스터로서 소환할 수 있다.
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ②: 이 카드가 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 자신 묘지의 "오노마토" 몬스터 1장을 고르고 특수 소환한다.
+CALLFORM CARD_ABLE(0,X素材時효과)
+PRINTL ③: 이 카드를 엑시즈 소재로 사용했을 경우, 이하의 효과를 적용할 수 있다.
+PRINTL ●자신은 덱에서 1장 드로우한다.
+
+
+
+@CARDCAN_11110(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,11110)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 오노마토
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == X素材時효과
+	RETURN 1
+ELSEIF 종류 == 효과소환
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_11110(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,11110)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 오노마토
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+	ENDIF
+ELSEIF 종류 == X素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,11110)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ELSEIF 종류 == 효과소환
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",現필드(듀얼리스트),"一星",3,1)
+	RETURN 1
+ENDIF
+

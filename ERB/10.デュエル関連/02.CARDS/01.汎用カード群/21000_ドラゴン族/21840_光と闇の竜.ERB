@@ -1,0 +1,121 @@
+﻿@CARDNAME_21840,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 빛과 어둠의 용
+	CASE "略称"
+RESULTS = 빛과 어둠의 룡
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_21840(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RESULT:1 = 어둠속성
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2400
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21840(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 특수 소환할 수 없다.
+PRINTL 이 카드의 속성은 '어둠'으로도 취급한다.
+CALLFORM CARD_ABLE(0,발동強制誘発)
+PRINTL ①: 카드 효과가 발동했을 때,
+PRINTL 이 카드의 공격력 / 수비력을 500 내리고, 그 발동을 무효로 한다 (이 효과는 체인에 타지 않는다).
+CALLFORM CARD_ABLE(0,破壊→묘지,戦闘→묘지)
+PRINTL ②: 이 카드가 파괴되어 묘지로 보내졌을 경우, 자신 묘지의 몬스터 1장을 대상으로 하여 발동한다.
+PRINTL 자신 필드의 카드를 전부 파괴한다. 대상 몬스터를 특수 소환한다.
+
+@CARDCAN_21840(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21840)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_攻:場所") < 500
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_守:場所") < 500
+		RETURN 0
+	CALL FULLRESET
+	효과条件固名前 = 빛과 어둠의 용
+	CALL CARD_CHECK_START_DATA_2(듀얼리스트,2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21840(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동強制誘発
+	CALL FULLRESET
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",-500)
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",-500)
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効2",場所,"無効")
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21840)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"필드",カウンタ,破壊行き)
+		NEXT
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_마함:{カウンタ}") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"마함",カウンタ,破壊行き)
+		NEXT
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

@@ -1,0 +1,141 @@
+﻿@CARDNAME_27154,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 명계의 황혼－카스
+	CASE "略称"
+RESULTS = 명계 카스
+	CASE "カテゴリ"
+RESULTS:0 = 명계
+ENDSELECT
+
+
+@CARD_27154(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 400
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_27154(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,묘지起動)
+PRINTL ①: 이 카드가 묘지에 존재할 경우, 자신 필드의 몬스터 1장을 릴리스하고 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+PRINTL 그 후, 상대는 자신의 묘지에서 몬스터 1장을 고르고 효과를 무효로 하여 특수 소환할 수 있다.
+CALL CARD_ABLE(2,특수소환時)
+PRINTL ②: 이 카드가 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지에서 레벨 4 이하의 「명계」 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터는, 필드에서 벗어났을 경우에 제외된다.
+
+@CARDCAN_27154(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,27154)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,27154)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) < 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,27154,"묘지",1)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,27154)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 명계
+	CALLFORM 효과条件レベル_ADV(4,"以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_27154(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27154,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+효과条件名前 = 명계의 황혼－카스
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과추가종류 = 効追無効
+				효과条件任意 = 1
+				CALL CARD_SP_SUMMON_ADV(対面者,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27154,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 명계
+		CALLFORM 효과条件レベル_ADV(4,"以下")
+		효과추가종류 = 効追除処
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

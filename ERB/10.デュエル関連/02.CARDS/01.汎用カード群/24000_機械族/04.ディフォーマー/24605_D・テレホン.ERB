@@ -1,0 +1,129 @@
+﻿@CARDNAME_24605,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = D 텔레폰
+	CASE "略称"
+RESULTS = D 텔레폰
+	CASE "カテゴリ"
+RESULTS:0 = 디포머
+RESULTS:1 = 다이스
+ENDSELECT
+
+
+@CARD_24605(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 100
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24605(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(10,필드起動)
+
+PRINTL 이 카드의 ①의 효과는 1턴에 1번밖에 발동할 수 없다.
+PRINTL ①: 이 카드는 표시 형식에 따라 이하의 효과를 얻는다.
+PRINTL ● 공격 표시: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 주사위를 1회 굴려, 나온 눈의 수× 100 LP 회복한다.
+PRINTL 그 후, 자신의 묘지에서 레벨 3 이하의 "디포머" 몬스터 2장까지 특수 소환할 수 있다.
+PRINTL ● 수비 표시: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 주사위를 1회 굴려, 나온 눈의 수 이하의 레벨의 "디포머" 몬스터 1장을 덱에서 묘지로 보낸다.
+
+
+@CARDCAN_24605(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24605)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,24605)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24605(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC サイコロ結果
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24605,1)
+	IF RESULT == 0
+		PRINTFORMW ダイヤル～～～オン！
+		CALL DICE_ROLL(듀얼리스트,1)
+		サイコロ結果 = RESULT
+		PRINTFORMW 出た目は……{サイコロ結果}だ！
+		;攻撃
+		IF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 1
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",サイコロ結果*100)
+			;その後の処理
+PRINTL 몬스터를 특수 소환하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+			IF RESULT == はい
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 디포머
+				효과条件複数 = 98
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		;守備
+		ELSEIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 2
+			CALL FULLRESET
+			효과条件カテゴリ = 디포머
+			CALL 효과条件レベル_ADV(サイコロ結果, "以下")
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

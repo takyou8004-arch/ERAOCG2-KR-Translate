@@ -1,0 +1,127 @@
+﻿@CARDNAME_1634,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 호접 자매
+	CASE "略称"
+RESULTS = 호접 자매
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1634(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 300
+	CASE "守備力"
+		RETURN 300
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1634(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①: 자신 필드의 몬스터의 레벨의 합계가 상대 필드의 몬스터의 레벨의 합계 이하일 경우,
+PRINTL 이 카드를 릴리스하고 발동할 수 있다.
+PRINTL 덱에서 레벨 7 이상의 곤충족 / 식물족 몬스터 1장을 패에 추가한다.
+;PRINTL こ의 효과의 발동後、자신がこ의 효과で손패に加えたモンスターまたは
+;PRINTL その同名몬스터를 소환 특수소환しなかった場合、
+;PRINTL 엔드 페이즈에 자신은 ２７００ダメージを受ける。
+
+@CARDCAN_1634(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件A
+#DIM DYNAMIC 条件B
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1634)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,1634)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = レベル持ち
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	条件A = RESULT:2
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件종류 = レベル持ち
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	条件B = RESULT:2
+	SIF 条件A > 条件B
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1634(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1634,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종류 = モン全般
+		CALLFORM 효과条件レベル_ADV(7,"以上")
+		효과条件종족:0 = 곤충족
+		효과条件종족:1 = 식물족
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

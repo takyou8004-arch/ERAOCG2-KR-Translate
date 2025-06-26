@@ -1,0 +1,152 @@
+﻿@CARDNAME_23212,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성기사 볼스
+	CASE "略称"
+RESULTS = 볼스
+	CASE "カテゴリ"
+RESULTS:0 = 성기사
+ENDSELECT
+
+
+@CARD_23212(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 900
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_23212(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①：자신 필드에 어둠 속성의 「성기사」 몬스터가 존재할 경우,
+PRINTL 이 카드는 패 / 묘지에서 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：이 카드가 「성검」 카드를 장착하고 있을 경우에 발동할 수 있다.
+PRINTL 덱에서 「성검」 카드 3장을 묘지로 보내고, 그 중에서 랜덤하게 1장을 골라 패에 넣는다.
+
+
+
+@CARDSUMMON_AA_23212
+
+
+@CARDCAN_23212(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23212)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,23212)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,23212,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 어둠속성
+	효과条件カテゴリ = 성기사
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,23212)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 성검
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 성검
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23212(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード,5
+#DIM DYNAMIC 選択カード_ID,5
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 当選番号
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23212,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン, 場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23212,2)
+	IF RESULT == 0
+		FOR カウンタ,0,3
+			CALL FULLRESET
+			효과条件カテゴリ = 성검
+			CALL CARD_ADD_GY_BASIC(듀얼리스트, "덱",ゾーン,場所)
+			選択カード:カウンタ = RESULT
+			SIF 選択カード:カウンタ != 9999
+				選択カード_ID:カウンタ = RESULT:1
+		NEXT
+		IF 選択カード:0 != 9999 && 選択カード:1 != 9999 && 選択カード:2 != 9999
+			当選番号 = RAND:3
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") == -1
+					CONTINUE
+				IF GETVAR(@"%듀얼리스트%_묘지:カウンタ") == 選択カード_ID:当選番号
+					CALL CARD_ADD(듀얼리스트,"묘지","손패",カウンタ)
+					BREAK
+				ENDIF
+			NEXT
+		ENDIF
+	ENDIF
+ENDIF

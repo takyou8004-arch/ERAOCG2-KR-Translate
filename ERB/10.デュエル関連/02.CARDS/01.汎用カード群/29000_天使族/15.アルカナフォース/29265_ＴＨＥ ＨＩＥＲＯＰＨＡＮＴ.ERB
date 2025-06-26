@@ -1,0 +1,160 @@
+﻿@CARDNAME_29265,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아르카나 포스 V─더 하이로펀트
+	CASE "略称"
+RESULTS = V─법황
+	CASE "カテゴリ"
+RESULTS:0 = 아르카나 포스
+ENDSELECT
+
+
+@CARD_29265(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250520
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29265(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 이 카드를 패에서 버리고 발동할 수 있다.
+PRINTL 이 턴, 자신 몬스터의 소환 / 특수 소환 성공 시에 상대는 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,소환時強制,특수소환時強制)
+PRINTL ②: 이 카드가 소환 / 특수 소환했을 때에 발동한다.
+PRINTL 이 카드의 표시 형식에 따라 이하의 효과를 적용한다.
+PRINTL ● 정위치: 같은 이름의 몬스터가 자신 필드 / 묘지에 존재하지 않는,
+PRINTL 　　　　　레벨 4 이하의 "아르카나 포스" 몬스터 1장을 덱에서 특수 소환한다.
+PRINTL ● 역위치: 덱에서 "아르카나 포스" 몬스터 1장을 상대 필드에 특수 소환한다.
+
+
+@CARDCAN_29265(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 選択カード名前
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29265)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,29265)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환時強制 || 종류 == 특수소환時強制
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_29265(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名前
+#DIMS DYNAMIC 条件カード名前,8
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29265,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL SET_PLAYER_INFO(듀얼리스트,"특수阻害中止",1)
+	ENDIF
+
+ELSEIF 종류 == 소환時強制 || 종류 == 특수소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29265)
+	IF RESULT == 0
+		CALL ARCANA_SET(듀얼리스트,ゾーン,場所,29265)
+
+		;正위치
+		IF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") == 1
+			FOR カウンタ,0,8
+				;さきにここで仮置き
+				条件カード名前:カウンタ = 仮置き
+
+				TRYCALLFORM CARDNAME_{カウンタ + 29260},"名前"
+				SIF RESULTS == ""
+					CONTINUE
+				選択カード名前 = %RESULTS%
+
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과範囲묘지 = 1
+효과条件名前 = %選択カード名前%
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				SIF RESULT == 1
+					CONTINUE
+
+				CALL FULLRESET
+				효과範囲덱 = 1
+효과条件名前 = %選択カード名前%
+				효과条件소환可 = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				SIF RESULT != 1
+					CONTINUE
+				;ここで最終결정
+				条件カード名前:カウンタ = %選択カード名前%
+			NEXT
+
+			CALL FULLRESET
+			효과範囲덱 = 1
+			FOR カウンタ,0,8
+				효과条件名前:カウンタ = %条件カード名前:カウンタ%
+			NEXT
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		;逆위치
+		ELSEIF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") == 2
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 아르카나 포스
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"",,1)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

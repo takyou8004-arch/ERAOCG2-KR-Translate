@@ -1,0 +1,112 @@
+﻿@CARDNAME_2184,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 공아단의 고고 사지타
+	CASE "略称"
+RESULTS = 고고 사지타
+	CASE "カテゴリ"
+RESULTS:0 = 공아단
+ENDSELECT
+
+
+@CARD_2184(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2184(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 한 번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,특수소환時)
+PRINTL ①: 이 카드가 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 자신 필드의 「공아단」 몬스터의 종류 × 500 데미지를 상대에게 입힌다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 상대는 이 카드 이외의 자신 필드의 「공아단」 몬스터를 효과 대상으로 지정할 수 없다.
+
+@CARDCAN_2184(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2184)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,2184)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 공아단
+	효과条件固名前 = 공아단의 고고 사지타
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2184(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2184,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 공아단
+		효과条件固名前起動 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		ダメージ修正 = RESULT * 500
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ修正,1)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 공아단
+	효과条件他所 = 1
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+ENDIF

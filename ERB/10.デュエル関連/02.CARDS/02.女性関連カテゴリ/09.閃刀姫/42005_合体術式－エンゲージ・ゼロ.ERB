@@ -1,0 +1,169 @@
+﻿@CARDNAME_42005,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 합체술식－인게이지 제로
+	CASE "略称"
+		RESULTS = 합체술식 En-0
+	CASE "カテゴリ"
+		RESULTS:0 = 섬도희
+		RESULTS:1 = 섬도
+ENDSELECT
+
+
+@CARD_42005(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1000
+	CASE "특수制限"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		SELECTCASE RAND:2
+			CASE 0
+				RESULT:1 = 2001
+				RETURN 2000
+			CASE 1
+				RESULT:1 = 2000
+				RETURN 2001
+		ENDSELECT
+ENDSELECT
+
+
+RETURN 0
+
+
+@CARD_EXPLANATION_42005(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 빛 / 어둠 속성 몬스터 2장
+PRINTL 이 카드명은 룰 상 「섬도희」 카드로도 취급한다.
+PRINTL 자신은 「합체술식 - 인게이지 제로」를 1턴에 1번밖에 특수 소환할 수 없고, 이 카드는 소재로 할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：이 카드가 특수 소환되었을 경우, 필드의 공격력 2500 이상 몬스터를 1장 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터의 효과를 턴 종료시까지 무효로 한다.
+CALLFORM CARD_ABLE(2,攻撃時誘発)
+PRINTL ②：자신의 묘지에 "섬도희－레이」 및 「섬도희－로제」가 존재할 경우, 이 카드의 공격 선언시에 발동할 수 있다.
+PRINTL 상대 필드의 몬스터를 전부 파괴한다.
+
+
+
+
+@CARDSUMMON_42005(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件속성:0 = 빛속성
+素材条件속성:1 = 어둠속성
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,42005) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_42005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,42005)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件以攻撃力 = 2500
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 섬도희－레이
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件달성 ++
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 섬도희－로제
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件달성 ++
+	SIF 条件달성 != 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_42005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42005)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件以攻撃力 = 2500
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"無効")
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42005)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"不材")
+ENDIF
+
+

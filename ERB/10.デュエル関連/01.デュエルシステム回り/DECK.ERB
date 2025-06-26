@@ -1,0 +1,396 @@
+﻿;-------------------------
+; 덱편집
+;-------------------------
+
+; 덱편집の入り口
+@EDIT_DECK_MAIN
+#DIM 덱_ID
+#DIM 덱_所有덱数
+
+;変数初期化
+덱_所有덱数 = 0
+
+; ヘッダ(UI)
+PRINTL
+CUSTOMDRAWLINE —
+PRINTL 　덱편집
+CUSTOMDRAWLINE —
+
+FOR 덱_ID, 0, 덱番号
+	;덱の所有者が자신ではないか덱自体が存在しなかったら弾く
+	SIF 덱所有者:덱_ID != MASTER || 덱存在確認:덱_ID == 0
+		CONTINUE
+	덱_所有덱数 ++
+	;行頭の余白調整
+	PRINT 　
+	;덱편집ボタンとして덱タイトルを표시
+	;덱에 名前がなかったら適当な名前を표시
+	STRLENFORM %덱名称:덱_ID%
+	
+	SIF 使用덱설정 == 덱_ID
+		SETCOLOR C_GREEN
+	IF RESULT > 0
+		PRINTBUTTON @"【%덱名称:덱_ID%】", 덱_ID
+	ELSE
+		PRINTBUTTON @"덱{덱_所有덱数}", 덱_ID
+	ENDIF
+	IF 使用덱설정 == 덱_ID
+		PRINTFORM 【선택중】
+		RESETCOLOR
+	ENDIF
+	PRINTL
+	; 자신이 持てる最大덱数を超えていたら終了(必要なら)
+	SIF 덱_所有덱数 >= 最大所有덱数
+		BREAK
+NEXT
+; もし자신이 最大数덱を持っていなかったら、덱편집ボタンを표시
+IF 덱_所有덱数 < 最大所有덱数
+	PRINTL
+	CUSTOMDRAWLINE —
+	;行頭の余白調整
+	PRINT 　
+	PRINTBUTTON "【신규 덱편집】", 998
+	PRINTL
+ENDIF
+CUSTOMDRAWLINE —
+PRINT 　
+PRINTBUTTON "【돌아간다】", 999
+PRINTL
+PRINTL
+
+$INPUT_LOOP
+
+INPUT 
+; 지정された덱が자신의 ものとして存在していたら編集
+IF RESULT >= 0 && RESULT < 덱番号 && 덱存在確認:RESULT == 1 && 덱所有者:RESULT == MASTER
+	CALL EDIT_DECK(RESULT)
+	RESTART
+; 자신의 所持덱が最大덱数未満だった場合は新規덱편집を추가
+ELSEIF RESULT == 998 && 덱_所有덱数 < 덱番号
+	; 空の덱を検索し、一番若いIDを취득。それを新たな자신의 덱として登録し編集開始
+	FOR 덱_ID, 0, 덱番号
+		SIF 덱存在確認:덱_ID == 1
+			CONTINUE
+		덱存在確認:덱_ID = 1
+		덱所有者:덱_ID = MASTER
+		CALL EDIT_DECK(덱_ID)
+		BREAK
+	NEXT
+	SIF 덱_ID >= 덱番号
+		PRINTFORMW 열려있는 덱 ID를 찾을수 없었습니다。
+	RESTART
+ELSEIF RESULT == 997
+	RETURN
+ELSEIF RESULT == 999
+	RETURN
+ENDIF
+; 이상値が入力されたら入力された行を削除してやり直し
+CLEARLINE 1
+GOTO INPUT_LOOP
+
+; 덱편집
+@EDIT_DECK(덱_ID)
+#DIM 덱_ID
+#DIM 덱_캐릭터クタ
+#DIM 덱_カウンタ
+#DIM 덱_추가済み
+#DIM 덱_入替先
+#DIM 덱_所有덱数
+;登録中の캐릭터のボタン押したとき+1000される
+#DIM CONST 덱_ボタン用 = 1000
+
+; 変数初期化
+덱_추가済み = 0
+덱_所有덱数 = 0
+
+SIF 덱初編集:덱_ID == 0
+CALL EDIT_DECK_RESET(덱_ID)
+
+FOR 덱_カウンタ, 0, 덱番号
+	;덱の所有者が자신ではないか덱自体が存在しなかったら弾く
+	SIF 덱所有者:덱_カウンタ != MASTER || 덱存在確認:덱_カウンタ == 0
+		CONTINUE
+	덱_所有덱数 ++
+NEXT
+
+; ヘッダ(UI)
+PRINTL
+CUSTOMDRAWLINE —
+PRINT 　덱편집 - 
+STRLENFORM %덱名称:덱_ID%
+SIF RESULT == 0
+	덱名称:덱_ID = 덱{덱_ID + 1}
+	PRINTBUTTON @"[%덱名称:덱_ID%]", 998
+PRINTL
+CUSTOMDRAWLINE —
+PRINTL
+
+; 現在登録中のメンバーを표시
+PRINTL ■ 현재 덱에 등록중인 멤버
+FOR 덱_カウンタ, 0, 덱内登録캐릭터_ID
+	; もしあなたが登録されていたら未登録と판정し弾く
+	PRINT 　
+	IF 덱内캐릭터:덱_ID:덱_カウンタ == 0
+		PRINTL ---
+	ELSE
+		PRINTBUTTON @"[{덱内캐릭터:덱_ID:덱_カウンタ,3}] %CALLNAME:(덱内캐릭터:덱_ID:덱_カウンタ)%", 덱内캐릭터:덱_ID:덱_カウンタ + 덱_ボタン用
+		PRINTL
+	ENDIF
+NEXT
+PRINTL 
+
+;연모に落ちている(登録可能な)캐릭터を표시
+PRINTL ■ 등록 가능한 멤버
+FOR 덱_캐릭터クタ, 1,CHARANUM
+	SIF TALENT:덱_캐릭터クタ:연모 == 0
+		CONTINUE
+	; すでに登録済みなら弾く
+	FOR 덱_カウンタ, 0, 덱内登録캐릭터_ID
+		IF 덱内캐릭터:덱_ID:덱_カウンタ == 덱_캐릭터クタ
+			덱_추가済み = 1
+			BREAK
+		ENDIF
+	NEXT
+	IF 덱_추가済み
+		덱_추가済み = 0
+		CONTINUE
+	ENDIF
+	PRINTBUTTON @"[{덱_캐릭터クタ,3}] %CALLNAME:덱_캐릭터クタ%", 덱_캐릭터クタ
+	PRINTL
+NEXT
+
+; FOOTER(UI)
+PRINTL
+SETCOLOR 0X999999
+CUSTOMDRAWLINE —
+RESETCOLOR
+PRINT 　
+PRINTBUTTON "[999] 완료", 999
+PRINTFORM %LOCALS,40%
+PRINTBUTTON "[997]【덱 삭제】", 997
+PRINTL
+PRINT 　
+PRINTBUTTON "[996]【카드 덱편집】", 996
+PRINTFORM %LOCALS,25%
+SIF 使用덱설정 == 덱_ID
+	SETCOLOR C_GREEN
+PRINTBUTTON "[995]【사용 덱으로 설정】", 995
+RESETCOLOR
+SETCOLOR C_L_GRAY
+PRINTL
+CUSTOMDRAWLINE —
+RESETCOLOR
+
+
+$INPUT_LOOP
+
+INPUT
+;덱에 登録可能な캐릭터だった場合
+IF RESULT > 0 && RESULT < CHARANUM && TALENT:RESULT:연모
+	; もし덱에 登録可能な人数を超えていた場合
+	; 本当はここまで長い処理は別の関数として抜き出すべきだが、引数が多くて逆にややこしくなりそうなので今回は見送り
+	덱_추가済み = 0
+	FOR 덱_カウンタ, 0, 덱内登録캐릭터_ID
+		IF 덱内캐릭터:덱_ID:덱_カウンタ
+			덱_추가済み ++
+			BREAK
+		ENDIF
+	NEXT
+	IF 덱_추가済み >= 덱内登録캐릭터_ID
+		PRINTL 
+		PRINTFORML 　덱에 등록가능한 멤버 상한의{덱内登録캐릭터_ID}명을 넘었습니다
+		PRINTL 　어떻게 하시겠습니까？
+		FOR 덱_カウンタ, 0, 덱内登録캐릭터_ID
+			SIF 덱内캐릭터:덱_ID:덱_カウンタ == 0
+				CONTINUE
+			PRINT 　
+			PRINTBUTTON @" %CALLNAME:(덱内캐릭터:덱_ID:덱_カウンタ)%과 바꿔넣는다", 덱_カウンタ
+			PRINTL
+		NEXT
+		PRINT 　
+		PRINTBUTTON "취소", 999
+		PRINTL
+		;RESULTが上書きされるので退避
+		덱_入替先 = RESULT
+		$INPUT_LOOP2
+		INPUT
+		IF RESULT >= 0 && RESULT < 덱内登録캐릭터_ID && 덱内캐릭터:덱_ID:덱_カウンタ
+			PRINTFORMW %CALLNAME:(덱内캐릭터:덱_ID:덱_カウンタ)%과 %CALLNAME:덱_入替先%를 바꿔넣었습니다
+		ELSEIF RESULT == 999
+			RESTART
+		ENDIF
+		; 이상値が入力された場合は入力された行を消して再入力
+		CLEARLINE 1
+		GOTO INPUT_LOOP2
+
+	;問題なければ登録
+	ELSE
+		FOR 덱_カウンタ, 0, 덱内登録캐릭터_ID
+			SIF 덱内캐릭터:덱_ID:덱_カウンタ > 0
+				CONTINUE
+			덱内캐릭터:덱_ID:덱_カウンタ = RESULT
+			BREAK
+		NEXT
+		RESTART
+	ENDIF
+
+; 名称변경
+ELSEIF RESULT == 998
+	$INPUT_LOOP3
+	PRINTL 　새로운 덱의 이름을 입력해주세요
+	INPUTS
+	STRLENFORM %RESULTS%
+	IF RESULT > 0
+		PRINTFORML 　새로운 덱의 이름은 [%RESULTS%] 으로 괜찮습니까？
+		PRINTBUTTON "[0] 예", 0
+		PRINTL
+		PRINTBUTTON "[1] 아니오", 1
+		PRINTL
+		PRINTBUTTON "[2] 이름변경을 취소", 2
+		PRINTL
+		INPUT
+		IF RESULT == 0
+			덱名称:덱_ID = %RESULTS%
+			RESTART
+		ELSEIF RESULT == 2
+			RESTART
+		ENDIF
+		GOTO INPUT_LOOP3
+	ENDIF
+
+; 登録削除
+ELSEIF RESULT > 덱_ボタン用 && RESULT < CHARANUM + 덱_ボタン用
+	FOR 덱_カウンタ, 0, 덱内登録캐릭터_ID
+		SIF 덱内캐릭터:덱_ID:덱_カウンタ != RESULT - 덱_ボタン用
+			CONTINUE
+		덱内캐릭터:덱_ID:덱_カウンタ = 0
+		BREAK
+	NEXT
+	RESTART
+;使用덱설정
+		ELSEIF RESULT == 995 && 使用덱설정 != 덱_ID
+			使用덱설정 = 덱_ID
+			PRINTFORMW 덱을 선택했습니다。
+			RESTART
+		ELSEIF RESULT == 995 && 使用덱설정 == 덱_ID
+			使用덱설정 = 0
+			PRINTFORMW 덱을 뺐습니다。
+			RESTART
+;山札編集
+		ELSEIF RESULT == 996
+			CALL EDIT_DECK_JANKEN(덱_ID)
+			RESTART
+;덱消去
+		ELSEIF RESULT == 997
+		;登録캐릭터リセット
+			FOR 덱_カウンタ, 0, 덱内登録캐릭터_ID
+				덱内캐릭터:덱_ID:덱_カウンタ = 0
+			NEXT
+		;登録カードリセット
+		덱初編集:덱_ID = 0
+		;덱名称リセット
+		덱名称:덱_ID = %덱名称:덱_ID%
+		;存在確認リセット
+		덱存在確認:덱_ID = 0
+	RETURN
+; 돌아간다
+ELSEIF RESULT == 999
+	RETURN
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+
+;グーで勝つと1000ダメージ
+;チョキで勝つと500ダメージ+ドロー
+;パーで勝つと500ダメージ＋EXカウンタ＋1
+
+
+@EDIT_DECK_JANKEN(덱_ID)
+#DIM 덱_ID
+#DIM 덱_カードID
+#DIM 덱_カウンタ
+
+$INPUT_LOOP
+PRINTFORML カード編集
+CUSTOMDRAWLINE —
+PRINTFORM 덱ID「{덱_ID}」
+PRINTFORML 첫편집 플래그「 {덱初編集:덱_ID}」
+
+PRINTFORML 각 카드의 설명
+SETCOLOR C_L_RED
+PRINTFORML 주먹으로 이기면 500+축적데미지
+SETCOLOR C_P_GREEN
+PRINTFORML 가위로 이기면 500데미지+드로우ー
+SETCOLOR C_L_BLUE
+PRINTFORML 보자기로 이기면 500데미지＋EX카운터＋1
+RESETCOLOR
+PRINTL
+CUSTOMDRAWLINE —
+
+FOR 덱_カウンタ,0,덱登録カードID
+	PRINTFORM 　[{덱_カウンタ,2}]
+	IF 덱カード:덱_ID:덱_カウンタ == 0
+		SETCOLOR C_L_RED
+		PRINTFORML 　공격패（주먹）
+		RESETCOLOR
+	ELSEIF 덱カード:덱_ID:덱_カウンタ == 1
+		SETCOLOR C_P_GREEN
+		PRINTFORML 　방해패（가위）
+		RESETCOLOR
+	ELSEIF 덱カード:덱_ID:덱_カウンタ == 2
+		SETCOLOR C_L_BLUE
+		PRINTFORML 　전개패（보자기）
+		RESETCOLOR
+	ENDIF
+NEXT
+
+SETCOLOR 0X999999
+CUSTOMDRAWLINE —
+RESETCOLOR
+PRINT 　
+PRINTBUTTON "[999] 완료", 999
+PRINTFORM %LOCALS,40%
+PRINTBUTTON "[998]【리셋】", 998
+SETCOLOR 0X999999
+PRINTL
+CUSTOMDRAWLINE —
+RESETCOLOR
+
+
+INPUT
+IF RESULT >= 0 && RESULT <=덱登録カードID && 덱カード:덱_ID:RESULT <= 1
+	덱カード:덱_ID:RESULT += 1
+	GOTO INPUT_LOOP
+ELSEIF RESULT >= 0 && RESULT <=덱登録カードID && 덱カード:덱_ID:RESULT == 2
+	덱カード:덱_ID:RESULT = 0
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 998
+	덱初編集:덱_ID = 0
+	CALL EDIT_DECK_RESET(덱_ID)
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 999
+	RETURN
+ELSE 
+	GOTO INPUT_LOOP
+ENDIF
+
+
+@EDIT_DECK_RESET(덱_ID)
+#DIM 덱_ID
+#DIM 덱_カウンタ
+
+FOR 덱_カウンタ,0,덱登録カードID
+	;グー
+	IF 덱_カウンタ <= 4
+		덱カード:덱_ID:덱_カウンタ = 0
+	;チョキ
+	ELSEIF 덱_カウンタ <= 9
+		덱カード:덱_ID:덱_カウンタ = 1
+	;パー
+	ELSEIF 덱_カウンタ <= 14
+		덱カード:덱_ID:덱_カウンタ = 2
+	ENDIF
+NEXT
+덱初編集:덱_ID = 1
+

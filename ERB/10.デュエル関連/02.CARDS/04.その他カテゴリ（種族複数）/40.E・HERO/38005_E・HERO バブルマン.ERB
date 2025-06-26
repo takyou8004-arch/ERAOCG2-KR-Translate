@@ -1,0 +1,120 @@
+﻿@CARDNAME_38005,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = E•HERO 버블맨
+	CASE "略称"
+RESULTS =  버블맨
+	CASE "カテゴリ"
+RESULTS:0 = HERO
+RESULTS:1 = E•HERO
+ENDSELECT
+
+
+@CARD_38005(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_38005(종류)
+#DIM DYNAMIC 종류
+
+
+CALL CARD_ABLE(0,손패起動)
+PRINTL ①：손패가 이 카드 1장뿐일 경우, 이 카드는 패에서 특수 소환할 수 있다.
+CALL CARD_ABLE(0,소환時 ,특수소환時)
+PRINTL ②：이 카드가 소환 / 특수 소환에 성공했을 때 발동할 수 있다.
+PRINTL 자신은 덱에서 1장 드로우한다.
+PRINTL 자신 패 / 필드에 다른 카드가 존재하지 않을 경우, 대신 2장 드로우한다.
+
+@CARDSUMMON_AA_38005
+
+
+@CARDCAN_38005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38005)
+SIF RESULT == 1
+	RETURN 0
+SIF LOCAL == 0
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,38005,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	SIF 손패数(듀얼리스트) >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_38005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38005)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38005)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과範囲손패 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성 = 1
+		IF 条件달성 == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		ELSE
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ENDIF

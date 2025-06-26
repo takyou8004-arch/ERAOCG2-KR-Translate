@@ -1,0 +1,107 @@
+﻿@CARDNAME_62330,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 러브 레터
+	CASE "略称"
+RESULTS = 러브 레터
+	CASE "カテゴリ"
+RESULTS:0 = 러브
+ENDSELECT
+
+
+@CARD_62330(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62330(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ① 효과는 1턴에 한 번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 자신 묘지에 몬스터가 3장 이상 존재하고, 그 공격력의 합계가 0일 경우에 발동할 수 있다.
+PRINTL 자신 묘지의 몬스터(천사족 / 공격력 0) 1장을 자신 필드에 특수 소환한다.
+PRINTL 그 후, 자신 묘지의 '러브 메모리' 1장을 선택하여 패에 추가할 수 있다.
+
+
+@CARDCAN_62330(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,62330)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,62330)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3 || RESULT:3 > 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件攻撃力 = 1
+	효과条件종족 = 천사족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_62330(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62330,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件攻撃力 = 1
+		효과条件종족 = 천사족
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 러브 메모리
+		효과条件任意 = 1
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

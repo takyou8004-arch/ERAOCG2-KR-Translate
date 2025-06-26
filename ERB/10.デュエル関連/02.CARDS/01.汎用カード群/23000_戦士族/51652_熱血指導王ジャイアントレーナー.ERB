@@ -1,0 +1,132 @@
+﻿@CARDNAME_51652,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 열혈 지도왕 자이언트 트레이너
+	CASE "略称"
+RESULTS = 열혈 지도왕
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_51652(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_51652(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 8 몬스터 x 3
+PRINTL 이 카드명의 효과는 1턴에 3번까지 사용할 수 있으며,
+PRINTL 이 효과를 발동하는 턴, 자신은 배틀 페이즈를 실행할 수 없다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 이 카드의 엑시즈 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 자신의 덱 맨 위의 카드를 넘겨, 패에 넣는다.
+PRINTL 넘긴 카드가 몬스터였을 경우, 추가로 상대에게 800 데미지를 준다.
+
+
+@CARDCAN_51652(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51652)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	; 使用後バトルフェイズが行えない制約はMP2に발동不可+BPスキップで対応。
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF メインフェイズ２ == 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所") > 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDSUMMON_51652(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 8
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51652) 
+	RETURN RESULT
+ENDIF
+
+@CARDEFFECT_51652(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+; ①의 효과
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51652,1,X消費1)
+PRINTL 자이언트 트레이너의 열혈 효과, 발동!
+	IF RESULT == 0
+		CALL FULLRESET
+		; X덱の上を1枚めくってモンスターなら손패へ加え800ダメージ。
+		; それ 이외의 場合はドローの処理を行う。
+		; うららが効かなくなっちゃった。
+		효과条件종류 = モン全般
+		효과条件任意 = 1
+		효과条件山切り無し = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,1)
+		IF RESULT == 0
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ELSEIF RESULT == 1
+			; モンスターだったので800ダメージ
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",800,1)
+		ENDIF
+		; 使用後バトルフェイズ不可
+		CALL SET_PLAYER_INFO(듀얼리스트,"バトルスキップ", 1)
+		; １ターンに３回しか使えないのでカウント。
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"T1汎数",1)
+	ENDIF
+ENDIF
+
+

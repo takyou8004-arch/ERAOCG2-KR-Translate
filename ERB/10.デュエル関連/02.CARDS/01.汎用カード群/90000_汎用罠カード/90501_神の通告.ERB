@@ -1,0 +1,126 @@
+﻿@CARDNAME_90501,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신의 통고
+	CASE "略称"
+RESULTS = 신의 통고
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_90501(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "C불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_90501(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드의 효과의 발동에 대하여 상대는 효과를 발동할 수 없다.
+PRINTL ①：1500 LP를 지불하고 이하의 효과를 발동할 수 있다.
+CALLFORM CARD_ABLE(0,발동誘発)
+PRINTL ●상대의 몬스터의 효과가 발동했을 때에 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 파괴한다.
+CALLFORM CARD_ABLE(0,소환誘発)
+PRINTL ●상대가 몬스터를 특수 소환했을 때에 발동할 수 있다.
+PRINTL 그 특수 소환을 무효로 하고, 그 몬스터를 파괴한다.
+
+@CARDCAN_90501(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,90501)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 소환誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF 最終소환決者 == 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 1500
+		RETURN 0
+
+	SIF !GROUPMATCH(最終소환타입,"특수","EX특수")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0	
+
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 1500
+		RETURN 0
+
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+
+
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_90501(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과先
+
+
+IF 종류 == 소환誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,90501)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1500)
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		효과先 = 最終소환場所
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",最終소환場所,"完全묘지")
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,90501)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1500)
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

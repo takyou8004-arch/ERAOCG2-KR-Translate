@@ -1,0 +1,138 @@
+﻿@CARDNAME_56557,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = PSY 프레임 로드 람다
+	CASE "略称"
+RESULTS = PFL 람다
+	CASE "カテゴリ"
+RESULTS:0 = PSY 프레임
+ENDSELECT
+
+
+@CARD_56557(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 牝性
+	CASE "レア度"
+		RETURN SPR
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_56557(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件종류 = トークン以外
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,56557) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_56557(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 토큰 이외의 몬스터 2장
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 자신은 패의 「PSY 프레임」 몬스터의 효과를 자신 필드에 몬스터가 존재할 경우에도 발동할 수 있다.
+PRINTL 이 효과는 무효화되지 않는다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 이 카드가 몬스터 존에 존재하고, 자신 필드의 사이킥족 몬스터가 제외되었을 경우에 발동할 수 있다.
+PRINTL 덱에서 「PSY 프레임」 카드 1장을 패에 추가한다.
+
+@CARDCAN_56557(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,56557)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,56557)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종족 = 사이킥족
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"필드除送")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = PSY 프레임
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_56557(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID 
+#DIM DYNAMIC リピート횟수
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,56557,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = PSY 프레임
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

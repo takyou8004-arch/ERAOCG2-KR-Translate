@@ -1,0 +1,159 @@
+﻿@CARDNAME_50723,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 바렐로드 새비지 드래곤
+	CASE "略称"
+RESULTS = BL새비지
+	CASE "カテゴリ"
+RESULTS:0 = 바렐
+ENDSELECT
+
+
+@CARD_50723(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50723(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50723) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50723(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너＋튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 싱크로 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지에서 링크 몬스터 1장을 골라, 장착 카드로써 이 카드에 장착하고,
+PRINTL 그 링크 마커의 수만큼 이 카드에 바렐 카운터를 놓는다.
+PRINTL 이 카드의 공격력은, 이 카드의 효과로 장착한 몬스터의 공격력의 절반 올린다.
+CALLFORM CARD_ABLE(1,발동誘発)
+PRINTL ②: 상대의 효과가 발동했을 때, 이 카드의 바렐 카운터를 1개 제거하고 발동할 수 있다.
+PRINTL 그 발동을 무효화한다.
+
+
+@CARDCAN_50723(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50723)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 링크
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,50723)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:場所") == 0
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50723(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50723)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 링크
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARD_{選択カード_ID},"レベル"
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"個Ｃ",RESULT)
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,場所,"묘지",選択カード)
+			TRYCALLFORM CARD_{選択カード_ID},"攻撃力"
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",(RESULT / 2))
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50723,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"個Ｃ",-1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+	ENDIF
+ENDIF

@@ -1,0 +1,248 @@
+;-------------------------------------------------
+;조개 벌리기
+;애무계커맨드、レベル2
+;-------------------------------------------------
+@COM8
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 50
+DOWNBASE:기력 += 90
+;처녀、정조観念
+IF TALENT:처녀 == 1
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 500)
+ELSE
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 300)
+ENDIF
+CALL SOURCE_CALC_쾌Ｃ(TARGET, MASTER, 40)
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;奴隷のＶ⇔손가락の汚れが이동
+STAIN:3 |= STAIN:1
+STAIN:1 |= STAIN:3
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;노출증Lv3以上で자위경험加算
+SIF ABL:노출증 >= 3
+	EXP:자위경험 ++
+
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 1
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 1
+ENDIF
+
+RETURN 1
+
+
+@CAN_COM8(ARG)
+#DIM DYNAMIC 素質確認
+#DIM DYNAMIC 판정値
+#DIM DYNAMIC 汚れ値
+#DIM DYNAMIC 実行値
+
+SKIPDISP ARG
+PRINTL 조개 벌리기
+;-------------------------------------------------
+;実行できるかの판정
+;-------------------------------------------------
+
+;すべての命令に共通の要素を考慮
+;(순종が高いと命令に従いやすいなど)
+CALL COM_ORDER
+素質確認 = RESULT:1
+판정値 += RESULT
+;ABL:욕망
+IF ABL:욕망
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:욕망 * 3
+	PRINT 욕망
+	PRINTV 'LV,ABL:욕망,'(,ABL:욕망 * 3,')
+	素質確認 = 1
+ENDIF
+;ABL:Ｖ감각
+IF ABL:Ｖ감각
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:Ｖ감각 * 2
+	PRINT Ｖ감각
+	PRINTV 'LV,ABL:Ｖ감각,'(,ABL:Ｖ감각 * 2,')
+	素質確認 = 1
+ENDIF
+;ABL:봉사정신
+IF ABL:봉사정신
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:봉사정신 * 4
+	PRINT 봉사정신
+	PRINTV 'LV,ABL:봉사정신,'(,ABL:봉사정신 * 4,')
+	素質確認 = 1
+ENDIF
+;ABL:노출증
+IF ABL:8
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:노출증 * 3
+	PRINT 노출증
+	PRINTV 'LV,ABL:노출증,'(,ABL:노출증 * 3,')
+	素質確認 = 1
+ENDIF
+;ABL:자위중독
+IF ABL:자위중독
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:자위중독 * 3
+	PRINT 자위중독
+	PRINTV 'LV,ABL:자위중독,'(,ABL:자위중독 * 3,')
+	素質確認 = 1
+ENDIF
+
+IF MARK:쾌락각인
+	SIF 素質確認
+		PRINT  + 
+	판정値 += MARK:쾌락각인 * 3
+	PRINT 쾌락각인
+	PRINTV 'LV,MARK:쾌락각인,'(,MARK:쾌락각인 * 3,')
+	素質確認 = 1
+ENDIF
+
+;PALAM:윤활（の不足）
+IF PALAM:윤활 < PALAMLV:3
+	PRINT  - 
+	판정値 -= 5
+	PRINT 윤활부족
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+;PALAM:욕정
+IF GETPALAMLV(PALAM:욕정,5)
+	SIF 素質確認
+		PRINT  + 
+	판정値 += GETPALAMLV(PALAM:욕정,5) * 3
+	PRINT 욕정
+	PRINTV 'LV,GETPALAMLV(PALAM:욕정,5),'(,GETPALAMLV(PALAM:욕정,5) * 3,')
+	素質確認 = 1
+ENDIF
+
+;부끄럼쟁이
+IF TALENT:수치심 > 0
+	PRINT  - 
+	판정値 -= 2
+	PRINT 부끄러움
+	PRINTV '(,2,')
+	素質確認 = 1
+ENDIF
+;쾌감의 부정（음란、쾌락광で無効）
+IF TALENT:쾌감반응 < 0 && !TALENT:음란
+	PRINT  - 
+	판정値 -= 5
+	PRINT 쾌감의 부정
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+;男嫌い（연모、친애で無効）
+IF TALENT:성별기호 & 1 && !(TALENT:MASTER:성별 & 1) && ((!TALENT:연모) || MASTER != MASTER)
+	PRINT  - 
+	판정値 -= 12
+	PRINT 남성혐오
+	PRINTV '(,12,')
+	素質確認 = 1
+ENDIF
+
+;처녀
+IF TALENT:처녀 == 1
+	PRINT  - 
+	판정値 -= 20
+	PRINT 처녀
+	PRINTV '(,20,')
+	素質確認 = 1
+ELSEIF EXP:Ｖ경험 < EXPLV:2
+	PRINT  - 
+	판정値 -= 5
+	PRINT Ｖ경험
+	PRINT 부족
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+
+;조교者が후타나리
+IF (TALENT:MASTER:성별 & 3) == 3
+	PRINT  + 
+	판정値 += 4
+	PRINT 후타나리
+	PRINTV '(,4,')
+	素質確認 = 1
+ENDIF
+
+;미약
+IF TEQUIP:미약
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 6
+	PRINT 미약
+	PRINTV '(,6,')
+	素質確認 = 1
+ENDIF
+
+;'合計を표시(18以上で実行)
+PRINT  = 
+PRINTV 판정値
+
+実行値 = 18
+SIF 판정値 < 実行値
+	PRINT  < 
+SIF 판정値 == 実行値
+	PRINT  = 
+SIF 판정値 > 実行値
+	PRINT  > 
+PRINT 실행치
+PRINTV 実行値
+
+WAIT
+SKIPDISP 0
+;実行できない
+SIF 판정値 < 実行値
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+
+@COM_ABLE8
+;조개 벌리기実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(8)
+	RETURN RESULT
+;순종が2未満だとダメ
+SIF ABL:순종< 2
+	RETURN 0
+;처녀の경우、순종3以上または노출증3以上ないとダメ
+SIF TALENT:처녀 && ABL:순종 < 3 && ABL:노출증 < 3
+	RETURN 0
+;밧줄사용중/手足が使えないと불가
+SIF TEQUIP:밧줄 || TEQUIP:사지없음
+	RETURN 0
+
+;하반신착의
+SIF TEQUIP:0 & 4 || TEQUIP:0 & 2
+	RETURN 0
+;바이브/딜도/로터삽입중はダメ
+SIF TEQUIP:바이브 || TEQUIP:딜도 || TEQUIP:로터
+	RETURN 0
+;オトコだとダメ
+SIF !(TALENT:2 & 1)
+	RETURN 0
+;목욕탕플레이 중は플레이매트が無いとダメ
+IF TEQUIP:목욕탕플레이
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ENDIF
+
+RETURN 1

@@ -1,0 +1,641 @@
+﻿@ENEMYTURN_BASIC
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 덱_ID
+
+#DIM DYNAMIC 마법함정セット
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC 발동カード
+#DIM DYNAMIC セットカード
+#DIM DYNAMIC リリース可
+
+#DIM DYNAMIC 攻撃誘導플래그
+#DIM DYNAMIC 戦闘ダメージ
+#DIM DYNAMIC 現在攻撃力
+#DIM DYNAMIC 現在最大攻撃力
+#DIM DYNAMIC 現在最大攻撃力_자신
+#DIM DYNAMIC 現在最少攻撃力_자신
+#DIM DYNAMIC 攻撃可能モンスター確認
+#DIM DYNAMIC 攻撃元
+#DIM DYNAMIC 攻撃先
+#DIM DYNAMIC 발동カード_ID
+
+
+IF メインフェイズ移行 == 0
+	メインフェイズ移行 = 1
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,100)
+	;PRINTL メインフェイズへ移行します
+;	RETURN 0
+ENDIF
+
+
+;PRINTL EX덱確認1
+IF メインフェイズ == 1
+	FOR カウンタ,0,紙束最大値
+		SIF 상대_EX덱:カウンタ == -1
+			CONTINUE
+		TRYCALLFORM CARD_{상대_EX덱:カウンタ}, "종류"
+		SIF RESULT == 융합
+			CONTINUE
+		CALLFORM RESETCONDITION
+		TRYCALLFORM CARDSUMMON_{상대_EX덱:カウンタ}("상대",カウンタ,1)
+		IF RESULT == 1 && ターンプレイヤー == "상대" && バトルフェイズ == 0
+			CALL CARD_EXDECK("상대",1)
+			SIF RESULT == 1
+				RETURN 0
+		ENDIF
+	NEXT
+ENDIF
+
+
+
+;PRINTL 손패 카드 확인 처리
+;패의 カード발동チェック
+VARSET 選択カード, -1
+FOR カウンタ,0,紙束最大値
+	SIF 상대_손패:カウンタ == -1
+		CONTINUE
+	TRYCALLFORM CARDCAN_{상대_손패:カウンタ}("상대",손패起動,"손패",カウンタ)
+	IF RESULT == 1
+		選択カード = カウンタ
+		BREAK
+	ENDIF
+NEXT
+;패의 カード발동処理
+IF 選択カード == -1
+;	PRINTL
+ELSE
+	발동カード_ID = 상대_손패:選択カード
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,4,발동カード_ID,1)
+	SETCOLOR C_W_RED
+	CUSTOMDRAWLINE —
+	CALLFORM CARDNAME_{발동カード_ID}("名前")
+	PRINTFORMW 상대는 패에서 %RESULTS%의 효과발동선언을 했습니다！
+	CUSTOMDRAWLINE —
+	RESETCOLOR
+	CALLFORM CARD_STANBY(발동カード_ID,"상대",손패起動,"손패",選択カード)
+	CALL CARD_FINAL(ターンプレイヤー);상대ターン패의 起動後のチェック
+	RETURN 0
+ENDIF
+
+
+;PRINTL フィールドカード確認処理
+;필드의 카드 발동チェック
+VARSET 選択カード, -1
+FOR カウンタ,0,5
+	SIF 상대_필드:カウンタ == -1
+		CONTINUE
+	TRYCALLFORM CARDCAN_{상대_필드:カウンタ}("상대",필드起動,"필드",カウンタ)
+	IF RESULT == 1
+		選択カード = カウンタ
+		BREAK
+	ENDIF
+NEXT
+;필드의 카드 발동処理
+IF 選択カード == -1
+;	PRINTL
+ELSE
+	발동カード_ID = 상대_필드:選択カード
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,4,발동カード_ID,2)
+	SETCOLOR C_W_RED
+	CUSTOMDRAWLINE —
+	CALLFORM CARDNAME_{발동カード_ID}("名前")
+	PRINTFORMW 상대는 몬스터 존에서 %RESULTS%의 효과발동선언을 했습니다！
+	CUSTOMDRAWLINE —
+	RESETCOLOR
+	CALLFORM CARD_STANBY(발동カード_ID,"상대",필드起動,"필드",選択カード)
+	CALL CARD_FINAL(ターンプレイヤー);상대ターン필드의 起動後のチェック
+	RETURN 0
+ENDIF
+
+
+;PRINTL 마함カード確認処理
+;필드의 카드 발동チェック
+VARSET 選択カード, -1
+FOR カウンタ,0,5
+	SIF 상대_마함:カウンタ == -1
+		CONTINUE
+	TRYCALLFORM CARDCAN_{상대_마함:カウンタ}("상대",마함起動,"마함",カウンタ)
+	IF RESULT == 1
+		選択カード = カウンタ
+		BREAK
+	ENDIF
+NEXT
+;필드의 카드 발동処理
+IF 選択カード == -1
+;	PRINTL
+ELSE
+	발동カード_ID = 상대_마함:選択カード
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,4,발동カード_ID,3)
+	SETCOLOR C_W_RED
+	CUSTOMDRAWLINE —
+	CALLFORM CARDNAME_{발동カード_ID}("名前")
+	PRINTFORMW 상대는 마・함존에서 %RESULTS%의 효과발동선언을 했습니다！
+	CUSTOMDRAWLINE —
+	RESETCOLOR
+	CALLFORM CARD_STANBY(발동カード_ID,"상대",마함起動,"마함",選択カード)
+	CALL CARD_FINAL(ターンプレイヤー);상대ターン마함の起動後のチェック
+	RETURN 0
+ENDIF
+
+
+;PRINTL 묘지カード確認処理
+;묘지のカード발동チェック
+VARSET 選択カード, -1
+FOR カウンタ,0,紙束最大値
+	SIF 상대_묘지:カウンタ == -1
+		CONTINUE
+	TRYCALLFORM CARDCAN_{상대_묘지:カウンタ}("상대",묘지起動,"묘지",カウンタ)
+	IF RESULT == 1
+		選択カード = カウンタ
+		BREAK
+	ENDIF
+NEXT
+;필드의 카드 발동処理
+IF 選択カード == -1
+;	PRINTL
+ELSE
+	발동カード_ID = 상대_묘지:選択カード
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,4,발동カード_ID,4)
+	SETCOLOR C_W_RED
+	CUSTOMDRAWLINE —
+	CALLFORM CARDNAME_{발동カード_ID}("名前")
+	PRINTFORMW 상대는 묘지에서 %RESULTS%의 효과발동선언을 했습니다！
+	CUSTOMDRAWLINE —
+	RESETCOLOR
+	CALLFORM CARD_STANBY(발동カード_ID,"상대",묘지起動,"묘지",選択カード)
+	CALL CARD_FINAL(ターンプレイヤー);상대ターン묘지の起動後のチェック
+	RETURN 0
+ENDIF
+
+
+
+;PRINTL EX덱효과確認
+VARSET 選択カード, -1
+FOR カウンタ,0,紙束最大値
+	SIF 상대_EX덱:カウンタ == -1
+		CONTINUE
+	TRYCALLFORM CARDCAN_{상대_EX덱:カウンタ}("상대",EX덱起動,"EX덱",カウンタ)
+	IF RESULT == 1
+		選択カード = カウンタ
+		BREAK
+	ENDIF
+NEXT
+IF 選択カード == -1
+;	PRINTL
+ELSE
+	CALLFORM CARDEFFECT_{상대_EX덱:選択カード}("상대",EX덱起動,"EX덱",選択カード)
+	CALL CARD_FINAL(ターンプレイヤー);상대ターンEX덱효과起動後のチェック
+	RETURN 0
+ENDIF
+
+
+
+
+IF メインフェイズ == 1
+
+	FOR カウンタ,0,紙束最大値
+		VARSET 現在攻撃力
+		SIF 상대_손패:カウンタ == -1
+			CONTINUE
+		;맥시멈だけ通す
+		VARSET RESULT
+		TRYCALLFORM CARD_{상대_손패:カウンタ}("맥시멈")
+		SIF RESULT <= 0
+			CONTINUE
+		TRYCALLFORM CARDSUMMON_{상대_손패:カウンタ}("상대",カウンタ,1)
+		IF RESULT >= 1
+			CALLFORM CARDNAME_{상대_손패:カウンタ}("名前")
+			PRINTFORMW 상대는 패에서『{カウンタ}』%RESULTS%의 맥시멈선언을 했습니다！
+			CALL MAXSUMMON("상대", カウンタ, "손패")
+		ENDIF
+	NEXT
+
+
+
+
+
+	SIF 소환権 <= 0 
+		GOTO SUMMON_SKIP
+
+	소환カード = -1
+	VARSET 現在最大攻撃力, -1
+	VARSET リリース可
+
+	FOR カウンタ,0,紙束最大値
+		VARSET 現在攻撃力
+		SIF 상대_손패:カウンタ == -1
+			CONTINUE
+		;モンスターだけ通す
+		CALLFORM CARD_{상대_손패:カウンタ}("종류")
+		SIF !GROUPMATCH(RESULT, 효과モン,通常モン)
+			CONTINUE
+		;소환불가カード
+		VARSET RESULT
+		TRYCALLFORM CARD_{상대_손패:カウンタ}("소환불가")
+		IF RESULT == 1 ;Anonym修正
+			TRYCALLFORM CARDCAN_{상대_손패:カウンタ}("상대",효과소환,"손패",カウンタ)
+			SIF RESULT != 1
+			CONTINUE
+			ENDIF
+		
+		CALLFORM CARD_{상대_손패:カウンタ}, "レベル"
+		IF INRANGE(RESULT,0,4) 
+			SIF モンスター数("상대") >= 5
+				CONTINUE
+		ELSEIF INRANGE(RESULT,5,6) 
+			VARSET RESULT
+			TRYCALLFORM CARDCAN_{상대_손패:カウンタ}("상대",효과소환,"손패",カウンタ)
+			IF RESULT == 1
+				PRINT
+			ELSE
+				CALL FULLRESET_EXT
+				濾過範囲필드 = 1
+				CALLFORM CARD_{상대_손패:カウンタ}, "攻撃力"
+				濾過条件攻撃力 = RESULT - 1
+				CALL CARD_CHECK_EXT("상대")
+				SIF RESULT >= 1
+					リリース可 = 1
+
+				SIF リリース可 == 0
+					CONTINUE
+			ENDIF
+		ELSEIF INRANGE(RESULT,7,12)
+			VARSET RESULT
+			TRYCALLFORM CARDCAN_{상대_손패:カウンタ}("상대",효과소환,"손패",カウンタ)
+			IF RESULT == 1
+				PRINT
+			ELSE
+				CALL FULLRESET_EXT
+				濾過範囲필드 = 1
+				CALLFORM CARD_{상대_손패:カウンタ}, "攻撃力"
+				濾過条件攻撃力 = RESULT - 1
+				濾過条件CNT = 1
+				CALL CARD_CHECK_EXT("상대")
+				SIF RESULT >= 2
+					リリース可 = 2
+				
+				SIF リリース可 == 0
+					CONTINUE
+			ENDIF
+		ENDIF
+		
+		VARSET RESULT
+		CALLFORM CARD_{상대_손패:カウンタ}, "攻撃力"
+		現在攻撃力 = RESULT
+		CALL ENEMY_RUTIN_PRIORITY(상대_손패:カウンタ,カウンタ,1)
+		IF 現在攻撃力 + RESULT > 現在最大攻撃力
+			現在最大攻撃力 = RESULT
+			소환カード = カウンタ
+		ENDIF
+	NEXT
+	;カード소환処理
+	IF 소환カード != -1
+		VARSET RESULT
+		TRYCALLFORM CARDCAN_{상대_손패:소환カード}("상대",효과소환,"손패",소환カード)
+		IF RESULT == 1
+			CALL CARD_SUMMON_SHORI("상대",소환カード,"攻撃표시",2)
+			SIF RESULT == 1
+				RETURN 0
+		ELSE
+			CALLFORM CARD_{상대_손패:소환カード}, "レベル"
+			IF INRANGE(RESULT,0,4) 				
+				CALL CARD_SUMMON_SHORI("상대",소환カード,"攻撃표시")
+				SIF RESULT == 1
+					RETURN 0
+			ELSEIF INRANGE(RESULT,5,6) && リリース可 >= 1
+				CALL CARD_SUMMON_SHORI("상대",소환カード,"攻撃표시")
+				SIF RESULT == 1
+					RETURN 0
+			ELSEIF INRANGE(RESULT,7,12) && リリース可 >= 2
+				CALL CARD_SUMMON_SHORI("상대",소환カード,"攻撃표시")
+				SIF RESULT == 1
+					RETURN 0
+			ENDIF
+		ENDIF
+	ELSEIF 소환カード == -1
+		PRINTL
+	ENDIF
+	$SUMMON_SKIP
+
+;	PRINTL 추가소환処理
+	SIF 소환権 <= 0 
+		GOTO SUMMON_SKIP2
+
+	소환カード = -1
+	VARSET 現在最大攻撃力, -1
+	VARSET リリース可
+
+	FOR カウンタ,0,紙束最大値
+		VARSET 現在攻撃力
+		SIF 상대_손패:カウンタ == -1
+			CONTINUE
+		SIF 상대_手_召可:カウンタ <= 0
+			CONTINUE
+		CALLFORM CARD_{상대_손패:カウンタ}("종류")
+		SIF !GROUPMATCH(RESULT, 효과モン,通常モン)
+			CONTINUE
+
+		;소환불가カード
+		VARSET RESULT
+		TRYCALLFORM CARD_{상대_손패:カウンタ}("소환불가")
+		IF RESULT == 1 ;Anonym修正
+			TRYCALLFORM CARDCAN_{상대_손패:カウンタ}("상대",효과소환,"손패",カウンタ)
+			SIF RESULT != 1
+			CONTINUE
+		ENDIF
+		
+
+		CALLFORM CARD_{상대_손패:カウンタ}, "レベル"
+		IF INRANGE(RESULT,0,4) 
+			SIF モンスター数("상대") >= 5
+				CONTINUE
+		ELSEIF INRANGE(RESULT,5,6) 
+			VARSET RESULT
+			TRYCALLFORM CARDCAN_{상대_손패:カウンタ}("상대",효과소환,"손패",カウンタ)
+			IF RESULT == 1
+				PRINT
+			ELSE
+				CALL FULLRESET_EXT
+				濾過範囲필드 = 1
+				CALLFORM CARD_{상대_손패:カウンタ}, "攻撃力"
+				濾過条件攻撃力 = RESULT - 1
+				CALL CARD_CHECK_EXT("상대")
+				SIF RESULT >= 1
+					リリース可 = 1
+
+				SIF リリース可 == 0
+					CONTINUE
+			ENDIF
+		ELSEIF INRANGE(RESULT,7,12)
+			VARSET RESULT
+			TRYCALLFORM CARDCAN_{상대_손패:カウンタ}("상대",효과소환,"손패",カウンタ)
+			IF RESULT == 1
+				PRINT
+			ELSE
+				CALL FULLRESET_EXT
+				濾過範囲필드 = 1
+				CALLFORM CARD_{상대_손패:カウンタ}, "攻撃力"
+				濾過条件攻撃力 = RESULT - 1
+				濾過条件CNT = 1
+				CALL CARD_CHECK_EXT("상대")
+				SIF RESULT >= 2
+					リリース可 = 2
+				
+				SIF リリース可 == 0
+					CONTINUE
+			ENDIF
+		ENDIF
+		
+		VARSET RESULT
+		CALLFORM CARD_{상대_손패:カウンタ}, "攻撃力"
+		現在攻撃力 = RESULT
+		CALL ENEMY_RUTIN_PRIORITY(상대_손패:カウンタ,カウンタ,1)
+		IF 現在攻撃力 + RESULT > 現在最大攻撃力
+			現在最大攻撃力 = RESULT
+			소환カード = カウンタ
+		ENDIF
+	NEXT
+	;カード소환処理
+	IF 소환カード != -1
+		VARSET RESULT
+		TRYCALLFORM CARDCAN_{상대_손패:소환カード}("상대",효과소환,"손패",소환カード)
+		IF RESULT == 1
+			CALL CARD_SUMMON_SHORI("상대",소환カード,"攻撃표시",4)
+			SIF RESULT == 1
+				RETURN 0
+		ELSE
+			CALLFORM CARD_{상대_손패:소환カード}, "レベル"
+			IF INRANGE(RESULT,0,4) 				
+				CALL CARD_SUMMON_SHORI("상대",소환カード,"攻撃표시",3)
+				SIF RESULT == 1
+					RETURN 0
+			ELSEIF INRANGE(RESULT,5,6) && リリース可 >= 1
+				CALL CARD_SUMMON_SHORI("상대",소환カード,"攻撃표시",3)
+				SIF RESULT == 1
+					RETURN 0
+			ELSEIF INRANGE(RESULT,7,12) && リリース可 >= 2
+				CALL CARD_SUMMON_SHORI("상대",소환カード,"攻撃표시",3)
+				SIF RESULT == 1
+					RETURN 0
+			ENDIF
+		ENDIF
+	ELSEIF 소환カード == -1
+		PRINTL
+	ENDIF
+	$SUMMON_SKIP2
+
+
+	;PRINTL EX덱確認2
+
+	IF メインフェイズ == 1
+		FOR カウンタ,0,紙束最大値
+			SIF 상대_EX덱:カウンタ == -1
+				CONTINUE
+			TRYCALLFORM CARD_{상대_EX덱:カウンタ}, "종류"
+			SIF RESULT == 융합
+				CONTINUE
+			CALLFORM RESETCONDITION
+			TRYCALLFORM CARDSUMMON_{상대_EX덱:カウンタ}("상대",カウンタ,1)
+			IF RESULT == 1 && ターンプレイヤー == "상대" && バトルフェイズ == 0
+				CALL CARD_EXDECK("상대")
+				SIF RESULT == 1
+					RETURN 0
+			ENDIF
+		NEXT
+	ENDIF
+
+	VARSET 選択カード, -1
+	FOR カウンタ,0,紙束最大値
+		SIF 상대_손패:カウンタ == -1
+			CONTINUE
+		IF 상대_魔香효과 >= 1
+			TRYCALLFORM CARD_{상대_손패:カウンタ}("종류")
+			IF RESULT >= 마법全般
+				選択カード = カウンタ
+				BREAK
+			ENDIF
+		ELSE
+			TRYCALLFORM CARD_{상대_손패:カウンタ}("종류")
+			IF RESULT >= 함정全般 || RESULT == 速攻마법
+				選択カード = カウンタ
+				BREAK
+			ENDIF
+		ENDIF
+	NEXT
+
+	;PRINTFORML 패의 カード발동処理
+	IF 選択カード == -1
+		PRINTL
+	ELSE
+		IF 마함数("상대") == 5
+			PRINTFORMW 마함존이 가득차서 세트할 수 없습니다。
+		ELSE
+			CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,6)
+			PRINTFORMW 상대는 리버스카드를 세트했습니다。
+			CALL CARD_ADD, "상대", "손패", "마함", 選択カード, "裏側표시"
+			RETURN 0
+		ENDIF
+	ENDIF
+	IF メインフェイズ２ == 1
+;		PRINTL 표시形式변경処理
+		;패의 カード발동チェック
+		VARSET 選択カード, -1
+		FOR カウンタ,0,5
+			IF GETVAR(@"상대_MZ_表固:カウンタ") == 0
+				IF 상대_MZ_表変:カウンタ >= 1
+					IF 상대_MZ_表:カウンタ == 1 && 상대_MZ_戦:カウンタ >= 1
+						TRYCALLFORM CARDNAME_{상대_필드:カウンタ}, "名前"
+						PRINTFORMW 상대는[{カウンタ}]%RESULTS%를 수비표시로 했습니다。
+						상대_MZ_表変:カウンタ = 0
+						CALL SET_FIELD_INFO("상대","필드",カウンタ,"表",2,1)
+					ENDIF
+				ENDIF
+			ENDIF
+		NEXT
+	ELSE
+;		PRINTL 표시形式변경処理
+		;패의 カード발동チェック
+		VARSET 選択カード, -1
+		FOR カウンタ,0,5
+			IF GETVAR(@"상대_MZ_表固:カウンタ") == 0
+				IF 상대_MZ_表変:カウンタ >= 1
+					CALL ENEMY_RUTIN_CHANGE_POSE(カウンタ)				
+					IF  RESULT == 1 && 상대_MZ_表:カウンタ >= 2
+						TRYCALLFORM CARDNAME_{상대_필드:カウンタ}, "名前"
+						PRINTFORMW 상대는[{カウンタ}]%RESULTS%를 공격표시로 했습니다。
+						상대_MZ_表変:カウンタ = 0
+						CALL SET_FIELD_INFO("상대","필드",カウンタ,"表",1,1)
+					ENDIF
+				ENDIF
+			ENDIF
+		NEXT
+	ENDIF
+ENDIF
+
+
+IF バトルフェイズ
+	VARSET 攻撃元, 5
+	VARSET 現在最大攻撃力, -1
+	FOR カウンタ,0,5
+		SIF 상대_필드:カウンタ == -1
+			CONTINUE
+		CALL CARD_ATK_CHECK("상대",カウンタ)
+		SIF RESULT == 1
+			CONTINUE
+		IF 상대_MZ_直攻:カウンタ >= 1
+			攻撃元 = カウンタ
+			BREAK
+		ELSEIF 상대_MZ_攻:カウンタ > 現在最大攻撃力
+			現在最大攻撃力 = 상대_MZ_攻:カウンタ
+			攻撃元 = カウンタ
+		ENDIF
+	NEXT
+
+	CALL BATTLE_SETUP("상대")
+	VARSET 攻撃先, 5
+	VARSET 攻撃可能モンスター確認
+	VARSET 現在最大攻撃力_자신, -1
+	VARSET 現在最少攻撃力_자신, 99999
+	VARSET 攻撃誘導플래그
+
+	;PRINTFORML 상대戦闘カード{상대_戦闘カード}
+	IF 攻撃元 == 5
+		PRINTL 상대에겐 공격할 수 있는 몬스터가 존재하지 않는다。
+	ELSE
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件攻撃可 = 1
+		CALL CARD_CHECK_ADV("상대")
+		IF RESULT == 0 && 상대_直接無効 == 0 && 상대_MZ_直無:攻撃元 <= 0
+			攻撃先 = 99
+		ELSEIF (モンスター数("자신") == 0  || 상대_MZ_直攻:攻撃元 >= 1) && 상대_直接無効 == 0 && 상대_MZ_直無:攻撃元 <= 0
+			攻撃先 = 99
+		ELSE
+			FOR カウンタ,0,5
+				SIF 자신_필드:カウンタ == -1
+					CONTINUE
+				SIF 자신_MZ_攻誘:カウンタ == 0
+					CONTINUE
+				攻撃誘導플래그 ++
+			NEXT
+			FOR カウンタ,0,5
+				SIF 자신_필드:カウンタ == -1
+					CONTINUE
+				SIF 자신_필드:カウンタ == 使用불가ゾーン
+					CONTINUE
+				SIF 자신_MZ_攻避:カウンタ != 0
+					CONTINUE
+				SIF 자신_MZ_攻誘:カウンタ == 0 && 攻撃誘導플래그 == 1	
+					CONTINUE
+
+
+				IF 자신_MZ_表:カウンタ == 3
+					攻撃先 = カウンタ
+				ELSEIF 자신_MZ_表:カウンタ == 2
+					IF 상대_MZ_戦狂:攻撃元 >= 1
+						IF 자신_MZ_守:カウンタ <= 現在最少攻撃力_자신
+							現在最少攻撃力_자신 = 자신_MZ_守:カウンタ
+							攻撃先 = カウンタ
+						ENDIF
+					ELSE
+						SIF 자신_MZ_守:カウンタ > 現在最大攻撃力
+							CONTINUE
+						IF 자신_MZ_守:カウンタ >= 現在最大攻撃力_자신
+							現在最大攻撃力_자신 = 자신_MZ_守:カウンタ
+							攻撃先 = カウンタ
+						ENDIF
+					ENDIF
+				ELSEIF 자신_MZ_表:カウンタ == 1
+					IF 상대_MZ_戦狂:攻撃元 >= 1
+						IF 자신_MZ_攻:カウンタ <= 現在最少攻撃力_자신
+							現在最少攻撃力_자신 = 자신_MZ_攻:カウンタ
+							攻撃先 = カウンタ
+						ENDIF
+					ELSE
+						CALL ENEMY_RUTIN_ATK(カウンタ,攻撃元)
+						SIF RESULT > 現在最大攻撃力
+							CONTINUE
+						IF 자신_MZ_攻:カウンタ >= 現在最大攻撃力_자신
+							現在最大攻撃力_자신 = 자신_MZ_攻:カウンタ
+							攻撃先 = カウンタ
+						ENDIF
+					ENDIF
+				ENDIF	
+			NEXT
+		ENDIF
+
+		IF 攻撃先 == 5
+			PRINTL 상대에겐 이쪽의 몬스터를 넘을 수 있는 몬스터가 존재하지 않는 것 같습니다。
+			SIF 상대_直接無効 >= 1
+				PRINTL 직접공격 불가！
+		ELSE
+			CALL CARD_FIGHT("상대",攻撃元,攻撃先)
+			IF バトル強制終了 == 1
+				バトル強制終了 = 0
+				メインフェイズ２移行 = 1
+			ENDIF
+			RETURN 0
+		ENDIF
+	ENDIF	
+ENDIF
+
+
+IF ターン数 == 1 || メインフェイズ２ == 1
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,101)
+	PRINTW 상대는 턴을 종료했습니다
+	상대ターン終了 = 1
+ELSEIF バトルフェイズ == 1
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,102)
+	PRINTW 상대는 메인 페이즈２로 이행하고싶은것 같습니다。
+	メインフェイズ２移行 = 1
+ELSEIF バトルフェイズ == 0 
+	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,103)
+	PRINTW 상대는 배틀 페이즈로 이행하고싶은것 같습니다。
+	バトルフェイズ移行 = 1
+	RETURN 0
+ENDIF
+
+
+

@@ -1,0 +1,172 @@
+﻿@CARDNAME_51783,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 연옥의 기사 바트라임스
+	CASE "略称"
+RESULTS = 바트라임스
+	CASE "カテゴリ"
+RESULTS:0 = 테라나이트
+ENDSELECT
+
+
+@CARD_51783(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 550
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_51783(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+素材条件カテゴリ = 테라나이트
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51783) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_51783(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 「테라나이트」 몬스터 ×2
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한, 필드의 모든 앞면 표시 몬스터는 어둠 속성이 된다.
+CALLFORM CARD_ABLE(0,필드起動,フリー誘発)
+PRINTL ②: 이 카드의 엑시즈 소재를 1개 제거하고, 손패를 1장 버리고 발동할 수 있다.
+PRINTL 빛 속성의 「테라나이트」 엑시즈 몬스터 1장을,
+PRINTL 자신 필드의 이 카드 위에 겹쳐 엑시즈 소환 취급하여 엑스트라 덱에서 특수 소환한다.
+;PRINTL こ의 효과의 발동後、ターン終了時まで자신은 몬스터를 Ｘ소환할 수 없다。
+PRINTL 자신 묘지에 「테라나이트」 몬스터가 7종류 이상 존재할 경우, 이 효과는 상대 턴에도 발동할 수 있다.
+
+
+@CARDCAN_51783(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51783)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 테라나이트
+	효과条件속성 = 빛속성
+	효과条件종류 = 엑시즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 테라나이트
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	효과条件固名前起動 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT >= 7
+		条件달성 = 1
+	
+	IF 条件달성 != 1
+		SIF 종류 == フリー誘発
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51783(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51783,0,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件カテゴリ = 테라나이트
+			효과条件속성 = 빛속성
+			효과条件종류 = 엑시즈
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL RESETCONDITION_MAT
+				必要素材数 = 1
+				重ねてＸ = 1
+				素材条件固定 = 場所
+				TRYCALLFORM XYZSUMMON(듀얼리스트,選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_OTHER(듀얼리스트,"필드",場所,"属",어둠속성)
+	CALL FULLRESET
+	CALL STATCHANGE_OTHER(듀얼리스트,"상대필드",場所,"属",어둠속성,51783)
+ENDIF

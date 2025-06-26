@@ -1,0 +1,582 @@
+﻿@CUSTOM_CHARAMAKE(대상캐릭터,カード_ID)
+#DIM DYNAMIC 대상캐릭터
+#DIM DYNAMIC カード_ID
+
+IF カード_ID <= 0
+	CALL NAME_CUSTOM(대상캐릭터)
+ELSE
+	CALLFORM CARDNAME_{カード_ID}, "名前"
+	NAME:대상캐릭터 = %RESULTS%
+	CALLFORM CARDNAME_{カード_ID}, "略称"
+	CALLNAME:대상캐릭터 = %RESULTS%
+
+	CALLFORM CARD_{カード_ID}, "攻撃力"
+	SIF RESULT <= 500
+		RESULT = 500
+	MAXBASE:대상캐릭터:체력 = RESULT
+	BASE:대상캐릭터:체력 = RESULT
+	CALLFORM CARD_{カード_ID}, "守備力"
+	SIF RESULT <= 500
+		RESULT = 500
+	MAXBASE:대상캐릭터:기력 = RESULT
+	BASE:대상캐릭터:기력 = RESULT
+
+	CALLFORM CARD_{カード_ID}, "성별"
+	TALENT:대상캐릭터:성별 = RESULT
+	IF RESULT == 2 || RESULT == 3
+		PRINTFORML 여자아이로 하시겠습니까？
+		PRINTFORML [0] - 예
+		PRINTFORML [1] - 아니오
+		BINPUT
+		IF RESULT == 0
+			TALENT:대상캐릭터:성별 = 1
+		ENDIF
+	ELSE
+		TALENT:대상캐릭터:성별 = 1
+	ENDIF
+
+	CALLFORM CARD_{カード_ID}, "속성"
+	TALENT:대상캐릭터:속성 = RESULT
+	CALLFORM CARD_{カード_ID}, "종족"
+	TALENT:대상캐릭터:종족 = RESULT
+ENDIF
+
+
+CALL CUSTOM_TERMINAL(대상캐릭터)
+RETURN RESULT
+
+@CUSTOM_TERMINAL(대상캐릭터)
+#DIM DYNAMIC モード選択
+#DIM DYNAMIC 대상캐릭터
+TALENT:대상캐릭터:키스미경험 = 1
+CFLAG:대상캐릭터:키스상실상대 = -1
+CFLAG:대상캐릭터:처녀버린상대 = -1
+CFLAG:대상캐릭터:동정버린상대 = -1
+
+$INPUT_LOOP
+
+IF 대상캐릭터 == 0
+	;排他処理
+	IF TALENT:대상캐릭터:성별 & 1
+		ABL:대상캐릭터:호모끼 = 0
+		ABL:대상캐릭터:게이중독 = 0
+		EXP:대상캐릭터:게이경험 = 0
+		SIF !(TALENT:대상캐릭터:성별 & 2)
+			EXP:대상캐릭터:사정경험 = 0
+	ELSE
+		ABL:대상캐릭터:Ｖ감각 = 0
+		ABL:대상캐릭터:레즈끼 = 0
+		ABL:대상캐릭터:레즈중독 = 0
+		EXP:대상캐릭터:레즈경험 = 0
+		EXP:대상캐릭터:분유경험 = 0
+		EXP:대상캐릭터:Ｖ경험 = 0
+		EXP:대상캐릭터:파이즈리경험 = 0
+		EXP:대상캐릭터:Ｖ성교경험 = 0
+		EXP:대상캐릭터:Ｖ확장경험 = 0
+		TALENT:대상캐릭터:Ｖ감도 = 0
+		TALENT:대상캐릭터:처녀 = 0
+		TALENT:대상캐릭터:모유체질 = 0
+		TALENT:대상캐릭터:가슴사이즈 = 0
+
+	ENDIF
+	IF TALENT:대상캐릭터:성별 & 2
+		MAXBASE:대상캐릭터:정력 = 1000
+		BASE:대상캐릭터:정력 = 1000
+	ELSE
+		TALENT:대상캐릭터:동정 = 0
+		MAXBASE:대상캐릭터:정력 = 0
+		BASE:대상캐릭터:정력 = 0
+	ENDIF
+	IF TALENT:대상캐릭터:처녀 == 1
+		ABL:대상캐릭터:Ｖ감각 = 0
+		EXP:대상캐릭터:Ｖ경험 = 0
+		EXP:대상캐릭터:Ｖ성교경험 = 0
+		EXP:대상캐릭터:Ｖ확장경험 = 0
+	ELSEIF TALENT:대상캐릭터:성별 & 1 && EXP:대상캐릭터:Ｖ경험 == 0
+		EXP:대상캐릭터:Ｖ경험 = 1
+	ENDIF
+ENDIF
+CALL PRINT_STATE(대상캐릭터,10)
+
+;最終결정
+IF モード選択 == 1000
+	CUSTOMDRAWLINE —
+	PRINTL 이것으로 정말 괜찮습니까？
+;名前の설정
+ELSEIF モード選択 == 1001
+	CALL NAME_CUSTOM(대상캐릭터)
+	モード選択 = 0
+	GOTO INPUT_LOOP
+;ベース설정
+ELSEIF モード選択 == 1002
+	CALL BASE_CUSTOM(대상캐릭터)
+;素質설정
+ELSEIF モード選択 == 1003
+	CALL TALENT_CUSTOM(대상캐릭터,LOCAL:101)
+;能力설정
+ELSEIF モード選択 == 1004
+	CALL ABL_CUSTOM(대상캐릭터)
+;경험설정
+ELSEIF モード選択 == 1005
+	CALL EXP_CUSTOM(대상캐릭터)
+ELSEIF モード選択 == 1006
+	CALL CHANGE_OUTFIT(대상캐릭터,1)
+	モード選択 = 1000
+ENDIF
+CUSTOMDRAWLINE —
+SETCOLOR C_YELLOW
+PRINTFORM %"[1000] - 결정",30,LEFT%
+RESETCOLOR
+
+PRINTFORM %"[1001] - 이름 변경",30,LEFT%
+PRINTFORM %"[1002] - 체력、기력의 설정",30,LEFT%
+PRINTL
+PRINTFORM %"[1003] - 소질 설정",30,LEFT%
+PRINTFORM %"[1004] - 능력 설정",30,LEFT%
+PRINTFORM %"[1005] - 경험 설정",30,LEFT%
+PRINTFORM %"[1006] - 복장 설정",30,LEFT%
+PRINTL
+SIF 대상캐릭터 != 0
+	PRINTFORM %"[9999] - 파기하다",30,LEFT%
+PRINTL
+
+BINPUT
+IF RESULT == 9999
+	PRINTL 이 캐릭터를 삭제하시겠습니까？
+	CUSTOMDRAWLINE —
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML [0] - 예
+	PRINTFORML [1] - 아니오
+	BINPUT
+	SIF RESULT == 1
+		GOTO INPUT_LOOP
+	RETURN 9999
+ENDIF
+IF RESULT == 1000
+
+	PRINTL 이 설정으로 됩니까？
+	CUSTOMDRAWLINE —
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML [0] - 예
+	PRINTFORML [1] - 아니오
+	BINPUT
+	IF RESULT == 0
+		SIF !EQUIP:대상캐릭터:0
+			CALL CLOTHES_CUSTOM
+		RETURN 1
+	ELSE
+		GOTO INPUT_LOOP
+	ENDIF
+ELSEIF RESULT >= 1000
+	モード選択 = RESULT
+	GOTO INPUT_LOOP
+ENDIF
+;ベース설정
+IF モード選択 == 1002
+	IF RESULT == 0 && MAXBASE:대상캐릭터:0 > 1000
+		MAXBASE:대상캐릭터:0 -= 100
+	ELSEIF RESULT == 1 && MAXBASE:대상캐릭터:0 < 3000
+		MAXBASE:대상캐릭터:0 += 100
+	ELSEIF RESULT == 2 && MAXBASE:대상캐릭터:1 > 1000
+		MAXBASE:대상캐릭터:1 -= 100
+	ELSEIF RESULT == 3 && MAXBASE:대상캐릭터:1 < 3000
+		MAXBASE:대상캐릭터:1 += 100
+	ENDIF
+	BASE:대상캐릭터:0 = MAXBASE:대상캐릭터:0
+	BASE:대상캐릭터:1 = MAXBASE:대상캐릭터:1
+	GOTO INPUT_LOOP
+;素質설정
+ELSEIF モード選択 == 1003
+	;ページ送り
+	SIF RESULT == 998 && LOCAL:101
+		LOCAL:101 --
+	SIF RESULT == 999
+		LOCAL:101 ++
+	SIF RESULT < 0 || RESULT > 500 || TALENTNAME:RESULT == ""
+		GOTO INPUT_LOOP
+	;함락素質ほか
+	SIF (RESULT >= 3 && RESULT <= 5) || RESULT == 9 || RESULT == 34 || (RESULT >= 72 && RESULT <= 76) || RESULT == 84 || RESULT == 85 || (RESULT >= 153 && RESULT <= 155)
+		GOTO INPUT_LOOP
+	;성별
+	IF RESULT == 2
+		IF TALENT:대상캐릭터:RESULT == 3
+			TALENT:대상캐릭터:RESULT = 1
+		ELSE
+			TALENT:대상캐릭터:RESULT ++
+		ENDIF
+	;성별嗜好
+	ELSEIF RESULT == 81
+		IF TALENT:대상캐릭터:RESULT == 3
+			TALENT:대상캐릭터:RESULT = -1
+		ELSE
+			TALENT:대상캐릭터:RESULT ++
+		ENDIF
+	;몸두께
+	ELSEIF RESULT == 120
+		IF TALENT:대상캐릭터:RESULT == 4
+			TALENT:대상캐릭터:RESULT = 0
+		ELSE
+			TALENT:대상캐릭터:RESULT ++
+		ENDIF
+	;가슴사이즈
+	ELSEIF RESULT == 121
+		IF TALENT:대상캐릭터:RESULT == 2
+			TALENT:대상캐릭터:RESULT = -2
+		ELSE
+			TALENT:대상캐릭터:RESULT ++
+		ENDIF
+		CALL SHOP_BUST_RESET(대상캐릭터)
+	ELSEIF RESULT == 122
+		IF TALENT:대상캐릭터:RESULT == 3
+			TALENT:대상캐릭터:RESULT = -1
+		ELSE
+			TALENT:대상캐릭터:RESULT ++
+		ENDIF
+	ELSEIF RESULT == 128
+		IF TALENT:대상캐릭터:RESULT == 3
+			TALENT:대상캐릭터:RESULT = -1
+		ELSE
+			TALENT:대상캐릭터:RESULT ++
+		ENDIF
+		CALL SHOP_BUTT_RESET(대상캐릭터)
+	ELSEIF RESULT == 190
+		IF TALENT:대상캐릭터:RESULT == 6
+			TALENT:대상캐릭터:RESULT = 0
+		ELSE
+			TALENT:대상캐릭터:RESULT ++
+		ENDIF
+	ELSEIF RESULT == 191
+		IF TALENT:대상캐릭터:RESULT == 17
+			TALENT:대상캐릭터:RESULT = 0
+		ELSE
+			TALENT:대상캐릭터:RESULT ++
+		ENDIF
+
+	;オンオフ型の素質
+	ELSEIF TALENTNAME:RESULT == GET_TALENTNAME(RESULT,1) || RESULT == 1
+		TALENT:대상캐릭터:RESULT = !TALENT:대상캐릭터:RESULT
+	;量的素質
+	ELSE
+		;성별
+		IF LOCAL == 2
+			IF TALENT:대상캐릭터:RESULT == 3
+				TALENT:대상캐릭터:RESULT = 1
+			ELSE
+				TALENT:대상캐릭터:RESULT ++
+			ENDIF
+		;端まで行くと-1を掛ける
+		ELSEIF STRLENS(GET_TALENTNAME(RESULT,TALENT:대상캐릭터:RESULT + 1)) || TALENT:대상캐릭터:RESULT == -1
+			TALENT:대상캐릭터:RESULT ++
+		ELSE
+			TALENT:대상캐릭터:RESULT = -1 * TALENT:대상캐릭터:RESULT
+		ENDIF
+	ENDIF
+;能力설정
+ELSEIF モード選択 == 1004
+	LOCAL = RESULT / 2
+	SIF !STRLENS(ABLNAME:LOCAL)
+		GOTO INPUT_LOOP
+	;同性愛관계
+	IF !(TALENT:대상캐릭터:성별 & 1) && (LOCAL == 17 || LOCAL == 32)
+		GOTO INPUT_LOOP
+	ELSEIF TALENT:대상캐릭터:성별 & 1 && (LOCAL == 18 || LOCAL == 33)
+		GOTO INPUT_LOOP
+	ENDIF
+	;중독관계
+	SIF LOCAL >= 30
+		GOTO INPUT_LOOP
+	;奇数(+)
+	IF RESULT % 2
+		IF ABL:대상캐릭터:LOCAL >= 5
+			GOTO INPUT_LOOP
+		ELSE
+			ABL:대상캐릭터:LOCAL ++
+		ENDIF
+	;偶数(-)
+	ELSE
+		IF ABL:대상캐릭터:LOCAL <= 0
+			GOTO INPUT_LOOP
+		ELSE
+			ABL:대상캐릭터:LOCAL --
+		ENDIF
+	ENDIF
+ELSEIF モード選択 == 1005
+	LOCAL = RESULT
+	SIF !STRLENS(EXPNAME:LOCAL)
+		GOTO INPUT_LOOP
+	;同性愛관계
+	IF !(TALENT:대상캐릭터:성별 & 1) && LOCAL == 41
+		GOTO INPUT_LOOP
+	ELSEIF TALENT:대상캐릭터:성별 & 1 && LOCAL == 42
+		GOTO INPUT_LOOP
+	ENDIF
+	PRINTFORM %EXPNAME:LOCAL%을 입력해주세요      
+	PRINTBUTTON "[취소]",-1
+	INPUT
+	SIF RESULT < 0
+		GOTO INPUT_LOOP
+	EXP:대상캐릭터:LOCAL = MIN(RESULT,50)
+ELSEIF モード選択 == 1006
+	
+ENDIF
+GOTO INPUT_LOOP
+
+;名前の설정
+@NAME_CUSTOM(대상캐릭터)
+#DIM DYNAMIC 대상캐릭터
+
+PRINTL 캐릭터의 NAME을 입력해 주세요
+IF STRLENS(NAME:대상캐릭터)
+	PRINTFORM 현재 NAME：%NAME:대상캐릭터%      
+	PRINTBUTTON "[변경하지 않는다]",""
+	PRINTL
+ENDIF
+INPUTS
+IF RESULTS == ""
+	NAME:대상캐릭터 = %NAME:대상캐릭터%
+ELSE
+	NAME:대상캐릭터 = %RESULTS%
+ENDIF
+
+PRINTL 캐릭터의 CALLNAME를 입력해 주세요
+IF STRLENS(CALLNAME:대상캐릭터)
+	PRINTFORM 현재의 CALLNAME： %CALLNAME:대상캐릭터%      
+	PRINTBUTTON "[변경하지 않는다]",""
+	PRINTL
+ENDIF
+INPUTS
+IF RESULTS == ""
+	CALLNAME:대상캐릭터 = %CALLNAME:대상캐릭터%
+ELSE
+	CALLNAME:대상캐릭터 = %RESULTS%
+ENDIF
+
+
+
+;ベースの설정
+@BASE_CUSTOM(대상캐릭터)
+#DIM DYNAMIC 대상캐릭터
+
+PRINT 체력:
+BAR BASE:대상캐릭터:0,MAXBASE:대상캐릭터:0,16
+PRINTFORM ({BASE:대상캐릭터:0,4}/{MAXBASE:대상캐릭터:0,4})
+IF BASE:대상캐릭터:0 != 1000
+	PRINTBUTTON "[－]", 0
+ELSE
+	SETCOLOR 0x969696
+	PRINT [－]
+	RESETCOLOR
+ENDIF
+IF BASE:대상캐릭터:0 != 3000
+	PRINTBUTTON "[＋]", 1
+ELSE
+	SETCOLOR 0x969696
+	PRINT [＋]
+	RESETCOLOR
+ENDIF
+PRINTL
+PRINT 기력:
+BAR BASE:대상캐릭터:1,MAXBASE:대상캐릭터:1,16
+PRINTFORM ({BASE:대상캐릭터:1,4}/{MAXBASE:대상캐릭터:1,4})
+IF BASE:대상캐릭터:1 != 1000
+	PRINTBUTTON "[－]", 2
+ELSE
+	SETCOLOR 0x969696
+	PRINT [－]
+	RESETCOLOR
+ENDIF
+IF BASE:대상캐릭터:1 != 3000
+	PRINTBUTTON "[＋]", 3
+ELSE
+	SETCOLOR 0x969696
+	PRINT [＋]
+	RESETCOLOR
+ENDIF
+PRINTL
+;素質の설정
+@TALENT_CUSTOM(캐릭터_ID,ページ数)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC ページ数
+#DIM DYNAMIC 改行플래그
+#DIM DYNAMIC 표시플래그
+#DIMS DYNAMIC 표시名
+#DIMS DYNAMIC 표시추가
+
+
+VARSET カウンタ
+FOR カウンタ,ページ数 * 40,40 + ページ数 * 40
+	IF カウンタ % 10 == 0
+		PRINTL
+		SIF 표시플래그 % 2
+			PRINTL
+		표시플래그 = 0
+	ENDIF
+	;함락素質ほかはリストに登録しない
+	SIF (カウンタ >= 3 && カウンタ <= 5) || カウンタ == 9 || カウンタ == 34 || (カウンタ >= 72 && カウンタ <= 76) || カウンタ == 84 || カウンタ == 85 ||  カウンタ == 131 || INRANGE(カウンタ,153, 173)
+		CONTINUE
+	;TALENT.CSVに登録されていないのはリストに入れられない
+	SIF TALENTNAME:カウンタ == ""
+		CONTINUE
+	;オンオフ型の素質(TALENTNAMEと素質표시が一致)
+	IF TALENTNAME:カウンタ == GET_TALENTNAME(カウンタ,1)
+		SIF !TALENT:캐릭터_ID:カウンタ
+			SETCOLOR 100,100,100
+		표시名 = [{カウンタ,3}] - %TALENTNAME:カウンタ%
+	;동정
+	ELSEIF カウンタ == 1
+		SIF TALENT:캐릭터_ID:カウンタ
+		;もし素質：마스터:素質番号
+			SETCOLOR 100,100,100
+		표시名 = [{カウンタ,3}] - %TALENTNAME:カウンタ%
+
+	ELSEIF カウンタ == 17
+		표시名 =  [{カウンタ,3}] - %TALENTNAME:カウンタ%
+		;PRINT = [소질 번호] - 소질명
+		IF STRLENS(GET_TALENTNAME(カウンタ,TALENT:캐릭터_ID:カウンタ))
+		;もしGETTALENTNAME（素質番号,（素質：마스터：素質番号）の状態【-1とか1とか】）
+			표시추가 =  …【%GET_TALENTNAME(カウンタ,TALENT:캐릭터_ID:カウンタ)%】
+		;표시：17の素質状態
+		ELSE
+			표시추가 = …
+		;표시：17の素質状態が0なら何も見せない
+		ENDIF
+		표시名 += 표시추가
+
+	;量的素質
+	ELSE
+		SIF !TALENT:캐릭터_ID:カウンタ
+			SETCOLOR 100,100,100
+		표시名 =  [{カウンタ,3}] - %TALENTNAME:カウンタ%
+		IF STRLENS(GET_TALENTNAME(カウンタ,TALENT:캐릭터_ID:カウンタ))
+			표시추가 =  …【%GET_TALENTNAME(カウンタ,TALENT:캐릭터_ID:カウンタ)%】
+		ELSE
+			표시추가 = …
+		ENDIF
+		표시名 += 표시추가
+	ENDIF
+	PRINTFORM %표시名,35,LEFT%
+	改行플래그 ++
+	SIF 改行플래그 % 4 == 0
+		PRINTL
+	RESETCOLOR
+NEXT
+PRINTL
+CUSTOMDRAWLINE —
+표시名 =  [{190,3}] - %TALENTNAME:190%
+표시추가 =  …【%GET_TALENTNAME(190,TALENT:캐릭터_ID:190)%】
+표시名 += 표시추가
+PRINTFORM %표시名,35,LEFT%
+표시名 =  [{191,3}] - %TALENTNAME:191%
+표시추가 =  …【%GET_TALENTNAME(191,TALENT:캐릭터_ID:191)%】
+표시名 += 표시추가
+PRINTFORM %표시名,35,LEFT%
+
+PRINTL
+CUSTOMDRAWLINE —
+IF ページ数 != 0
+	PRINTBUTTON "[998] - 앞페이지                 ",998
+ELSE
+	SETCOLOR 0x969696
+	PRINTFORM %"[---] - 앞페이지",35,LEFT%
+	RESETCOLOR
+ENDIF
+IF ページ数 != 3
+	PRINTBUTTON "[999] - 뒷페이지",999
+ELSE
+	SETCOLOR 0x969696
+	PRINTFORM %"[---] - 뒷페이지",35,LEFT%
+	RESETCOLOR
+ENDIF
+PRINTL
+
+@ABL_CUSTOM(대상캐릭터)
+#DIM DYNAMIC 대상캐릭터
+LOCAL:1 = 0
+FOR LOCAL,0,50
+	SIF !STRLENS(ABLNAME:LOCAL)
+		CONTINUE
+	;同性愛관계
+	IF !(TALENT:대상캐릭터:성별 & 1) && (LOCAL == 17 || LOCAL == 32)
+		CONTINUE
+	ELSEIF TALENT:대상캐릭터:성별 & 1 && (LOCAL == 18 || LOCAL == 33)
+		CONTINUE
+	ENDIF
+	;중독も無し
+	SIF LOCAL >= 30
+		CONTINUE
+	PRINTFORM %ABLNAME:LOCAL,12%:{ABL:대상캐릭터:LOCAL,5,LEFT} 
+	IF ABL:대상캐릭터:LOCAL != 0
+		PRINTBUTTON "[－]", LOCAL * 2
+	ELSE
+		SETCOLOR 0x969696
+		PRINT [－]
+		RESETCOLOR
+	ENDIF
+	IF ABL:대상캐릭터:LOCAL != 5
+		PRINTBUTTON "[＋]", LOCAL * 2 + 1
+	ELSE
+		SETCOLOR 0x969696
+		PRINT [＋]
+		RESETCOLOR
+	ENDIF
+	LOCAL:1 ++
+
+	SIF LOCAL:1 % 2 == 0
+		PRINTL 
+NEXT
+PRINTL
+@EXP_CUSTOM(대상캐릭터)
+#DIM DYNAMIC 대상캐릭터
+VARSET LOCAL
+FOR LOCAL,0,100
+	SIF !STRLENS(EXPNAME:LOCAL)
+		CONTINUE
+	;同性愛관계
+	IF !(TALENT:대상캐릭터:성별 & 1) && LOCAL == 41
+		CONTINUE
+	ELSEIF TALENT:대상캐릭터:성별 & 1 && LOCAL == 42
+		CONTINUE
+	ENDIF
+	PRINTFORM [{LOCAL,2}] - %EXPNAME:LOCAL,12%:{EXP:대상캐릭터:LOCAL,5,LEFT} 
+	LOCAL:1 += 1
+	SIF LOCAL:1 % 3 == 0
+		PRINTL 
+NEXT
+PRINTL
+
+
+
+@CLOTHES_CUSTOM(대상캐릭터)
+#DIM DYNAMIC 대상캐릭터
+;あなた以外なら변경しない
+SIF NO:대상캐릭터
+	RETURN 0
+IF TALENT:대상캐릭터:성별 & 1
+	CFLAG:대상캐릭터:7 = 2
+ELSE
+	CFLAG:대상캐릭터:7 = 1
+ENDIF
+PRINTFORM 현재의 %CALLNAME:MASTER%는
+IF CFLAG:대상캐릭터:7 == 2
+	PRINT 여성복
+ELSEIF CFLAG:대상캐릭터:7 == 1
+	PRINT 남성복
+ENDIF
+PRINTL 입니다
+PRINTL 변경하시겠습니까？
+PRINTL [0] - 그대로 [1] - 남성복으로 [2] - 여성복으로
+INPUT
+SIF RESULT == 1 || RESULT == 2
+	CFLAG:대상캐릭터:7 = RESULT
+
+IF CFLAG:대상캐릭터:7 == 2
+	PRINTFORML \@(CFLAG:대상캐릭터:7 == 1) ? 執事 # メイド\@옷으로 하시겠습니까？
+	PRINTFORML [0] - 그대로 [1] - \@(CFLAG:대상캐릭터:7 == 1) ? 執事 # メイド\@으로
+	INPUT
+	SIF RESULT == 1
+		CFLAG:대상캐릭터:7 += RESULT * 2
+ENDIF
+RETURN 0

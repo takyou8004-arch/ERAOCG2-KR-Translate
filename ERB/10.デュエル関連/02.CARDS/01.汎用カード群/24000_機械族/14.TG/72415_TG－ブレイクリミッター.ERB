@@ -1,0 +1,157 @@
+﻿@CARDNAME_72415,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = TG－브레이크 리미터
+	CASE "略称"
+RESULTS = TG 리미터
+	CASE "カテゴリ"
+RESULTS:0 = 테크 지너스
+ENDSELECT
+
+@CARD_72415(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72415(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ①② 효과는 1턴에 1번, 어느 하나만 발동할 수 있다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 손패를 1장 묘지로 보내고 발동할 수 있다.
+PRINTL 덱에서 「TG」 몬스터 2장을 패에 넣는다 (같은 이름의 카드는 1장까지).
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 묘지의 이 카드를 제외하고, 자신의 묘지의 「TG」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 덱으로 되돌린다.
+PRINTL 자신 필드에 「TG」 EX 몬스터가 존재할 경우, 덱으로 되돌리지 않고 패에 넣는 것도 가능하다.
+
+@CARDCAN_72415(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72415)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,72415)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,72415)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF 손패数(듀얼리스트) == 0
+			RETURN 0
+	ELSEIF 종류 == 손패起動
+		SIF 손패数(듀얼리스트) == 1
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 테크지너스
+	효과条件固名前選択 = 1
+	효과条件종류 = モン全般
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,72415)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,72415)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 테크지너스
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_72415(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72415,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件カテゴリ = 테크지너스
+			효과条件複数 = 2
+			효과条件固名前選択 = 1
+			효과条件종류 = モン全般
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72415,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 테크지너스
+		효과条件종류 = EXモン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+PRINTL 패에 넣겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+		ELSE
+			RESULT = いいえ
+		ENDIF
+		IF RESULT == はい
+			CALL FULLRESET
+			효과条件カテゴリ = 테크지너스
+			효과条件종류 = モン全般
+			CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		ELSE
+			CALL FULLRESET
+			효과条件カテゴリ = 테크지너스
+			효과条件종류 = モン全般
+			효과条件行先플래그 = 덱行き
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

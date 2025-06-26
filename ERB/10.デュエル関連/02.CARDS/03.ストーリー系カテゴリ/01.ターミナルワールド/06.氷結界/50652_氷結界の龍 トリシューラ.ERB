@@ -1,0 +1,117 @@
+﻿@CARDNAME_50652,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 빙결계의 용 트리슈라
+	CASE "略称"
+RESULTS = 트리슈라
+	CASE "カテゴリ"
+RESULTS:0 = 빙결계
+ENDSELECT
+
+
+@CARD_50652(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2700
+	CASE "守備力"
+		RETURN 2000
+
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50652(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1체 이상
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 S소환했을 때 발동할 수 있다.
+PRINTL 상대 손패, 필드, 묘지의 카드를 각각 1장까지 제외한다.
+PRINTL 
+
+
+@CARDSUMMON_50652(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 9
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50652) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50652(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50652)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX소환時
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50652(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50652,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"제외")
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"손패破壊",場所,"제외")
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트, "상대묘지",ゾーン,場所)	
+	ENDIF
+ENDIF
+
+
+

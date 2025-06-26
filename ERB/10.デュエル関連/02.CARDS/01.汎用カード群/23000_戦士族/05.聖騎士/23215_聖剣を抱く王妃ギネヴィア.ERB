@@ -1,0 +1,169 @@
+﻿@CARDNAME_23215,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성검을 품에 안은 왕비 기네비아
+	CASE "略称"
+RESULTS = 기네비아
+	CASE "カテゴリ"
+RESULTS:0 = 성검
+ENDSELECT
+
+
+@CARD_23215(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 300
+	CASE "守備力"
+		RETURN 300
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_23215(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①：자신 필드의 「성기사」 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 손패 묘지의 이 카드를 공격력 300 업의 장착 마법 카드 취급으로 그 몬스터에 장착한다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ②：장착 몬스터가 효과로 파괴될 경우, 대신에 이 카드를 파괴할 수 있다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ③：장착 몬스터가 상대 몬스터와 전투를 실행할 경우에 발동할 수 있다. 그 몬스터와 이 카드를 파괴한다.
+
+
+
+@CARDSUMMON_AA_23215
+
+
+@CARDCAN_23215(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23215)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,23215)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 성기사
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 装備先
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF GETVAR(@"%装備者%_戦闘カード") != 装備先
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23215(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23215,1)
+	IF RESULT == 0
+		효과条件カテゴリ = 성기사
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,300)
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23215)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23215)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘場所(듀얼리스트,1),"묘지")
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+	ENDIF
+ENDIF

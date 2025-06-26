@@ -1,0 +1,139 @@
+﻿@CARDNAME_57144,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 샐러맨그레이트 알미라지
+	CASE "略称"
+RESULTS = 전생 알미라지
+	CASE "カテゴリ"
+RESULTS:0 = 샐러맨그레이트
+ENDSELECT
+
+
+@CARD_57144(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_57144(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件召種 = 召種通常
+素材条件攻撃力 = 1000
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,57144) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_57144(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 일반 소환된 공격력 1000 이하 몬스터 1장
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ①: 자신 또는 상대 턴에, 이 카드를 릴리스하고, 자신 필드의 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 이 턴에, 그 몬스터는 파괴 내성을 얻는다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 이 카드가 묘지에 존재할 경우, EX 이외의 자신 몬스터가 전투로 파괴되었을 때 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+
+@CARDCAN_57144(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57144)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF !GROUPMATCH(ゾーン,"필드")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件표시 = 表側표시
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,57144)
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"묘지")
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,57144,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = EX以外全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"戦闘破壊")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_57144(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択レベル
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 속성セット
+#DIM DYNAMIC 속성セットビット
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57144)
+	IF RESULT == 0	
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		CALL CARD_GRANT_ADV(듀얼리스트,ゾーン,場所,"破耐",1)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57144,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

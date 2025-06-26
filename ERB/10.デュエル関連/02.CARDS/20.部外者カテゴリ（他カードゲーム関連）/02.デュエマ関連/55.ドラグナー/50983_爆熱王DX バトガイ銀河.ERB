@@ -1,0 +1,182 @@
+﻿@CARDNAME_50983,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 폭열왕 DX 바토가이 은하
+	CASE "略称"
+RESULTS = 바토가이 은하
+
+	CASE "武装名"
+RESULTS = 폭은왕검 바토가이 진투
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:1 = 드래그하트
+RESULTS:2 = 웨폰
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_50983(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "コスト"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2800
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50983(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+RETURN 0
+
+@CARD_EXPLANATION_50983(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 『초차원』으로 강림.
+PRINTL (이 카드는 카드의 효과로만 EX덱에서 필드에 특수 소환하거나 마함 존에 놓을 수 있다)
+CALL TEXT_DECORATION("D_HEART_W")
+PRINTL 웨폰 측 《폭은왕검 바토가이 진투》 비용: ５
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①: 이 카드를 장착한 몬스터의 공격 선언 시에 발동할 수 있다.
+PRINTL 덱에서 카드를 1장 드로우한다. 그 후, 패에서 드래곤족 몬스터 1장을 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②: 자신의 드래곤족 몬스터가 특수 소환되었을 때,
+PRINTL 자신 필드에 드래곤족 몬스터가 2장 이상 존재할 경우에 발동할 수 있다.
+PRINTL 이 카드를 몬스터로서 필드에 특수 소환한다.
+CALL TEXT_DECORATION("D_HEART_2")
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①: 이 몬스터의 공격 선언 시에 발동할 수 있다.
+PRINTL 덱에서 카드를 1장 드로우한다. 그 후, 패에서 드래곤족 몬스터 1장을 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 상대의 드래곤족 이외의 몬스터는, 소환 / 특수 소환된 턴에 공격할 수 없다.
+
+@CARDCAN_50983(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50983)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	IF ゾーン == "마함"
+		SIF 装備先 == 5
+			RETURN 0
+		SIF GETVAR(@"%듀얼리스트%_戦闘カード") != 装備先
+			RETURN 0
+	ELSEIF ゾーン == "필드"
+		SIF GETVAR(@"%듀얼리스트%_戦闘カード") != 場所
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 現山札数(듀얼리스트) == 0
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,50983,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종족 = 드래곤족
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 드래곤족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50983(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50983)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종족 = 드래곤족
+		효과条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50983)
+	IF RESULT == 0
+		PRINTFORMW 龍の고동に呼応し、드래그하트웨폰が변형をはじめた！！
+		PRINTFORML 『爆熱王ＤＸ バトガイ은하　龍　解　！！』
+		CALL RESETCONDITION
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALLFORM 효과条件종족_ADV(드래곤족, "以外")
+	효과条件T1召種 = 全召種
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"戦無")
+ENDIF

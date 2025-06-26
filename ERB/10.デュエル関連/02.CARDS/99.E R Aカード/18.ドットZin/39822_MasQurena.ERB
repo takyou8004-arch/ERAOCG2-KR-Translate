@@ -1,0 +1,185 @@
+﻿@CARDNAME_39822,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마스카레나.zin
+	CASE "略称"
+		RESULTS = MasQurena.zin
+	CASE "カテゴリ"
+		RESULTS:0 = 닷진
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39822(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39822(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：자신 필드에 몬스터가 존재하지 않을 경우, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드를 패에서 상대 필드로 공격 표시로 특수 소환한다.
+PRINTL 그 후, 자신은 EX덱에서 성별을 가진 몬스터 1장을 효과를 무효로 하고 특수 소환한다.
+PRINTL 해당 몬스터는 “E.R.A” 카드로 취급되며, 단일 공격을 가지고 특수 소환의 소재로 사용할 수 없다.
+PRINTL 이 게임 중, 자신은 그 몬스터의 효과를 발동할 수 없다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드는 표시 형식을 변경할 수 없고,
+PRINTL “E.R.A” 카드와 전투할 경우, 이 카드는 전투 내성을 얻는다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드가 앞면 표시로 존재하는 한, 서로의 “E.R.A” 카드는 파괴 내성을 얻는다.
+
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39822(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39822)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,39822)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39822,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 1
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件성별 = 성별在
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL CAT_CHECK("E.R.A",듀얼리스트,戦闘場所(듀얼리스트,1),1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39822(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상 
+#DIM DYNAMIC 対面대상
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39822,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 695
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所, "攻撃표시",1)
+		CALL CARD_EROTICS(39822)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORMW %CALLNAME:조교대상%는 상품으로서 음란하고 육감적으로 그려진 몸을 전시물로 삼아졌다.
+			PRINTFORMW EX덱의 동료들과 즐기고 있던 중 갑자기 불려나와 약간 불쾌해 보인다.
+			CALL EROTIC_MOVE("晒しもの",조교대상,,50)
+		ENDIF
+
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件성별 = 성별在
+		효과추가종류:0 = 効追無効
+		효과추가종류:1 = 24
+		효과추가종류:2 = 27
+		효과추가カテ = E.R.A
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		対面대상 = RESULT:1
+		CALL CARD_EFFECT_PROHIB(듀얼리스트,対面대상,0,1)
+
+		CALL CARD_EROTICS(対面대상)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORMW %CALLNAME:조교대상%는 땀에 흠뻑 젖은 채로 EX덱에서 등장한다.
+			PRINTFORMW 상대 필드에 있는 마스카레나가 장난스럽게 혀를 내밀며 %CALLNAME:조교대상%에게 어필하자 %CALLNAME:조교대상%는 부끄러워하며 시선을 돌린다.
+			PRINTFORMW 그러나 마스카레나에게 되갚아주고 싶은 듯하다……
+			CALL EROTIC_MOVE("全身애무",조교대상,,50)
+		ENDIF
+
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"表固")
+	IF 戦闘場所(듀얼리스트) == 場所 && 戦闘場所(듀얼리스트,1) != 5
+		CALL CAT_CHECK("E.R.A",듀얼리스트,戦闘場所(듀얼리스트,1),1)
+		SIF RESULT == 1
+			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"戦耐")
+	ENDIF
+	CALL FULLRESET
+	효과条件カテゴリ = E.R.A
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐")
+
+	CALL FULLRESET
+	효과条件カテゴリ = E.R.A
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대마함",場所,"破耐")
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL DOT_ZIN_ACT(듀얼리스트,39822,戦闘カードID(듀얼리스트,1))
+ENDIF
+

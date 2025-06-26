@@ -1,0 +1,530 @@
+﻿@CARDNAME_59555,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 네가스타 윈다
+	CASE "略称"
+		RESULTS = NeGst윈다
+	CASE "カテゴリ"
+		RESULTS:0 = 가스타
+		RESULTS:1 = 네가스타
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59555(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 사이킥족 
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 400
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_59555(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 2
+지정素材名前 = 가스타의 무녀 윈다
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ:0 = 가스타
+	素材条件カテゴリ:1 = 아누스피어
+ELSEIF EX参照 >= 10
+ENDIF
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,59555) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_59555(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL "가스타" 또는 "아누스피어" 레벨２ 몬스터×２
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드가 "가스타의 무녀 윈다"를 소재로 X소환했을 경우、이하의 효과를 얻는다。
+PRINTL ●이 카드가 몬스터와 전투를 행하는 경우、그 ２장은 전투로는 파괴되지 않는다。
+PRINTL ●이 카드는 전투로 자신 / 상대는 데미지를 받지 않으며、자신은 데미지의 수치만큼 LP를 회복한다。
+CALLFORM CARD_ABLE(0,EX소환時強制,ターン開始時強制)
+PRINTL ②：이 카드가 X소환했을 때、또는 자신 메인 페이즈 개시시、
+PRINTL 자신의 패에 윈다의 장난감"이 존재하지 않을 경우에 발동한다。
+PRINTL 덱 밖에서 "윈다의 장난감" １장을 패에 넣는다。
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ③：자신 메인 페이즈에、이 카드의 X소재를 １개 제거하고 발동할 수 있다。
+PRINTL 자신의 덱 / 묘지에서 "장난스러운 회오리바람" 또는 "미독의 바람" １장을 필드에 세트한다。
+PRINTL 이 효과로 세트된 카드는 세트한 턴에 발동할 수 있다。
+CALL TEXT_DECORATION("ROGUE")
+;※ X素材の판정は仕様的に出来ない？ようなので、텍스트の一部はフレイバ-です。
+;X소재를 出したり入れたりでA삽입を再現したかっただけの処理
+
+@CARDCAN_59555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59555)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時強制 || 종류 == ターン開始時強制
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	;既に패에 ある場合は渡さない
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件ID = 159555
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT > 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,59555)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件名前:0 = 장난스러운 회오리바람
+	효과条件名前:1 = 미독의 바람
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘カードID(듀얼리스트) != 59555
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前:0 = 장난스러운 회오리바람
+	효과条件名前:1 = 미독의 바람
+	CALL CARD_CHECK_START_DATA(듀얼리스트)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 戦闘カード
+#DIMS DYNAMIC 戦闘カード名
+#DIM DYNAMIC 대상カード
+#DIMS DYNAMIC 대상カード名
+#DIM DYNAMIC 대상カード성별
+#DIM DYNAMIC 攻守合計
+#DIMS DYNAMIC 攻守合計文字
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 자신조교 = -1
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF  종류 == EX소환時強制 || 종류 == ターン開始時強制
+	PRINTFORML 윈다는 %CALLNAME:MASTER%에게「장난감」을 넘겨주었다...
+	CALL CARD_GENERATE_HAND(듀얼리스트,159555)
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59555,1,X消費1)
+	IF RESULT == 0
+		PRINTFORML 윈다는 바람을 두르기 시작했다…
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件名前:0 = 장난스러운 회오리바람
+		효과条件名前:1 = 미독의 바람
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"使化裏側표시")
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	
+	戦闘カード = 戦闘場所(듀얼리스트)
+	대상カード = 戦闘場所(듀얼리스트,1)
+	TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:戦闘カード")},"略称"
+	戦闘カード名 = %RESULTS%
+	TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:대상カード")},"略称"
+	대상カード名 = %RESULTS%
+	대상カード성별 = GETVAR(@"%対面者%_MZ_性:대상カード")
+	
+	;CALL SET_FIELD_INFO(듀얼리스트,"필드",無効カード,"戦耐",2,1,1)
+	
+	IF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 1
+		;자신이 攻撃표시の時
+		IF GETVAR(@"%対面者%_MZ_表:대상カード") == 1
+			;상대も攻撃표시
+			攻守合計 = GETVAR(@"%듀얼리스트%_MZ_攻:戦闘カード") - GETVAR(@"%対面者%_MZ_攻:대상カード") 
+			
+			PRINTFORM 공: 
+			PRINTVL GETVAR(@"%듀얼리스트%_MZ_攻:戦闘カード")
+			PRINTFORM 공: 
+			PRINTVL GETVAR(@"%対面者%_MZ_攻:대상カード")
+			PRINTFORM 
+			
+			IF 攻守合計 < 0 
+				攻守合計 = -攻守合計
+			ENDIF
+		ELSE
+			;상대는 守備표시
+			攻守合計 = GETVAR(@"%対面者%_MZ_守:대상カード") - GETVAR(@"%듀얼리스트%_MZ_攻:戦闘カード")
+			
+			PRINTFORM 상대수: 
+			PRINTVL GETVAR(@"%対面者%_MZ_守:대상カード")
+			PRINTFORM 자신공: 
+			PRINTVL GETVAR(@"%듀얼리스트%_MZ_攻:戦闘カード")
+			PRINTFORM 
+			
+			IF 攻守合計 < 0 
+				攻守合計 = 0
+			ENDIF
+		ENDIF
+	ELSE
+		;자신이 守備표시の時
+		IF GETVAR(@"%対面者%_MZ_表:대상カード") == 1
+			;상대가 攻撃표시なら
+			攻守合計 = GETVAR(@"%듀얼리스트%_MZ_守:戦闘カード")  - GETVAR(@"%対面者%_MZ_攻:대상カード") 
+			
+			PRINTFORM 자신수: 
+			PRINTVL GETVAR(@"%듀얼리스트%_MZ_守:戦闘カード")
+			PRINTFORM 상대공: 
+			PRINTVL GETVAR(@"%対面者%_MZ_攻:대상カード") 
+			PRINTFORM 
+			
+			IF 攻守合計 < 0 
+				攻守合計 = 0
+			ENDIF
+		ENDIF
+	ENDIF
+	
+	;直接攻撃時は、자신의 공격력을 그대로 参照する
+	IF 戦闘場所(対面者) == 5 
+		攻守合計 = GETVAR(@"%듀얼리스트%_MZ_攻:戦闘カード")
+		
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		조교대상 = RESULT
+		IF RESULT != -1
+			대상カード名 = %NAME:조교대상%
+			대상カード성별 = TALENT:조교대상:성별
+		ELSE
+			대상カード名 = "대상상대"
+			대상カード성별 = 0
+		ENDIF
+	ELSE		
+		CALL CARD_EROTICS(戦闘カードID(듀얼리스트,1))
+		조교대상 = RESULT
+		;CARD_EROTICS仕組みが分からず、仕方なくID直打ち。コレどこに紐づいてるんだ…？
+		CALL CARD_EROTICS(1815)
+		자신조교 = RESULT
+	ENDIF
+	
+
+	;LPを回復
+	IF 攻守合計 > 0
+		IF 대상カード성별 == 牝性
+			PRINTFORML %戦闘カード名%는 %대상カード名%의 엉덩이구멍을 손가락으로 봉사했다…
+			PRINTFORMW %戦闘カード名%「엉덩이구멍을 기분좋게 넓히는 방법、많이 알려줄게…❤❤❤」
+			IF 조교대상 != -1
+				CALL EROTIC_MOVE("애널解し",조교대상,-1,300)
+			ENDIF
+			
+		ELSEIF 대상カード성별 == 雄性
+			PRINTFORML %戦闘カード名%는 엉덩이구멍을 사용해、%대상カード名%의 남근에 봉사했다…
+			PRINTFORMW %戦闘カード名%「같이 기분좋아지자…❤❤❤」
+			
+			IF 조교대상 != -1
+				CALL EROTIC_MOVE("애널解し",자신조교,-1,300)
+			ENDIF
+			
+		ELSEIF 대상カード성별 == ふたなり
+			PRINTFORML %戦闘カード名%는 %대상カード名%의 원래 없을터인것에 엉덩이구멍을 대주니、몰아세우는듯이 허리를 흔들기 시작했다…
+			PRINTFORMW %戦闘カード名%「같이 기분좋아지자…❤❤❤」
+			
+			IF 조교대상 != -1
+				CALL EROTIC_MOVE("애널解し",자신조교,-1,300)
+			ENDIF
+		ELSE
+			PRINTFORML %戦闘カード名%는 엉덩이구멍을 손가락으로 벌려、%대상カード名%에게 신음소리를 보냈다…
+			PRINTFORMW %戦闘カード名%「괜찮아、내가 멋대로 기분좋아질게…❤❤❤」
+			
+			IF 조교대상 != -1
+				CALL EROTIC_MOVE("애널解し",자신조교,-1,300)
+			ENDIF
+		ENDIF
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",攻守合計)
+	ELSE
+		PRINTFORML %戦闘カード名%는 조금 불만인듯 하다。
+		PRINTFORMW 「다음은 좀더 힘내줬으면 해…」
+	ENDIF
+	
+	;バトルを終了する
+	CALL EVADE_ATTACK(듀얼리스트)
+	
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"戦耐")
+ELSEIF 종류 == 발동強制誘発
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前:0 = 장난스러운 회오리바람
+	;효과条件名前:1 = 미독의 바람
+	CALL CARD_CHECK_START_DATA(듀얼리스트)
+	
+	CUSTOMDRAWLINE —
+	PRINTFORML 
+	PRINTFORML 윈다는 쿡쿡 웃고있다…
+	SETCOLOR C_PINK
+	IF RESULT == 1
+		;つむじ바람
+		PRINTFORML 「좋은 바람이 불어왔네…❤」
+	ELSE
+		;미독의 바람
+		PRINTFORML 「달콤-한 바람이 불어왔네…❤」
+	ENDIF
+	RESETCOLOR
+	PRINTFORML 
+	CUSTOMDRAWLINE —
+	PRINTFORMW 
+ENDIF
+
+;以下、トークン
+
+@CARDNAME_159555,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 윈다의 장난감
+	CASE "略称"
+		RESULTS = 윈다의 완구
+	CASE "カテゴリ"
+		RESULTS:0 = 아누스피어
+ENDSELECT
+
+
+@CARD_159555(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_159555(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL ①：필드의 암컷 몬스터 １장을 대상으로 발동할 수 있다。
+PRINTL 그 몬스터의 공격력을 0으로 한다。
+PRINTL 대상 몬스터가 상대 몬스터인 경우、그 몬스터의 효과를 무효로 한다。
+PRINTL 대상 몬스터가 자신의 "네가스타" X몬스터였을 경우、
+PRINTL 덱 / 묘지에서 "아누스피어─빅 테일"을 대상의 X소재로 한다。
+PRINTL 발동한 이 카드는 소멸한다。
+PRINTL ②：자신 / 상대의 엔드 페이즈에 이 카드가 패에 좋재하지 않을 경우에 발동한다。
+PRINTL 이 카드는 소멸한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_159555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,159555)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン終了時強制
+	SIF ゾーン != "마함" && ゾーン != "묘지" && ゾーン != "제외"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,159555)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_159555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カード名
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ターン終了時強制
+	;마함 묘지 / 제외존에 あったら消滅する
+	CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)	
+	TRYCALLFORM CARDNAME_{159555},"名前"
+	選択カード名 = %RESULTS%
+	
+	PRINTFORMW 사용되지 않은 「%選択カード名%」는 소멸했습니다。
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,159555,1)
+	IF RESULT == 0
+		;通常마법汎用발동後묘지送り処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+		
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과条件성별 = 牝性
+		
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		
+		IF RESULT != -1
+			選択カード = RESULT
+			選択カードID = RESULT:99
+			;TRYCALLFORM CARDNAME_{選択カードID},"略称"
+			
+			IF 選択カード != 9999
+				CALL CARD_SELECT(듀얼리스트,選択カード)
+				選択カード = RESULT
+				
+				;공격력을 0にする
+				CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード,"永攻",-100000)
+				
+				IF 대상者（CS） == "자신"
+					;자신 필드의  카드를 選択
+					;네가스타X 몬스터의 場合
+					TRYCALLFORM CARDNAME_{選択カードID},"カテゴリ"
+					IF MATCH(RESULTS, "네가스타")
+						CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード,"Ｘ",1)
+						PRINTFORML 
+						
+						TRYCALLFORM CARDNAME_{選択カードID},"略称"
+						選択カード名 = %RESULTS%
+						
+						SELECTCASE 選択カードID
+							CASE 1815,41815,59555
+								;"윈다":
+								PRINTFORML "윈다의 장난감"을%選択カード名%의 엉덩이구멍에 쑤셔넣었다！
+								PRINTFORMW 커다란 "완구"에 의해、엉덩이 구멍이 크게 넓혀져간다…
+								PRINTFORMW 「응읏❤ …역시 이게 가장 좋아…❤」
+								
+							CASE 1816,41816,59556
+								;"캄":
+								PRINTFORML "윈다의 장난감"을%選択カード名%의 엉덩이구멍에 쑤셔넣었다！
+								PRINTFORMW 커다란 "완구"에 의해、엉덩이 구멍이 크게 넓혀져간다…
+								PRINTFORMW 「옷…❤ 옷、너무 커…❤」
+								
+							CASE 1817,41817,59557
+								;"리즈":
+								PRINTFORML "윈다의 장난감"을%選択カード名%의 엉덩이구멍에 쑤셔넣었다！
+								PRINTFORMW 커다란 "완구"에 의해、엉덩이 구멍이 크게 넓혀져간다…
+								PRINTFORMW 「히익…❤ 엉덩이구멍 찢어졋…❤」
+							
+							CASE 1818,41818,59554,59558
+								;피리카
+								PRINTFORML "윈다의 장난감"을%選択カード名%의 엉덩이구멍에 쑤셔넣었다！
+								PRINTFORMW 커다란 "완구"에 의해、小さな엉덩이 구멍이 크게 넓혀져간다…
+								PRINTFORMW 「앗❤ 제 엉덩이 구멍…❤ 모양 바뀌어버려요…❤❤」
+						ENDSELECT
+					ELSE
+						PRINTFORML "윈다의 장난감"이%選択カード名%의 엉덩이구멍에 쑤셔넣어졌다！
+						PRINTFORMW 커다란 "완구"에 의해、삐걱삐격하는 소리를 내며 엉덩이구멍을 넓혀간다…
+					ENDIF
+				ELSE
+					;상대 필드의  카드를 選択
+					;효과無効
+					CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード,"無効",2,1)
+					
+					PRINTFORML "윈다의 장난감"이%選択カード名%의 엉덩이구멍에 쑤셔넣어졌다！
+					PRINTFORMW 커다란 "완구"에 의해、삐걱삐격하는 소리를 내며 엉덩이구멍을 넓혀간다…
+					
+				ENDIF
+				
+				CALL CARD_EROTICS(選択カードID)
+				IF RESULT != -1
+					조교대상 = RESULT
+				CALL EROTIC_MOVE("애널解し",조교대상,-1,300)
+				ENDIF
+			ENDIF
+			
+		ENDIF
+	ENDIF
+ENDIF

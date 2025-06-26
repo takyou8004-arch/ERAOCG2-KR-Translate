@@ -1,0 +1,117 @@
+﻿@CARDNAME_54280,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마굉신 레이지온
+	CASE "略称"
+RESULTS = 마굉신 레이지온
+	CASE "カテゴリ"
+RESULTS:0 = 마굉신
+ENDSELECT
+
+
+@CARD_54280(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_54280(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「마굉신」튜너 ＋ 튜너 이외의 몬스터 1장 이상
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 S 소환에 성공했을 때에 발동할 수 있다.
+PRINTL 자신은 패가 2장이 되도록 덱에서 드로우한다.
+PRINTL 
+
+@CARDSUMMON_54280(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 5
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件カテゴリ = 마굉신	
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,54280) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_54280(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54280)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 손패数(듀얼리스트) >= 2
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54280(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ドロー枚数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54280)
+	IF RESULT == 0
+		ドロー枚数 = 2 - 손패数(듀얼리스트)
+		CALL CARDDRAW_BASIC(듀얼리스트,ドロー枚数)
+	ENDIF
+ENDIF
+
+
+

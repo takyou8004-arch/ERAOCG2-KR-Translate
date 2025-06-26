@@ -1,0 +1,95 @@
+﻿@CARDNAME_24282,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 분보그 002
+	CASE "略称"
+RESULTS = 분보그 002
+	CASE "カテゴリ"
+RESULTS:0 = 분보그
+ENDSELECT
+
+
+@CARD_24282(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 500
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24282(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,특수소환時)
+PRINTL ①: 이 카드가 특수 소환에 성공했을 경우 발동할 수 있다.
+PRINTL 덱에서 「분보그」 카드 1장을 패에 추가한다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 이 카드 이외의 자신 필드의 기계족 몬스터의 공격력 / 수비력은 500 올린다.
+
+@CARDCAN_24282(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24282)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 특수소환時
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24282(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+
+IF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24282)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 분보그
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件종족 = 기계족
+	효과条件他所 = 1
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,500,500)
+ENDIF
+

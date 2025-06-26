@@ -1,0 +1,176 @@
+﻿@CARDNAME_25501,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 무신-미카즈치
+	CASE "略称"
+RESULTS = 무신 미카즈치
+	CASE "カテゴリ"
+RESULTS:0 = 무신
+ENDSELECT
+
+
+@CARD_25501(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 1500
+	CASE "単一存在"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_25501(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL ①: 「무신-미카즈치」는 자신 필드에 1장밖에 앞면 표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②: 자신 필드의 「무신」 몬스터가 전투 / 효과로 파괴되어 묘지로 보내졌을 때에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ③: 이 카드가 필드에 앞면 표시로 존재하고,
+PRINTL 자신의 패에서 「무신」 또는 「무신기」 몬스터가 효과로 자신의 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 덱에서 「무신」 마법 / 함정 카드 1장을 패에 넣는다.
+PRINTL 그 후, 패에 넣은 카드의 종류에 따라 이하의 효과를 적용할 수 있다.
+PRINTL ● 일반 함정 : 그 카드를 자신 필드에 세트한다.
+PRINTL ● 지속 마법 / 지속 함정 : 그 카드를 자신 필드에 앞면 표시로 놓는다.
+
+@CARDCAN_25501(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 발동불가,2
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25501)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	IF ゾーン == "손패"
+		CALL CARD_SS_CHECK(듀얼리스트,25501,"손패")
+		SIF RESULT == 1
+			RETURN 0
+		CALL FULLRESET
+		효과条件カテゴリ = 무신
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+		SIF RESULT != 1
+			RETURN 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+효과条件名前 = 무신－미카즈치
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+		RETURN 1
+
+	ELSEIF ゾーン == "필드"
+		SIF 발동済_1(듀얼리스트,25501)
+			RETURN 0
+		CALL FULLRESET
+		효과条件カテゴリ:0 = 무신
+		효과条件カテゴリ:1 = 무신기
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"손패墓送")
+		SIF RESULT != 1
+			RETURN 0
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종류 = 마함全般
+		효과条件カテゴリ = 무신
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+@CARDEFFECT_25501(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード종류
+#DIMS DYNAMIC 選択カード名前
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	IF ゾーン == "손패"
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25501)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+		ENDIF
+
+	ELSEIF ゾーン == "필드"
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25501,1)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = 마함全般
+			효과条件カテゴリ = 무신
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				選択カード_ID = RESULT:1
+				TRYCALLFORM CARD_{選択カード_ID},"종류"
+				選択カード종류 = RESULT
+				TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
+				選択カード名前 = %RESULTS%
+
+				IF 選択カード종류 == 通常함정 || 選択カード종류 == 지속마법 || 選択カード종류 == 지속함정
+					SIF 듀얼리스트 == "자신"
+						PRINTW 자신 필드에 セットしますか？
+					CALL YN_CHOICE(듀얼리스트)
+					SIF RESULT == 1
+						RETURN 1
+					
+					IF 選択カード종류 == 通常함정
+						CALL FULLRESET
+						효과範囲손패 = 1
+효과条件名前 = %選択カード名前%
+						CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+
+					ELSEIF 選択カード종류 == 지속마법 || 選択カード종류 == 지속함정
+						CALL FULLRESET
+						효과範囲손패 = 1
+효과条件名前 = %選択カード名前%
+						CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

@@ -1,0 +1,157 @@
+@IRAI_EVENT_441(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+;アドリブバチバチねじ込んであります。
+;セリフとかのところはコピペしてもらって大丈夫です。
+;アロマージ非所持前提で書かれてますが、所持、非所持での분기は特にありません
+;(むしろ分かんないところをお任せしてしまうような形になってしまってスイマセン…)
+;不明点、解釈違いによる文章改良点があれば是非ご相談ください。
+;都合에 의해 セリフが省略される場合は多いです
+
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = (CP-AM1)아로마 치료원에서 에스테를 받는다
+	CASE "이벤트種"
+		RETURN 이벤트_施設
+	CASE "依頼先"
+		RETURN 場所_森
+	CASE "詳細"
+		IF 依頼_完了횟수:441 == 0
+			PRINTL 숲의 깊은 곳에 아로마지 몬스터와 닮은 사람이 아로마 테라피 치료원을 개업했다는 소문을 들었다
+			PRINTL 기회니까 한번 가볼까…？
+		ELSEIF 依頼_完了횟수:441 != 0
+			PRINTL 오늘은 아로마지 치료원에 가볼까…？
+			PRINTL 
+		ENDIF
+		PRINTL 
+		PRINTL 
+		PRINTL 요금：8000円
+	CASE "条件"
+		SIF 依頼_完了횟수:1 == 0 && FLAG:게임모드 == 1
+			RETURN 0
+		SIF 依頼_完了횟수:443 != 0
+			RETURN 0
+		RETURN 1
+	CASE "利用制限"
+		SIF 依頼플래그:441 != 0
+			RETURN 3
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_441(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC 체력BEFORE
+#DIM DYNAMIC 체력AFTER
+#DIM DYNAMIC 기력BEFORE
+#DIM DYNAMIC 기력AFTER
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(1397);ロザリーナ
+이벤트主:1 = NO_TO_CHARANUM(1390);ロ-ズマリー
+이벤트主:2 = NO_TO_CHARANUM(1391);ジャスミン
+이벤트主:3 = NO_TO_CHARANUM(1392);マジョラム
+이벤트主:4 = NO_TO_CHARANUM(1399);マグノリア
+이벤트主:5 = NO_TO_CHARANUM(1395);アンゼリカ
+
+IF 依頼_完了횟수:441 == 0
+	PRINT 아로마지 몬스터와 닮은 아이가 있다는 소문이 있는
+ELSEIF 依頼_完了횟수:441 != 0
+	PRINT 오늘도 마찬가지로
+ENDIF
+PRINTFORMW 아로마지의 치료원에 왔다.
+PRINTFORMW 「어서 오세요ー！」
+PRINT 곧바로 들어가자,
+IF 依頼_完了횟수:441 == 0
+	PRINTFORMW %NAME:(이벤트主:1)%와 비슷한 소녀가 접수대에서 맞아주었다.
+	PRINTFORMW 多分、%NAME:(이벤트主:1)%의 정령 본인일 것 같지만, 여기서는 넘어가자.
+ELSEIF 依頼_完了횟수:441 != 0
+	PRINTFORMW %CALLNAME:(이벤트主:1)%가 접수대에서 맞아주었다.
+ENDIF
+CALL SYOTAIMEN(이벤트主:1)
+IF 依頼_完了횟수:442 != 0
+	PRINTFORMW 얼굴이 살짝 붉어진 것 같다.
+ENDIF
+IF 依頼_完了횟수:441 == 0
+	PRINT 「처음 오신 고객이시네요。
+ELSEIF 依頼_完了횟수:441 != 0
+	PRINT 「오늘도
+ENDIF
+PRINTFORMW 아로마 테라피 에스테틱을 받으러 오셨나요？」
+PRINTFORMW 그렇다고 대답했다。
+PRINTFORMW 「요금은 8,000엔입니다ー」
+IF MONEY >= 8000
+	PRINTFORMW 당연히 준비해왔다.
+	CALL MONEY_GET(-8000)
+	RESETCOLOR
+ELSEIF MONEY < 8000
+	PRINTFORMW 이런. 돈이 부족하다.
+	PRINTFORMW 오늘은 돌아가자…。
+	RETURN 3
+ENDIF
+PRINTFORMW 「그럼 이쪽으로 들어오세요ー」
+PRINTFORMW %CALLNAME:(이벤트主:1)%의 안내로 안쪽 방으로 들어갔다.
+PRINTFORMW 방은 벽 전체가 허브 계열의 식물로 가득 차 있었고, 중앙에는 의자가 있었다.
+PRINTFORMW 「이 의자에 앉아주세요」
+PRINTFORMW %CALLNAME:(이벤트主:1)%의 지시에 따라 의자에 앉는다.
+PRINTFORMW 그리고 %CALLNAME:(이벤트主:1)%가 어떤 향을 태우며 에스테가 시작되었다.
+IF 依頼_完了횟수:442 != 0
+	PRINTFORMW 향기 속에 이상하게 흥분을 자극하는 냄새가 섞여 있는 것 같다…
+ENDIF
+PRINTFORMW …………
+PRINTFORMW ………
+PRINTFORMW ……
+PRINTFORMW 「네, 끝났습니다」
+PRINTFORMW 몸이 가벼워진 것 같다！
+체력BEFORE = MAXBASE:MASTER:체력
+기력BEFORE = MAXBASE:MASTER:기력
+SETCOLOR C_YELLOW
+IF 체력BEFORE <= 4900
+MAXBASE:MASTER:체력 += 100
+체력AFTER = MAXBASE:MASTER:체력
+PRINTFORML %CALLNAME:MASTER%체력UP！！：【{체력BEFORE}】→【{체력AFTER}】
+ELSEIF 체력BEFORE > 4900 && 체력BEFORE < 5000
+MAXBASE:MASTER:체력 = 5000
+체력AFTER = MAXBASE:MASTER:체력
+PRINTFORML %CALLNAME:MASTER%체력UP！！：【{체력BEFORE}】→【{체력AFTER}】
+ENDIF
+IF 기력BEFORE <= 4900
+MAXBASE:MASTER:기력 += 100
+기력AFTER = MAXBASE:MASTER:기력
+PRINTFORML %CALLNAME:MASTER%기력UP！！：【{기력BEFORE}】→【{기력AFTER}】
+ELSEIF 기력BEFORE > 4900 && 기력BEFORE < 5000
+MAXBASE:MASTER:기력 = 5000
+기력AFTER = MAXBASE:MASTER:기력
+PRINTFORML %CALLNAME:MASTER%체력UP！！：【{기력BEFORE}】→【{기력AFTER}】
+ENDIF
+BASE:MASTER:체력 = MAXBASE:MASTER:체력
+BASE:MASTER:기력 = MAXBASE:MASTER:기력
+PRINTFORML 
+SETCOLOR C_YELLOW
+PRINTFORML 《체력·기력이 완전히 회복되었습니다》
+PRINTFORMW 
+RESETCOLOR
+PRINTFORMW 「또 오세요ー」
+PRINTFORMW %CALLNAME:(이벤트主:1)%에게 배웅받으며 치료원을 떠났다.
+IF 依頼_完了횟수:442 == 0
+	PRINTFORMW 기분이 되면 또 오자.
+ELSEIF 依頼_完了횟수:442 > 0 && 依頼_進行보존:442 < 9
+	PRINTFORMW 이쪽을 배웅하는 %CALLNAME:(이벤트主:1)%의 시선이 뜨겁게 느껴진다.。
+	PRINTFORMW 약 {10-依頼_進行보존:442}번 정도 더 오면 의미 있는 진전이 있을 것 같다……
+	依頼_進行보존:442 += 1
+ELSE ;IF 依頼_進行보존:442 == 10
+	PRINTFORMW 이쪽을 배웅하는 %CALLNAME:(이벤트主:1)%의 시선이 뜨겁게 느껴진다.
+	PRINTFORMW 이제 다음 단계로 넘어가도 될지도 모르겠다……
+	依頼_進行보존:442 += 1
+ENDIF
+TIME += 60
+依頼_完了횟수:441 += 1
+RETURN 2
+

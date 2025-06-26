@@ -1,0 +1,128 @@
+﻿@CARDNAME_91500,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 궁정의 관례
+	CASE "略称"
+RESULTS = 궁정의 관례
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_91500(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91500(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「궁정의 관례」는 자신 필드에 한 장밖에 앞면 표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 마법 & 함정 존에 존재하는 한,
+PRINTL 「궁정의 관례」 이외의 서로의 필드의 앞면 표시 지속 함정 카드는 파괴 내성과 전투 내성을 얻는다.
+
+@CARDCAN_91500(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件チェック,5
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91500)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動
+
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲마함 = 1
+효과条件名前 = 궁정의 관례
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_91500(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 条件チェック,5
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+
+IF 종류 == 마함起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91500)
+	IF RESULT == 0
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件종류 = 지속함정
+	효과条件固名前 = 궁정의 관례
+	효과条件표시 = 表側표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐")
+
+	CALL FULLRESET
+	효과条件종류 = 지속함정
+	효과条件固名前 = 궁정의 관례
+	효과条件표시 = 表側표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+
+	CALL FULLRESET
+	효과条件종류 = 지속함정
+	효과条件固名前 = 궁정의 관례
+	효과条件표시 = 表側표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐")
+ENDIF
+

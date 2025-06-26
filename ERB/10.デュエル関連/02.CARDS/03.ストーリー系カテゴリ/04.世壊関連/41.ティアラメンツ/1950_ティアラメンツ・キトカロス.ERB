@@ -1,0 +1,160 @@
+﻿@CARDNAME_1950,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 티아라멘츠 키토칼로스
+	CASE "略称"
+RESULTS = 키토칼로스
+	CASE "カテゴリ"
+RESULTS:0 = 티아라멘츠
+ENDSELECT
+
+
+@CARD_1950(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1950(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "티아라멘츠" 몬스터 ＋ 원소정령족 몬스터
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 융합 소환했을 경우에 발동할 수 있다.
+PRINTL 덱에서 "티아라멘츠" 카드 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드를 묘지로 보내고, 자신의 패 / 묘지에서 이 카드명 이외의 "티아라멘츠" 몬스터 1장을 특수 소환한다.
+PRINTL 그 후, 자신의 덱 위에서 카드 3장을 묘지로 보낸다.
+
+
+@CARDSUMMON_AA_1950
+
+
+
+@CARDSUMMON_1950(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 티아라멘츠
+ELSEIF EX参照 >= 10
+	素材条件종족 = 원소정령족
+ENDIF
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,1950) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_1950(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1950)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,1950)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 티아라멘츠
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,1950)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 티아라멘츠
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_1950(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1950,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 티아라멘츠
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1950,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件固名前 = 티아라멘츠 키토칼로스
+		효과条件カテゴリ = 티아라멘츠
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",3)
+	ENDIF
+ENDIF

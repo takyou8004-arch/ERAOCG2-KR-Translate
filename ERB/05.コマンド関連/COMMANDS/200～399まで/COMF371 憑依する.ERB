@@ -1,0 +1,75 @@
+﻿;정신を操作を悪用する
+@COM371
+#DIM DYNAMIC MASTER_ID
+#DIM DYNAMIC TARGET_ID
+#DIM DYNAMIC MASTER_起
+
+PRINTFORML ＊테스트중인 커맨드입니다、버그 등 발견한다면 보고해주세요。
+
+IF CFLAG:MASTER:빙의중 == 0
+	PRINTFORML 《빙의령》카드를 발동하니、 %CALLNAME:MASTER%의 몸은 영체처럼 되며、 %CALLNAME:TARGET%의 육체쪽으로 몸이 끌려갔다。
+	PRINTFORMW 눈을 뜨니、 %CALLNAME:TARGET%의 몸을 빼앗아버렸다！
+
+	TCVAR:MASTER:친밀감 = 0
+	MASTER_ID = MASTER
+	TARGET_ID = TARGET
+	MASTER_起 = CFLAG:MASTER:기상시간
+	CFLAG:MASTER:현재위치 = 100
+
+	MASTER = TARGET_ID
+	TARGET = 0
+	TCVAR:MASTER:친밀감 = 0
+	CFLAG:MASTER:기상시간 = MASTER_起
+	CFLAG:MASTER:빙의중 = 1
+ELSE
+	CFLAG:MASTER:빙의중 = 0
+	PRINTFORML 《빙의령》카드를 발동하니、 %CALLNAME:MASTER%의 영혼은、 %CALLNAME:TARGET%의 육체에서 빠져、
+	PRINTFORMW 눈을 뜨니、우너래 모습으로 돌아와있었다。
+	TCVAR:MASTER:친밀감 = 0
+	MASTER_ID = MASTER
+	TARGET_ID = TARGET
+	MASTER_起 = CFLAG:MASTER:기상시간
+
+	CFLAG:0:현재위치 = CFLAG:MASTER:현재위치
+	MASTER = 0
+	TARGET = MASTER_ID
+
+	TCVAR:MASTER:친밀감 = 0
+	CFLAG:MASTER:기상시간 = MASTER_起
+
+ENDIF
+
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE371
+IF CFLAG:MASTER:빙의중 == 1
+	SIF TARGET:1 > 0
+		RETURN 0
+	RETURN 1
+ENDIF
+;금단의지식が無いとできない
+SIF TALENT:MASTER:금단의지식 == 0
+	RETURN 0
+SIF 依頼플래그:依頼_受領中 == 1
+	RETURN 0
+;빙의령의 사냥터が必要
+SIF ITEM:79790 <= 0
+	RETURN 0
+IF CFLAG:MASTER:빙의중 == 0
+	;一括관리
+	SIF GLOBAL_COMABLE(371)
+		RETURN RESULT
+	;二人きりでないとだめ
+	SIF GET_TARGETNUM() > 1
+		RETURN 0
+	SIF CFLAG:수면
+		RETURN 0
+	SIF TARGET:1 <= 0
+		RETURN 0
+ENDIF
+RETURN 1

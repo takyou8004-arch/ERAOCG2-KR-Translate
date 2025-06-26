@@ -1,0 +1,167 @@
+﻿@CARDNAME_54521,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 피안의 흑천사 켈비니
+	CASE "略称"
+RESULTS = 켈비니
+	CASE "カテゴリ"
+RESULTS:0 = 피안
+ENDSELECT
+
+
+@CARD_54521(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_54521(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件종류 = レベル持ち
+素材条件レベル = 3
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,54521) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_54521(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 3 몬스터 2체
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 자신의 턴 중, 자신의 몬스터는 효과로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ②: 필드의 이 카드가 파괴될 경우, 대신에 자신 필드의 카드 1장을 묘지로 보낼 수 있다.
+CALLFORM CARD_ABLE(3,필드起動)
+PRINTL ③: 덱에서 레벨 3 몬스터 1장을 묘지로 보내 발동할 수 있다.
+PRINTL 이 카드의 공격력 / 수비력은 턴 종료 시까지, 묘지로 보낸 몬스터의 공격력만큼 올린다.
+PRINTL 
+
+@CARDCAN_54521(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54521)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_3(듀얼리스트,54521)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件レベル = 3
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0		
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_54521(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力상승
+IF 종류 == 지속효과
+	CALL FULLRESET
+	;효과条件他所 = 1
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54521)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54521,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件レベル = 3
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		IF RESULT == 1
+			CALLFORM CARD_{RESULT:1}("攻撃力")
+			攻撃力상승 = RESULT
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",攻撃力상승)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一守",攻撃力상승)
+		ENDIF
+	ENDIF
+ENDIF
+
+

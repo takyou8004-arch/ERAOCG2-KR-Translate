@@ -1,0 +1,151 @@
+﻿@CARDNAME_21237,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 멸룡제 디 엔드 드라고니스
+	CASE "略称"
+RESULTS = 멸룡제
+	CASE "カテゴリ"
+RESULTS:0 = 멸룡
+		RESULTS:4 = 배틀 스피릿
+ENDSELECT
+
+
+@CARD_21237(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2500
+	CASE "특수不可"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21237(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 특수 소환할 수 없다.
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환했을 경우에 발동할 수 있다.
+PRINTL 이 카드는 파괴 내성을 얻는다.
+CALLFORM CARD_ABLE(0,효과後強制誘発)
+PRINTL ②: 이 카드 이외의 자신 필드의 "멸룡" 몬스터가 묘지로 보내졌을 경우에 발동한다.
+PRINTL 묘지로 보내진 카드의 원래 공격력만큼, 이 카드의 공격력을 올린다.
+CALLFORM CARD_ABLE(3,攻撃時誘発)
+PRINTL ③: 이 카드의 공격 선언 시에, 이 카드 이외의 자신 필드의 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 묘지로 보내고, 이 카드의 공격 횟수를 1회 늘린다.
+
+@CARDCAN_21237(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21237)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	RETURN 1
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+효과条件カテゴリ = 멸룡
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"묘지送り全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF 발동済_3(듀얼리스트,21237)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21237(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択レベル
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード数
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21237,0)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"破耐",2,1)
+	ENDIF
+ELSEIF 종류 == 효과後強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21237,0)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件カテゴリ = 멸룡
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般",0,1)
+		選択カード数 = RESULT
+		FOR カウンタ, 1, 選択カード数 + 1
+			選択カード_ID = RESULT:カウンタ
+			TRYCALLFORM CARD_{選択カード_ID},"攻撃力"
+			攻撃力修正 = RESULT
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",攻撃力修正)
+		NEXT
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21237,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件他所 = 1
+		효과範囲필드 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",1)
+		ENDIF
+	ENDIF
+ENDIF

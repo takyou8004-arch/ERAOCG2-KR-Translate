@@ -1,0 +1,209 @@
+﻿@CARDNAME_39770,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 파피야스 드래그마라
+	CASE "略称"
+		RESULTS = 음교의 천사
+	CASE "カテゴリ"
+		RESULTS:0 = 드래그마라
+		RESULTS:1 = 드래그마
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39770(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 의식
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_39770(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 4
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,39770) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_39770(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL “음교의 야연”으로 강림.
+PRINTL 이 카드명의  ①③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,특수소환時,EX소환時,ターン終了時)
+PRINTL ①：이 카드가 특수 소환된 경우, 또는 상대의 엔드 페이즈에 발동할 수 있다.
+PRINTL 자신 / 상대 묘지에서 암컷 몬스터 1장을 효과를 무효로 하고 특수 소환한다.
+PRINTL 소유자가 상대의 몬스터를 특수 소환한 경우, 이 듀얼 동안 그 소유자를 자신으로 변경한다.
+CALL CARD_ABLE(2,身代효과)
+PRINTL ②：이 카드가 전투 또는 효과로 파괴될 경우, 대신 자신 필드에 있는 암컷 몬스터 1장을 묘지로 보낸다.
+CALL CARD_ABLE(3,손패起動)
+PRINTL ③：자신의 메인 페이즈에 이 카드를 패에서 버리고 발동할 수 있다.
+PRINTL 덱에서 ‘드래그마라’ 마법 카드 1장을 패에 넣는다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+
+
+@CARDCAN_39770(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39770)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 특수소환時 || 종류 == EX소환時 || 종류 == ターン終了時
+	SIF 발동済_1(듀얼리스트,39770)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲상대묘지 = 1
+	효과条件성별 = 牝性
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件종류 = モン全般
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 손패起動
+	SIF 발동済_3(듀얼리스트,39770)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 드래그마라
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39770(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 조교대상_ID
+#DIM DYNAMIC 元持ち主
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 특수소환時 || 종류 == EX소환時 || 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39770,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과条件성별 = 牝性
+		효과추가종류 = 効追無効
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		조교대상_ID = RESULT:1
+		元持ち主 = GETVAR(@"%듀얼리스트%_MZ_所有:カード소환先")
+		IF 듀얼리스트 == "자신"
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"所有",1,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"接可",2,1)
+		ELSEIF 듀얼리스트 == "상대"
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"所有",2,1)
+		ENDIF
+		CALL CARD_EROTICS(조교대상_ID)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML
+			SETCOLOR C_PINK
+			PRINTFORMW 음교의 천사에 유혹된 %CALLNAME:조교대상%는 자신의 몸을 바쳤다…！
+			RESETCOLOR
+			PRINTFORML
+			CALL EROTIC_MOVE("前穴凌辱",조교대상, -1, 500)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39770)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件종류 = モン全般
+		효과条件성별 = 牝性
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39770,3)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 드래그마라
+		효과条件종류 = 마법全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

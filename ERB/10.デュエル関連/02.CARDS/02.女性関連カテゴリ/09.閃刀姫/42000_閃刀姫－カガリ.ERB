@@ -1,0 +1,141 @@
+﻿@CARDNAME_42000,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 섬도희－카가리
+	CASE "略称"
+		RESULTS = 섬도희－카가리
+	CASE "カテゴリ"
+		RESULTS:0 = 섬도희
+		RESULTS:1 = 섬도
+ENDSELECT
+
+
+@CARD_42000(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1000
+	CASE "특수制限"
+		RETURN 1
+
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 2000
+ENDSELECT
+
+
+RETURN 0
+
+
+@CARD_EXPLANATION_42000(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 화염 속성 이외의 "섬도희」 몬스터 1장
+PRINTL 자신은 「섬도희－카가리」를 1턴에 1번밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：이 카드가 특수 소환되었을 경우, 자신 묘지의 "섬도」 마법 카드 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 카드를 패에 넣는다.
+CALLFORM CARD_ABLE(2,攻守変動)
+PRINTL ②：이 카드의 공격력은 자신 묘지의 마법 카드의 수× 100 올린다.
+
+
+@CARDSUMMON_42000(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 섬도희
+	素材条件R속성 = 화염속성
+ELSE
+	PRINT
+ENDIF
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,42000) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_42000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,42000)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 섬도
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_42000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42000)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 섬도
+		효과条件종류 = 마법全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 마법全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 100
+	CALL STATCHANGE_BASIC(듀얼리스트,"자신",場所,攻撃力修正)
+ENDIF
+
+

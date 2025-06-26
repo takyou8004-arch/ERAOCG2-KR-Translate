@@ -1,0 +1,142 @@
+﻿@CARDNAME_50594,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마왕초룡 베르제우스
+	CASE "略称"
+RESULTS = 베르제우스
+	CASE "カテゴリ"
+RESULTS:0 = 듀얼룡
+ENDSELECT
+
+
+@CARD_50594(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50594(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+IF EX参照 == 0 || EX参照 == 1
+	素材条件속성 = 어둠속성
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50594) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50594(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 어둠속성튜너＋튜너 이외의 몬스터 1장 이상
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 전투 / 효과로는 파괴되지 않으며, 자신 필드의 다른 몬스터는 공격할 수 없다.
+CALL CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 상대 필드의 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터의 공격력을 0으로 하고, 그 원래 공격력만큼 자신은 LP를 회복한다.
+
+
+@CARDCAN_50594(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50594)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_50594(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"単攻")
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50594,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"永攻DOWN",99999)
+			CALL FULLRESET
+			CALLFORM CARD_{GETVAR(@"%対面者%_필드:選択カード")}("攻撃力")
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",RESULT)
+		ENDIF
+	ENDIF
+ENDIF

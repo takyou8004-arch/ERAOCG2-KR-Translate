@@ -1,0 +1,92 @@
+@CARDNAME_23180,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = フォトン・クラッシャー
+	CASE "略称"
+		RESULTS = Ｐｔクラッシャー
+	CASE "カテゴリ"
+		RESULTS:0 = フォトン
+ENDSELECT
+
+
+@CARD_23180(参照先)
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23180(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,소환時)
+PRINTL ①：この카드가 소환했을 경우에 발동할 수 있다。
+PRINTL 덱에서 「은하眼の光子룡」１体を패에 加える。
+
+@CARDCAN_23180(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23180)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 소환時
+	SIF 발동済_1(듀얼리스트,23180)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件名前 = ギャラクシーアイズ・フォトン・ドラゴン
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23180(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23180,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前 = ギャラクシーアイズ・フォトン・ドラゴン
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF
+

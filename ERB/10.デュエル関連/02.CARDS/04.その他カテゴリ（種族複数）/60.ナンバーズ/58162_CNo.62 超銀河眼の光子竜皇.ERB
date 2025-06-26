@@ -1,0 +1,167 @@
+@CARDNAME_58162,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = CNo.62 네오 갤럭시아이즈 프라임 포톤 드래곤
+	CASE "略称"
+RESULTS = C#62 초광자룡황
+	CASE "カテゴリ"
+RESULTS:0 = 넘버즈
+RESULTS:1 = 갤럭시아이즈
+RESULTS:2 = 갤럭시
+RESULTS:3 = 포톤
+RESULTS:4 = 카오스
+ENDSELECT
+
+
+@CARD_58162(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 3000
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_58162(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 8
+素材条件속성 = 빛속성
+지정素材名前 = 갤럭시 아이즈 포톤 드래곤
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,58162) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_58162(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 빛속성 레벨 8 몬스터 × 3
+PRINTL 「은하안의 광자룡」 또는 「No.62 은하안의 광자룡황」을 X 소재로 하고 있는 이 카드는 각성 상태가 된다.
+PRINTL 이 카드는 자신 필드의 「No.62 은하안의 광자룡황」 위에 겹쳐서 X 소환할 수도 있다.
+CALLFORM CARD_ABLE(0,バトル開始時)
+PRINTL ①: 자신 배틀 페이즈 개시 시, 이 카드의 X 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 이 카드는 이 배틀 페이즈 중, 3회까지 몬스터에게 공격할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과,攻守変動)
+PRINTL ②: 각성 상태의 이 카드는 몬스터 내성을 가지고, 공격력은 X 소재의 수× 800 올린다.
+
+@CARDCAN_58162(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58162)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,58162)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = No.62 갤럭시아이즈 프라임 포톤 드래곤
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == バトル開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF モンスター数(対面者) != 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_58162(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58162)
+	IF RESULT == 0
+		CALL RESETCONDITION_MAT
+		必要素材数 = 1
+素材条件名前 = No.62 갤럭시아이즈 프라임 포톤 드래곤
+		重ねてＸ = 1
+		TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"条達",2,1)
+	ENDIF
+ELSEIF 종류 == バトル開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58162,0,X消費1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",3,1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+ELSEIF 종류 == 攻守変動
+	攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") * 800
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",-99,1)
+ENDIF

@@ -1,0 +1,184 @@
+@CARDNAME_39764,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = MIA 로더
+	CASE "略称"
+		RESULTS = MIA로더
+	CASE "カテゴリ"
+		RESULTS:0 = MIA
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39764(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 1400
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39764(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②③의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：이 카드가 소환・특수소환되었을 경우에 발동할 수 있다。
+PRINTL 「MIA 로더」를 제외한 기계족・어둠 속성 몬스터 １장을 덱에서 묘지로 보낸다。
+CALL CARD_ABLE(2,필드起動)
+PRINTL ①：자신의 메인 페이즈에 발동할 수 있다。
+PRINTL 「MIA 로더」를 제외한、성별을 갖지 않는 기계족・어둠 속성 몬스터 １장을 패・묘지에서 특수 소환한다。
+PRINTL 이 턴、자신은 기계족 몬스터밖에 특수 소환할 수 없다。
+CALL CARD_ABLE(3,ターン終了時)
+PRINTL ③：자신 / 상대의 엔드 페이즈에 상대의 제외된 카드가 존재할 경우 발동할 수 있다。
+PRINTL 묘지의 이 카드와 기계족・어둠 속성 몬스터 １장을 덱으로 되돌리고、
+PRINTL 자신은 ３００의 피해를 받고、１장 드로우 한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39764(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39764)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,39764)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 기계족
+	효과条件속성 = 어둠속성
+	효과条件固名前 = MIA 로더
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,39764)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件종족 = 기계족
+	효과条件속성 = 어둠속성
+	효과条件固名前 = MIA 로더
+	효과条件성별 = 無性
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時
+	SIF 발동済_3(듀얼리스트,39764)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대제외 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 어둠속성
+	효과条件종족 = 기계족
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39764(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39764,1)
+	IF RESULT == 0
+        CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종족 = 기계족
+		효과条件속성 = 어둠속성
+		효과条件固名前 = MIA 로더
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+    ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39764,2)
+	IF RESULT == 0
+        CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件종족 = 기계족
+		효과条件속성 = 어둠속성
+		효과条件固名前 = MIA 로더
+		효과条件성별 = 無性
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			SS소환可能종족 = 기계족
+			CALL CARD_SS_RESTRICTION(듀얼리스트)
+		ENDIF
+    ENDIF
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39764,3)
+	IF RESULT == 0
+        CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件속성 = 어둠속성
+			효과条件종족 = 기계족
+			효과条件行先플래그 = 덱行き
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+			IF RESULT == 1
+				CALL SHUFFLE(듀얼리스트)
+				CALL LIFE_CHANGE(듀얼리스트,"減少","효과",300)
+				CALL CARDDRAW_BASIC(듀얼리스트,1)
+			ENDIF
+		ENDIF
+    ENDIF
+ENDIF
+

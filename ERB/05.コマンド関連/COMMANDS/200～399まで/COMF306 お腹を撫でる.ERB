@@ -1,0 +1,77 @@
+﻿;-------------------------------------------------
+;お腹を撫でる
+;日常계커맨드　レベル2
+;-------------------------------------------------
+@COM306
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+;ボディタッチで발기UP
+IF BASE:MASTER:발기 <= 1000
+	TCVAR:MASTER:사정쾌락강도 = 500
+	TCVAR:MASTER:사정대상캐릭터_1 = TARGET
+	TCVAR:MASTER:사정부위플래그 = 8
+ENDIF
+	;-------------------------------------------------
+	;ソース추가処理
+	;-------------------------------------------------
+	;消費체력、기력
+	DOWNBASE:체력 += 5
+	DOWNBASE:기력 += 50
+
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 100)
+	CALL SOURCE_CALC_접촉(TARGET, MASTER, 80)
+
+	IF EXP:TARGET:포르치오경험 >= 50
+		EXP:TARGET:포르치오경험 += 1
+		CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER,300)
+	ENDIF
+	IF ABL:TARGET:친밀 >= 6 && TALENT:TARGET:임신 >= 1
+		TFLAG:SELECTCOM분기 = 1
+	ELSEIF ABL:TARGET:친밀 <= 5 && RAND:3 == 0
+		TFLAG:SELECTCOM분기 = -1
+	ENDIF
+	;-------------------------------------------------
+	;특수ソース処理
+	;-------------------------------------------------
+	;抑圧、저항持ちには、억울ソース추가
+	SIF TALENT:자기애 < 0 || TALENT:저항
+		SOURCE:울굴 += 20
+
+	;-------------------------------------------------
+	;경험の処理
+	;-------------------------------------------------
+	IF HETEROSEX(TARGET,MASTER)
+		EXP:(50 + HETEROSEX(TARGET,MASTER)) += 1
+		EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 1
+	ENDIF
+	TIME += 5
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE306
+;お腹撫でる実行판정
+SIF !TFLAG:100
+	RETURN 0
+;エッチしている状態でおなか触りたい
+SIF CFLAG:우후후 == 1
+	RETURN 1
+;一括관리
+SIF GLOBAL_COMABLE(306)
+	RETURN RESULT
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+;친밀감강도1
+SIF TCVAR:MASTER:친밀감 < 1
+	RETURN 0
+;수면中
+SIF CFLAG:수면
+	RETURN 0
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+RETURN 1
+

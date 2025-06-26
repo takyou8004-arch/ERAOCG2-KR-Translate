@@ -1,0 +1,164 @@
+﻿@CARDNAME_31022,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 이터널 마그넷 워리어β
+	CASE "略称"
+RESULTS = 영구마그넷전사β
+	CASE "カテゴリ"
+RESULTS:0 = 마그넷 워리어
+RESULTS:1 = 마그넷 워리어β
+ENDSELECT
+
+
+@CARD_31022(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1100
+	CASE "守備力"
+		RETURN 600
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_31022(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 자신 필드에 「마그넷 워리어α」 몬스터와 「마그넷 워리어γ」 몬스터가 존재하고,
+PRINTL 「마그넷 워리어β」 몬스터가 존재하지 않을 경우에 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+CALLFORM CARD_ABLE(2,필드起動 ,フリー誘発)
+PRINTL ②: 자신 / 상대 메인 페이즈에, 덱의 맨 위 카드를 묘지로 보내고 발동할 수 있다.
+PRINTL 이 카드의 카드명은 이 턴, 「마그넷 워리어β」가 된다.
+PRINTL 그 후, 자신의 패/필드의 몬스터를 융합 소재로 하여, 땅 속성의 융합 몬스터 1장을 융합 소환할 수 있다.
+PRINTL 
+
+
+@CARDCAN_31022(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31022)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,31022,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 마그넷 워리어α	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 마그넷 워리어β
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 마그넷 워리어γ
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,31022)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31022(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31022)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)	
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31022,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",0)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",31012,上書きモード)
+		CALLFORM CARDNAME_31012("名前")
+		PRINTFORMW 영구마그넷전사βは%RESULTS%にその姿を変えた！
+
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲손패 = 1
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종류 = 융합
+		효과条件속성 = 땅속성
+		효과条件소환可 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+PRINTL 몬스터를 융합 소환하겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+		ELSE
+			RESULT = いいえ
+		ENDIF
+		IF RESULT == はい
+			CALL RESETAREA_MAT
+			素材範囲필드 = 1
+			素材範囲손패 = 1
+			CALL FULLRESET
+			효과条件종류 = 융합
+			효과条件속성 = 땅속성
+			효과条件소환可 = 1		
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+				CALL FUSSUMMON(듀얼리스트, 選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

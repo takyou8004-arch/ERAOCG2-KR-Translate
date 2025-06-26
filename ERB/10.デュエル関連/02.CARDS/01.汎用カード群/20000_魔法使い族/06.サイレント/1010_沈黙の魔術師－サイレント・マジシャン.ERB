@@ -1,0 +1,137 @@
+﻿@CARDNAME_1010,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 침묵의 마술사－사일런트 매지션
+	CASE "略称"
+RESULTS = 사매
+	CASE "カテゴリ"
+RESULTS:0 = 사일런트
+RESULTS:1 = 마술사
+ENDSELECT
+
+
+@CARD_1010(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1010(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,攻守変動,지속효과)
+PRINTL ①: 이 카드의 공격력은, 자신 패의 수× 500만큼 업하고,
+PRINTL 이 카드의 공격력이 3000 이상인 한, 이 카드는 마법 내성을 가진다.
+CALLFORM CARD_ABLE(10,발동誘発)
+PRINTL ②: 1턴에 1번, 상대의 마법 카드의 효과가 발동했을 때 발동할 수 있다.
+PRINTL 손패를 1장 버리고, 그 발동을 무효로 하고, 파괴한다.
+CALLFORM CARD_ABLE(0,戦闘→묘지,破壊→묘지)
+PRINTL ③: 이 카드가 파괴되었을 경우에 발동할 수 있다.
+PRINTL 덱에서 이 카드명 이외의 「사일런트」 몬스터를 특수 소환한다.
+
+
+@CARDCAN_1010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1010)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 손패数(듀얼리스트) == 0
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 사일런트
+	효과条件固名前 = 침묵의 마술사－사일런트 매지션
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == 攻守変動
+	攻撃力修正 = 500 * 손패数(듀얼리스트)
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+
+ELSEIF 종류 == 지속효과
+	SIF GETVAR(@"%듀얼리스트%_MZ_攻:場所") >= 3000
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1010,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1010)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 사일런트
+		효과条件固名前 = 침묵의 마술사－사일런트 매지션
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

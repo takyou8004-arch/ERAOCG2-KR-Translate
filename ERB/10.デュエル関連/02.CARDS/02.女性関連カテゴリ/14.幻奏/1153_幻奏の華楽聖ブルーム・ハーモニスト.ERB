@@ -1,0 +1,160 @@
+﻿@CARDNAME_1153,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 환주의 화락성 블룸 하모니스트
+	CASE "略称"
+RESULTS = 환주 하모니스트
+	CASE "カテゴリ"
+RESULTS:0 = 환주
+ENDSELECT
+
+
+@CARD_1153(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1153(종류)
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC 듀얼리스트
+
+PRINTL 천사족 몬스터 2장
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 링크 소환에 성공했을 경우, 손패를 1장 버리고 발동할 수 있다.
+PRINTL 덱에서 레벨 4 및 레벨 5의 「환주」 몬스터 2장을 수비 표시로 특수 소환한다.
+PRINTL 이 턴, 자신은 「환주」 몬스터밖에 특수 소환할 수 없다.
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드 이외의 「환주」 몬스터가 전투를 실행할 경우,
+PRINTL 상대는 데미지 스텝 종료시까지 마법 / 함정 / 몬스터의 효과를 발동할 수 없다.
+
+
+@CARDSUMMON_1153(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件종족 = 천사족
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,1153) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_1153(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1153)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,1153)
+		RETURN 0
+	SIF 손패数(듀얼리스트) == 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 환주
+	효과条件レベル = 5
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 환주
+	효과条件レベル = 4
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 4
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1153(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択효과
+#DIM DYNAMIC 回復量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1153,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 환주
+			효과条件レベル = 4
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 환주
+			효과条件レベル = 5
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+
+			CALL CARD_SS_RESTRICTION(듀얼리스트,"환주")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件他所 = 1
+	효과条件カテゴリ = 환주
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦阻")
+ENDIF

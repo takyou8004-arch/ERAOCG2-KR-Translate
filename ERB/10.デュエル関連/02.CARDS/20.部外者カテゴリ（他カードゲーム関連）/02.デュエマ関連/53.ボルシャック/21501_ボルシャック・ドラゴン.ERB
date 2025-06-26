@@ -1,0 +1,126 @@
+﻿@CARDNAME_21501,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 볼샤크 드래곤
+	CASE "略称"
+RESULTS = 볼샤크 D
+	CASE "カテゴリ"
+RESULTS:0 = 볼샤크
+RESULTS:1 = 아머드
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_21501(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 효과モン
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 1500
+	;牝性/雄性があるよ
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_21501(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드의 ②의 효과는 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 자신 턴 동안, 이 카드의 공격력은 자신의 묘지의 화염 속성 몬스터 1장당 200 포인트 올린다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ②: 이 카드를 패에서 버리고 발동할 수 있다.
+PRINTL 자신의 덱 위에서 카드 3장을 넘기고, 그 중의 '볼샤크' 카드를 전부 패에 더한다.
+PRINTL 남은 카드는 덱으로 되돌린다.
+
+
+@CARDCAN_21501(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21501)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 손패起動
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,21501)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+		
+@CARDEFFECT_21501(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 화염속성
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 200
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+ELSEIF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21501,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 볼샤크
+		효과条件複数 = 97
+		효과条件任意 = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,3)
+	ENDIF
+ENDIF

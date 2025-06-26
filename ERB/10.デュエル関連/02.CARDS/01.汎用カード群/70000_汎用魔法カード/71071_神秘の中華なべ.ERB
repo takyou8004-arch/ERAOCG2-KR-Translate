@@ -1,0 +1,259 @@
+﻿@CARDNAME_71071,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 신비의 중화냄비
+	CASE "略称"
+		RESULTS = 신비의 중화냄비
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_71071(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71071(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신 필드 위의 몬스터 1장을 소재로 한다。
+PRINTL 그 몬스터의 공격력이나 수비력을 선택하고, 그 수치만 자신은 회복한다。
+
+
+@CARDCAN_71071(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71071)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71071(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC カロリー,2
+#DIMS DYNAMIC 요리名
+#DIM DYNAMIC 味付け
+#DIM DYNAMIC 材料
+#DIM DYNAMIC 回復量
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71071)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			選択カード_ID = RESULT:99
+			;攻撃力
+			カロリー:0 = GETVAR(@"%듀얼리스트%_MZ_攻:選択カード")
+			;守備力
+			カロリー:1 = GETVAR(@"%듀얼리스트%_MZ_守:選択カード")
+			TRYCALLFORM CARD_{選択カード_ID},"속성"
+			味付け = RESULT
+			TRYCALLFORM CARD_{選択カード_ID},"종족"
+			材料 = RESULT
+
+			IF 듀얼리스트 == "자신"
+				PRINTL 요리를 선택하세요
+				PRINTL
+				PRINTFORML [0] - 볶음밥（{칼로리:0}cal）
+				PRINTFORML [1] - 필라프（{칼로리:1}cal）
+				BINPUT
+				PRINTL
+				IF RESULT == 0
+					요리名 = 볶음밥
+					回復量 = カロリー:0
+				ELSEIF RESULT == 1
+					요리名 = 필라프
+					回復量 = カロリー:1
+				ENDIF
+				PRINTL 냄비에 재료 투입！
+				CALL CARD_DISPOSE(듀얼리스트,"필드",選択カード)
+				REPEAT 3
+					PRINTL 
+				REND
+
+				PRINTL 　  ∧ ,, ∧
+				PRINTFORML 　(；`・ω・）　｡･ﾟ･⌒）　%요리名% 시작！！
+				PRINTL 　/　　 ｏ━ヽニニフ ))
+				PRINTL 　しー-Ｊ
+				WAIT
+				CLEARLINE 4
+
+				PRINTL 　　　　　　　어라！　｡･ﾟ･
+				PRINTL 　 ∧ ,, ∧ て　　　｡･ﾟ･｡･ﾟ･
+				PRINTL 　(；´ﾟωﾟ）て　　／／
+				PRINTL 　/　　 ｏ━ヽニニフ
+				PRINTL 　しー-Ｊ　　 　彡
+				WAIT
+				CLEARLINE 5
+				IF RAND:10 == 0
+					PRINTL 　　　　　　　아차차！　　　 ｡･ﾟ･ 彡
+					PRINTL 　　　　　　＿─＝∧,,∧　　ミ｡･ﾟ･｡･ﾟ･))
+					PRINTL 　　─≡三c(,＿⊃`・ω・）⊃━ヽニニフ
+					PRINTL 
+					WAIT
+					CLEARLINE 4
+
+					PRINTL 　　　　 ∧ ,,∧　　샥샥!!
+					PRINTL 　　　（`・ω・´）｡･ﾟ･
+					PRINTL 　　 c(,＿＿Ｕ━ヽニニフ
+					PRINTL 
+					WAIT
+					CLEARLINE 4
+				ELSE
+					PRINTL 　　 ∧ ,, ∧　　　　이런
+					PRINTL 　 （´・ω・）
+					PRINTL 　c(,＿Ｕ_Ｕ　　　　　　･ﾟ･｡･ ﾟ･｡･ﾟ･ ｡･ﾟ･
+					PRINTL 　　　　━ヽニニフ
+					WAIT
+					CLEARLINE 4
+
+					PRINTL 　　　　　　　　　　　　3초 룰이니깐
+					PRINTL 　　　　　　 허겁　∧ ,, ∧
+					PRINTL 　　　　　　　 　ﾐ（・ω・´)つ　지겁
+					PRINTL 　　 　　　　　　c（ Ｕ･ ﾟＵ｡彡･ ｡･ﾟ･
+					PRINTL 　━ヽニニフ
+					WAIT
+					CLEARLINE 5
+				ENDIF
+				PRINTL 　∧ ,, ∧　　 ｡･｡ﾟ･｡ ﾟ･｡ﾟ･　짜란～
+				PRINTL （´・ω・）つ＼･ﾟ･ ｡･ﾟ･･／
+				WAIT
+				PRINTL
+				PRINTL
+				PRINTFORM 오늘의 %요리名%는
+				SELECTCASE 味付け
+					CASE 화염속성
+						PRINT 붉닭볶음소스
+					CASE 물속성
+						PRINT 냉동
+					CASE 땅속성
+						PRINT 맛이 듬뿍
+					CASE 바람속성
+						PRINT 겸손한 칼로리
+					CASE 어둠속성
+						PRINT 기름을 듬뿍 사용한
+					CASE 빛속성
+						PRINT 달걀이 많이 사용된
+					CASE 신속성
+						PRINT 최고급 재료가 사용된
+				ENDSELECT
+
+				SELECTCASE 材料
+					CASE 마법사족
+						PRINT 마법의
+					CASE 드래곤족
+						PRINT 드래곤
+					CASE 언데드족
+						PRINT 낫토
+					CASE 전사족
+						PRINT 노동자용
+					CASE 기계족
+						PRINT 바이오
+					CASE 야수족
+						PRINT 안심 돈까스
+					CASE 비행야수족
+						PRINT 미스티아 로렐라이(원본은 오에에 새)
+					CASE 비늘야수족
+						PRINT 뱀고기
+					CASE 악마족
+						PRINT 폭식
+					CASE 천사족
+						PRINT 동글동글하게 부드러운
+					CASE 곤충족
+						PRINT 밀웜
+					CASE 원소정령족
+						PRINT ３색 소스 포함
+					CASE 식물족
+						PRINT 야채
+					CASE 사이킥족
+						PRINT 귤
+					CASE 사이버스족
+						PRINT 디지털
+					CASE 바다생물족
+						PRINT 해산물
+					CASE 미확인족
+						PRINT 암흑전골
+					CASE 환신야수족
+						PRINT 고추기름을 넣은
+				ENDSELECT
+
+				PRINTFORMW %요리名%다！
+				PRINTL
+				PRINTL
+				PRINTBUTTON @"【잘먹겠습니다！】",1
+				PRINTL
+				BINPUT
+			ELSE
+				IF カロリー:0 >= カロリー:1
+					요리名 = 볶음밥
+					回復量 = カロリー:0
+				ELSE
+					요리名 = 필라프
+					回復量 = カロリー:1
+				ENDIF
+				PRINTFORMW 상대는%요리名%를 만든 거 같습니다
+			ENDIF
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",回復量)
+			CALL RECOVER_PERMIL(MASTER,回復量,"체력",1)
+			CALL RECOVER_PERMIL(MASTER,回復量,"기력",1)
+			IF 듀얼리스트 == "자신"
+				PRINTL
+				PRINTL
+				PRINTBUTTON @"【잘 먹었습니다！】",1
+				PRINTL
+				BINPUT
+				PRINTL
+				SIF 回復量 < 1
+					PRINTW 신기하다…… 이만큼 먹었는데도 먹은 기분이 안 든다……？
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

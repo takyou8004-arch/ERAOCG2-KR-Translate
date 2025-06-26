@@ -1,0 +1,117 @@
+﻿@CARDNAME_34003,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 밸런서 로드
+	CASE "略称"
+RESULTS = 밸런서 로드
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_34003(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 1200
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_34003(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 1000 LP를 지불하고 발동할 수 있다.
+PRINTL 이 턴 자신은 일반 소환에 더해 1번만, 자신 메인 페이즈에 사이버스족 몬스터 1장을 소환할 수 있다.
+CALL CARD_ABLE(2,제외時)
+PRINTL ②: 이 카드가 제외되었을 경우에 발동할 수 있다.
+PRINTL 패에서 레벨 4 이하의 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_34003(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,34003)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 1000
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 제외時
+	SIF 발동済_2(듀얼리스트,34003)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 短紋章起動
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_34003(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,34003,10)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1000)
+		CALL CARD_RESERV(듀얼리스트,34003,短紋章予約)
+	ENDIF
+
+ELSEIF 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,34003,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 短紋章起動
+	CALL FULLRESET
+	효과条件종족 = 사이버스족
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+ENDIF

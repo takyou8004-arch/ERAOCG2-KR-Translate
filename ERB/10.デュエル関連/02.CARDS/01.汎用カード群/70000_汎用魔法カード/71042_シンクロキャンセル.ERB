@@ -1,0 +1,118 @@
+﻿@CARDNAME_71042,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 싱크로 캔슬
+	CASE "略称"
+		RESULTS = 싱크로 캔슬
+	CASE "カテゴリ"
+		RESULTS:0 = 싱크로
+ENDSELECT
+
+
+@CARD_71042(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71042(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①：필드의 싱크로 몬스터 1장을 대상으로 하여 발동할 수 있다。
+PRINTL 그 싱크로 몬스터카드를 엑스트라 덱으로 되돌린다。
+PRINTL 되돌린 몬스터가 자신의 몬스터일 경우、
+PRINTL 묘지에서 몬스터를 특수 소환할 수 있으며 묘지에서 특수 소환하는 몬스터들의 레벨 합은 되돌린 몬스터의 원래 레벨 이하가 되어야 특수 소환 할수 있다。
+
+
+@CARDCAN_71042(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71042)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件종류 = 싱크로
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71042(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 싱크로レベル
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71042)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = 싱크로
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"選択")
+		IF RESULT != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT:1)
+			TRYCALLFORM CARD_{GETVAR(@"%대상者（CS）%_필드:選択カード（CS）")}, "レベル"
+			싱크로レベル = RESULT
+			PRINTFORMW レベル：{싱크로レベル}
+			CALL CARD_DISPOSE(대상者（CS）,参照先（CS）,選択カード（CS）,덱行き)
+			;戻したのが상대だったら終了
+			SIF 대상者（CS） != "자신"
+				RETURN 0
+
+			SIF 듀얼리스트 == "자신"
+				PRINTL 몬스터를 특수 소환 하시겠습니까？
+			CALL YN_CHOICE(듀얼리스트)
+			SIF RESULT == いいえ
+				RETURN 0
+			
+			WHILE 싱크로レベル > 0
+				CALL FULLRESET
+				효과条件종류 = モン全般
+				CALL 효과条件レベル_ADV(싱크로レベル,"以下")
+				CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",場所)
+				SIF RESULT == 9999
+					BREAK
+				選択カード = RESULT
+				TRYCALLFORM CARD_{RESULT:99},"レベル"
+				싱크로レベル -= RESULT
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트,"묘지",選択カード)
+				SIF モンスター数(듀얼리스트) >= 5
+					RETURN 0
+			WEND
+		ENDIF
+	ENDIF
+ENDIF

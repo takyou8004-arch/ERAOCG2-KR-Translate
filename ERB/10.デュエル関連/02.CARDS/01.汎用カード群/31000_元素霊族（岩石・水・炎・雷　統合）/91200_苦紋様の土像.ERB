@@ -1,0 +1,141 @@
+﻿@CARDNAME_91200,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 고문양의 토상
+	CASE "略称"
+RESULTS = 고문양의 토상
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_91200(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2500
+	CASE "分割"
+		RETURN 효과なし
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91200(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ①: 이 카드는 발동 후, 몬스터 존에 특수 소환한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드 이외의 함정 카드가 몬스터 존에 존재하는 한, 이 카드는 대상 내성을 가진다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+;PRINTL ③：이 카드의 효과で특수소환されたこの카드가 存在する状態で、
+PRINTL ③: 이 카드가 몬스터 존에 존재하고, 자신 필드의 마법 & 함정 존의 카드가 몬스터 존에 특수 소환되었을 경우,
+PRINTL 상대 필드의 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+
+
+@CARDCAN_91200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91200)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 
+	SIF 발동済_1(듀얼리스트,91200)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,91200,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 함정全般
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"소환出処",1,2)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_最召場所") == 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,91200)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_91200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91200)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "마함", 場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91200)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+ENDIF

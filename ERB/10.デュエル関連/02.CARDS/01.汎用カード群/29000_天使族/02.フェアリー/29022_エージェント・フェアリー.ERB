@@ -1,0 +1,122 @@
+﻿@CARDNAME_29022,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;代行者モチ-フ、덱에서 フレイヤ持ってくるのはチア スポ-ツなどのエ-ジェントさんを連想
+;最終的には자신もチアに参加（レベル変動）
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 페어리 에이전트
+	CASE "略称"
+RESULTS = 대행의 요정
+	CASE "カテゴリ"
+RESULTS:0 = 페어리
+ENDSELECT
+
+
+@CARD_29022(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29022(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 2번까지 발동할 수 있다.
+CALL CARD_ABLE(1,필드起動)
+CALL CARD_ABLE(2,필드起動)
+PRINTL ①: 500LP를 지불하고 발동할 수 있다.
+PRINTL 패 / 덱에서 「승리의 인도자 프레이야」 1장을 특수 소환한다.
+PRINTL 이 효과가 2번째의 발동인 경우, 자신 필드의 레벨 4 이하의 몬스터의 레벨은 1 오른다.
+PRINTL 이 효과의 발동 후, 이 턴 자신은 엑시즈 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+
+
+@CARDSUMMON_AA_29022
+
+
+@CARDCAN_29022(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과使用불가,3
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29022)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,29022) && 발동済_2(듀얼리스트,29022)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 500
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+효과条件名前 = 승리의 인도자 프레이야
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29022(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과使用불가,3
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29022,15)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",500)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+효과条件名前 = 승리의 인도자 프레이야
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		EX소환可能종류 = 엑시즈
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+		IF 발동済_2(듀얼리스트,29022) == 1
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+					CONTINUE
+				SIF GETVAR(@"%듀얼리스트%_MZ_星:カウンタ") >= 4
+					CONTINUE
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"一星",1)
+			NEXT
+		ENDIF
+	ENDIF
+ENDIF
+

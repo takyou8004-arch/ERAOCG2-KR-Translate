@@ -1,0 +1,231 @@
+﻿@CARDNAME_99711,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 음화의 바꿔치기
+	CASE "略称"
+		RESULTS = 음화의 바꿔치기
+	CASE "カテゴリ"
+		RESULTS:0 = 음화
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99711(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99711(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,발동誘発)
+PRINTL ①：자신 필드에 "음화」카드가 존재하고, 상대가 필드에서 카드의 효과를 발동했을 때 발동할 수 있다.
+PRINTL 그 카드와 이 카드를 뒷면 표시로 셔플하고, 상대는 그 중 1장을 고른다.
+PRINTL 선택한 카드가 발동한 카드일 경우, 발동한 카드의 효과를 그대로 적용한다.
+PRINTL 선택한 카드가 이 카드일 경우, 발동한 카드의 발동을 무효로 하고, 소유권째로 자신의 패에 추가한 뒤,
+PRINTL 게임 밖에서 상대 패에 "음화의 위작」을 추가한다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99711(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99711)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲필드 = 1
+	효과条件カテゴリ = 음화
+	효과条件표시 = 10
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99711(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 발동カード
+#DIM DYNAMIC 발동カード_ID
+#DIMS DYNAMIC 발동ゾーン
+#DIMS DYNAMIC 발동カード名
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 合計攻撃力
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 발동誘発 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99711,1)
+	IF RESULT == 0
+		발동カード = 効後_設場所:(処理中番号 - 1)
+		발동ゾーン = %効後_ゾーン:(処理中番号 - 1)%
+		발동カード_ID = 効後_효과ID:(処理中番号 - 1)
+
+		TRYCALLFORM CARDNAME_{발동カード_ID},"名前"
+		발동カード名 = %RESULTS%
+		PRINTFORMW 이 카드와 발동한 《%발동カード名%》를 셔플！
+		PRINTFORMW （쉐킷쉐킷）
+		PRINTFORML 
+		IF 듀얼리스트 == "상대"
+			PRINTFORML 셔플된 카드를 선택해 주세요.
+			PRINTL [0] - 위쪽 카드
+			PRINTL [1] - 아래쪽 카드
+			PRINTL
+			BINPUT
+			;チ-トモード
+			IF RAND:1 == 0
+				PRINTFORMW 선택한 카드는 《%발동カード名%》！
+				PRINTFORMW 이대로 효과가 적용됩니다.
+				CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			ELSE
+				PRINTFORMW 선택한 카드는 《음화의 바꿔치기》！
+				PRINTFORMW 《%발동カード名%》는 《음화의 위작》으로 교체되었다！
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",발동カード,"無効")
+				IF 발동ゾーン == "필드"
+					CALL CARD_RECONSTRUCT(対面者,"필드",발동カード,-1)
+				ELSEIF 발동ゾーン == "마함"
+					CALL CARD_RECONSTRUCT(対面者,"마함",발동カード,-1)
+				ENDIF
+				CALL CARD_RECONSTRUCT(듀얼리스트,"손패",現손패(듀얼리스트),발동カード_ID)
+				SETVAR @"%듀얼리스트%_手加数" , GETVAR(@"%듀얼리스트%_手加数") + 1
+				PRINTL
+				SETCOLOR C_RED
+				PRINTFORMW 《%발동カード名%》을 빼앗겼습니다！
+				ITEM:발동カード_ID -= 1
+				RESETCOLOR
+				CALL CARD_GENERATE_HAND(듀얼리스트,199711)
+				CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+				RETURN 1
+			ENDIF
+		ELSEIF 듀얼리스트 == "자신"
+			PRINTFORML 상대가 카드를 선택합니다.
+			PRINTFORMW ………
+			;チ-トモード
+			IF RAND:1 == 0
+				PRINTFORMW 선택한 카드는 《음화의 바꿔치기》！
+				PRINTFORMW 《%발동カード名%》는 《음화의 위작》으로 교체되었다！
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",발동カード,"無効")
+				IF 발동ゾーン == "필드"
+					CALL CARD_RECONSTRUCT(対面者,"필드",발동カード,-1)
+				ELSEIF 開始_ゾーン == "마함"
+					CALL CARD_RECONSTRUCT(対面者,"마함",발동カード,-1)
+				ENDIF
+				CALL CARD_RECONSTRUCT(듀얼리스트,"손패",現손패(듀얼리스트),발동カード_ID)
+				SETVAR @"%듀얼리스트%_手加数" , GETVAR(@"%듀얼리스트%_手加数") + 1
+				CALL CARD_GET_SINGLE(발동カード_ID,1)
+				CALL CARD_GENERATE_HAND(対面者,199711)
+				CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+				RETURN 1
+			ELSE
+				PRINTFORMW 선택한 카드는 《%발동カード名%》！
+				PRINTFORMW 이대로 효과가 적용됩니다.
+				CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 0
+ENDIF
+
+
+
+@CARDNAME_199711,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 음화의 위작
+	CASE "略称"
+		RESULTS = 음화의 위작
+	CASE "カテゴリ"
+		RESULTS:0 = 음화
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+
+
+@CARD_199711(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARDCAN_199711(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+RETURN 0
+
+
+@CARD_EXPLANATION_199711(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 내가 생각한 최강의 카드
+PRINTL 
+PRINTL 
+

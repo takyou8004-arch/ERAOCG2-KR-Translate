@@ -1,0 +1,179 @@
+﻿@CARDNAME_52160,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 크리포트 게니우스
+	CASE "略称"
+RESULTS = 클리 게니우스
+	CASE "カテゴリ"
+RESULTS:0 = 크리포트
+ENDSELECT
+
+
+@CARD_52160(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52160(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件종족 = 기계족
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,52160) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52160(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 기계족 몬스터 2장
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 링크 소환한 이 카드는 마법 / 함정 내성을 얻는다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 이 카드 이외의, 자신 및 상대 필드의 앞면 표시의 카드를 1장씩 대상으로 하여 발동할 수 있다.
+PRINTL 대상으로 한 카드의 효과를 턴 종료시까지 무효로 한다.
+CALLFORM CARD_ABLE(3,효과後誘発)
+PRINTL ③: 자신 필드에 「크리포트」 P 몬스터가 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 덱에서 레벨 5 이상의 기계족 몬스터 1장을 패에 넣는다.
+PRINTL 이 턴 자신은 일반 소환에 더해 1번만, 레벨 5 이상의 기계족 몬스터 1장을 소환할 수 있다.
+
+
+@CARDCAN_52160(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52160)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種EX덱
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件표시 = 表側표시
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,52160)
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 클리포트
+	효과条件分割 = 펜듈럼
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 기계족
+	효과条件종류 = モン全般
+	CALL 효과条件レベル_ADV(5, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 短紋章起動
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52160(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52160,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件他所 = 1
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"無効",0,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"無効")
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52160,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종족 = 기계족
+		효과条件종류 = モン全般
+		CALL 효과条件レベル_ADV(5, "以上")
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		CALL CARD_RESERV(듀얼리스트,52160,短紋章予約)
+	ENDIF
+ELSEIF 종류 == 短紋章起動
+	CALL FULLRESET
+	효과条件종족 = 기계족
+	효과条件종류 = モン全般
+	CALL 효과条件レベル_ADV(5, "以上")
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+ENDIF

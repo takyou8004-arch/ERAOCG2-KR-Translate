@@ -1,0 +1,184 @@
+﻿@CARDNAME_24606,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = D 스캐넌
+	CASE "略称"
+RESULTS = D 스캐넌
+	CASE "カテゴリ"
+RESULTS:0 = 디포머
+ENDSELECT
+
+
+@CARD_24606(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 600
+	CASE "튜너"
+		RETURN 1
+	CASE "소환불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24606(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 일반 소환할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 패에서 "D 스캐넌" 이외의 "디포머" 카드 1장을 제외하고 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 이 카드는 표시 형식에 따라 이하의 효과를 얻는다.
+PRINTL ● 공격 표시: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 덱에서 "디포머" 마법 / 함정 카드를 패에 넣는다. 그 후, 패 1장을 덱으로 되돌린다.
+PRINTL ● 수비 표시: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 묘지에서 레벨 4 이하의 "디포머" 몬스터 1장을 패에 넣는다. 그 후, 패 1장을 덱으로 되돌린다.
+
+
+@CARDCAN_24606(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24606)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24606,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 디포머
+	효과条件固名前 = D 스캐넌
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0	
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+
+	IF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 2
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 디포머
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 디포머
+		효과条件종류 = 마함全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24606(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24606,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 디포머
+		효과条件固名前 = D 스캐넌
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_DISPOSE(듀얼리스트,"손패",選択カード,1)
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		ENDIF
+	ENDIF
+	
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24606,10)
+	IF RESULT == 0
+		IF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 디포머
+			효과条件종류 = 마함全般
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+			;その後の処理、シェルタから引用
+			IF RESULT != 9999
+				CALL FULLRESET
+				효과条件行先플래그 = 덱行き
+				CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			ENDIF
+
+		ELSEIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 2
+			CALL FULLRESET
+			효과条件カテゴリ = 디포머
+			CALL 효과条件レベル_ADV(4, "以下")
+			CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+			;その後の処理、フェリジットから引用
+			IF RESULT != 9999
+				CALL FULLRESET
+				효과条件行先플래그 = 2
+				CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

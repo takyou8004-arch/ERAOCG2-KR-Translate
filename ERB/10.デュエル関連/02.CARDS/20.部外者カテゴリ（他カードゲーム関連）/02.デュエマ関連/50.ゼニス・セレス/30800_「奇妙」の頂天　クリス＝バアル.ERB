@@ -1,0 +1,132 @@
+﻿@CARDNAME_30800,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 기묘함의 정점 크리스=바알
+	CASE "略称"
+RESULTS = 크리스=바알
+	CASE "カテゴリ"
+RESULTS:0 = 제니스
+RESULTS:1 = 셀레스
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_30800(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 곤충족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3450
+	CASE "守備力"
+		RETURN 4350
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_30800(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 자신 필드에 뒷면 표시의 카드가 5장 이상 있을 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 패에서 특수 소환한 이 카드는 직접 공격을 가진다.
+CALLFORM CARD_ABLE(3,특수소환時)
+PRINTL ③: 이 카드가 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 묘지의 「제니스」 카드 1장을 패에 추가한다.
+
+
+@CARDCAN_30800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 손패起動
+	CALL CARD_SS_CHECK(듀얼리스트,30800,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件표시 = 20
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_3(듀얼리스트,30800)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") == 召種손패
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_30800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード_ID
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,30800)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,30800,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 제니스
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直攻")
+ENDIF
+

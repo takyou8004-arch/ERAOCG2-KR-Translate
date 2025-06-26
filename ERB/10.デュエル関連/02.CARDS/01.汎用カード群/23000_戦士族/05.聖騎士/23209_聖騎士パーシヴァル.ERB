@@ -1,0 +1,131 @@
+﻿@CARDNAME_23209,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성기사 파르시팔
+	CASE "略称"
+RESULTS = 파르시팔
+	CASE "カテゴリ"
+RESULTS:0 = 성기사
+ENDSELECT
+
+
+@CARD_23209(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 300
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_23209(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 자신의 마법 & 함정 존에 「성검」 카드가 존재할 경우,
+PRINTL 다음의 효과 중에서 1개 또는 양쪽을 선택하여 발동할 수 있다.
+PRINTL ● 이 카드의 레벨은 턴 종료시까지 1개 올린다.
+PRINTL ● 이 카드는 턴 종료시까지 어둠 속성이 된다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②: 이 카드가 필드에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지의 「성검」 카드 1장을 패에 넣는다.
+
+
+@CARDSUMMON_AA_23209
+
+
+@CARDCAN_23209(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23209)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件カテゴリ = 성검
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 성검
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 短紋章起動
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23209(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23209,10)
+	IF RESULT == 0
+PRINTL 이 카드의 레벨을 1개 올리겠습니까?
+		CALL YN_CHOICE(듀얼리스트)
+		SIF RESULT == はい
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一星",1)
+PRINTL 이 카드를 어둠 속성으로 하겠습니까?
+		CALL YN_CHOICE(듀얼리스트)
+		SIF RESULT == はい
+			CALL CARD_RESERV(듀얼리스트,23209,短紋章予約)
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23209)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 성검
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 短紋章起動
+	CALL STATCHANGE_OTHER(듀얼리스트,"自身",場所,"属",어둠속성)
+ENDIF

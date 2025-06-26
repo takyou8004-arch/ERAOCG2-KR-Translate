@@ -1,0 +1,137 @@
+﻿@CARDNAME_14000,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 유성의 가이아슈 카이자
+	CASE "略称"
+RESULTS = 가이아슈
+	CASE "カテゴリ"
+RESULTS:0 = 헌터
+RESULTS:1 = 커맨드
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_14000(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_14000(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,ターン終了時)
+PRINTL ①: 상대의 엔드 페이즈에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALL CARD_ABLE(2,필드起動)
+PRINTL 그 후, 덱에서 1장 드로우한다.
+PRINTL ②: 자신의 메인 페이즈에 발동할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL 패에서 레벨 10 이상의 몬스터 1장을 릴리스 없이 일반 소환한다.
+
+
+@CARDCAN_14000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,14000)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン終了時
+	SIF 발동済_1(듀얼리스트,14000)
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,14000,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,14000)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = モン全般
+	CALL 효과条件レベル_ADV(10, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_14000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,14000,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,14000,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL 효과条件レベル_ADV(10, "以上")
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		選択カード = RESULT
+		IF RESULT != 9999
+			CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件T1召種 = 全召種
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"戦無")
+ENDIF

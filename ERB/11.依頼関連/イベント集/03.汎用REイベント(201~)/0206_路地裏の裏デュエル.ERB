@@ -1,0 +1,473 @@
+﻿@IRAI_EVENT_206(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = (裏CP)뒷골목의 듀얼장(반복수주 가능)
+	CASE "이벤트種"
+		IF 依頼_完了횟수:206 == 0
+			RETURN 이벤트_通常
+		ELSE
+			RETURN 이벤트_施設
+		ENDIF
+	CASE "依頼先"
+		RETURN 場所_裏通り
+	CASE "詳細"
+		IF 依頼_完了횟수:206 == 0
+			PRINTL 裏通りに珍しい덱を使うデュエリストが集まる店があるらしい。
+			PRINTL 勝てば珍しい報酬も貰えるらしいので挑戦してみよう！
+		ELSE
+			PRINTL 今日もパックを賭けたデュエルをしていくか？
+			PRINTL 
+		ENDIF
+		PRINTL 
+		PRINTL 
+			SETCOLOR C_RED
+		PRINTL （注意！女の子몬스터를 使うと不利になる可能性が高いです！）
+			RESETCOLOR
+		PRINTL
+		IF 依頼_完了횟수:206 == 0
+			PRINTL 
+		ELSEIF 依頼_完了횟수:206 != 0
+			PRINTL 報酬：特別パックＸ５
+		ENDIF
+	CASE "条件"
+		SIF 依頼_全完了횟수() < 3
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_206(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 대상상대
+#DIM DYNAMIC パック_종류
+#DIM DYNAMIC カウンタ
+
+
+
+
+
+IF 依頼_完了횟수:206 == 0
+	PRINTFORMW 裏通りを探し回ると、情報にあった住所の建物を見つけた。
+	PRINTFORMW 中に入ると空気が一転し、多くのデュエリストのデュエルの熱気に満ちた空間が広がる。
+	PRINTFORMW しかし、たまに女の子モンスターがエロい事を되어있는 ように見えるのは気のせいだろうか……？
+	PRINTFORMW 疑問に思っていると、デュエリストの一人がデュエルを申し込んで来た。
+	PRINTFORMW 元よりデュエルするために来たので、申し出を受けた。
+	依頼_進行보존:206 = 0
+ELSE
+	PRINTFORMW 裏ショップのデュエルスペースに入った。
+	PRINTFORMW 中に入ると空気が一転し、多くのデュエリストのデュエルの熱気に満ちた空間が広がる。
+	PRINTFORMW しかし、たまに女の子モンスターがエロい事を되어있는 ように見えるのは気のせいだろう。
+	PRINTFORMW さて、今日は誰とデュエルしようか？
+	PRINTFORML
+	PRINTFORML [0] 땅속성・전사족덱使い
+	PRINTFORML [1] 함정フィールド덱使い
+	PRINTFORML [2] 물속성・원소정령족덱使い
+	PRINTFORML [3] 어둠속성・기계족덱使い
+	PRINTFORML [4] 바람속성・곤충족덱使い
+	PRINTFORML
+	PRINTFORML [100] 돌아간다
+	BINPUT
+	依頼_進行보존:206 = RESULT
+ENDIF
+IF RESULT == 100
+	PRINTFORML しかしまだ準備ができていなかったので、一旦待ってもらうことにした。
+	RETURN 1
+ENDIF
+
+TARGET = -1
+CALL CHOICE_DUEL_TYPE(206)
+IF RESULT == 0
+	PRINTFORML しかしまだ準備ができていなかったので、一旦待ってもらうことにした。
+	
+	RETURN 1
+ENDIF
+IF RESULT == 1
+;勝ち
+	PRINTFORML
+	PRINTFORMW 勝った！
+	PRINTFORMW デュエルが終わると店員が現れ、あなたは賞品として特別パックを貰った！
+	IF 依頼_完了횟수:206 == 0
+		CALL CARD_PACK_SHORI(5,99)
+	ELSE
+		PRINTFORMW しかも、パックを選べるらしい。
+		PRINTFORMW どのパックにしよう？
+		FOR カウンタ,94,100
+			CALL CARD_PACK_NAME(カウンタ)
+			PRINTFORML [{カウンタ}] - %RESULTS%
+		NEXT
+		BINPUT
+		CALL CARD_PACK_SHORI(5,RESULT)
+	ENDIF
+	PRINTFORML 
+	IF パック_解放:99 != 1
+		PRINTFORMW ん……？
+		PRINTFORMW こんなカードあったのか？
+		PRINTFORMW 店員の話によると、この店だけでの特別パックから出るカードで、もっと欲しいならこれから구입できるらしい。
+	ENDIF
+ELSE
+;負け
+	PRINTFORML
+	PRINTFORMW 負けてしまった……。
+	PRINTFORMW デュエルが終わると店員が現れ、あなたはペナルティとしてファイトマネーを10,000円支払った。
+	CALL MONEY_GET(-10000)
+	IF パック_解放:99 != 1
+		PRINTFORMW それもそうだが、듀얼중에 상대가 使ったカードから感じた違和感は一体……？
+		PRINTFORMW 店員の話によると、상대가 使ったのはこの店だけでの特別パックから出るカードで、欲しいならこれから구입できるらしい。
+		PRINTFORML 
+	ENDIF
+ENDIF
+
+
+IF パック_解放:99 != 1
+PRINTFORML 
+CALL CARD_PACK_RELEASE(99)
+PRINT 何にせよ、
+ENDIF
+PRINTFORMW 一日にデュエル出来るのは一回までみたいだ。
+PRINTFORMW 再戦したいならまた日を改めよう。
+PRINTFORML
+
+TIME += 60
+依頼_進行보존:206 = 0
+TARGET = LOCAL
+RETURN 2
+
+
+@IRAI_DECK_206(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+IF 듀얼리스트 == "상대"
+	SELECTCASE 依頼_進行보존:206
+		CASE 0
+			RETURN 59650
+		CASE 1
+			RETURN 59702
+		CASE 2
+			RETURN 59751
+		CASE 3
+			RETURN 39760
+		CASE 4
+			RETURN 59720
+	ENDSELECT
+ENDIF
+RETURN 0
+
+;고블린덱。基本덱パワーが弱いので、날개箒と増援の数を割増
+@DUELDECK_59650(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+
+SIF 듀얼리스트 == "存在確認"
+	RETURN 1
+
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(1)", 1263
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 1263
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 23501
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 23501
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 23501
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39650
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39651
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39651
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39652
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39652
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39653
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39653
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70001
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70003
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70003
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70004
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70011
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70016
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70023
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70100
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70100
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79651
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79651
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79652
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79652
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 90500
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 91050
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 91050
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 91050
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 99651
+
+
+
+
+
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(1)", 59650
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59650
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59650
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 50900
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 52300
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 53030
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 58101
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 54100
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 58039
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59652
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59652
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59652
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59651
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59651
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59651
+
+
+;촉수궁덱
+@DUELDECK_59702(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+
+SIF 듀얼리스트 == "存在確認"
+	RETURN 1
+
+SETVAR @"%듀얼리스트%_덱:0", 20405
+SETVAR @"%듀얼리스트%_덱:1", 20405
+SETVAR @"%듀얼리스트%_덱:2", 39700
+SETVAR @"%듀얼리스트%_덱:3", 39700
+SETVAR @"%듀얼리스트%_덱:4", 39701
+SETVAR @"%듀얼리스트%_덱:5", 39701
+SETVAR @"%듀얼리스트%_덱:6", 39702
+SETVAR @"%듀얼리스트%_덱:7", 39702
+SETVAR @"%듀얼리스트%_덱:8", 39702
+SETVAR @"%듀얼리스트%_덱:9", 39703
+SETVAR @"%듀얼리스트%_덱:10", 39704
+SETVAR @"%듀얼리스트%_덱:11", 39704
+SETVAR @"%듀얼리스트%_덱:12", 39704
+SETVAR @"%듀얼리스트%_덱:13", 39705
+SETVAR @"%듀얼리스트%_덱:14", 39705
+SETVAR @"%듀얼리스트%_덱:15", 39706
+SETVAR @"%듀얼리스트%_덱:16", 39706
+SETVAR @"%듀얼리스트%_덱:17", 39753
+SETVAR @"%듀얼리스트%_덱:18", 39753
+SETVAR @"%듀얼리스트%_덱:19", 39753
+SETVAR @"%듀얼리스트%_덱:20", 70004
+SETVAR @"%듀얼리스트%_덱:21", 70023
+SETVAR @"%듀얼리스트%_덱:22", 79770
+SETVAR @"%듀얼리스트%_덱:23", 79770
+SETVAR @"%듀얼리스트%_덱:24", 79770
+SETVAR @"%듀얼리스트%_덱:25", 99700
+SETVAR @"%듀얼리스트%_덱:26", 99700
+SETVAR @"%듀얼리스트%_덱:27", 99700
+SETVAR @"%듀얼리스트%_덱:28", 99701
+SETVAR @"%듀얼리스트%_덱:29", 99702
+
+
+
+
+
+SETVAR @"%듀얼리스트%_EX덱:0", 59700
+SETVAR @"%듀얼리스트%_EX덱:1", 59700
+SETVAR @"%듀얼리스트%_EX덱:2", 59700
+SETVAR @"%듀얼리스트%_EX덱:3", 59701
+SETVAR @"%듀얼리스트%_EX덱:4", 59701
+SETVAR @"%듀얼리스트%_EX덱:5", 59701
+SETVAR @"%듀얼리스트%_EX덱:6", 59702
+SETVAR @"%듀얼리스트%_EX덱:7", 59702
+SETVAR @"%듀얼리스트%_EX덱:8", 59702
+SETVAR @"%듀얼리스트%_EX덱:9", -1
+SETVAR @"%듀얼리스트%_EX덱:10", -1
+SETVAR @"%듀얼리스트%_EX덱:11", -1
+SETVAR @"%듀얼리스트%_EX덱:12", -1
+SETVAR @"%듀얼리스트%_EX덱:13", -1
+SETVAR @"%듀얼리스트%_EX덱:14", -1
+
+
+;슬라임덱
+@DUELDECK_59751(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+
+SIF 듀얼리스트 == "存在確認"
+	RETURN 1
+
+SETVAR @"%듀얼리스트%_덱:0", 1262
+SETVAR @"%듀얼리스트%_덱:1", 1262
+SETVAR @"%듀얼리스트%_덱:2", 1262
+SETVAR @"%듀얼리스트%_덱:3", 1263
+SETVAR @"%듀얼리스트%_덱:4", 1263
+SETVAR @"%듀얼리스트%_덱:5", 1263
+SETVAR @"%듀얼리스트%_덱:6", 39750
+SETVAR @"%듀얼리스트%_덱:7", 39750
+SETVAR @"%듀얼리스트%_덱:8", 39750
+SETVAR @"%듀얼리스트%_덱:9", 39751
+SETVAR @"%듀얼리스트%_덱:10", 39751
+SETVAR @"%듀얼리스트%_덱:11", 39751
+SETVAR @"%듀얼리스트%_덱:12", 39752
+SETVAR @"%듀얼리스트%_덱:13", 39752
+SETVAR @"%듀얼리스트%_덱:14", 39752
+SETVAR @"%듀얼리스트%_덱:15", 39753
+SETVAR @"%듀얼리스트%_덱:16", 39753
+SETVAR @"%듀얼리스트%_덱:17", 39753
+SETVAR @"%듀얼리스트%_덱:18", 70003
+SETVAR @"%듀얼리스트%_덱:19", 70003
+SETVAR @"%듀얼리스트%_덱:20", 70004
+SETVAR @"%듀얼리스트%_덱:21", 79601
+SETVAR @"%듀얼리스트%_덱:22", 79603
+SETVAR @"%듀얼리스트%_덱:23", 79750
+SETVAR @"%듀얼리스트%_덱:24", 79750
+SETVAR @"%듀얼리스트%_덱:25", 79750
+SETVAR @"%듀얼리스트%_덱:26", 99604
+SETVAR @"%듀얼리스트%_덱:27", 99604
+SETVAR @"%듀얼리스트%_덱:28", 99750
+SETVAR @"%듀얼리스트%_덱:29", 99750
+
+
+
+
+
+SETVAR @"%듀얼리스트%_EX덱:0", 59750
+SETVAR @"%듀얼리스트%_EX덱:1", 59750
+SETVAR @"%듀얼리스트%_EX덱:2", 59750
+SETVAR @"%듀얼리스트%_EX덱:3", 59751
+SETVAR @"%듀얼리스트%_EX덱:4", 59751
+SETVAR @"%듀얼리스트%_EX덱:5", 59751
+SETVAR @"%듀얼리스트%_EX덱:6", 59752
+SETVAR @"%듀얼리스트%_EX덱:7", 59752
+SETVAR @"%듀얼리스트%_EX덱:8", 59752
+SETVAR @"%듀얼리스트%_EX덱:9", -1
+SETVAR @"%듀얼리스트%_EX덱:10", -1
+SETVAR @"%듀얼리스트%_EX덱:11", -1
+SETVAR @"%듀얼리스트%_EX덱:12", -1
+SETVAR @"%듀얼리스트%_EX덱:13", -1
+SETVAR @"%듀얼리스트%_EX덱:14", -1
+
+
+
+;MIA덱
+@DUELDECK_39760(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+
+SIF 듀얼리스트 == "存在確認"
+	RETURN 1
+
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(1)", 39711
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39711
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39761
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39761
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39761
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39762
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39762
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39762
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39763
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39763
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39763
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39764
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39764
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70003
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70003
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70004
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70015
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70034
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70100
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70100
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79608
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79608
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79608
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79760
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79760
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79760
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79761
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79761
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 99650
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 99760
+
+
+
+
+
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(1)", 52300
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 52300
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59760
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59760
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59760
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59761
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59761
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59761
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59762
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59762
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59762
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+
+
+
+;비밀벌덱
+@DUELDECK_59720(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+
+SIF 듀얼리스트 == "存在確認"
+	RETURN 1
+
+
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(1)", 39721
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39721
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39721
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39722
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39722
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39722
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39723
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39723
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39723
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39724
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39724
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39724
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39725
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39725
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39725
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70004
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 70019
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79608
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79608
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79608
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79755
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79755
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79755
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79756
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79756
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79756
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 93240
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 99604
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 99604
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 99604
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+
+
+
+
+
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(1)", 59720
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59720
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 59720
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55010
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55010
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55010
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55052
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55052
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55052
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55350
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55350
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55350
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55351
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55351
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 55351
+

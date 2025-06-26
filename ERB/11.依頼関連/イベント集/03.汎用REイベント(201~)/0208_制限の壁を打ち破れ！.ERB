@@ -1,0 +1,126 @@
+﻿@IRAI_EVENT_208(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 所持制限カード数
+#DIM DYNAMIC 合計価格
+
+VARSET RESULT
+VARSET RESULTS
+VARSET 所持制限カード数
+
+FOR カウンタ,1000,100000
+	IF ITEM:カウンタ >= 1
+		CALL CARD_RESTRICTION_CHECK(カウンタ)
+		SIF RESULT > 0
+			所持制限カード数 ++ 
+	ENDIF
+NEXT
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = (裏CP)제한의 벽을 부숴라！(반복수주 가능)
+	CASE "이벤트種"
+		RETURN 이벤트_施設
+	CASE "依頼先"
+		RETURN 場所_裏通り
+	CASE "詳細"
+		PRINTL 카드가 揃ったけど、制限지정で思うように덱を組めない！
+		PRINTL そんなあなたに朗報です！
+		PRINTL こちらでデュエルディスクを改造する事で、制限の限界を突破できるようになります！
+		PRINTL ご興味のある方は是非当店まで！
+		PRINTL 
+		PRINTFORML （費用:{200000 + (制限突破횟수*10000)}円）
+		;PRINTFORML （所持制限カード数:{所持制限カード数}）
+			SETCOLOR C_RED
+		PRINTL （注意！デュエルのバランスを壊す可能性が非常に高いですので自己判断でのご利用をお願いします！）
+			RESETCOLOR
+		PRINTL
+	CASE "条件"
+		SIF パック_解放:99 == 0
+			RETURN 0
+		SIF MONEY < 200000 + (制限突破횟수*10000)
+			RETURN 0
+		SIF 所持制限カード数 < 20
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_208(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 合計価格
+
+
+IF 依頼_完了횟수:208 == 0
+	PRINTFORMW 件のチラシを手に持って裏ショップに入り、適当な店員を捕まえて話を聞いてみた。
+	PRINTFORMW 「デュエルディスクの改造ですね。費用とデュエルディスクを預けていただければすぐにでも出来ます！」
+	PRINTFORMW 費用は{200000 + (制限突破횟수*10000)}円だ。
+	PRINTFORMW どうする……？
+		SETCOLOR C_RED
+	PRINTL （注意！デュエルのバランスを壊す可能性が非常に高いですので自己判断でお願いします！）
+		RESETCOLOR
+	PRINTFORML 
+	PRINTFORML [0] 改造する！
+	PRINTFORML [1] 改造しない
+	BINPUT
+	IF RESULT == 0
+		PRINTFORMW 店員に費用とデュエルディスクを渡して改造をお願いした。
+		SETCOLOR C_YELLOW
+;		PRINTFORMW {200000 + (制限突破횟수*10000)}円を支払いました。
+		合計価格 = 200000 + (制限突破횟수*10000)
+		CALL MONEY_GET(-合計価格)
+		RESETCOLOR
+		PRINTFORMW 「はい、少々お待ちくださいー」
+		PRINTFORMW ……………
+		PRINTFORMW …………
+		PRINTFORMW ………
+		PRINTFORMW 「お待たせしました！改造は無事終わりました！」
+		PRINTFORMW 店員からデュエルディスクを返して貰った。
+		PRINTFORMW 「これで덱を編集する時、1枚分だけ、制限を無視できるようになりました！」
+		PRINTFORMW ……ん？1枚だけ？全部ではないのか。
+		PRINTFORMW 「もっと制限카드를 入れたい場合は、추가の改造をしてくださいー」
+		PRINTFORMW ……まあいい。
+		PRINTFORMW 取りあえず実際に改造の結果を確かめてから考えるとしよう。
+		TIME += 60
+		制限突破횟수 += 1
+	ELSEIF RESULT == 1
+		PRINTFORMW 少し考えた結果、改造は一旦保留する事にした。
+	ENDIF
+ELSE
+	PRINTFORMW 裏ショップに入り、適当な店員を捕まえてデュエルディスク改造の話をした。
+	PRINTFORMW 「デュエルディスクの改造ですね。費用とデュエルディスクを預けていただければすぐにでも出来ます！」
+	PRINTFORMW 費用は{200000 + (制限突破횟수*10000)}円だ。
+	PRINTFORMW どうする……？
+		SETCOLOR C_RED
+	PRINTL （注意！デュエルのバランスを壊す可能性が非常に高いですので自己判断でお願いします！）
+		RESETCOLOR
+	PRINTFORML 
+	PRINTFORML [0] 改造する！
+	PRINTFORML [1] 改造しない
+	BINPUT
+	IF RESULT == 0
+		PRINTFORMW 店員に費用とデュエルディスクを渡して改造をお願いした。
+		SETCOLOR C_YELLOW
+		;PRINTFORMW {200000 + (制限突破횟수*10000)}円を支払いました。
+		合計価格 = 200000 + (制限突破횟수*10000)
+		CALL MONEY_GET(-合計価格)
+		RESETCOLOR
+		PRINTFORMW 「はい、少々お待ちくださいー」
+		PRINTFORMW ……………
+		PRINTFORMW …………
+		PRINTFORMW ………
+		PRINTFORMW 「お待たせしました！改造は無事終わりました！」
+		PRINTFORMW 店員からデュエルディスクを返して貰った。
+		PRINTFORMW 「もっと制限카드를 入れたい場合は、추가の改造をしてくださいー」
+		PRINTFORMW お金に余裕があり、もっと덱에 入れたい制限카드가 あればまた来るとしよう。
+		TIME += 60
+		制限突破횟수 += 1
+	ELSEIF RESULT == 1
+		PRINTFORMW 少し考えた結果、改造は一旦保留する事にした。
+	ENDIF
+ENDIF
+
+RETURN 2
+

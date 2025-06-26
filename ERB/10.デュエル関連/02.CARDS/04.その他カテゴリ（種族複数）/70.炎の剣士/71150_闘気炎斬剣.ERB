@@ -1,0 +1,144 @@
+﻿@CARDNAME_71150,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 투기화염참검
+	CASE "略称"
+RESULTS = 투기화염참검
+	CASE "カテゴリ"
+RESULTS:0 = 화염의 검사
+ENDSELECT
+
+
+@CARD_71150(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71150(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장만 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動 ,フリー誘発)
+PRINTL ①: 이하의 효과 중에서 1개를 선택하여 발동할 수 있다.
+PRINTL ●「투기화염참검」을 제외한 「화염의 검사」, 「샐러맨더」 카드 1장을 덱에서 패에 추가한다.
+PRINTL ●자신 필드에 전사족 화염속성 몬스터가 존재할 경우,
+PRINTL 상대 필드의 카드 1장을 대상으로 하여 발동할 수 있다. 그 카드를 파괴한다.
+PRINTL ●자신 필드에 있는 「화염의 검사」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 이 턴, 그 몬스터를 상대는 효과의 대상으로 할 수 없다.
+
+@CARDCAN_71150(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71150)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,71150)
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71150(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성,2
+#DIM DYNAMIC 選択효과
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71150,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;チェック
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 전사족
+		효과条件속성 = 화염속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성:0 = 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 화염의 검사
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성:1 = 1
+
+		IF 듀얼리스트 == "자신"
+PRINTL 효과를 선택해 주십시오
+			PRINTL 
+PRINTL [1] - 「투기화염참검」을 제외한 「화염의 검사」, 「샐러맨더」 카드 1장을 덱에서 패에 추가한다.
+			IF 条件달성:0 == 1
+PRINTL [2] - 상대 필드의 카드 1장을 파괴한다.
+			ELSE
+				SETCOLOR C_GRAY
+PRINTL [X] - 자신 필드에 전사족 화염속성 몬스터가 없습니다.
+				RESETCOLOR
+			ENDIF
+			IF 条件달성:1 == 1
+PRINTL [3] - 자신 필드에 있는 「화염의 검사」 몬스터 1장에 대상 내성을 부여한다.
+			ELSE
+				SETCOLOR C_GRAY
+PRINTL [X] - 자신 필드에 「화염의 검사」 몬스터가 없습니다.
+				RESETCOLOR
+			ENDIF
+			BINPUT
+			選択효과 = RESULT
+		ELSE
+			CALL FULLRESET
+			選択효과 = 1
+		ENDIF
+		IF 選択효과 == 1
+			CALL FULLRESET
+			효과条件カテゴリ:0 = 화염의 검사
+			효과条件カテゴリ:1 = 샐러맨더
+			효과条件固名前 = 투기화염참검
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ELSEIF 選択효과 == 2
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		ELSEIF 選択효과 == 3
+			CALL FULLRESET
+			효과条件カテゴリ = 화염의 검사
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"対耐",1,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

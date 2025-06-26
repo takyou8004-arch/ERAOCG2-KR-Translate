@@ -1,0 +1,282 @@
+﻿@CARDNAME_1190,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마계극단－프리티 히로인
+	CASE "略称"
+RESULTS = 프리티 히로인
+	CASE "カテゴリ"
+RESULTS:0 = 마계극단
+ENDSELECT
+
+
+@CARD_1190(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1190(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 ①②의 펜듈럼 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①：자신 마법 & 함정 존에 이 카드명 이외의 펜듈럼 몬스터 카드가 존재할 경우, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 패 / 엑스트라 덱에서 「마계극단」 펜듈럼 몬스터 1장을 특수 소환한다.
+PRINTL 자신 마법 & 함정 존에 「마계극단－트윙클 리틀스타」가 존재할 경우, 이 효과의 대상을 2장으로 할 수 있다.
+CALLFORM CARD_ABLE(2,ライフ変強制誘発)
+PRINTL ②：상대 몬스터의 공격으로 자신이 전투 데미지를 받았을 때,
+PRINTL 이하의 효과에서 1개를 선택하여 발동할 수 있다.
+PRINTL ● 그 상대 몬스터의 공격력은, 받은 데미지 수치만큼 다운한다.
+PRINTL ● 자신 엑스트라 덱에서, 받은 데미지 수치 이하의 공격력을 가지는,
+PRINTL 　「마계극단」 펜듈럼 몬스터 1장을 패에 넣는다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+
+CALLFORM CARD_ABLE(10,ライフ変強制誘発)
+PRINTL ①：1턴에 1번, 자신 또는 상대가 전투 데미지를 받았을 때,
+PRINTL 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 공격력은, 그 전투 데미지 수치만큼 다운한다.
+CALLFORM CARD_ABLE(0,戦闘→묘지 ,破壊→묘지)
+PRINTL ②：이 카드가 파괴되었을 때 발동할 수 있다.
+PRINTL 덱에서 「마계대본」 마법 카드 1장을 고르고 자신 필드에 세트한다.
+
+
+@CARDSUMMON_AA_1190
+
+
+@CARDCAN_1190(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1190)
+SIF RESULT == 1
+	RETURN 0
+
+;P
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲마함 = 1
+효과条件名前 = 마계극단－프리티 히로인
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,1190)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件固名前 = 마계극단－프리티 히로인
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 마계극단
+	효과条件分割 = 펜듈럼
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ライフ変強制誘発
+	SIF 발동済_2(듀얼리스트,1190)
+		RETURN 0
+	SIF ゾーン != "마함" && ゾーン != "필드"
+		RETURN 0
+
+	IF ゾーン == "마함"
+		SIF ターンプレイヤー == 듀얼리스트
+			RETURN 0
+		SIF ダメージ受者 != 듀얼리스트
+			RETURN 0
+		SIF !GROUPMATCH(ダメージ종류,"直接戦闘","戦闘")
+			RETURN 0
+		RETURN 1
+	
+	ELSEIF ゾーン == "필드"
+		SIF 효과발동済(듀얼리스트,場所,ゾーン)
+			RETURN 0
+		SIF !GROUPMATCH(ダメージ종류,"直接戦闘","戦闘")
+			RETURN 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		RETURN 1
+	ENDIF
+
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 마계대본
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1190(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戦闘モンスター
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;P
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1190)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1190,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 마계극단
+		효과条件分割 = 펜듈럼
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲마함 = 1
+효과条件名前 = 마계극단－트윙클 리틀 스타
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1 && モンスター数(듀얼리스트) < 5
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲EX덱 = 1
+			효과条件カテゴリ = 마계극단
+			효과条件分割 = 펜듈럼
+			효과条件任意 = 1
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == ライフ変強制誘発
+	IF ゾーン == "마함"
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1190,2)
+		IF RESULT == 0
+			条件달성 = 0
+			CALL FULLRESET
+			효과範囲EX덱 = 1
+			효과条件カテゴリ = 마계극단
+			효과条件分割 = 펜듈럼
+			효과条件攻撃力 = ダメージ受値
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件달성 = 1
+			
+			IF 条件달성 == 1
+				SIF 듀얼리스트 == "자신"
+PRINTL 몬스터를 패에 넣을까요?
+				CALL YN_CHOICE(듀얼리스트)
+			ELSE
+				RESULT = いいえ
+			ENDIF
+
+			IF RESULT == はい
+				CALL FULLRESET
+				효과範囲EX덱 = 1
+				효과条件カテゴリ = 마계극단
+				효과条件分割 = 펜듈럼
+				효과条件攻撃力 = ダメージ受値
+				CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			ELSEIF RESULT == いいえ
+				戦闘モンスター = 戦闘場所(듀얼리스트,1)
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘モンスター,"永攻DOWN",ダメージ受値)
+			ENDIF
+		ENDIF
+
+	ELSEIF ゾーン == "필드"
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1190,10)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과条件표시 = 表側표시
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"永攻DOWN",ダメージ受値)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1190)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 마계대본
+		효과条件종류 = 마법全般
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF
+
+

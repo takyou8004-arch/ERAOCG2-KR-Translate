@@ -1,0 +1,138 @@
+@CARDNAME_39854,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 사바트리스의 신자
+	CASE "略称"
+		RESULTS = SB 신자
+	CASE "カテゴリ"
+		RESULTS:0 = 사바트리스
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39854(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性	
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39854(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：필드에 "성별을 가진 몬스터」가 존재할 경우、자신 메인 페이즈에 발동할 수 있다.。
+PRINTL 이 카드를 패에서 특수 소환한다。
+CALL CARD_ABLE(2,소환時,특수소환時)
+PRINTL ②：이 카드가 일반 소환 / 특수 소환되었을 때 발동할 수 있다.。
+PRINTL 덱에서 "사바트리스」카드 １장을 패에 넣는다。
+PRINTL 이후、이 카드에 악성카운터를 1개 놓고 、발정 상태로 한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39854(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39854)
+SIF RESULT == 1
+    RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,39854)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39854,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件성별 = 성별在
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,39854)
+		RETURN 0
+	CALL FULLRESET
+    효과範囲덱 = 1
+	효과条件カテゴリ = 사바트리스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39854(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39854,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39854,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 사바트리스
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"悪Ｃ",1,0)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"発情",2,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"接可",2,1)
+		ENDIF
+	ENDIF
+ENDIF

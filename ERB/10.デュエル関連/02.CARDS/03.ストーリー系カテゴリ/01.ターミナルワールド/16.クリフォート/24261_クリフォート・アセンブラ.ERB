@@ -1,0 +1,115 @@
+﻿@CARDNAME_24261,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 클리포트 어셈블러
+	CASE "略称"
+RESULTS = 큐리 어셈블러
+	CASE "カテゴリ"
+RESULTS:0 = 클리포트
+ENDSELECT
+
+
+@CARD_24261(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1000
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24261(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①: 자신이 "클리포트" 몬스터의 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 자신은 덱에서 1장 드로우한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL qliphoth.exe의 0x1I─666에서 처리되지 않은 예외가 확인되었습니다.
+PRINTL 위치 0x00-000에 쓰기 중에 액세스 위반이 발생했습니다.
+PRINTL 이 에러를 무시하고 계속하시겠습니까? <Y/N>...[ ]
+PRINTL ＝＝＝CARNAGE＝＝＝
+PRINTL .다었되게알을악선어되럼하나는중리우은람사,라보
+PRINTL .다른모지도살히원영고먹서무나명생어뻗을손이들그
+
+@CARDCAN_24261(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24261)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 클리포트
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"通常소환")
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24261(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24261)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24261)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ENDIF

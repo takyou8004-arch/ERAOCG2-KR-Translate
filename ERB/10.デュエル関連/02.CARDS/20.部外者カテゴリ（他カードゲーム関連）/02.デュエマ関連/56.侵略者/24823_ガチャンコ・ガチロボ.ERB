@@ -1,0 +1,200 @@
+﻿@CARDNAME_24823,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 가창코 가치로보
+	CASE "略称"
+RESULTS = 가치로보
+	CASE "カテゴリ"
+RESULTS:0 = 침략자
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_24823(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 2000
+	CASE "レア度"
+		RETURN SPR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24823(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 패의 같은 레벨의 몬스터 카드 3장을 보여주고 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(2,소환時 ,특수소환時,攻撃時誘発)
+PRINTL ②: 이 카드가 소환 / 특수 소환되었을 경우, 또는 이 카드의 공격 선언 시에 발동할 수 있다.
+PRINTL 덱 위에서 3장을 앞면 표시로 하고, 전부 같은 레벨의 몬스터일 경우,
+PRINTL 그 카드 전부를 특수 소환하거나 패에 추가한다.
+
+@CARDCAN_24823(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24823)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,24823)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24823,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	FOR カウンタ,1,13
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件レベル = カウンタ
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT >= 3
+			条件달성 = 1
+			BREAK
+		ENDIF
+	NEXT
+	SIF 条件달성 == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,24823)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF 발동済_2(듀얼리스트,24823)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_24823(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC リピート횟수
+#DIM DYNAMIC 条件レベル
+#DIM DYNAMIC 公開レベル , 3
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24823,1)
+	IF RESULT == 0
+		FOR カウンタ,1,13
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과条件レベル = カウンタ
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT >= 3
+				条件レベル = カウンタ
+				BREAK 
+			ENDIF
+		NEXT
+		CALL FULLRESET
+		효과条件レベル = 条件レベル
+		효과条件複数 = 3
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "손패",ゾーン,場所)	
+		IF RESULT != 9999
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == 攻撃時誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24823,2)
+	IF RESULT == 0
+		TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_덱:0"))
+		PRINTW
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_덱:0")}, "レベル"
+		公開レベル:0 = RESULT
+		TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_덱:1"))
+		PRINTW
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_덱:1")}, "レベル"
+		公開レベル:1 = RESULT
+		TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_덱:2"))
+		PRINTW
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_덱:2")}, "レベル"
+		公開レベル:2 = RESULT
+
+		IF (公開レベル:0 == 公開レベル:1) && (公開レベル:0 == 公開レベル:2) && (公開レベル:0 != 0)
+			PRINTFORMW ガチャ成功！
+			FOR カウンタ,0,3
+				TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_덱:0"))
+				IF モンスター数(듀얼리스트) <= 4
+PRINTL 이 몬스터를 특수 소환하시겠습니까?
+					CALL YN_CHOICE(듀얼리스트)
+				ELSE
+					RESULT = いいえ
+				ENDIF
+				IF RESULT == はい
+					CALL FULLRESET
+					CALL CARD_SP_SUMMON(듀얼리스트, "덱", 0)
+				ELSE
+					CALL CARDDRAW_BASIC(듀얼리스트,1)
+				ENDIF
+			NEXT
+		ENDIF
+	ENDIF
+ENDIF

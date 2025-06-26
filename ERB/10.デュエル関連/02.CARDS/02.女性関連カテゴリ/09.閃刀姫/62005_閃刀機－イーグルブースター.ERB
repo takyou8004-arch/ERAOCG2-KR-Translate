@@ -1,0 +1,105 @@
+﻿@CARDNAME_62005,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 섬도기－이글부스터
+	CASE "略称"
+		RESULTS = 이글부스터
+	CASE "カテゴリ"
+		RESULTS:0 = 섬도
+ENDSELECT
+
+
+@CARD_62005(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62005(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신의 몬스터 존의 몬스터가 1장 이하인 경우,
+PRINTL 자신 필드의 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 이 턴, 그 몬스터는 완전 내성을 얻는다.
+PRINTL 자신 묘지에 마법 카드가 3장 이상 존재할 경우, 추가로 이 턴, 그 몬스터는 전투 내성을 얻는다.
+
+
+@CARDCAN_62005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,62005)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT > 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_62005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62005)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"モ耐",1,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"魔耐",1,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"함정耐",1,1)
+		ENDIF
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 마법全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT >= 4 && (他参照選択カード != 9999)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"戦耐",1,1)
+		ENDIF
+	ENDIF
+ENDIF

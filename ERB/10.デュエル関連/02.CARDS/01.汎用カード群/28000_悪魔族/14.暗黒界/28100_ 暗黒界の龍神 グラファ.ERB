@@ -1,0 +1,121 @@
+﻿@CARDNAME_28100,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 암흑계의 용신 그라파
+	CASE "略称"
+RESULTS = 그라파
+	CASE "カテゴリ"
+RESULTS:0 = 암흑계
+ENDSELECT
+
+
+@CARD_28100(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2700
+	CASE "守備力"
+		RETURN 1800
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28100(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ①: 이 카드가 묘지에 존재할 경우, 이 카드명 이외의 자신 필드의 「암흑계」 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드를 패로 되돌리고, 이 카드를 묘지에서 특수 소환한다.
+CALLFORM CARD_ABLE(0,손패→묘지)
+PRINTL ②: 이 카드가 효과로 패에서 묘지로 버려졌을 경우, 상대 필드의 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 상대의 카드를 파괴한다.
+
+
+@CARDCAN_28100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28100)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,28100,"묘지",1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 암흑계
+	효과条件固名前 = 암흑계의 용신 그라파
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 종류 == 손패→묘지
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28100)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 암흑계
+		효과条件固名前 = 암흑계의 용신 그라파
+		효과条件行先플래그 = 손패行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)	
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 손패→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28100)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+ENDIF
+

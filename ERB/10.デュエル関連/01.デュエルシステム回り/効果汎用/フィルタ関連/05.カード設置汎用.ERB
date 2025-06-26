@@ -1,0 +1,272 @@
+﻿@CARD_SET_BASIC(듀얼리스트,元参照先,ゾーン,場所,표시形式)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 参照先
+#DIMS DYNAMIC 대상者
+#DIMS DYNAMIC 元参照先
+
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カードID
+#DIM DYNAMIC めくり数
+#DIM DYNAMIC サーチ範囲
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 現在最大攻撃力
+#DIMS DYNAMIC 표시形式
+#DIMS DYNAMIC 出処２
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 所有先
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カード추가先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+SELECTCASE 元参照先
+	CASE "필드","마함","손패","묘지","덱","EX덱","제외"
+		대상者 = %듀얼리스트%
+		参照先 = %元参照先%
+	CASE "상대필드"
+		대상者 = %対面者%
+		参照先 = 필드
+	CASE "상대마함"
+		대상者 = %対面者%
+		参照先 = 마함
+	CASE "상대손패"
+		대상者 = %対面者%
+		参照先 = 손패
+	CASE "상대묘지"
+		대상者 = %対面者%
+		参照先 = 묘지
+	CASE "상대덱"
+		대상者 = %対面者%
+		参照先 = 덱
+	CASE "상대EX덱"
+		대상者 = %対面者%
+		参照先 = EX덱
+	CASE "상대제외"
+		대상者 = %対面者%
+		参照先 = 제외	
+ENDSELECT
+$CHOICE_LOOP
+カードID = 処理中_효과ID
+IF 듀얼리스트 == "자신"
+	CUSTOMDRAWLINE —
+	PRINTL 【설치될 카드를 선택해주세요】
+	CUSTOMDRAWLINE —
+	PRINTL 
+ELSEIF 듀얼리스트 == "상대"
+	CALL ENEMY_RUTIN_CARD_ADD(元参照先,場所,カードID)
+ENDIF
+
+CALL CARD_FILTER_BASIC(듀얼리스트,元参照先,ゾーン,場所,めくり数)
+条件달성 = RESULT:1
+
+IF 듀얼리스트 == "자신"
+	PRINTL
+	IF 条件달성 != 0 && 효과条件任意 != 1
+		SETCOLOR C_GRAY
+		PRINTL 　(9999) - 돌아간다(선택 가능한 카드가 있습니다)
+		RESETCOLOR
+	ELSE
+		PRINTL 　[9999] - 돌아간다
+	ENDIF
+	PRINTL
+	BINPUT
+	選択カード = RESULT
+ELSEIF 듀얼리스트 == "상대"
+	選択カード = RESULT
+ENDIF
+
+
+IF 選択カード == 9999
+	PRINTFORMW 돌아갑니다。
+	RETURN 0
+ELSEIF 選択カード != 9999
+	選択カード_ID = GETVAR(@"%대상者%_%参照先%:{選択カード}")
+	CALL SELECT_UI_SET(듀얼리스트,選択カード_ID,5)
+	IF RESULT == 1
+		GOTO CHOICE_LOOP
+	ENDIF
+ENDIF
+
+カード추가先 = 現마함(듀얼리스트)
+
+CALL CARD_ADD(듀얼리스트, 元参照先, "마함", 選択カード, 표시形式)
+SIF 参照先 == "덱"
+	CALL SHUFFLE(듀얼리스트)
+
+IF 표시形式 == "表側표시"
+	TRYCALLFORM CARD_{選択カード_ID}("종류")
+	IF RESULT == フィールド
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_마함:カウンタ") == -1
+				CONTINUE
+			SIF カウンタ == カード추가先
+					CONTINUE
+			SIF GETVAR(@"%듀얼리스트%_魔_表:カウンタ") >= 2
+				CONTINUE
+			CALLFORM CARD_{GETVAR(@"%듀얼리스트%_마함:カウンタ")}("종류")
+			SIF RESULT != フィールド
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"마함",カウンタ)
+		NEXT
+	ENDIF
+ENDIF
+
+VARSET RESULT
+RESULT:1 = 選択カード_ID
+RETURN 1
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARD_SET_ADV(듀얼리스트,ゾーン,場所,표시形式,상대セット플래그)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 대상者
+#DIMS DYNAMIC 参照先
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 現在最大攻撃力
+#DIM DYNAMIC 上級値
+#DIMS DYNAMIC 표시形式
+#DIM DYNAMIC 所有先
+#DIM DYNAMIC 상대セット플래그
+#DIM DYNAMIC カード추가先
+#DIM DYNAMIC カウンタ
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 상대セット플래그 == 0
+	SIF 現마함(듀얼리스트) >= 5
+		RETURN 0
+ENDIF
+カードID = 処理中_효과ID
+$CHOICE_LOOP
+IF 듀얼리스트 == "자신"
+	CUSTOMDRAWLINE —
+	PRINTL 【설치 될 카드를 선택해주세요】
+	CUSTOMDRAWLINE —
+	PRINTL 
+ELSEIF 듀얼리스트 == "상대"
+	CALL ENEMY_RUTIN_CARD_ADD(参照先,場所,カードID)
+ENDIF
+
+CALL CARD_FILTER_BASIC(듀얼리스트,"上級",ゾーン,場所)
+条件달성 = RESULT:1
+IF 듀얼리스트 == "자신"
+	PRINTL
+	IF 条件달성 != 0 && 효과条件任意 != 1
+		SETCOLOR C_GRAY
+		PRINTL 　(9999) - 돌아간다(선택 가능한 카드가 있습니다)
+		RESETCOLOR
+	ELSE
+		PRINTL 　[9999] - 돌아간다
+	ENDIF
+	PRINTL
+	BINPUT
+	選択カード = RESULT
+ELSEIF 듀얼리스트 == "상대"
+	選択カード = RESULT
+	IF 選択カード == 9999
+		SETCOLOR C_W_RED
+		CUSTOMDRAWLINE —
+		PRINTL 【설치 가능한 카드가 없습니다】
+		CUSTOMDRAWLINE —
+		RESETCOLOR
+		WAIT
+	ENDIF
+ENDIF
+
+IF 選択カード == 9999
+	PRINTFORMW 돌아갑니다。
+	RETURN 0
+ELSEIF 選択カード != 9999
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	選択カード_ID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{選択カード（CS）}")
+	CALL SELECT_UI_SET(듀얼리스트,選択カード_ID,5)
+	IF RESULT == 1
+		GOTO CHOICE_LOOP
+	ENDIF
+ENDIF
+カード추가先 = 現마함(듀얼리스트)
+
+
+IF 상대セット플래그 == 1 && 選択カード >= 2000 
+	CALL CARD_ADD(対面者, 参照先（CS）, "마함", 選択カード（CS）, 표시形式)
+	IF 표시形式 == "表側표시"
+		TRYCALLFORM CARD_{選択カード_ID}("종류")
+		IF RESULT == フィールド
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%対面者%_마함:カウンタ") == -1
+					CONTINUE
+				SIF カウンタ == カード추가先
+						CONTINUE
+				SIF GETVAR(@"%対面者%_魔_表:カウンタ") >= 2
+					CONTINUE
+				CALLFORM CARD_{GETVAR(@"%対面者%_마함:カウンタ")}("종류")
+				SIF RESULT != フィールド
+					CONTINUE
+				CALL CARD_DISPOSE(対面者,"마함",カウンタ)
+			NEXT
+		ENDIF
+	ENDIF
+ELSEIF 상대セット플래그 == 2
+	選択カード += 2000
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	CALL CARD_ADD(対面者, 本参照先（CS）, "마함", 選択カード（CS）, 표시形式)
+	IF 표시形式 == "表側표시" && LOCAL == 1
+		TRYCALLFORM CARD_{選択カード_ID}("종류")
+		IF RESULT == フィールド
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%対面者%_마함:カウンタ") == -1
+					CONTINUE
+				SIF カウンタ == カード추가先
+					CONTINUE
+				SIF GETVAR(@"%対面者%_魔_表:カウンタ") >= 2
+					CONTINUE
+				CALLFORM CARD_{GETVAR(@"%対面者%_마함:カウンタ")}("종류")
+				SIF RESULT != フィールド
+					CONTINUE
+				CALL CARD_DISPOSE(対面者,"마함",カウンタ)
+			NEXT
+		ENDIF
+	ENDIF
+ELSE
+	CALL CARD_ADD(듀얼리스트,本参照先（CS）, "마함", 選択カード（CS）, 표시形式)
+	IF 표시形式 == "表側표시"
+		TRYCALLFORM CARD_{選択カード_ID}("종류")
+		IF RESULT == フィールド
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%듀얼리스트%_마함:カウンタ") == -1
+					CONTINUE
+				SIF カウンタ == カード추가先
+					CONTINUE
+				
+				SIF GETVAR(@"%듀얼리스트%_魔_表:カウンタ") >= 2
+					CONTINUE
+
+				CALLFORM CARD_{GETVAR(@"%듀얼리스트%_마함:カウンタ")}("종류")
+				SIF RESULT != フィールド
+					CONTINUE
+
+				CALL CARD_DISPOSE(듀얼리스트,"마함",カウンタ)
+			NEXT
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+
+VARSET RESULT
+RESULT:1 = 選択カード_ID
+RETURN 1

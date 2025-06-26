@@ -1,0 +1,109 @@
+﻿@CARDNAME_25303,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 환상수 와일드혼
+	CASE "略称"
+RESULTS = 와일드혼
+	CASE "カテゴリ"
+RESULTS:0 = 환상수
+ENDSELECT
+
+
+@CARD_25303(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_25303(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ② 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 필드 / 묘지에 존재하는 한,
+PRINTL 자신 필드의 "환상수" 몬스터는 관통 공격을 얻는다.
+CALLFORM CARD_ABLE(1,소환時 ,특수소환時)
+PRINTL ②: 이 카드가 소환 / 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 자신 묘지의 레벨 4 이하의 "환상수" 몬스터 1장을 선택하여 특수 소환한다.
+PRINTL 
+PRINTL 
+
+@CARDCAN_25303(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25303)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF !GROUPMATCH(ゾーン,"필드","묘지")
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,25303)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 환상수
+	CALL 효과条件レベル_ADV(4, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25303(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 환상수
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"貫通")
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25303,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 환상수
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+

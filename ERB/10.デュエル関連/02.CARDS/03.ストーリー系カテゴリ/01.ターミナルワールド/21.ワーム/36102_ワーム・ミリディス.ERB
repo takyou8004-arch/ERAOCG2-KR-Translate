@@ -1,0 +1,179 @@
+﻿@CARDNAME_36102,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 웜 밀리디스
+	CASE "略称"
+RESULTS = 웜 밀리디스
+	CASE "カテゴリ"
+RESULTS:0 = 웜
+ENDSELECT
+
+
+@CARD_36102(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 400
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_36102(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①: 이 카드가 드로우 이외의 방법으로 패에 더해졌을 경우에 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+CALLFORM CARD_ABLE(0,표시변경誘発,F素材時효과)
+PRINTL ②: 이 카드의 표시 형식이 변경되었을 경우, 또는 이 카드가 융합 소재가 되었을 경우에 발동할 수 있다.
+PRINTL 상대 몬스터 1장을 고르고, 이 카드를 장착한다. (융합 소환의 경우는 묘지에서 장착)
+CALLFORM CARD_ABLE(0,ターン開始時強制)
+PRINTL ③: 이 카드가 장착되어 있을 경우, 스탠바이 페이즈에 발동한다.
+PRINTL 장착 몬스터의 컨트롤러에게 400 포인트 데미지를 준다.
+
+@CARDCAN_36102(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,36102)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,36102)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,36102,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件名前 = 웜 밀리디스
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"손패취득")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == F素材時효과 || 종류 == 표시변경誘発
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	IF 종류 == F素材時효과
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前 = 웜 밀리디스
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == ターン開始時強制
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 != -1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_36102(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,36102,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+	ENDIF
+ELSEIF 종류 == 표시변경誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,36102)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EQUIP_MONSTER(対面者,選択カード,"필드",場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == F素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,36102)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前 = 웜 밀리디스
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "묘지",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			CALLFORM CARD_EQUIP_ADV(듀얼리스트,選択カード,"묘지")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ターン開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,36102)
+	IF RESULT == 0
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",装備先)
+;		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",装備先)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTL
+			PRINTFORML 웜 밀리디스が %CALLNAME:조교대상%の身体を締め付けると、
+			PRINTFORML %CALLNAME:조교대상%는歯を食いしばりながら苦悶の表情を浮かべた。
+			PRINTW
+			CALL EROTIC_MOVE("拷問処理",조교대상,-1,100)
+		ENDIF
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",400,1)
+	ENDIF
+ENDIF

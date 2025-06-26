@@ -1,0 +1,643 @@
+@SHOW_STATUS
+#DIM 표시済み, 200
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 侵入者
+#DIM DYNAMIC 캐릭터クター
+#DIM DYNAMIC 装備品
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM 표시サイズ
+#DIM DYNAMIC タゲ確認
+#DIM DYNAMIC 개시시간
+#DIM DYNAMIC ランダム値
+#DIM DYNAMIC 侵入者태도
+#DIM DYNAMIC 馴合강도설정
+#DIM DYNAMIC 侵入可
+#DIMS DYNAMIC 画像コード
+#DIM DYNAMIC 캐릭터동행中
+#DIM DYNAMIC CTおさわり確認
+#DIMS DYNAMIC 名前설정
+#DIM DYNAMIC GDI値
+#DIM DYNAMIC ターゲット보존,100
+
+#DIM GDI보존
+VARSET 표시済み
+
+TFLAG:100 = TFLAG:101
+SIF TFLAG:101 == 1
+	TFLAG:100 = 0
+SIF TFLAG:101
+	TFLAG:101 --
+SIF TFLAG:COMABLE관리 == 2
+	CALL SHOW_TOUCH
+
+
+CALL CHANGE_TIMEZONE
+
+SIF 듀얼モード == 1
+	GOTO SKIP_TO_POINT
+;-------------------------------------------------
+;요리の시간경과
+;-------------------------------------------------
+;SIF FLAG:20 > 0
+;	CALL CEACK_COOKING
+;-------------------------------------------------
+;캐릭터の태도
+;-------------------------------------------------
+CALL CHARA_ATTITUDE
+
+;-------------------------------------------------
+;시간경과によるステータス回復、캐릭터의 이동
+;-------------------------------------------------
+CALL CHARA_MOVEMENT("INFO")
+IF TCVAR:MASTER:친밀감 >= 1
+	侵入者 = IN_ROOM("MIN", CFLAG:MASTER:현재위치, "CFLAG", 6)
+	侵入者태도 = CFLAG:侵入者:태도
+	IF 侵入者태도 <= 0 && 侵入者 > 0 && CFLAG:侵入者:현재위치 != CFLAG:侵入者:전턴위치 && !CFLAG:侵入者:수면
+ 		IF TALENT:侵入者:펫
+
+			PRINTFORMW 애완동물 %CALLNAME:侵入者%가 방에 들어왔다。
+			PRINTFORMW 조금 마음은 어긋났지만、아랑곳하지 않고 행위를 계속하기 시작했다。
+		ELSE
+			PRINTFORMW %CALLNAME:侵入者%가 들어오는 것으로 공기가 변해버렸다…
+			FOR 캐릭터_ID, 0,CHARANUM
+				SIF CFLAG:캐릭터_ID:같은방 && CFLAG:캐릭터_ID:태도 >= 1 && !CFLAG:캐릭터_ID:수면
+					CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 5, 侵入者)
+			NEXT
+		ENDIF
+	ENDIF
+ENDIF
+
+
+TFLAG:시간경과 = TIME + 1440 * DAY
+CFLAG:MASTER:수면 = 0
+
+;-------------------------------------------------
+;訪問이벤트、캐릭터
+;-------------------------------------------------
+ランダム値 = RAND:50
+
+
+
+
+;-------------------------------------------------
+;일이벤트、캐릭터
+;-------------------------------------------------
+;아르바이트を持っていたり、듀얼리스트である場合通す
+FOR 캐릭터_ID,1,CHARANUM
+	;憑依モンスターはNG
+	SIF 캐릭터_ID == MASTER
+		CONTINUE
+	;듀얼리스트で있는 경우、あなたの自宅に住んでいるのが条件
+	SIF TALENT:캐릭터_ID:듀얼리스트 >= 1 && CFLAG:캐릭터_ID:시작위치 >= 自宅部屋最大値
+		CONTINUE
+	;몬스터의 경우、아르바이트をしていることが条件
+	SIF TALENT:캐릭터_ID:듀얼리스트 == 0 && CFLAG:캐릭터_ID:아르바이트 <= 1
+		CONTINUE
+	;平日である
+	IF !GROUPMATCH(GET_DAY(), "土", "日") && CFLAG:캐릭터_ID:변기화 == 0
+		IF TALENT:캐릭터_ID:듀얼리스트 >= 1
+			IF INRANGE(TIME,480,720)
+				IF TALENT:캐릭터_ID:연령 <= -1
+					SIF CFLAG:캐릭터_ID:현재위치 <= 自宅部屋最大値
+						CALL CHAR_GOINGOUT(캐릭터_ID)	
+					CFLAG:캐릭터_ID:현재위치 = 場所_学校内
+				ELSEIF TALENT:캐릭터_ID:연령 >= 0
+					;현재위치があなたの家であり、あなたが家にいる경우、外に出るアナウンスが入る
+					SIF CFLAG:캐릭터_ID:현재위치 <= 自宅部屋最大値
+						CALL CHAR_GOINGOUT(캐릭터_ID)			
+					CFLAG:캐릭터_ID:현재위치 = 50 + RAND:15
+				ENDIF
+			ENDIF
+		ELSE
+			CALL PTJ_SETTINGS(캐릭터_ID,"行先")
+			IF CFLAG:캐릭터_ID:아르바이트 >= 1 && RESULT >= 自宅部屋最大値
+				CALL PTJ_SETTINGS(캐릭터_ID, "開始")
+				IF RESULT != -1 && TIME >= RESULT && CFLAG:캐릭터_ID:일했음 == 0
+					CFLAG:캐릭터_ID:알바중 = 1
+					SIF CFLAG:캐릭터_ID:현재위치 <= 自宅部屋最大値
+						CALL CHAR_GOINGOUT(캐릭터_ID)
+					CALL PTJ_SETTINGS(캐릭터_ID,"衣装")
+					CALL PTJ_SETTINGS(캐릭터_ID,"行先",1)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+	;동행상대가 いるのかを確認する
+	SIF CFLAG:캐릭터_ID:동행 >= 1
+		캐릭터동행中 = 1
+NEXT
+
+IF 캐릭터동행中
+	CFLAG:MASTER:동행 = 1
+ELSE
+	CFLAG:MASTER:동행 = 0
+ENDIF
+
+FOR 캐릭터_ID,1,CHARANUM
+	;憑依モンスターはNG
+	SIF 캐릭터_ID == MASTER
+		CONTINUE
+	SIF CFLAG:캐릭터_ID:시작위치 >= 20
+		CONTINUE
+	SIF CFLAG:캐릭터_ID:데이트중 == 1
+		CONTINUE
+	IF CFLAG:캐릭터_ID:현재위치 >= 50
+		IF CFLAG:캐릭터_ID:아르바이트 >= 1
+			CALL PTJ_SETTINGS(캐릭터_ID,"終了")
+			IF TIME >= RESULT && CFLAG:캐릭터_ID:일했음 == 0
+				IF CFLAG:캐릭터_ID:시작위치 <= 20
+					PRINTFORMW %CALLNAME:캐릭터_ID%는 아르바이트에서 돌아온 모양이다。
+					CFLAG:캐릭터_ID:현재위치 = 1
+					CFLAG:캐릭터_ID:알바중 = 0
+					CFLAG:캐릭터_ID:일했음 = 1
+					CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 11, 4)
+				ELSE
+					CFLAG:캐릭터_ID:현재위치 = 100
+					CFLAG:캐릭터_ID:알바중 = 0
+					CFLAG:캐릭터_ID:일했음 = 1
+				ENDIF
+			ENDIF
+		ELSEIF TIME >= KANTAN_TIME(17,00)
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 외출에서 돌아온 것 같다。
+			CFLAG:캐릭터_ID:현재위치 = 1
+			CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 11, 3)
+		ENDIF
+	ENDIF
+
+NEXT
+
+
+;-------------------------------------------------
+;TARGET選択
+;-------------------------------------------------
+;같은방中の캐릭터をTARGETに代入
+VARSET TARGET
+VARSET TARGETNUM,1
+
+IF 人祓いモード == 1
+	FOR 캐릭터_ID,1,CHARANUM
+		SIF 캐릭터_ID == MASTER
+			CONTINUE
+		SIF CFLAG:MASTER:현재위치 != CFLAG:캐릭터_ID:현재위치
+			CONTINUE
+		SIF CFLAG:캐릭터_ID:데이트중 != 1
+			CONTINUE
+		TARGET:TARGETNUM = 캐릭터_ID
+		TARGETNUM ++
+	NEXT
+ELSE
+	FOR 캐릭터_ID,1,CHARANUM
+		SIF CFLAG:MASTER:현재위치 != CFLAG:캐릭터_ID:현재위치
+			CONTINUE
+		SIF 캐릭터_ID == MASTER
+			CONTINUE
+		TARGET:TARGETNUM = 캐릭터_ID
+		TARGETNUM ++
+	NEXT
+ENDIF
+
+
+
+
+$SKIP_TO_POINT
+;TFLAG:104が설정되어있는 ときその番号のターゲットが存在するならTARGETに代入、いなければTFLAG:104をリセット
+タゲ確認 = 0
+TARGET = TARGET:1
+FOR カウンタ,1,CHARANUM
+	SIF TFLAG:104 < 1
+		BREAK
+	IF TARGET:カウンタ == TFLAG:104
+		TARGET = TARGET:カウンタ
+		タゲ確認 ++
+	ENDIF
+NEXT
+SIF !タゲ確認
+	TFLAG:104 = 0
+
+
+IF 朝襲われ == 1
+	朝襲われ = 0
+	FOR カウンタ,1,TARGETNUM
+		CFLAG:(TARGET:カウンタ):우후후 = 2
+		BASE:(TARGET:カウンタ):만족 = 0
+		CFLAG:(TARGET:カウンタ):같은방 = 1
+	NEXT
+	SETCOLOR C_Ne_PINK
+	PRINTFORMW 아침 봉사에서 해방되었다고 방심하던 중、그대로 덮쳐지고 말았다。
+	RESETCOLOR
+	CFLAG:MASTER:우후후 = 2
+	TFLAG:COMABLE관리 = 3
+ENDIF
+
+;MASTERと같은방플래그
+FOR 캐릭터_ID,1,CHARANUM
+	IF CFLAG:캐릭터_ID:현재위치 == CFLAG:MASTER:현재위치
+		;遭遇구상と情事発覚구상
+		SIF !CFLAG:캐릭터_ID:같은방 && !CFLAG:캐릭터_ID:수면
+			CALL AFFAIR_DISCLOSURE(캐릭터_ID, 1)
+		CFLAG:캐릭터_ID:같은방 = 1
+	ELSE
+		;상대からこちらが見える위치/　MASTER前のターンの위치が、現在땅じゃないときまたは상대가 そういう時、または前のコマンドが押し倒しの時
+		;そもそもCAN_MOVE=２がないな……
+		SIF CAN_MOVE(CFLAG:캐릭터_ID:현재위치, CFLAG:MASTER:현재위치) == 2 && (CFLAG:MASTER:전턴위치 != CFLAG:MASTER:현재위치 || CFLAG:캐릭터_ID:전턴위치 != CFLAG:캐릭터_ID:현재위치 || TRAINNAME:PREVCOM == "밀어넘어뜨린다") && !CFLAG:캐릭터_ID:수면
+			CALL AFFAIR_DISCLOSURE(캐릭터_ID, 0)
+		CFLAG:캐릭터_ID:같은방 = 0
+	ENDIF
+NEXT
+
+
+;친밀감강도결정
+;TARGET側
+FOR カウンタ,1,TARGETNUM + 1
+	;合意か약점がないと2以上にならない
+	;PRINTFORML CFLAG:(TARGET:カウンタ):기정사실:({CFLAG:(TARGET:カウンタ):기정사실})
+	IF GETBIT(CFLAG:(TARGET:カウンタ):기정사실,0) || CFLAG:(TARGET:カウンタ):약점취득 || TALENT:(TARGET:カウンタ):포식자 || TALENT:(TARGET:カウンタ):굴복됨 || TCVAR:(TARGET:カウンタ):만취
+		馴合강도설정 = CFLAG:(TARGET:カウンタ):태도
+		;PRINTFORML 순합강도설정:({馴合강도설정})  TARGET:カウンタ({TARGET:カウンタ})
+	ELSE
+		馴合강도설정 = MIN(CFLAG:(TARGET:カウンタ):태도 , 1)
+	ENDIF
+
+	;TARGET:1の강도
+	IF カウンタ == 1
+		TCVAR:(TARGET:カウンタ):친밀감 = 馴合강도설정
+	ELSE
+		;TARGET:2以降は、MIN(直前のTARGETのTCVAR:태도,자신의 CFLAG:태도)
+		SIF TARGET:カウンタ > 0
+			TCVAR:(TARGET:カウンタ):친밀감 = MIN(TCVAR:(TARGET:(カウンタ - 1)):친밀감,馴合강도설정)
+	ENDIF
+NEXT
+
+;MASTERはTARGET:1～のTCVAR:130の最低値
+TCVAR:MASTER:친밀감 = TCVAR:(IN_ROOM("MIN", CFLAG:MASTER:현재위치, "TCVAR", 130)):친밀감
+
+IF !CFLAG:TARGET:우후후
+	RESETBGCOLOR
+ENDIF
+
+FOR 캐릭터_ID,0,CHARANUM
+	IF !CFLAG:캐릭터_ID:우후후 || CFLAG:캐릭터_ID:현재위치 != CFLAG:캐릭터_ID:전턴위치
+		CFLAG:캐릭터_ID:최면상태 = 0
+		CALL CLOTHES_RESET(캐릭터_ID)
+		CALL CLOTHES_SETTING_TRAIN(캐릭터_ID)
+		FOR 装備品,10,40
+			TEQUIP:캐릭터_ID:装備品 = 0
+		NEXT
+		FOR 装備品,50,70
+			TEQUIP:캐릭터_ID:装備品 = -1
+		NEXT
+
+		IF CFLAG:캐릭터_ID:변기화 == 1
+			EQUIP:캐릭터_ID:1 = 0
+			EQUIP:캐릭터_ID:2 = 0
+			EQUIP:캐릭터_ID:신발 = 0
+			EQUIP:캐릭터_ID:양말 = 0
+			EQUIP:캐릭터_ID:외투 = 0
+			EQUIP:캐릭터_ID:이너 = 0
+			EQUIP:캐릭터_ID:바디슈트 = 0
+			EQUIP:캐릭터_ID:원피스 = 0
+			EQUIP:캐릭터_ID:바지 = 0
+			EQUIP:캐릭터_ID:하반신겉옷 = 0
+			EQUIP:캐릭터_ID:치마 = 0
+			EQUIP:캐릭터_ID:상반신속옷１ = 0
+			EQUIP:캐릭터_ID:상반신속옷２ = 0
+			EQUIP:캐릭터_ID:하반신속옷１ = 0
+			EQUIP:캐릭터_ID:하반신속옷２ = 0
+			CALL CLOTHES_SETTING_TRAIN(캐릭터_ID)
+			TEQUIP:캐릭터_ID:볼개그 = 1
+			TEQUIP:캐릭터_ID:애널바이브 = 1
+			TEQUIP:캐릭터_ID:아이마스크 = 1
+			TEQUIP:캐릭터_ID:바이브 = 1
+			TEQUIP:캐릭터_ID:밧줄 = 1
+		ENDIF
+		SIF CFLAG:캐릭터_ID:로터삽입 >= 1
+			TEQUIP:캐릭터_ID:로터 = 1
+		IF TFLAG:COMABLE관리 < 2
+			BASE:캐릭터_ID:사정 = 0
+			TCVAR:캐릭터_ID:갈것같음 = 0
+		ENDIF
+	ENDIF
+	IF CFLAG:캐릭터_ID:우후후
+		CFLAG:캐릭터_ID:로터삽입 = 0
+	ENDIF
+	IF BATHROOM(CFLAG:캐릭터_ID:현재위치)
+		EQUIP:캐릭터_ID:0 = 0
+		IF CFLAG:캐릭터_ID:우후후 || TCVAR:캐릭터_ID:친밀감 > 2
+			TEQUIP:캐릭터_ID:목욕탕플레이 = 1
+		ELSE
+			TEQUIP:캐릭터_ID:목욕탕플레이 = 0
+		ENDIF
+		CALL CLOTHES_SETTING_TRAIN(캐릭터_ID)
+	ELSE
+		TEQUIP:캐릭터_ID:목욕탕플레이 = 0
+	ENDIF
+	IF OPENPLACE(CFLAG:캐릭터_ID:현재위치)
+		IF CFLAG:캐릭터_ID:우후후 == 1
+			TEQUIP:캐릭터_ID:야외플레이 = OPENPLACE(CFLAG:캐릭터_ID:현재위치)
+		ELSE
+			TEQUIP:캐릭터_ID:야외플레이 = 0
+		ENDIF
+	ELSE
+		TEQUIP:캐릭터_ID:야외플레이 = 0
+	ENDIF
+NEXT
+;-------------------------------------------------
+;情報표시（PORTRAIT표시）
+;-------------------------------------------------
+;WAIT
+
+IF TIME > 1440
+	DAY ++
+	DAY:3 ++
+	IF DAY:3 == 31
+		DAY:3 -= 30
+		DAY:2 += 1
+		IF DAY:2 == 5
+			DAY:2 -= 4
+		ENDIF
+	ENDIF
+	TIME -= 1440
+ENDIF
+
+
+IF TARGET
+	SIF CFLAG:TARGET:우후후 >= 1
+		SETCOLOR C_Ne_PINK
+	IF CFLAG:TARGET:우후후 == 1
+		TFLAG:COMABLE관리 = 2
+		;バトル開始！
+		CALL HORNY_CHECK(TARGET,1)
+		IF RESULT == 1
+			SETCOLOR C_Ne_PINK
+			IF TFLAG:COMABLE관리 != 3
+				PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:TARGET%에게 공수역전당했다！
+				CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 10, 1, 2)
+			ENDIF			
+			FOR カウンタ,1,TARGETNUM
+				CFLAG:(TARGET:カウンタ):우후후 = 2
+			NEXT
+			CFLAG:MASTER:우후후 = 2
+			TFLAG:COMABLE관리 = 3
+		ENDIF
+	ELSEIF CFLAG:TARGET:우후후 == 2
+		TFLAG:COMABLE관리 = 3
+	ELSE
+		;친밀감강도3以上（or対面が처녀じゃない포식자）、만족状態でないとき
+		;正門、広間、庭、二階踊り場、廊下では押し倒されない
+		CALL HORNY_CHECK(TARGET)
+		IF RESULT == 1
+			SETCOLOR C_Ne_PINK
+			IF TFLAG:COMABLE관리 != 3
+				PRINTL
+				IF CFLAG:MASTER:현재위치 <= 30
+					;お酒パワーがあると容赦なくやって来る
+					IF (TALENT:TARGET:반응 == -1 || TALENT:TARGET:성적흥미 == -1) && TCVAR:TARGET:만취 != 1
+						CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 10, 4)
+						PRINTFORMW %CALLNAME:TARGET%는 부끄러운 듯이、연인과의 스킨십을 원하고 있다。
+						CALL YN_CHOICE_STR()
+						IF RESULT == はい
+							PRINTFORMW %CALLNAME:MASTER%은 발정해 %CALLNAME:TARGET%을 안아、마음대로 해도 좋다고 귓가에 속삭였다。
+							CFLAG:TARGET:조르기허가 = 1
+
+						ELSE
+							PRINTFORMW 대담한 제한을 하며 %CALLNAME:TARGET%는 부끄러운 듯이 얼굴을 붉히고、자기 얼굴을 손으로 가렸다。
+							CFLAG:TARGET:조르기허가 = 1
+							GOTO SKIP_HATSUJO
+						ENDIF
+					ELSE
+						PRINTFORMW %CALLNAME:MASTER%은 발정해 %CALLNAME:TARGET%에 밀려 넘어졌다！
+						IF CFLAG:TARGET:변기화 == 1
+							PRINTFORMW 구속은！？　어느새 빠져 있었던 것 같다……。
+							CFLAG:TARGET:변기화 = 0
+							TEQUIP:TARGET:볼개그 = 0
+							TEQUIP:TARGET:애널바이브 = 0
+							TEQUIP:TARGET:아이마스크 = 0
+							TEQUIP:TARGET:바이브 = 0
+							TEQUIP:TARGET:밧줄 = 0
+						ENDIF
+					ENDIF
+					RESETCOLOR
+					CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 10, 1)
+				ELSEIF CFLAG:MASTER:현재위치 >= 50 
+					IF TALENT:TARGET:반응 == -1 || TALENT:TARGET:성적흥미 == -1
+
+						PRINTFORMW %CALLNAME:TARGET%는 부끄러운 듯이、조금 남의 눈에 띄지 않는 곳으로 가지 않겠느냐고 권했다。
+						CALL YN_CHOICE_STR()
+						IF RESULT == はい
+							PRINTFORMW %CALLNAME:MASTER%은 발정해 %CALLNAME:TARGET%을 남의 눈에 띄지 않는 곳까지 데리고 가서 그 몸을 맡겼다。
+							CFLAG:TARGET:조르기허가 = 1
+							人祓いモード = 1
+							CFLAG:TARGET:데이트중 = 1
+						ELSE
+							PRINTFORMW 용기를 낸 %CALLNAME:TARGET%는 부끄러운 듯이 얼굴을 붉히고、자기 얼굴을 손으로 가렸다。
+							CFLAG:TARGET:조르기허가 = 1
+							GOTO SKIP_HATSUJO
+						ENDIF
+					ELSE
+						PRINTFORMW %CALLNAME:MASTER%은 남의 눈에 띄지 않는 곳까지 끌려가、발정한 %CALLNAME:TARGET%에게 습격당했다。
+						人祓いモード = 1
+						CFLAG:TARGET:데이트중 = 1
+					ENDIF
+				ENDIF
+				CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 10, 1, 3)
+			ENDIF			
+			FOR カウンタ,1,TARGETNUM
+				CFLAG:(TARGET:カウンタ):우후후 = 2
+			NEXT
+			CFLAG:MASTER:우후후 = 2
+			TFLAG:COMABLE관리 = 3
+		ELSE
+			TFLAG:COMABLE관리 = 1
+		ENDIF
+		$SKIP_HATSUJO
+	ENDIF
+	;카운터
+	FOR カウンタ,1,3
+		SIF TARGET:カウンタ <= 0
+			CONTINUE
+	NEXT
+ENDIF
+
+PRINTL
+;-------------------------------------------------
+;MASTER情報
+;-------------------------------------------------
+CALL MASTER_PORTRAIT
+IF TARGET > 0
+	CALL PRINT_PORTRAIT
+ENDIF
+;-------------------------------------------------
+;TARGET情報とモード切り替え
+;-------------------------------------------------
+
+IF TARGET:2
+	SIF GET_TARGETNUM() < 6
+		PORTRAIT_같은방開始 = 0
+
+	VARSET ターゲット보존, -1
+	FOR カウンタ,1,CHARANUM
+		SIF TARGET:0 == TARGET:カウンタ
+			CONTINUE
+		ターゲット보존:カウンタB = TARGET:カウンタ
+		カウンタB ++
+		SIF カウンタ >= 20
+			BREAK
+	NEXT
+
+	SIF CFLAG:MASTER:우후후 >= 1
+		SETCOLOR  C_Ne_PINK	
+	PRINTFORM ＞＞——동실자：
+	;PRINTFORM {PORTRAIT_같은방開始} / {GET_TARGETNUM()}
+	PRINTBUTTON "[표시 전환]",2020
+	PRINTFORM ——
+	PRINTBUTTON "(<<)", 2021
+	PRINTFORM ————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+	PRINTBUTTON "(>>)", 2022
+	PRINTFORM ———————
+	PRINTL
+	RESETCOLOR
+	IF PORTRAIT_같은방표시 == 0
+		FOR カウンタ, 0, CHARANUM
+			SIF TARGET:カウンタ <= 0
+				CONTINUE
+			IF カウンタ != 0
+				SIF TARGET:0 == TARGET:カウンタ
+					CONTINUE
+			ENDIF
+			SIF CFLAG:(TARGET:カウンタ):동행 || CFLAG:(TARGET:カウンタ):데이트중
+				SETCOLOR C_PINK
+			SIF TARGET == TARGET:カウンタ
+				SETCOLOR C_AQUA
+			PRINTBUTTON "[" + CALLNAME:(TARGET:カウンタ) + "]", (1000 + TARGET:カウンタ)
+
+			IF CFLAG:(TARGET:カウンタ):수면
+				PRINT （수면중）
+			ELSEIF CFLAG:(TARGET:カウンタ):데이트중
+				PRINTFORM 【데이트】
+			ELSEIF CFLAG:(TARGET:カウンタ):동행
+				PRINTFORM 【동행중】
+			ENDIF
+
+			RESETCOLOR
+			SIF カウンタ < GET_TARGETNUM()
+				PRINT 　
+		NEXT
+		PRINTL
+	ELSEIF PORTRAIT_같은방표시 == 1
+		FOR カウンタ, PORTRAIT_같은방開始, (PORTRAIT_같은방開始 + 6)
+			SIF ターゲット보존:カウンタ <= 0
+				CONTINUE
+			SIF CFLAG:(ターゲット보존:カウンタ):동행 || CFLAG:(ターゲット보존:カウンタ):데이트중
+				SETCOLOR C_PINK
+			SIF TARGET == ターゲット보존:カウンタ
+				SETCOLOR C_AQUA
+			;24CHARA= 18CHARA
+
+			SUBSTRING CALLNAME:(ターゲット보존:カウンタ), 0, 16
+			名前설정 = %"[" + RESULTS + "]",18,LEFT%
+			PRINTBUTTON @"%名前설정%", (1000 + ターゲット보존:カウンタ)
+
+			IF CFLAG:(ターゲット보존:カウンタ):수면
+				PRINT （잠）
+			ELSEIF CFLAG:(ターゲット보존:カウンタ):데이트중
+				PRINTFORM 【데】
+			ELSEIF CFLAG:(ターゲット보존:カウンタ):동행
+				PRINTFORM 【동】
+			ELSE
+				PRINTFORM %"",6%
+			ENDIF
+
+			RESETCOLOR
+			SIF カウンタ < GET_TARGETNUM()
+				PRINTFORM %"",1%
+		NEXT
+		PRINTL
+		FOR カウンタ, PORTRAIT_같은방開始, (PORTRAIT_같은방開始 + 6)
+			SIF ターゲット보존:カウンタ <= 0
+				CONTINUE
+			PRINT ┏━━━━━━━━━━┓
+			;24CHARA
+			RESETCOLOR
+			SIF カウンタ < GET_TARGETNUM()
+				PRINTFORM %"",1%
+
+		NEXT
+		PRINTL
+
+		FOR カウンタ,PORTRAIT_같은방開始, (PORTRAIT_같은방開始 + 6)
+			SIF ターゲット보존:カウンタ <= 0
+				CONTINUE
+			GDI値 = 1100 + GDI보존
+			GDI보존 ++
+			IF GDI보존 >= 20
+				GDI보존 = 0
+			ENDIF
+			CALL SHOW_GRAPHICS(ターゲット보존:カウンタ,GDI値,3)
+			PRINT ┃
+			IF SPRITECREATED(@"{GDI値}_WINDOW")
+				LOCALS = <button value='{1000 + ターゲット보존:カウンタ}'><img src='{GDI値}_WINDOW' srcb='' height='{600}' width='{1000}'></button>
+				HTML_PRINT LOCALS,30
+			ENDIF
+			PRINT ┃
+			SIF カウンタ < GET_TARGETNUM()
+				PRINTFORM %"",1%
+		NEXT
+		PRINTL
+
+		REPEAT 5
+			FOR カウンタ,PORTRAIT_같은방開始, (PORTRAIT_같은방開始 + 6)
+				SIF ターゲット보존:カウンタ <= 0
+					CONTINUE
+				PRINTFORM ┃%"",20,LEFT%┃
+				SIF カウンタ < GET_TARGETNUM()
+					PRINTFORM %"",1%
+			NEXT
+			PRINTL
+		REND
+		FOR カウンタ,PORTRAIT_같은방開始, (PORTRAIT_같은방開始 + 6)
+			SIF ターゲット보존:カウンタ <= 0
+				CONTINUE
+			PRINTFORM ┗━━━━━━━━━━┛
+			SIF カウンタ < GET_TARGETNUM()
+				PRINTFORM %"",1%
+		NEXT
+		PRINTL
+	ENDIF
+ENDIF
+
+IF TARGET == 0
+	TFLAG:COMABLE관리 = 0
+	FOR カウンタ,0,CHARANUM
+		CFLAG:カウンタ:우후후 = 0
+	NEXT
+ENDIF
+;PRINTFORML 2.TARGET: %CALLNAME:TARGET%
+
+
+B = 10000
+SIF TALENT:MASTER:절륜
+	B /= 2
+MAXBASE:MASTER:2 = B
+
+SIF MAXBASE:2 == 0
+	MAXBASE:2 = 10000
+IF TARGET
+	SIF CFLAG:MASTER:우후후 >= 1
+		SETCOLOR  C_Ne_PINK
+	CUSTOMDRAWLINE —
+	RESETCOLOR
+	FOR カウンタ,1,3
+		SIF TARGET:カウンタ <= 0
+			CONTINUE
+		IF TCVAR:(TARGET:カウンタ):전CT행동
+			CALL KOJO_MESSAGE_COUNTER(TARGET:カウンタ,CTおさわり確認)
+			CTおさわり確認 ++
+		ENDIF
+	NEXT
+	IF TFLAG:COMABLE관리 == 1
+		SIF TCVAR:TARGET:전CT행동 == 0
+			TRYCALL KOJO_MESSAGE_COUNTER_LIFE(TARGET)
+	ENDIF
+	RESETCOLOR
+ENDIF

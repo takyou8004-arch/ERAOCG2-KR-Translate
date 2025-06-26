@@ -1,0 +1,134 @@
+﻿@CARD_GRANT_ADV(듀얼리스트,ゾーン,場所,효과種,효과修正,上書き消去)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 대상者
+#DIMS DYNAMIC カード名
+#DIMS DYNAMIC 参照先
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 효과種
+#DIM DYNAMIC 효과修正
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード,99
+#DIM DYNAMIC 上級値
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 複数カウンタ
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+
+#DIM DYNAMIC 最大値
+#DIM DYNAMIC 消去カード
+#DIM DYNAMIC 一時보존,99
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 上書き消去
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+$CHOICE_LOOP
+IF 듀얼리스트 == "자신"
+	CUSTOMDRAWLINE —
+	PRINTL 【효과를 부여할 카드를 선택해주세요】【능력부여】
+	CUSTOMDRAWLINE —
+	PRINTL 
+ELSEIF 듀얼리스트 == "상대"
+	CALL ENEMY_RUTIN_CARD_ADD(参照先,場所,カードID)
+ENDIF
+
+$INPUT_LOOP
+CALL CARD_FILTER_BASIC(듀얼리스트,"上級",ゾーン,場所)
+条件달성 = RESULT:1
+IF 듀얼리스트 == "자신"
+	IF 条件달성 != 0 && 효과条件任意 != 1
+		SETCOLOR C_GRAY
+		PRINTL 　(9999) - 돌아간다(선택 가능한 카드가 있습니다)
+		RESETCOLOR
+	ELSE
+		PRINTL 　[9999] - 돌아간다
+	ENDIF
+	PRINTL
+	BINPUT
+	選択カード = RESULT
+ELSEIF 듀얼리스트 == "상대"
+	選択カード = RESULT
+	SETCOLOR C_W_RED
+	IF 選択カード == 9999
+		CUSTOMDRAWLINE —
+		PRINTL 【선택 가능한 카드가 없습니다】
+		CUSTOMDRAWLINE —
+		RESETCOLOR
+	ENDIF
+	PRINTL
+	WAIT
+ENDIF
+IF 選択カード == 9999
+	PRINTFORMW 돌아갑니다。
+	RETURN 0
+ELSEIF 選択カード:複数カウンタ != 9999
+	CALL CARD_SELECT(듀얼리스트,選択カード:複数カウンタ)
+	選択カード_ID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{選択カード（CS）}")
+	CALL SELECT_UI_SET(듀얼리스트,選択カード_ID,4)
+	IF RESULT == 1
+		GOTO CHOICE_LOOP
+	ENDIF
+ENDIF
+
+SELECTCASE 효과種
+CASE "完全耐性"
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"モ耐",효과修正,1)
+	CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"魔耐",효과修正,1)
+	CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"함정耐",효과修正,1)
+CASE "永攻守"
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"永攻",효과修正)
+	CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"永守",효과修正)
+CASE "永星変動"
+
+	CALL YN_CHOICE(듀얼리스트,"레벨을 上げる","레벨을 下げる")
+	IF RESULT == 0
+		CALL CARD_SELECT(듀얼리스트,選択カード)
+		CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"永星",효과修正)
+	ELSE
+		CALL CARD_SELECT(듀얼리스트,選択カード)
+		CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"永星",-효과修正)
+	ENDIF
+CASE "一攻守"
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"一攻",효과修正)
+	CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"一守",효과修正)
+
+
+CASE "永攻０"
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	효과修正 = GETVAR(@"%대상者（CS）%_MZ_攻:{選択カード（CS）}")
+	CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"永攻",효과修正)
+CASE "永攻","一攻"
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,효과種,효과修正)
+CASE "個Ｃ","魔Ｃ","悪Ｃ"
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,효과種,효과修正)
+
+CASE "Ｘ"
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"Ｘ",효과修正)
+CASEELSE
+	IF 上書き消去
+		CALL CARD_SELECT(듀얼리스트,選択カード)
+		CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,효과種,효과修正)
+	ELSE
+		CALL CARD_SELECT(듀얼리스트,選択カード)
+		CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,효과種,효과修正,1)
+	ENDIF
+ENDSELECT
+
+CALL CARD_SELECT(듀얼리스트,選択カード)
+選択カード_ID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{選択カード（CS）}")
+RESULT:1 = 選択カード_ID
+RESULT:2 = 選択カード
+
+
+RETURN 1

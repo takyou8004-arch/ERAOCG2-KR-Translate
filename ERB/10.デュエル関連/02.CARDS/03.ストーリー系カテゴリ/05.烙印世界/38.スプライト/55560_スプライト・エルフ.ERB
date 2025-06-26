@@ -1,0 +1,132 @@
+﻿@CARDNAME_55560,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스프라이트 엘프
+	CASE "略称"
+RESULTS = 스프라이트 엘프
+	CASE "カテゴリ"
+RESULTS:0 = 스프라이트
+ENDSELECT
+
+
+@CARD_55560(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 1400
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_55560(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件レベル = 2
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,55560) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_55560(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 코스트 2 몬스터 2장
+PRINTL (코스트 2는 레벨, 랭크, 링크 2의 카드를 가리킨다)
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL 이 카드는 L소환된 턴에 특수 소환의 소재로 할 수 없다.
+PRINTL ①: 이 카드 이외의 자신 필드의 원소정령족 몬스터는 대상 내성을 얻는다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신 / 상대의 메인 페이즈에, 자신의 묘지의 레벨 2 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 특수 소환한다.
+
+@CARDCAN_55560(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,55560)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,55560)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件レベル = 2
+	효과条件종류 = レベル持ち
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1 
+ENDIF
+
+@CARDEFFECT_55560(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID 
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55560,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件レベル = 2
+		효과条件종류 = レベル持ち
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件他所 = 1
+	효과条件종족 = 원소정령족
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+
+	SIF GETVAR(@"%듀얼리스트%_MZ_T1召種:場所") == 召種EX덱
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"不材")
+ENDIF
+

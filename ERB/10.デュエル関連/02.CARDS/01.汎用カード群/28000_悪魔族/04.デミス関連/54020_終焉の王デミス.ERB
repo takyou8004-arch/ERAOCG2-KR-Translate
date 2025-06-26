@@ -1,0 +1,126 @@
+﻿@CARDNAME_54020,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 종언의 왕 데미스
+	CASE "略称"
+RESULTS = 데미스
+	CASE "カテゴリ"
+RESULTS:0 = 종언과 파멸
+ENDSELECT
+
+
+@CARD_54020(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 의식
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_54020(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,54020) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_54020(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "엔드 오브 더 월드"에 의해 강림.
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ①: 2000 LP를 지불하고 발동할 수 있다.
+PRINTL 필드의 다른 카드를 모두 파괴한다.
+PRINTL 
+
+
+
+@CARDCAN_54020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54020)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 2000
+		RETURN 0
+	CALL FULLRESET
+	IF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+	ENDIF
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 손패選択
+#DIM 選択カード
+#DIM 選択カード_ID
+#DIM 소환カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54020)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",2000)
+		CALL FULLRESET
+		효과条件他所 = 1
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場全体",場所,"묘지")
+	ENDIF
+ENDIF

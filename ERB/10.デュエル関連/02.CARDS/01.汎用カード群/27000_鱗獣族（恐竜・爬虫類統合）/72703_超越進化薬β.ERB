@@ -1,0 +1,126 @@
+﻿@CARDNAME_72703,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초월진화약β
+	CASE "略称"
+RESULTS = 초월진화약β
+	CASE "カテゴリ"
+RESULTS:0 = 진화약
+ENDSELECT
+
+
+@CARD_72703(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250403
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72703(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드 명의 카드는 1턴에 1장만 발동할 수 있다.
+CALL CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①: 자신 패 / 필드에서 비늘야수족 몬스터를 포함하는 몬스터 2장을 릴리스하고 발동할 수 있다.
+PRINTL 레벨 5 이상의 비늘야수족 몬스터 1장을 덱 / EX덱에서 특수 소환한다.
+PRINTL 이 효과 발동 후, 턴 종료시까지 자신은 드래곤족 / 비늘야수족 몬스터만 EX덱에서 특수 소환할 수 있다.
+
+
+
+@CARDCAN_72703(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72703)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,72703)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+	효과条件종류 = モン全般
+	효과条件종족 = 비늘야수족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+
+	CALL FULLRESET		
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件종족 = 비늘야수족
+	CALL 효과条件レベル_ADV(5, "以上")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_72703(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件成立
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72703,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲필드 = 1
+		효과条件종류 = モン全般
+		효과条件종족 = 비늘야수족
+		효과条件複数 = 2
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과範囲EX덱 = 1
+			효과条件종족 = 비늘야수족
+			CALL 효과条件レベル_ADV(5, "以上")
+			효과条件종류 = レベル持ち
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)		
+		ENDIF
+
+		EX소환可能종족:0 = 드래곤족
+		EX소환可能종족:1 = 비늘야수족
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+	ENDIF
+ENDIF

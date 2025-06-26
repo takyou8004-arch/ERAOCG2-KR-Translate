@@ -1,0 +1,256 @@
+﻿;-------------------------------------------------
+;산책한다
+;-------------------------------------------------
+@COM600
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択行先
+#DIM DYNAMIC 依頼_ID_C
+#DIM DYNAMIC 施設アリ,1000
+#DIM DYNAMIC C_開始
+#DIM DYNAMIC C_終了
+VARSET マップモード
+IF INRANGE(CFLAG:MASTER:현재위치,50,100)
+	マップモード = 0
+ELSEIF INRANGE(CFLAG:MASTER:현재위치,101,149)
+	マップモード = 1
+ELSEIF INRANGE(CFLAG:MASTER:현재위치,150,200)
+	マップモード = 2
+ENDIF
+
+$INPUT_LOOP
+
+IF マップモード == 0
+	C_開始 = 50
+	C_終了 = 80
+ELSEIF マップモード == 1
+	C_開始 = 101
+	C_終了 = 150
+ELSEIF マップモード == 2
+	C_開始 = 151
+	C_終了 = 200
+ENDIF
+
+FOR 依頼_ID_C,0,1000
+	TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("이벤트種")
+	SIF RESULT != 이벤트_施設
+		CONTINUE
+	TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("条件")
+	SIF RESULT != 1
+		CONTINUE
+	TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("利用制限")
+	SIF RESULT != 0
+		CONTINUE
+	TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("依頼先")
+	施設アリ:RESULT = 1
+NEXT
+
+
+PRINTFORML ——【ＭＡＰ】＞＞—————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+
+IF マップモード == 0
+	CALLFORM MAP_PRINT_CITY
+ELSEIF マップモード == 1
+	CALLFORM MAP_PRINT_CENTER
+ELSEIF マップモード == 2
+	CALLFORM MAP_PRINT_OUTSKIRTS
+ENDIF
+
+CUSTOMDRAWLINE ―
+PRINTFORML ——【산책지】＞＞—————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+
+SETCOLOR C_PINK
+PRINTFORM 　핑크：듀얼리스트 지인
+PRINTFORM  /
+SETCOLOR C_GOLD
+PRINTFORM　 금색：몬스터 방랑 중
+PRINTFORM  /
+SETCOLOR C_AQUA
+PRINTFORM 　청색：의뢰처
+PRINTFORM  /
+SETCOLOR C_ORANGE
+PRINTFORM 　（！）：시설 이벤트 있음
+RESETCOLOR
+PRINTFORML 
+CUSTOMDRAWLINE ―
+
+
+IF マップモード == 0
+	FOR カウンタ,50,80
+		SIF CFLAG:MASTER:현재위치 == カウンタ
+			CONTINUE
+		SIF カウンタ == 場所_学校教室
+			CONTINUE
+		SIF カウンタ == 場所_휴식室
+			CONTINUE
+		SIF GETPLACENAME(カウンタ) == ""
+			CONTINUE
+		SIF カウンタ == 場所_裏通り
+			SETCOLOR C_BLACK
+		CALL GETMAP(カウンタ,1)
+		PRINTFORM [{カウンタ,3}] - %GETPLACENAME(カウンタ),20,LEFT%	
+		RESETCOLOR
+	
+		IF 施設アリ:カウンタ == 1
+			SETCOLOR C_ORANGE
+			PRINT (！)
+			RESETCOLOR
+		ELSE
+			PRINTFORM %"",4%
+		ENDIF
+		PRINTFORM / 
+	NEXT
+ELSEIF マップモード == 1
+	FOR カウンタ,101,150
+		SIF CFLAG:MASTER:현재위치 == カウンタ
+			CONTINUE
+		SIF GETPLACENAME(カウンタ) == ""
+			CONTINUE
+		CALL GETMAP(カウンタ,1)
+		PRINTFORM [{カウンタ,3}] - %GETPLACENAME(カウンタ),20,LEFT%	
+		RESETCOLOR	
+		IF 施設アリ:カウンタ == 1
+			SETCOLOR C_ORANGE
+			PRINT (！)
+			RESETCOLOR
+		ELSE
+			PRINTFORM %"",4%
+		ENDIF
+		PRINTFORM / 
+	NEXT
+	CALL GETMAP(カウンタ,1)
+	PRINTFORM [{73,3}] - %GETPLACENAME(73),20,LEFT%	
+	RESETCOLOR	
+	IF 施設アリ:73 == 1
+		SETCOLOR C_ORANGE
+		PRINT (！)
+		RESETCOLOR
+	ELSE
+		PRINTFORM %"",4%
+	ENDIF
+ELSEIF マップモード == 2
+	FOR カウンタ,151,200
+		SIF CFLAG:MASTER:현재위치 == カウンタ
+			CONTINUE
+		SIF GETPLACENAME(カウンタ) == ""
+			CONTINUE
+
+		CALL GETMAP(カウンタ,1)
+		PRINTFORM [{カウンタ,3}] - %GETPLACENAME(カウンタ),20,LEFT%	
+		RESETCOLOR
+		IF 施設アリ:カウンタ == 1
+			SETCOLOR C_ORANGE
+			PRINT (！)
+			RESETCOLOR
+		ELSE
+			PRINTFORM %"",4%
+		ENDIF
+		PRINTFORM / 
+	NEXT
+ENDIF
+
+
+
+PRINTL
+PRINTL 
+
+
+
+PRINT [9999] - 맵 전환
+SIF ITEM:천년스마트폰
+	PRINT 　　　[8888] - 지인 검색
+PRINTL 
+CUSTOMDRAWLINE —
+PRINTL [1000] - 뒤로
+BINPUT
+
+
+
+
+IF RESULT == 99
+	NEXTCOM = 435
+	RETURN 0
+ELSEIF RESULT == 9999
+	マップモード += 1
+	SIF マップモード >= 3
+		マップモード = 0
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 8888
+	SETCOLOR C_ROYAL_BLUE
+	CUSTOMDRAWLINE —
+	PRINTFORML 지인의 현재 위치 검색을 시작합니다(이름을 누르면 해당 위치로 이동)
+	CUSTOMDRAWLINE —
+	RESETCOLOR
+
+	CALL CHARA_PLACE
+	GOTO INPUT_LOOP
+
+ELSEIF RESULT == 1000
+	RETURN 0
+ELSE
+	IF GROUPMATCH(マップモード,1,2)
+		SIF RESULT <= 100
+		RESULT += 100
+	ENDIF
+	選択行先 = RESULT
+
+	IF RESULT == 22
+		IF 데이트_ホテル플래그 == 0
+			PRINTFORML 휴게소 이용은8000円을 지불해야 하는데 괜찮습니까？
+			PRINTL [1] - 예
+			PRINTL [0] - 아니오
+		ELSE
+			PRINTFORML 호텔 방으로 돌아갈까요？
+			PRINTL [1] - 예
+			PRINTL [0] - 아니오
+		ENDIF
+		BINPUT
+		IF RESULT == 1
+			IF 데이트_ホテル플래그 == 0
+				CALL MONEY_GET(-8000)
+				데이트_ホテル플래그 = 1
+			ENDIF
+			CFLAG:MASTER:현재위치 = RESULT
+			FOR LOCAL,1,CHARANUM
+				SIF !CFLAG:LOCAL:데이트중 == 1
+					CONTINUE
+				CFLAG:LOCAL:현재위치 = RESULT
+			NEXT    
+		ELSE
+			GOTO INPUT_LOOP
+		ENDIF
+	ENDIF
+
+	ABS PLACEPARAMATOR(CFLAG:MASTER:현재위치) - PLACEPARAMATOR(選択行先)
+	TIME += RESULT
+	CFLAG:MASTER:현재위치 = 選択行先
+	FOR LOCAL,1,CHARANUM
+		SIF !CFLAG:LOCAL:데이트중 == 1
+			CONTINUE
+		CFLAG:LOCAL:현재위치 = 選択行先
+	NEXT
+ENDIF
+
+
+RETURN 1
+
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;산책한다
+@COM_ABLE600
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;외출以外
+SIF !INRANGE(CFLAG:MASTER:현재위치,50,499)
+	RETURN 0
+SIF CFLAG:MASTER:현재위치 == 99
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(600)
+	RETURN RESULT
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

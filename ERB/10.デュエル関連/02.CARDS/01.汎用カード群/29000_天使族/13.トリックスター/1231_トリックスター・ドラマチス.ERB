@@ -1,0 +1,152 @@
+﻿@CARDNAME_1231,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 트릭스터 밴드 드라마티스
+	CASE "略称"
+RESULTS = 드라마티스
+	CASE "カテゴリ"
+RESULTS:0 = 트릭스터
+ENDSELECT
+
+
+@CARD_1231(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_1231(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件カテゴリ = 트릭스터
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,1231) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_1231(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「트릭스터」 몬스터 ×２
+PRINTL 이 카드명의 ①③의 효과는 각각 １턴에 １번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 융합 소환했을 경우에 발동할 수 있다.
+PRINTL 「트릭스터」 카드 １장을 덱에서 패에 추가한다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②：자신의 「트릭스터」 L 몬스터의 공격력은 １０００ 업한다.
+CALLFORM CARD_ABLE(3,효과後誘発)
+PRINTL ③：자신 또는 상대가 효과 데미지를 받았을 경우에 발동할 수 있다.
+PRINTL 필드의 앞면 표시 몬스터 １장의 공격력을 ０으로 한다.
+
+
+@CARDCAN_1231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1231)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,1231)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 트릭스터
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 트릭스터
+	효과条件종류 = 링크
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_3(듀얼리스트,1231)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"被弾種",3,2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	SIF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件표시 = 10
+	효과条件除去種 = 選択
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 存在カード名,100
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1231,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 트릭스터
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",場所)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ = 트릭스터
+	효과条件종류 = 링크
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,1000)
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1231,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"永攻DOWN",99999)
+	ENDIF
+ENDIF

@@ -1,0 +1,165 @@
+﻿@CARDNAME_50559,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 코즈믹 블레이저 드래곤
+	CASE "略称"
+RESULTS = C블레이저
+	CASE "カテゴリ"
+RESULTS:0 = 스타더스트
+ENDSELECT
+
+
+@CARD_50559(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+	CASE "성별"
+		RETURN 牝性
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50559(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 12
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件종류 = 싱크로
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件종류 = 싱크로
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50559) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50559(종류)
+#DIM DYNAMIC 종류
+
+PRINTL S몬스터의 튜너 ＋ 튜너 이외의 S몬스터 １장 이상
+PRINTL 이 카드는 S소환으로밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,발동誘発,소환誘発,攻撃時誘発)
+PRINTL ①: 필드의 이 카드를 엔드 페이즈까지 제외하고, 이하의 효과에서 1개를 선택하여 발동할 수 있다.
+PRINTL ●상대가 마법 / 함정 / 몬스터의 효과를 발동했을 때에 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 파괴한다.
+PRINTL ●상대가 몬스터를 일반 소환 / 반전 소환 / 특수 소환할 시기에 발동할 수 있다.
+PRINTL 그것을 무효로 하고, 그 몬스터를 파괴한다.
+PRINTL ●상대 몬스터의 공격 선언시에 발동할 수 있다.
+PRINTL 그 공격을 무효로 하고, 그 후 배틀 페이즈를 종료한다.
+
+@CARDCAN_50559(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50559)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 最終소환決者 == 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50559(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50559)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 소환誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50559)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+		효과先 = 最終소환場所
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",효과先,"完全묘지")
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50559)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+		CALL EVADE_ATTACK(듀얼리스트)
+		バトル強制終了 = 1
+	ENDIF
+ENDIF

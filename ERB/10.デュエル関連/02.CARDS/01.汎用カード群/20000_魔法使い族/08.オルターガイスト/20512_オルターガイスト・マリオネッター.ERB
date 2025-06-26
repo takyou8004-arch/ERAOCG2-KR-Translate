@@ -1,0 +1,122 @@
+﻿@CARDNAME_20512,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 얼터-가이스트 마리오네트-
+	CASE "略称"
+RESULTS = 얼가-마리오네트-
+	CASE "カテゴリ"
+RESULTS:0 = 얼터-가이스트
+ENDSELECT
+
+
+@CARD_20512(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1700
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20512(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환한 시에 발동할 수 있다.
+PRINTL 덱에서 「얼터-가이스트」함정 카드 1장을 자신 필드에 세트한다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신 필드의 「얼터-가이스트」카드 1장과, 자신의 묘지의 「얼터-가이스트」몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 대상 필드의 카드를 묘지로 보내고, 대상 묘지의 몬스터를 특수 소환한다.
+
+@CARDCAN_20512(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20512)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 얼터가이스트
+	효과条件종류 = 함정全般
+	효과条件うらら解除 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,20512)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 얼터가이스트
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20512(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20512)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 얼터가이스트
+		효과条件종류 = 함정全般
+		CALL CARD_SET_BASIC(듀얼리스트,"덱",ゾーン,場所,"裏側표시")
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20512,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		SIF モンスター数(듀얼리스트) < 5
+			효과範囲마함 = 1
+		효과条件カテゴリ = 얼터가이스트
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 얼터가이스트
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+

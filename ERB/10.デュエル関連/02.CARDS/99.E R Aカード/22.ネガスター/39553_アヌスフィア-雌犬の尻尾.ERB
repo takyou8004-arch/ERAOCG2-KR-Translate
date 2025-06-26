@@ -1,0 +1,377 @@
+﻿@CARDNAME_39553,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 아누스피어─암캐의 꼬리
+	CASE "略称"
+		RESULTS = AnS─암캐의 꼬리
+	CASE "カテゴリ"
+		RESULTS:0 = 아누스피어
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39553(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 1500
+	CASE "튜너"
+		RETURN 1
+	CASE "分割"
+		RETURN 유니온
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39553(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ④의 효과는 １턴에 １번밖에 사용할 수 없다。
+PRINTL ①："아누스피어─암캐의 꼬리"는 필드 위에 １장밖에 앞면 표시로 존재할 수 없다。
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ②：이 카드는 패에서 장착 카드로서 상대 필드의 암컷 몬스터 １장에 장착할 수 있다。
+PRINTL 장착 가능한 몬스터가 존재하지 않을 경우、상대의 묘지에서 암컷 몬스터 １장을 상대 필드에 특수 소환한 후에 장착할 수 있다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드를 장착한 몬스터는 전투 / 효과로는 파괴되지 않는다。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ④：자신 메인 페이즈에 발동할 수 있다。
+PRINTL 장착상태인 이 카드를 특수 소환하고、장착 되어있던 몬스터의 컨트롤을 얻는다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39553(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 雌犬대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39553)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF RESULT == 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件名前 = 아누스피어─암캐의 꼬리
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	
+	IF RESULT == 0
+		효과範囲상대필드 = 0
+		효과範囲상대묘지 = 1
+		효과条件소환可 = 2
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	ENDIF
+	
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,39553)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39553,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,39553)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件성별 = 牝性
+	FOR カウンタ,0,5
+		;카드가 存在しない場所は見ない
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		;자신은 제외
+		SIF カウンタ == 場所
+			CONTINUE
+		;裏側표시は参照しない
+		SIF GETVAR(@"%듀얼리스트%_MZ_表:カウンタ") == 3
+			CONTINUE
+		IF GETVAR(@"%듀얼리스트%_MZ_所有:カウンタ") == 2
+			효과条件ID:雌犬대상 = GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ")
+			雌犬대상 ++
+		ENDIF
+	NEXT
+	
+	;元々상대가 所有する카드가 ない場合
+	SIF 雌犬대상 == 0
+		RETURN 0
+		
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	
+	SIF RESULT != 1
+		RETURN 0
+	
+	RETURN 1
+ENDIF
+@CARDEFFECT_39553(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 装備先カード名
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 雌犬대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39553)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件성별 = 牝性
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲상대묘지 = 1
+			효과条件성별 = 牝性
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,,,1)
+		ENDIF
+
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件성별 = 牝性
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+		選択カード = RESULT:2
+		選択カードID = RESULT:1
+		IF 選択カード != 9999
+			TRYCALLFORM CARDNAME_{選択カードID},"略称"
+			PRINTFORML %RESULTS%의 엉덩이구멍에 개의 꼬리가 잠입했다！
+			PRINTFORMW 엉덩이 구멍으로의 감각과 같이「개」로서의 의식이 박아넣어져간다…
+			PRINTFORML 
+			;PRINTFORML あなたの手には「犬」の躾けを行うための스위치が握られている...
+			;CALL CARD_GENERATE_HAND(듀얼리스트,139553)
+			
+			CALL CARD_EROTICS(選択カードID)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL EROTIC_MOVE("애널解し",조교대상,-1,300)
+			ENDIF
+			
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39553,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		
+		IF 装備者 == 対面者
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:装備先")},"略称"
+		ELSE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:装備先")},"略称"
+		ENDIF
+		装備先カード名 = %RESULTS%
+		PRINTFORML 당신이 스위치를 누르니、큰 진동음이 울려퍼졌다！
+		PRINTFORML 진동음이 멈추니、%装備先カード名%는 떨어져버린 꼬리를 사랑스러운듯이 물어、다시「개」가 되기 위해 찾아왔다…
+		PRINTFORMW %装備先カード名%의 엉덩이 구멍은、무언가를 기대하는듯이 떨리고있다……
+		
+		
+		IF 装備者 == 対面者
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",装備先,1)
+		ELSE
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",装備先)
+		ENDIF
+		IF RESULT != -1
+			조교대상 = RESULT
+			CALL EROTIC_MOVE("애널解し",조교대상,-1,300)
+		ENDIF
+		
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"마함",場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",装備先,"強奪")
+		
+		
+	ENDIF
+ELSEIF 종류 == 지속효과
+	;CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,-100000,-100000)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"戦耐")
+	
+	;CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"表固")
+	;CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"不材")
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39553,2)
+	IF RESULT == 0
+		PRINTFORMW 꼬리는 암캐에 알맞는 상대를 찾아、필드를 뛰어돌아다녔다！
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件성별 = 牝性
+		FOR カウンタ,0,5
+			;카드가 存在しない場所は見ない
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+				CONTINUE
+			;자신은 제외
+			SIF カウンタ == 場所
+				CONTINUE
+			;裏側표시は参照しない
+			SIF GETVAR(@"%듀얼리스트%_MZ_表:カウンタ") == 3
+				CONTINUE
+			IF GETVAR(@"%듀얼리스트%_MZ_所有:カウンタ") == 2
+				효과条件ID:雌犬대상 = GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ")
+				雌犬대상 ++
+			ENDIF
+		NEXT
+		
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		
+		IF RESULT != -1
+			選択カード = RESULT
+			選択カードID = RESULT:99
+			IF 選択カード != 9999
+				CALL CARD_SELECT(듀얼리스트,選択カード)
+				選択カード = RESULT
+				
+				TRYCALLFORM CARDNAME_{選択カードID},"略称"
+				装備先カード名 = %RESULTS%
+				
+				PRINTFORMW 꼬리는 암캐에 알맞는 상대를 찾아내니、%装備先カード名%의 엉덩이구멍에 잠입했다！
+				PRINTFORMW 자신의 움직임에 맞추라고 말하는듯이 지배적인 움직임이지만、그것에 맞춰 엉덩이를 흔드는 모습은 마치 암캐라고 해도 되겠지…
+				CALL CARD_EROTICS(選択カードID)
+				IF RESULT != -1
+					조교대상 = RESULT
+					CALL EROTIC_MOVE("애널解し",조교대상,-1,300)
+					装備先カード名 = %NAME:조교대상%
+				ENDIF
+				
+				PRINTFORML 
+				PRINTFORMW "훈육"받은 암캐의 꼬리를 흔드는듯이 만족한것인지、꼬리는 엉덩이구멍에서 스르륵 빠져나왔다…
+				PRINTFORMW 쩍 벌어진 %装備先カード名%의 엉덩이구멍은 암캐에 걸맞는 구멍으로 만들어 바뀐듯 하다…
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永星",4,上書きモード)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+@CARDNAME_139553,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = AnS─암캐로의 훈육
+	CASE "略称"
+		RESULTS = AnS─암캐훈육
+	CASE "カテゴリ"
+		RESULTS:0 = 아누스피어
+ENDSELECT
+
+
+@CARD_139553(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_139553(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 １턴에 １번밖에 사용할 수 없다。
+PRINTL 상대의 마법 / 함정존의 "아누스피어─암캐의 꼬리"를 대상으로 발동할 수 있다。
+PRINTL 그 카드를 장착하고있는 몬스터의 컨트롤을 얻는다。
+PRINTL 그 후、떨어진 꼬리도 가지고와준다。
+PRINTL 
+PRINTL 떨어진 꼬리는 암캐를 구해 희미하게 떨리고있다…아직"훈육"이 부족한것같다…
+PRINTL 돌아온 꼬리를 조사해보는것이 좋을지도 모른다…
+

@@ -1,0 +1,148 @@
+﻿@CARDNAME_62350,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 다이스키- 파라다이스!
+	CASE "略称"
+RESULTS = DK 파라다이스!
+	CASE "カテゴリ"
+RESULTS:0 = 다이스
+ENDSELECT
+
+
+@CARD_62350(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62350(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「다이스키- 파라다이스」가 된다.
+CALL CARD_ABLE(0,효과後誘発)
+PRINTL ①: 자신이 「다이스」 몬스터를 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 주사위를 1개 굴린다.
+CALL CARD_ABLE(0,효과後誘発)
+PRINTL ②: 자신이 카드의 효과에 의해 굴린 주사위에서 6의 눈이 나왔을 경우에 발동할 수 있다.
+PRINTL 덱에서 1장 드로우한다.
+PRINTL 이 효과는 1턴에 3번까지 발동할 수 있다.
+
+@CARDCAN_62350(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,62350)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 다이스
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환",2)
+	SIF RESULT == 1
+		条件달성 = 1
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"다이스目",6)
+	SIF RESULT == 1 && GETVAR(@"%듀얼리스트%_魔_T1汎数:場所") < 3
+		条件달성 = 1
+	SIF	条件달성 != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_62350(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC サイコロ結果
+#DIM DYNAMIC 攻撃力修正
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;EX덱에서 直出し
+;参考：마법族の里、フラワリング エトワ-ル、해피 チャネラ-
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62350)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62350)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 다이스
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환",2)
+		IF RESULT == 1
+			CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62350)
+			IF RESULT == 0
+				CALL DICE_ROLL(듀얼리스트,1)
+				サイコロ結果 = RESULT
+				PRINTFORMW 出た目は……{サイコロ結果}だ！
+			ENDIF
+		ENDIF
+	ENDIF
+	IF GETVAR(@"%듀얼리스트%_魔_T1汎数:場所") < 3
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62350,30)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_CHECK_FIN_BIT(듀얼리스트,"다이스目",6)
+			IF RESULT == 1 && GETVAR(@"%듀얼리스트%_魔_T1汎数:場所") < 3
+				CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62350)
+				IF RESULT == 0
+					PRINTFORMW チャレンジ成功！
+					CALL CARDDRAW_BASIC(듀얼리스트,1)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "다이스パラ다이스")
+
+ENDIF
+
+
+

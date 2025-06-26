@@ -1,0 +1,161 @@
+﻿@CARDNAME_58531,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = E-HERO 라이트닝 골렘
+	CASE "略称"
+RESULTS = 라이트닝G
+	CASE "カテゴリ"
+RESULTS:0 = HERO
+RESULTS:1 = E-HERO
+RESULTS:2 = 다크 퓨전
+ENDSELECT
+
+
+@CARD_58531(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1500
+	CASE "특수불가"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_58531(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「E-HERO 스파크맨」 또는 「E-HERO 클레이맨」＋「HERO」 몬스터
+PRINTL 이 카드는 「다크 퓨전」 카드의 효과로만 특수 소환할 수 있다.
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,특수소환時,EX소환時)
+PRINTL ①: 이 카드가 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 악마족 몬스터 또는 「E-HERO」 카드 1장을 자신의 덱 / 묘지에서 패에 더한다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신의 메인 페이즈에 발동할 수 있다.
+PRINTL 상대 필드의 카드 1장을 파괴한다.
+
+
+
+@CARDSUMMON_58531(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+SIF 효과条件어둠융합 == 0
+	RETURN 0
+IF EX参照 == 0 || EX参照 == 1
+	素材条件名前:0 = E•HERO 스파크맨
+	素材条件名前:1 = E•HERO 클레이맨
+ELSEIF EX参照 >= 10
+	素材条件カテゴリ = HERO
+
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,58531)
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_58531(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58531)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 특수소환時 || 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,58531)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件スーパーカテゴリ = E-HERO
+	효과条件종족 = 악마족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,58531)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_58531(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == 특수소환時 || 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58531,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件スーパーカテゴリ = E-HERO
+		효과条件종족 = 악마족
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58531,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+ENDIF

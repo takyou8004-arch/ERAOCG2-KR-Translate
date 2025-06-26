@@ -1,0 +1,139 @@
+﻿;-------------------------------------------------
+;휴식
+;-------------------------------------------------
+@COM403
+#DIM DYNAMIC 回復率_체력
+#DIM DYNAMIC 回復率_기력
+#DIM DYNAMIC 回復率_정력
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 호감도修正
+#DIM DYNAMIC 入れ替え元
+#DIM DYNAMIC 入れ替え先
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 看病イベ実行者,1000
+回復率_체력 = 100 + (MAXBASE:MASTER:체력 / 50)
+回復率_기력 = 150 + (MAXBASE:MASTER:기력 / 50)
+
+IF TIME_PROGRESS(CFLAG:MASTER:기상시간) >= 960 && !CFLAG:MASTER:수면
+	PRINTFORMW 한숨 쉬려고 한 %CALLNAME:MASTER%는 그대로 잠들어버렸다
+	CFLAG:MASTER:수면 = 1
+	CFLAG:MASTER:취침시간 = DAY * 1440 + TIME
+	FLAG:1 = 1
+ELSEIF TIME_PROGRESS(CFLAG:MASTER:기상시간) <= 960 && !CFLAG:MASTER:수면
+	FOR 캐릭터_ID,1,CHARANUM
+		SIF CFLAG:캐릭터_ID:현재위치 != CFLAG:MASTER:현재위치
+			CONTINUE
+		CALL RECOVER_PERMIL(캐릭터_ID,回復率_체력,"체력",1)
+		CALL RECOVER_PERMIL(캐릭터_ID,回復率_기력,"기력",1)
+		CALL SOURCE_CALC_환락(캐릭터_ID, MASTER, 50)
+		CALL SOURCE_CALC_접촉(캐릭터_ID, MASTER, 50)
+		CFLAG:캐릭터_ID:쇠약 -= 60
+	NEXT
+
+	IF CFLAG:MASTER:감기플래그 >= 1
+		CALL RECOVER_PERMIL(MASTER,50,"체력",1)
+		CALL RECOVER_PERMIL(MASTER,100,"기력",1)
+
+		;1/10の確立で감기が良くなる
+		SIF RAND:10
+			CFLAG:MASTER:감기플래그 -= 1
+
+		;1/3の確立で看病
+		IF RAND:3
+			FOR 캐릭터_ID,1,CHARANUM
+				SIF CFLAG:캐릭터_ID:현재위치 >= 自宅部屋最大値
+					CONTINUE
+				看病イベ実行者:カウンタ = 캐릭터_ID
+				カウンタ ++
+			NEXT
+			FOR 入れ替え元, カウンタ, 0, -1
+				入れ替え先 = RAND:入れ替え元
+				SWAP 看病イベ実行者:(入れ替え元-1), 看病イベ実行者:入れ替え先
+			NEXT
+			IF カウンタ >= 0
+				TARGET = 看病イベ実行者
+				CFLAG:TARGET:현재위치 = CFLAG:MASTER:현재위치
+
+				호감도修正 = 3
+				SIF TALENT:TARGET:연모 == 2
+					호감도修正 += 1
+				SIF TALENT:TARGET:연모 == 1
+					호감도修正 += 2
+				SELECTCASE RAND:호감도修正
+				CASE 0
+					CALL KOJO_MESSAGE_SEND("EVENT",TARGET, 36,0)
+				CASE 1
+					PRINTFORMW %CALLNAME:TARGET%가 땀을 닦고、차가운것을 이마에 대 주었다。
+					CALL KOJO_MESSAGE_SEND("EVENT",TARGET, 36,1)
+				CASE 2
+					IF TIME_PROGRESS(TCVAR:MASTER:식사가능여부) >= 240
+						PRINTFORMW %CALLNAME:TARGET%는 있는것으로 감기에 잘드는 식사를 만들어주었다。
+						CALL KOJO_MESSAGE_SEND("EVENT",TARGET, 36,2)
+						CFLAG:MASTER:감기플래그 -= 1
+						TCVAR:MASTER:식사가능여부 = 1440 * DAY + TIME
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%는 일단 옆 붙어서 이야기 상대가 되어주었다。
+						CALL KOJO_MESSAGE_SEND("EVENT",TARGET, 36,22)
+					ENDIF
+				CASE 3
+					IF CFLAG:MASTER:약먹었다 == 0
+						PRINTFORMW %CALLNAME:TARGET%는 일부러 약을 사러가서 먹게하려고 와주었다。
+						CALL KOJO_MESSAGE_SEND("EVENT",TARGET, 36,3)
+						CFLAG:MASTER:약먹었다 = 1
+						CFLAG:MASTER:감기플래그 -= 1
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%는 일부러 약을 보충해주었다。
+						CALL KOJO_MESSAGE_SEND("EVENT",TARGET, 36,23)
+						ITEM:약세트 += 1
+					ENDIF
+				CASE 4
+					PRINTFORMW %CALLNAME:TARGET%는 힘들어하고있는 %CALLNAME:MASTER%의 옆에서、자장가를 불러주었다。
+					CALL KOJO_MESSAGE_SEND("EVENT",TARGET, 36,4)
+					CFLAG:MASTER:감기플래그 -= 1
+				CASE 5
+					PRINTFORMW %CALLNAME:TARGET%는 감기가 옮는것도 신경쓰지 않고、밀착하여 같이 가장 가까운곳에 있어주었다。
+					CALL KOJO_MESSAGE_SEND("EVENT",TARGET, 36,5)
+					CFLAG:MASTER:감기플래그 -= 2
+				ENDSELECT
+			ENDIF
+		ENDIF
+		;お薬有ると바람良くなるよ
+		IF ITEM:약세트 >= 1 && CFLAG:MASTER:약먹었다 >= 1
+			PRINTFORML 하는김에 오늘의 약을 먹었다。
+			ITEM:약세트 -= 1
+			CFLAG:MASTER:감기플래그 -= 1
+			CFLAG:MASTER:약먹었다 = 1
+		ENDIF
+		IF CFLAG:MASTER:감기플래그 <= 0
+			PRINTFORML 음、몸이 가볍다……감기 나았다고ー！
+			CFLAG:MASTER:감기플래그 = 0
+		ENDIF
+	ELSE
+		CALL RECOVER_PERMIL(MASTER,回復率_체력,"체력",1)
+		CALL RECOVER_PERMIL(MASTER,回復率_기력,"기력",1)
+	ENDIF
+
+	TIME += 120 - 40 * TALENT:MASTER:회복속도
+
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;휴식
+@COM_ABLE403
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(403)
+	RETURN RESULT
+;私室설정
+SIF !BEDROOM(CFLAG:MASTER:현재위치) && !BATHROOM(CFLAG:MASTER:현재위치)
+	RETURN 0
+SIF TIME_PROGRESS(CFLAG:MASTER:314) >= 960 && BATHROOM(CFLAG:MASTER:현재위치)
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

@@ -1,0 +1,231 @@
+﻿@CARDNAME_28209,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마굉신수 베히모스
+	CASE "略称"
+RESULTS = 마굉신수베히모스
+	CASE "カテゴリ"
+RESULTS:0 = 마굉신
+ENDSELECT
+
+
+@CARD_28209(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 600
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28209(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 이 카드가 패에 존재할 경우에 발동할 수 있다.
+PRINTL 패에서 이 카드를 포함하는 「마굉신」 몬스터를 2장 선택하고 버리고,
+PRINTL 버린 몬스터의 원래 레벨의 합계와 같은 레벨을 가지는 「마굉신」 싱크로 몬스터 1장을 싱크로 소환 취급으로 EX덱에서 특수 소환한다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 이 카드가 묘지에 존재하는 상태에서, 자신의 패에서 카드가 묘지로 보내졌을 경우,
+PRINTL 이 카드를 제외하고 발동할 수 있다.
+PRINTL 패에서 「마굉신」 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_28209(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28209)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,28209)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,0,"EX덱")
+	SIF RESULT == 1
+		RETURN 0
+	CALL BEHIR_CHECK(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件他所 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 마굉신
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+		
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,28209)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"離이동元",2,2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 마굉신
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28209(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성,20
+#DIM DYNAMIC 素材レベル
+#DIM DYNAMIC 싱크로レベル
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28209,1)
+	IF RESULT == 0
+		CALL BEHIR_CHECK(듀얼리스트,종류,ゾーン,場所,1)
+		;パスされた条件달성をRESULT経由で
+		FOR カウンタ,1,11
+			条件달성:カウンタ = RESULT:カウンタ
+		NEXT
+		IF 듀얼리스트 == "자신"
+PRINTL 몬스터의 레벨을 선택해 주세요
+			PRINTL
+			;연속処理はなるべくこの形で
+			FOR カウンタ,1,11
+				SIF 条件달성:カウンタ == 1
+					PRINTFORML レベル：[{カウンタ + 2}]
+			NEXT
+			BINPUT
+		ELSE
+			FOR カウンタ,1,11
+				SIF 条件달성:カウンタ == 1
+					RESULT = カウンタ + 2
+			NEXT
+		ENDIF
+		싱크로レベル = RESULT
+		素材レベル = 싱크로レベル - 2
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 마굉신
+		효과条件レベル = 素材レベル
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+			효과範囲EX덱 = 1
+			효과条件종류 = 싱크로
+			효과条件カテゴリ = 마굉신
+			효과条件レベル = 싱크로レベル
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1 && 듀얼리스트 == "자신"
+				リザルト：SYN소환 = 1
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28209,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 마굉신
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+@BEHIR_CHECK(듀얼리스트,종류,ゾーン,場所,モード選択)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성,20
+#DIM DYNAMIC モード選択
+VARSET RESULT
+
+FOR カウンタ,1,11
+	;レベル３～１２までの몬스터를 確認
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 싱크로
+	효과条件カテゴリ = 마굉신
+	효과条件レベル = カウンタ + 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	;いないならこの処理は捨てる
+	SIF RESULT != 1
+		CONTINUE
+	;上記の条件から、자신의 손패に相方となる몬스터를 検索
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 마굉신
+	효과条件レベル = カウンタ
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		CONTINUE
+	;CARD_CANモードなら1つでも条件に当てはまるなら起動可能を返す
+	IF モード選択 == 0
+		RETURN 1
+	;효과処理（CARD_EFFECT）モードなら、条件달성:○○に1の플래그を立たす。この後EFFECT側の条件달성にパスする。
+	ELSEIF モード選択 == 1
+		条件달성:カウンタ = 1
+	ENDIF
+NEXT
+
+IF モード選択 == 1
+	VARSET RESULT
+	;RESULTに보존！EFFECT側の条件달성にパスする。
+	FOR カウンタ,1,11
+		RESULT:カウンタ = 条件달성:カウンタ
+	NEXT
+	RETURN 1
+ENDIF
+RETURN 0
+

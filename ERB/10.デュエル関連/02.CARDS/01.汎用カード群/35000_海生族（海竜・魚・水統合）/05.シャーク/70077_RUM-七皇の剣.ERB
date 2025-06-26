@@ -1,0 +1,276 @@
+﻿@CARDNAME_70077,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = RUM－더 세븐스 원
+	CASE "略称"
+RESULTS = RUM-칠황의 검
+	CASE "カテゴリ"
+RESULTS:0 = RUM
+RESULTS:1 = 세븐스
+ENDSELECT
+
+
+@CARD_70077(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250324
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_70077(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 듀얼 중에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(20,마함起動,손패起動)
+PRINTL ①：「CNo.」 몬스터를 제외하고, 자신의 EX덱 / 필드 / 묘지에서 「오버 헌드레드」 몬스터 1장을 대상으로 하여 발동한다.
+PRINTL 대상의 몬스터가 EX덱 / 묘지에 존재할 경우, 그 몬스터를 소환 조건을 무시하고 특수 소환한다.
+PRINTL 그 후, 대상의 몬스터와 같은 「No.」의 숫자를 가진 「CNo.」 몬스터 1장을,
+PRINTL 대상의 몬스터 위에 겹쳐 X 소환한다.
+PRINTL 이 카드의 발동 후, 턴 종료시까지 자신은 X 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+
+@CARDCAN_70077(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,70077)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_D1(듀얼리스트,70077)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	TRYCALLFORM CARDRUM_70077(듀얼리스트)
+	SIF RESULT != 1
+		RETURN 0
+	;上に효과条件IDを설정する処理があるので念のため
+	CALL FULLRESET
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_70077(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 설정レベル
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択カードB
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70077,20)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲EX덱 = 빛속성
+		효과範囲필드 = 마법사족
+		효과範囲묘지 = 효과モン
+		TRYCALLFORM CARDRUM_70077(듀얼리스트)
+		효과条件종류 = 엑시즈
+		효과条件カテゴリ = 오버핸드 레드
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		選択カード_ID = RESULT:99
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = RESULT
+			IF 参照先（CS） == "필드"
+				효과先 = 選択カード
+			ELSE
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트,参照先（CS）,選択カード)
+				IF RESULT == 1
+					효과先 = カード소환先
+				ELSE
+					RETURN
+				ENDIF
+			ENDIF
+			CALL FULLRESET
+			효과条件ID = 選択カード_ID + 100
+			효과条件カテゴリ = 카오스
+			효과条件종류 = 엑시즈
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カードB = RESULT
+			;戻る
+			IF 選択カードB != 9999
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カードB}")}(듀얼리스트,選択カードB)
+				CALL RESETCONDITION_MAT(1)
+				代替素材数 = 1
+				重ねてＸ = 1
+				素材条件固定 = 효과先
+				TRYCALLFORM XYZSUMMON(듀얼리스트,選択カードB)
+
+				EX소환可能종류 = 엑시즈
+				CALL CARD_EX_RESTRICTION(듀얼리스트)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+
+@CARDRUM_70077(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 설정カードID
+#DIM DYNAMIC 素材レベル
+#DIM DYNAMIC 条件달성
+VARSET RESULT
+
+
+FOR カウンタ,0,20
+	설정カードID =  GETVAR(@"%듀얼리스트%_EX덱:カウンタ")
+	SIF 설정カードID == -1
+		CONTINUE
+	TRYCALLFORM CARD_{설정カードID}, "종류"
+	SIF RESULT != 엑시즈
+		CONTINUE
+	TRYCALLFORM CARDNAME_{설정カードID}, "カテゴリ"
+	SIF !MATCH(RESULTS,"오버핸드 레드")
+		CONTINUE
+	TRYCALLFORM CARDNAME_{설정カードID}, "カテゴリ"
+	SIF MATCH(RESULTS,"카오스")
+		CONTINUE
+	CALL CARD_SS_CHECK(듀얼리스트,설정カードID,"EX덱")
+	SIF RESULT == 1
+		CONTINUE
+	TRYCALLFORM CARDRUM_70077_2(듀얼리스트,설정カードID)
+	SIF RESULT != 1
+		CONTINUE
+	VARSET RESULT
+	VARSET RESULTS
+	효과条件ID:カウンタB = 설정カードID
+	カウンタB ++
+NEXT
+
+FOR カウンタ,0,필드最大値
+	설정カードID =  GETVAR(@"%듀얼리스트%_필드:カウンタ")
+	SIF 설정カードID == -1
+		CONTINUE
+	TRYCALLFORM CARD_{설정カードID}, "종류"
+	SIF RESULT != 엑시즈
+		CONTINUE
+	TRYCALLFORM CARDNAME_{설정カードID}, "カテゴリ"
+	SIF !MATCH(RESULTS,"오버핸드 레드")
+		CONTINUE
+	TRYCALLFORM CARDNAME_{설정カードID}, "カテゴリ"
+	SIF MATCH(RESULTS,"카오스")
+		CONTINUE
+	TRYCALLFORM CARDRUM_70077_2(듀얼리스트,설정カードID)
+	SIF RESULT != 1
+		CONTINUE
+	VARSET RESULT
+	VARSET RESULTS
+	효과条件ID:カウンタB = 설정カードID
+	カウンタB ++
+NEXT
+
+FOR カウンタ,0,紙束最大値
+	설정カードID =  GETVAR(@"%듀얼리스트%_묘지:カウンタ")
+	SIF 설정カードID == -1
+		CONTINUE
+	TRYCALLFORM CARD_{설정カードID}, "종류"
+	SIF RESULT != 엑시즈
+		CONTINUE
+	TRYCALLFORM CARDNAME_{설정カードID}, "カテゴリ"
+	SIF !MATCH(RESULTS,"오버핸드 레드")
+		CONTINUE
+	TRYCALLFORM CARDNAME_{설정カードID}, "カテゴリ"
+	SIF MATCH(RESULTS,"카오스")
+		CONTINUE
+	CALL CARD_SS_CHECK(듀얼리스트,설정カードID,"묘지")
+	SIF RESULT == 1
+		CONTINUE
+	TRYCALLFORM CARDRUM_70077_2(듀얼리스트,설정カードID)
+	SIF RESULT != 1
+		CONTINUE
+	VARSET RESULT
+	VARSET RESULTS
+	효과条件ID:カウンタB = 설정カードID
+	カウンタB ++
+NEXT
+
+VARSET RESULT
+VARSET RESULTS
+
+SIF 효과条件ID == 0
+	RETURN 0
+
+RETURN 1
+
+
+@CARDRUM_70077_2(듀얼리스트,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 설정カードID
+#DIM DYNAMIC 설정カードID_2
+#DIM DYNAMIC 素材レベル
+#DIM DYNAMIC 条件달성
+VARSET RESULT
+
+설정カードID_2 = カードID + 100
+
+FOR カウンタ,0,20
+	설정カードID =  GETVAR(@"%듀얼리스트%_EX덱:カウンタ")
+	SIF 설정カードID != 설정カードID_2
+		CONTINUE
+	TRYCALLFORM CARD_{설정カードID}, "종류"
+	SIF RESULT != 엑시즈
+		CONTINUE
+	TRYCALLFORM CARDNAME_{설정カードID}, "カテゴリ"
+	SIF !MATCH(RESULTS,"오버핸드 레드")
+		CONTINUE
+	TRYCALLFORM CARDNAME_{설정カードID}, "カテゴリ"
+	SIF !MATCH(RESULTS,"카오스")
+		CONTINUE
+	CALL CARD_SS_CHECK(듀얼리스트,설정カードID,"EX덱")
+	SIF RESULT == 1
+		CONTINUE
+	VARSET RESULT
+	VARSET RESULTS
+	RETURN 1
+NEXT
+
+VARSET RESULT
+VARSET RESULTS
+RETURN 0

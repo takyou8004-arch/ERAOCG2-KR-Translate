@@ -1,0 +1,657 @@
+﻿;--------------------------------------------------
+;@KOJO_MESSAGE_COM관계
+;コマンド実行時に출력されます
+;--------------------------------------------------
+@KOJO_MESSAGE_SEND(종류,캐릭터_ID,이벤트_ID,変数A,変数B,文字変数A)
+#DIMS DYNAMIC 종류
+#DIM DYNAMIC 구상_ID
+#DIM DYNAMIC 이벤트_ID
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カード_ID
+#DIM DYNAMIC 変数A
+#DIM DYNAMIC 変数B
+#DIMS DYNAMIC 文字変数A
+#DIM DYNAMIC LTARGET
+#DIM DYNAMIC 구상在り
+#DIM DYNAMIC 汎用구상
+
+
+SELECTCASE 종류
+;------------------------------------------------------------
+;コマンド系KOJO출력処理
+;------------------------------------------------------------
+	CASE "COMMAND"
+		캐릭터_ID = TARGET
+		VARSET LOCAL
+	;	PRINTFORMW FLAG:구상텍스트설정:{FLAG:구상텍스트설정}
+		IF FLAG:구상텍스트설정 <= 0
+			IF FLAG:배경텍스트설정 > 0
+				CALL TRAIN_MESSAGE
+			ENDIF
+			RETURN 0
+		ENDIF
+		VARSET RESULT
+		VARSET RESULTS
+		구상_ID = NO:캐릭터_ID
+		SIF CFLAG:TARGET:구상설정 == 1
+			구상_ID += 10000
+
+
+		TRYCALLFORM M_KOJO_K{구상_ID}
+	;	PRINTFORMW RESULT:{RESULT}/CFLAG:캐릭터_ID:개인구상무효:{CFLAG:캐릭터_ID:개인구상무효}/FLAG:배경텍스트설정:{FLAG:배경텍스트설정}
+		IF (!RESULT || CFLAG:캐릭터_ID:개인구상무효== 1) && FLAG:배경텍스트설정 > 0
+			IF TALENT:캐릭터_ID:구상성격 == 0
+				CALL TRAIN_MESSAGE
+				RETURN 0
+			ELSEIF TALENT:캐릭터_ID:구상성격 >= 1
+				汎用구상 = 1
+			ENDIF
+		ELSE
+			IF RESULT
+				구상在り = 1
+			ENDIF
+		ENDIF
+
+		VARSET RESULT
+		SIF 停止状態 == 1
+			RETURN 0
+		IF 구상在り
+			IF CFLAG:캐릭터_ID:문자색설정 > 0
+				SETCOLOR CFLAG:캐릭터_ID:문자색설정
+			ELSE
+				TRYCALLFORM M_KOJO_COLOR_K{구상_ID}
+			ENDIF
+			IF TFLAG:50
+				TRYCCALLFORM M_KOJO_MESSAGE_SCOM_K{구상_ID}_{TFLAG:50}
+				CATCH
+					CALL TRAIN_MESSAGE
+				ENDCATCH
+			ELSE
+				TRYCCALLFORM M_KOJO_MESSAGE_COM_K{구상_ID}_{SELECTCOM}
+				CATCH
+					CALL TRAIN_MESSAGE
+				ENDCATCH
+			ENDIF
+			SIF CFLAG:캐릭터_ID:자동신음
+				CALL AUTO_AEGI(캐릭터_ID)
+			;埋めていないところは汎用的な処理が可能
+			SIF RESULT
+				TRYCALLFORM KOJO_MESSAGE_COM_K{구상_ID}_00
+			RESETCOLOR
+
+
+		ELSEIF 汎用구상
+			TRYCALLFORM M_HNYO_SETTINGS_K{TALENT:캐릭터_ID:구상성격}(캐릭터_ID)
+			SIF CFLAG:캐릭터_ID:문자색설정 > 0
+				SETCOLOR CFLAG:캐릭터_ID:문자색설정
+			IF TFLAG:50
+				TRYCCALLFORM M_HNYO_MESSAGE_SCOM_K{TALENT:캐릭터_ID:구상성격}_{TFLAG:50}
+				CATCH
+					CALL TRAIN_MESSAGE
+				ENDCATCH
+			ELSE
+				TRYCCALLFORM M_HNYO_MESSAGE_COM_K{TALENT:캐릭터_ID:구상성격}_{SELECTCOM}
+				CATCH
+					CALL TRAIN_MESSAGE
+				ENDCATCH
+			ENDIF
+			SIF CFLAG:캐릭터_ID:자동신음
+				CALL AUTO_AEGI(캐릭터_ID)
+			;埋めていないところは汎用的な処理が可能
+			SIF RESULT
+				TRYCALLFORM HNYO_MESSAGE_COM_K{TALENT:캐릭터_ID:구상성격}_00
+			RESETCOLOR
+		ENDIF
+		
+;------------------------------------------------------------
+;이벤트系KOJO출력処理
+;------------------------------------------------------------
+	CASE "EVENT"
+		LOCAL = TARGET
+		TARGET = 캐릭터_ID
+		IF FLAG:구상텍스트설정 <= 0
+			TARGET = LOCAL
+			RETURN 0
+		ENDIF
+		VARSET RESULT
+		VARSET RESULTS
+		구상_ID = NO:캐릭터_ID
+		SIF CFLAG:TARGET:구상설정 == 1
+			구상_ID += 10000
+
+		TRYCALLFORM M_KOJO_K{구상_ID}
+		IF (!RESULT || CFLAG:캐릭터_ID:개인구상무효== 1) 
+			IF TALENT:TARGET:구상성격 == 0
+				RETURN 0
+			ELSEIF TALENT:TARGET:구상성격 >= 1
+				汎用구상 = 1
+			ENDIF
+		ELSE
+			구상在り = 1
+		ENDIF
+		IF 구상在り
+			IF CFLAG:캐릭터_ID:문자색설정 > 0
+				SETCOLOR CFLAG:캐릭터_ID:문자색설정
+			ELSE
+				TRYCALLFORM M_KOJO_COLOR_K{구상_ID}
+			ENDIF
+			TRYCALLFORM M_KOJO_EVENT_K{구상_ID}_{이벤트_ID}(変数A,変数B)
+			TARGET = LOCAL
+			RESETCOLOR
+		ELSEIF 汎用구상
+			TRYCALLFORM M_HNYO_SETTINGS_K{TALENT:TARGET:구상성격}(TARGET)
+			SIF CFLAG:캐릭터_ID:문자색설정 > 0
+				SETCOLOR CFLAG:캐릭터_ID:문자색설정
+			TRYCALLFORM M_HNYO_EVENT_K{TALENT:TARGET:구상성격}_{이벤트_ID}(変数A,変数B)
+			TARGET = LOCAL
+			RESETCOLOR
+		ENDIF
+
+;------------------------------------------------------------
+;이벤트系KOJO출력処理
+;------------------------------------------------------------
+	CASE "SPEVENT"
+		LOCAL = TARGET
+		TARGET = 캐릭터_ID
+		IF FLAG:구상텍스트설정 <= 0
+			TRYCALLFORM SPEVENT_MESSAGE_{이벤트_ID}
+			TARGET = LOCAL
+			RETURN 0
+		ENDIF
+		VARSET RESULT
+		VARSET RESULTS
+		구상_ID = NO:캐릭터_ID
+		SIF CFLAG:TARGET:구상설정 == 1
+			구상_ID += 10000
+
+		TRYCALLFORM M_KOJO_K{구상_ID}
+		IF (!RESULT || CFLAG:캐릭터_ID:개인구상무효== 1) 
+			IF TALENT:TARGET:구상성격 == 0
+				TRYCALLFORM SPEVENT_MESSAGE_{이벤트_ID}
+				TARGET = LOCAL
+				RETURN 0
+			ELSEIF TALENT:TARGET:구상성격 >= 1
+				汎用구상 = 1
+			ENDIF
+		ELSE
+			구상在り = 1
+		ENDIF
+		IF 구상在り
+			IF CFLAG:캐릭터_ID:문자색설정 > 0
+				SETCOLOR CFLAG:캐릭터_ID:문자색설정
+			ELSE
+				TRYCALLFORM M_KOJO_COLOR_K{구상_ID}
+			ENDIF
+			TRYCALLFORM M_KOJO_SPEVENT_K{구상_ID}_{이벤트_ID}(変数A,変数B)
+			TARGET = LOCAL
+			RESETCOLOR
+		ELSEIF 汎用구상
+			TRYCALLFORM M_HNYO_SETTINGS_K{TALENT:TARGET:구상성격}(TARGET)
+			SIF CFLAG:캐릭터_ID:문자색설정 > 0
+				SETCOLOR CFLAG:캐릭터_ID:문자색설정
+			TRYCALLFORM M_HNYO_SPEVENT_K{TALENT:TARGET:구상성격}_{이벤트_ID}(変数A,変数B)
+			TARGET = LOCAL
+			RESETCOLOR
+		ENDIF
+
+;------------------------------------------------------------
+;デュエル系KOJO출력処理
+;------------------------------------------------------------
+	CASE "DUEL"
+		SIF 캐릭터_ID <= -1
+			RETURN 0
+		IF FLAG:구상텍스트설정 <= 0
+			RETURN 0
+		ENDIF
+		LTARGET = TARGET
+		TARGET = 캐릭터_ID
+
+		VARSET RESULT
+		VARSET RESULTS
+		구상_ID = NO:캐릭터_ID
+		SIF CFLAG:TARGET:구상설정 == 1
+			구상_ID += 10000
+
+		TRYCALLFORM M_KOJO_K{구상_ID}
+		IF (!RESULT || CFLAG:캐릭터_ID:개인구상무효== 1) 
+			IF TALENT:캐릭터_ID:구상성격 == 0
+				RETURN 0
+			ELSEIF TALENT:캐릭터_ID:구상성격 >= 1
+				汎用구상 = 1
+			ENDIF
+		ELSE
+			구상在り = 1
+		ENDIF
+		IF 구상在り
+			IF CFLAG:캐릭터_ID:문자색설정 > 0
+				SETCOLOR CFLAG:캐릭터_ID:문자색설정
+			ELSE
+				TRYCALLFORM M_KOJO_COLOR_K{구상_ID}
+			ENDIF
+			PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+			IF 이벤트_ID == 999
+				TRYCALLFORM M_KOJO_DUEL_K{구상_ID}_{이벤트_ID}(変数A,変数B,文字変数A)
+			ELSE
+				TRYCALLFORM M_KOJO_DUEL_K{구상_ID}_{이벤트_ID}(変数A,変数B)
+			ENDIF
+			CUSTOMDRAWLINE ―
+			RESETCOLOR
+
+		ELSEIF 汎用구상
+			SIF CFLAG:캐릭터_ID:문자색설정 > 0
+				SETCOLOR CFLAG:캐릭터_ID:문자색설정
+			PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+			IF 이벤트_ID == 999
+				TRYCALLFORM M_HNYO_DUEL_K{TALENT:캐릭터_ID:구상성격}_{이벤트_ID}(変数A,変数B,文字変数A)
+			ELSE
+				TRYCALLFORM M_HNYO_DUEL_K{TALENT:캐릭터_ID:구상성격}_{이벤트_ID}(変数A,変数B)
+			ENDIF
+	
+			CUSTOMDRAWLINE ―
+			RESETCOLOR
+		ENDIF
+		TARGET = LTARGET
+	CASE "CARD"
+		カード_ID = 캐릭터_ID
+		캐릭터_ID = NO_TO_CHARANUM(カード_ID)
+		VARSET RESULT
+		TRYCALLFORM M_KOJO_CARD_K{カード_ID}
+		IF RESULT == 1
+			구상在り = 1
+		ENDIF
+		IF 구상在り
+			IF 캐릭터_ID != -1
+				IF CFLAG:캐릭터_ID:문자색설정 > 0
+					SETCOLOR CFLAG:캐릭터_ID:문자색설정
+				ELSE
+					SETCOLOR C_YELLOW
+					TRYCALLFORM M_KOJO_COLOR_K{カード_ID}
+				ENDIF
+			ENDIF
+			
+			CUSTOMDRAWLINE ―
+			PRINTFORM >>―MESSAGE：
+			CALLFORM CARDNAME_{カード_ID}, "名前"
+			PRINTFORML 「%RESULTS%」
+;			CALL FILL_DRAWLINE	
+			CUSTOMDRAWLINE ―
+;			PRINTL
+			TRYCALLFORM M_KOJO_DUEL_K{カード_ID}_{이벤트_ID}(変数A,変数B)
+			CUSTOMDRAWLINE ―
+			RESETCOLOR
+		ENDIF
+;------------------------------------------------------------
+;ファーストインプレッション系KOJO출력処理（俗に言うエクストラ構文）
+;------------------------------------------------------------
+	CASE "ENCOUNTER"
+		;TARGETに発言者설정（현재의 TARGETはLOCALへ退避）
+		LOCAL = TARGET
+		TARGET = 캐릭터_ID
+		구상_ID = NO:캐릭터_ID
+		SIF CFLAG:TARGET:구상설정 == 1
+			구상_ID += 10000
+
+		TRYCALLFORM M_KOJO_K{구상_ID}
+		IF (!RESULT || CFLAG:캐릭터_ID:개인구상무효== 1) 
+			IF TALENT:TARGET:구상성격 == 0
+				IF オプション_初回구상설정 == 1
+					PRINTL 이 캐릭터에는 구상이 설정되어 있지 않습니다。
+					PRINTL 범용 구상을 설정하시겠습니까？
+					PRINTL 					
+					PRINTL [0] - 예
+					PRINTL [1] - 아니오
+					PRINTL [2] - 아니오（초회 설정도 하지 않는다）
+					BINPUT
+				ELSE
+					RESULT = 1
+				ENDIF
+				IF RESULT == 1 || RESULT == 2
+					SIF RESULT == 2
+						オプション_初回구상설정 = 0
+					TARGET = LOCAL
+					RETURN 0
+				ELSEIF RESULT == 0
+					CALL HAN_KOJO_OPTION(캐릭터_ID)
+					SIF TALENT:TARGET:구상성격 != 0
+						汎用구상 = 1
+				ENDIF
+			ELSEIF TALENT:TARGET:구상성격 >= 1
+				汎用구상 = 1
+			ENDIF
+		ELSE
+			구상在り = 1
+		ENDIF
+		IF 구상在り
+			IF CFLAG:캐릭터_ID:문자색설정 > 0
+				SETCOLOR CFLAG:캐릭터_ID:문자색설정
+			ELSE
+				TRYCALLFORM M_KOJO_COLOR_K{구상_ID}
+			ENDIF
+			TRYCALLFORM M_KOJO_ENCOUNTER_K{구상_ID}(이벤트_ID)
+			RESETCOLOR
+		ELSEIF 汎用구상
+			TRYCALLFORM M_HNYO_SETTINGS_K{TALENT:TARGET:구상성격}(TARGET)
+			SIF CFLAG:캐릭터_ID:문자색설정 > 0
+				SETCOLOR CFLAG:캐릭터_ID:문자색설정
+			TRYCALLFORM M_HNYO_ENCOUNTER_K{TALENT:TARGET:구상성격}(이벤트_ID)
+			RESETCOLOR
+		ENDIF
+
+		TARGET = LOCAL
+		RETURN 0
+
+
+
+ENDSELECT
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COUNTER관계
+;카운터実行時に출력されます
+;--------------------------------------------------
+@KOJO_MESSAGE_COUNTER(ARG,CTおさわり確認)
+#DIM DYNAMIC CTおさわり確認
+
+VARSET LOCAL
+LOCAL = TARGET
+TARGET = ARG
+IF FLAG:구상텍스트설정 <= 0
+	IF FLAG:배경텍스트설정 > 0
+		CALL EVENT_COUNTER_MESSAGE(CTおさわり確認)
+		TARGET = LOCAL
+	ENDIF
+	RETURN 0
+ENDIF
+
+;볼개그
+IF TEQUIP:ARG:20 && FLAG:배경텍스트설정 > 0
+	CALL EVENT_COUNTER_MESSAGE
+	TARGET = LOCAL
+ELSE
+	RESULT = 0
+	;구상の存在판정 and RESULTSに文字列代入
+	TRYCALLFORM KOJO_K{NO:ARG}
+	IF !RESULT && FLAG:배경텍스트설정 > 0
+		SETCOLOR C_H_PINK
+		CALL EVENT_COUNTER_MESSAGE(CTおさわり確認)
+		RESETCOLOR
+		TARGET = LOCAL
+		RETURN 0
+	ENDIF
+	TRYCALLFORM KOJO_MESSAGE_COUNTER_K{NO:TARGET}_{TCVAR:TARGET:20}
+	TARGET = LOCAL
+ENDIF
+
+
+;--------------------------------------------------
+;@KOJO_MESSAGE_COUNTER_LIFE관계
+;部屋での행동などのメッセージが출력されます。
+;구상などは관계なく、今部屋で何をしているかを描写
+;--------------------------------------------------
+@KOJO_MESSAGE_COUNTER_LIFE(ARG)
+VARSET LOCAL
+LOCAL = TARGET
+TARGET = ARG
+IF FLAG:배경텍스트설정 > 0
+	CALL EVENT_COUNTER_LIFE_MESSAGE
+	TARGET = LOCAL
+ENDIF
+RETURN 0
+
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG관계
+;パラメータ変動をトリガーにした구상
+;パラメータ変動後に구상を발동します
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_A
+VARSET LOCAL
+IF FLAG:구상텍스트설정 <= 0
+	SIF FLAG:배경텍스트설정 > 0
+		CALL PALAM_MESSAGE_A
+	RETURN 0
+ENDIF
+FOR LOCAL,0,CHARANUM
+	SIF TARGET:LOCAL < 1
+		CONTINUE
+	;TARGET,TARGET:1,…の順に출력
+	SIF LOCAL > 0 && TARGET:LOCAL == TARGET
+		CONTINUE
+	;구상출력용の플래그がないと飛ばす
+	SIF !TCVAR:(TARGET:LOCAL):50
+		CONTINUE
+	LOCAL:1 = TARGET
+	TARGET = TARGET:LOCAL
+	RESULT = 0
+	RESULTS =
+	;구상の存在판정 and RESULTSに文字列代入
+	TRYCALLFORM KOJO_K{NO:TARGET}
+	IF !RESULT && FLAG:배경텍스트설정 > 0
+		CALL PALAM_MESSAGE_A
+		TARGET = LOCAL:1
+		RETURN 0
+	ENDIF
+	CALL KOJO_MESSAGE_PALAMCNG_A2(LOCAL)
+	SIF !RESULT
+	LOCAL:2 ++
+	TARGET = LOCAL:1
+	;콘돔구상は대상一人のみ
+	SIF GETBIT(TFLAG:1,0)
+		BREAK
+NEXT
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG관계
+;パラメータ変動をトリガーにした구상
+;パラメータ変動後に구상を발동します
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_B(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+;구상OFFの분기
+;PRINTL PALAMCNG_B：Aデス1
+IF FLAG:구상텍스트설정 <= 0
+	SIF FLAG:배경텍스트설정 > 0
+		CALL PALAM_MESSAGE_B(캐릭터_ID)
+	RETURN 0
+ENDIF
+VARSET RESULT
+VARSET RESULTS
+;PRINTL PALAMCNG_B：Aデス2
+;구상の存在판정 and RESULTSに文字列代入
+TRYCALLFORM KOJO_K{NO:캐릭터_ID}
+IF !RESULT && FLAG:배경텍스트설정 > 0
+;	PRINTL PALAMCNG_B：Aデス3
+	CALL PALAM_MESSAGE_B(캐릭터_ID)
+	RETURN 0
+ENDIF
+;볼개그
+LOCALS = 
+IF TEQUIP:20 && SELECTCOM != 106
+	LOCALS = BALLGAG_
+ENDIF
+TRYCALLFORM KOJO_MESSAGE_PALAMCNG_B_K{NO:TARGET}
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG관계
+;パラメータ変動をトリガーにした구상
+;パラメータ変動後に구상を발동します
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_C
+IF FLAG:구상텍스트설정 <= 0
+	SIF FLAG:배경텍스트설정 > 0
+		CALL PALAM_MESSAGE_C
+	RETURN 0
+ENDIF
+RESULT = 0
+RESULTS =
+;구상の存在판정 and RESULTSに文字列代入
+TRYCALLFORM KOJO_K{NO:TARGET}
+IF !RESULT && FLAG:배경텍스트설정 > 0
+	CALL PALAM_MESSAGE_C
+	RETURN 0
+ENDIF
+;볼개그
+LOCALS = 
+IF TEQUIP:20 && SELECTCOM != 106
+	LOCALS = BALLGAG_
+ENDIF
+TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_C_%LOCALS%K{NO:TARGET}
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_MARKCNG관계
+;각인変動をトリガーにした구상
+;각인変動後に구상を발동します
+;-------------------------------------------------
+@KOJO_MESSAGE_MARKCNG(ARG)
+
+IF FLAG:구상텍스트설정 <= 0
+	SIF FLAG:배경텍스트설정 > 0
+		CALL MARK_MESSAGE(ARG)
+	RETURN 0
+ENDIF
+RESULT = 0
+RESULTS =
+;구상の存在판정 and RESULTSに文字列代入
+TRYCALLFORM KOJO_K{NO:ARG}
+IF !RESULT && FLAG:배경텍스트설정 > 0
+	CALL MARK_MESSAGE(ARG)
+	RETURN 0
+ENDIF
+;볼개그
+LOCALS = 
+IF TEQUIP:20 && SELECTCOM != 106
+	LOCALS = BALLGAG_
+ENDIF
+TRYCALLFORM M_KOJO_MESSAGE_MARKCNG_K{NO:TARGET}
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_ENDING관계
+;이벤트時の구상、이벤트開始時に출력します
+;-------------------------------------------------
+@KOJO_MESSAGE_ENDING
+TRYCALLFORM KOJO_MESSAGE_ENDING_K{NO:TARGET}
+
+;-------------------------------------------------
+;@KOJO_MESSAGE_PALAMCNG_A2
+;사정구상출력のギミック
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_A2(ARG)
+;ARG W펠라等でTARGETならARG=0、二人目ならARG=1
+;RESULTSには@KOJO_KXで지정したものが入力되어있는 
+;볼개그
+LOCALS = 
+IF TEQUIP:20 && SELECTCOM != 106
+	LOCALS = BALLGAG_
+ENDIF
+;콘돔
+IF GETBIT(TCVAR:50,0)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_0(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;이라마치오
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,23)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_23(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;식스나인
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,22)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_22(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;파이즈리펠라
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,21)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_21(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;수음펠라
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,20)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_20(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;애널봉사
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,9)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_9(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;거품춤
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,8)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_8(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;풋잡
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,7)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_7(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;스마타
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,6)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_6(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;파이즈리
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,5)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_5(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;펠라치오
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,4)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_4(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;수음
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,3)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_3(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;애널
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,2)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_2(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;-------------------------------------------------
+;질내
+;-------------------------------------------------
+IF GETBIT(TCVAR:50,1)
+	TRYCALLFORM KOJO%RESULTS%_MESSAGE_PALAMCNG_A_%LOCALS%K{NO:TARGET}_1(ARG)
+	SIF RESULT
+		RETURN RESULT
+ENDIF
+;ここまでRETURNされなかったら구상がないということなので서술문を표시して修了
+CALL PALAM_MESSAGE_A
+RETURN 0

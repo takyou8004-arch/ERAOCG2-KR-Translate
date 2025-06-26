@@ -1,0 +1,212 @@
+﻿@CARDNAME_59840,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 리마인드 컨트롤러
+	CASE "略称"
+		RESULTS = Re MC
+	CASE "カテゴリ"
+		RESULTS:0 = MC
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59840(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_59840(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 「MC" 몬스터를 포함한 몬스터 2체 이상
+PRINTL 이 카드명의 ①②③의 효과는 각각 1턴에 1번 밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 링크 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 상대의 묘지의「MC」카드를 모두 상대의 덱에 복제한다.
+PRINTL 그후 상대는 패의 카드를 모두 덱으로 되돌려 섞고, 되돌린 카드 수만큼 드로우한다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：자신 메인 페이즈에 자신의 묘지의「MC」카드 1장을 대상으로 하고 발동할 수 있다
+PRINTL 그 카드를 패로 넣는다.
+CALLFORM CARD_ABLE(3,효과後誘発)
+PRINTL ③：상대의 패에 카드가 넣어졌을 경우에 발동할 수 있다.
+PRINTL  상대 필드의 카드를 1장 파괴한다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_59840(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 3
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = MC
+ELSE
+	PRINT
+ENDIF
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,59840) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_59840(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59840)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,59840)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과条件カテゴリ = MC
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,59840)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = MC
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_3(듀얼리스트,59840)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"손패취득+D",1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_59840(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウント数
+#DIM DYNAMIC ドロー枚数
+#DIM DYNAMIC 복제枚数
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 実보정
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59840,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		SETCOLOR C_PINK
+		FOR カウンタ,0,紙束最大値
+			SIF GETVAR(@"%対面者%_묘지:カウンタ") == -1
+				CONTINUE
+
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_묘지:カウンタ")}, "カテゴリ"
+			IF !MATCH(RESULTS, "MC")
+				CONTINUE
+			ENDIF
+			CALL CARD_GENERATE_DECK(対面者,GETVAR(@"%対面者%_묘지:カウンタ"))
+			복제枚数 ++
+		NEXT
+		RESETCOLOR
+
+		FOR カウンタ,0,紙束最大値
+			SIF GETVAR(@"%対面者%_손패:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(対面者,"손패",カウンタ,덱行き)
+			ドロー枚数 ++
+		NEXT
+		CALL SHUFFLE(対面者)
+		;うららで止めて全ハンデスできてしまうため、通常ドロー扱いに
+		CALL CARDDRAW_BASIC(対面者,ドロー枚数,1)
+
+		IF 복제枚数 > 0
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				実보정 = 50 * 복제枚数
+				조교대상 = RESULT
+				SETCOLOR C_PINK
+				PRINTFORMW %CALLNAME:조교대상%의 뇌리에 여태까지의 최면중의 기억이 소생한다!
+				CALL EROTIC_MOVE("晒しもの",조교대상,MASTER,実보정)
+				RESETCOLOR
+			ELSE
+				PRINTFORMW 상대의 뇌리에 여태까지의 최면중의 기억이 소생한다!
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59840,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = MC
+		효과条件行先플래그 = 손패行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59840,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+ENDIF

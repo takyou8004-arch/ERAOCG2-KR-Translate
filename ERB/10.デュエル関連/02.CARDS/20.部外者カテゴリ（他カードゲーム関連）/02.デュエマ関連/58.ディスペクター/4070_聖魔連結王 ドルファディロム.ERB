@@ -1,0 +1,211 @@
+﻿@CARDNAME_4070,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성마 연결왕 돌파디롬
+	CASE "略称"
+RESULTS = 돌파디롬
+	CASE "カテゴリ"
+RESULTS:0 = 디스펙터-
+RESULTS:1 = 커맨드
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_4070(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 융합
+	CASE "속성"
+		RESULT:1 = 어둠속성
+		RETURN 빛속성
+	CASE "종족"
+		RESULT:1 = 악마족
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3150
+	CASE "守備力"
+		RETURN 2850
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN ディスペクタ-
+	CASE "특수制限"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4070(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 천사족 몬스터 ＋ 악마족 몬스터
+PRINTL 이 카드는 자신 필드의 상기의 카드를 묘지로 보내는 것으로 EX덱에서 특수 소환할 수도 있다.
+PRINTL 자신은 "성마 연결왕 돌파디롬"을 1턴에 1번밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,EX소환時強制,특수소환時強制)
+PRINTL ①：『X 라이프』
+PRINTL 이 카드는 X 소재를 가질 수 있으며, X 소재를 1개 가진 상태로 특수 소환된다.
+PRINTL 이 카드가 몬스터 존을 벗어날 경우, 대신에 이 X 소재를 제거한다.
+CALLFORM CARD_ABLE(0,EX소환時 ,특수소환時,他효과起動)
+PRINTL ②：이 카드가 특수 소환에 성공했을 경우, 또는 이 카드의 "X 라이프"가 제거되었을 때 발동할 수 있다.
+PRINTL 상대의 분할（펜듈럼, 듀얼, 유니온, 함정 / 몬스터 등）이 아닌 몬스터를 전부 파괴한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：상대는 통상 마법 / 함정을 발동할 수 없다.
+PRINTL 
+
+
+
+@CARDSUMMON_4070(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件종족 = 천사족
+ELSEIF EX参照 >= 10
+	素材条件종족 = 악마족
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,4070) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_4070(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4070)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,4070)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,4070,ゾーン,1)
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 천사족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 악마족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時強制 || 종류 == 특수소환時強制
+
+	RETURN 1
+ELSEIF 종류 == 他효과起動
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_4070(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4070,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 천사족
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件종족 = 악마족
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트, "EX덱", 場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4070,00,X消費1)
+	IF RESULT == 0
+		CALLFORM CARD_STANBY(4070,듀얼리스트,他효과起動,"필드",場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 他효과起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4070)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件分割 = 11
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == EX소환時強制 || 종류 == 특수소환時強制
+
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4070)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件分割 = 11
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"通常無効",3,1)
+ENDIF

@@ -1,0 +1,150 @@
+@CARDNAME_78710,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 바니 폴리스 인력 배치
+	CASE "略称"
+RESULTS = 바니 P 인력 배치
+	CASE "カテゴリ"
+RESULTS:0 = 바니 폴리스
+		RESULTS:1 = 래빗시티
+		RESULTS:2 = 밀리언 라이브!
+ENDSELECT
+
+@CARD_78710(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250601
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_78710(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_78710(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①: 패에서 "래빗 걸" / "바니 폴리스" 카드 1장을 덱으로 되돌리고,
+PRINTL 덱에서 이 효과로 패로 되돌린 카드명 이외의 "래빗 걸" 몬스터 1장을 패에 넣는다.
+PRINTL 그 후, 자신 / 상대의 마법 & 함정 존의 "래빗 걸" 몬스터 1장을 자신 필드에 특수 소환할 수 있다.
+
+@CARDCAN_78710(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,78710)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,78710)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件他所 = 1
+	효과条件カテゴリ:0 = 래빗 걸
+	효과条件カテゴリ:1 = 바니 폴리스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件カテゴリ = 래빗 걸
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_78710(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カードゾーン
+#DIM DYNAMIC 選択カード場所
+#DIMS DYNAMIC 選択カードコントローラー
+#DIM DYNAMIC 選択カード所有
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,78710,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ:0 = 래빗 걸
+		효과条件カテゴリ:1 = 바니 폴리스
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		選択カードID = RESULT:1
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+효과条件カテゴリ = 래빗 걸
+			효과条件종류 = モン全般
+			효과条件固ID = RESULT:1
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲마함 = 1
+				효과範囲상대마함 = 1
+				효과条件종류 = モン全般
+효과条件カテゴリ = 래빗 걸
+				효과条件分割 = 펜듈럼
+				효과条件任意 = 1
+				CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"選択")
+				IF RESULT == 1
+					CALL CARD_SELECT(듀얼리스트,RESULT:1)
+					選択カード = 選択カード（CS）
+					選択カードゾーン = %本参照先（CS）%
+					選択カードコントローラー = %대상者（CS）%
+					選択カード所有 = GETVAR(@"%選択カードコントローラー%_魔_所有:選択カード")
+					選択カード場所 = 現필드(듀얼리스트)
+					CALL CARD_SP_SUMMON(듀얼리스트,選択カードゾーン,選択カード)
+					IF RESULT == 1
+						SETVAR @"%듀얼리스트%_MZ_所有:選択カード場所", 選択カード所有
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

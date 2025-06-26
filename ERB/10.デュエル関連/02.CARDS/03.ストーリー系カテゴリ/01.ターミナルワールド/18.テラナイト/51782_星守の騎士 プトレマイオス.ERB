@@ -1,0 +1,181 @@
+﻿@CARDNAME_51782,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성수의 기사 프톨레마이오스
+	CASE "略称"
+RESULTS = 프톨레마이오스
+	CASE "カテゴリ"
+RESULTS:0 = 테라나이트
+ENDSELECT
+
+
+@CARD_51782(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 550
+	CASE "守備力"
+		RETURN 2600
+	CASE "성별"
+		RETURN ふたなり
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_51782(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件レベル = 4
+素材条件数自由 = 1
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51782) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_51782(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 몬스터 × 2장 이상
+CALLFORM CARD_ABLE(0,필드起動,フリー誘発)
+PRINTL ①：자신 / 상대 턴에 1번, 발동할 수 있다.
+PRINTL 이 카드의 엑시즈 소재를 다음의 수만큼 제거하고, 그 효과를 적용한다.
+PRINTL ●3개: 「No.」몬스터 이외의, 이 카드보다 랭크가 1개 높은 엑시즈 몬스터 1장을,
+PRINTL 자신 필드의 이 카드 위에 겹쳐 엑시즈 소환 취급으로 EX덱에서 특수 소환한다.
+PRINTL ●7개: 자신 메인 페이즈에 선택할 수 있다.
+PRINTL 다음 상대 턴, 상대의 메인 페이즈 2까지 스킵한다.
+CALLFORM CARD_ABLE(0,ターン終了時)
+PRINTL ②：서로의 엔드 페이즈에 발동할 수 있다.
+PRINTL 자신의 EX덱의 「테라나이트」카드 1장을 묘지로 보내고, 이 카드의 엑시즈 소재를 1개 늘린다.
+
+
+@CARDCAN_51782(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51782)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") < 2
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 테라나이트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51782(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51782,10)
+	IF RESULT == 0
+		IF ターンプレイヤー == 듀얼리스트 && メインフェイズ == 1
+			IF 듀얼리스트 == "자신"
+PRINTL 효과를 선택해 주세요
+				PRINTL
+PRINTL [0] ●3개: 「No.」이외로 랭크 업
+				SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") >= 6
+PRINTL [1] ●7개: 상대 메인 2까지 스킵
+				BINPUT
+			ELSE
+				RESULT = 0
+			ENDIF
+		ELSE
+			RESULT = 0
+		ENDIF
+
+		IF RESULT == 0
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",-3)
+			CALL FULLRESET
+			효과条件固カテゴリ = 넘버즈
+			효과条件レベル = GETVAR(@"%듀얼리스트%_MZ_星:場所") + 1
+			효과条件종류 = 엑시즈
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL RESETCONDITION_MAT
+				必要素材数 = 1
+				重ねてＸ = 1
+				素材条件固定 = 場所
+				TRYCALLFORM XYZSUMMON(듀얼리스트,選択カード)
+			ENDIF
+		ELSEIF RESULT == 1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",-7)
+			CALL SET_PLAYER_INFO(対面者,"ドロースキップ", 1)
+			CALL SET_PLAYER_INFO(対面者,"メインスキップ", 1)
+			CALL SET_PLAYER_INFO(対面者,"バトルスキップ２", 1)
+			PRINTL
+			SETCOLOR C_YELLOW
+			PRINTW 星の巡りが加速し始める   ！
+			RESETCOLOR
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51782)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 테라나이트
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+		ENDIF
+	ENDIF
+ENDIF

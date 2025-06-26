@@ -1,0 +1,150 @@
+﻿@CARDNAME_39702,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 촉수궁의 황새
+	CASE "略称"
+		RESULTS = 촉수궁 황새
+	CASE "カテゴリ"
+		RESULTS:0 = 촉수
+		RESULTS:1 = E.R.A
+
+ENDSELECT
+
+
+@CARD_39702(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39702(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번 밖에 사용할 수 없다。
+CALL CARD_ABLE(1,손패起動,묘지起動,フリー誘発)
+PRINTL ①：필드가 「촉수궁」일 경우, 자신 / 상대 턴에 발동할 수 있다。
+PRINTL 패 / 묘지 의 이 카드를 특수 소환한다。
+CALL CARD_ABLE(2,ターン終了時強制)
+PRINTL ②：엔드 페이즈 시에 발동한다。
+PRINTL 필드의 여성 몬스터 「묘상」 카테고리를 얻는다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39702(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39702)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動 || 종류 == 묘지起動 || 종류 == フリー誘発
+	SIF !GROUPMATCH(ゾーン,"손패","묘지")
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,39702)
+		RETURN 0	
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39702,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	SIF GETVARS(@"%듀얼리스트%_フィールド名")  !=  "촉수궁"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF 발동済_2(듀얼리스트,39702)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39702(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 || 종류 == 묘지起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39702,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39702,2)
+	IF RESULT == 0
+		PRINTFORMW 【空気임신】
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+				CONTINUE
+			IF GETVAR(@"%対面者%_MZ_性:カウンタ") == 1
+				CALL CARD_SET_CATEGORY(対面者,"필드",カウンタ,"묘상")
+
+				CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ,1)
+				IF RESULT != -1
+					조교대상 = RESULT
+					CALL EROTIC_MOVE("悪臭汚染",조교대상, -1, 100)
+				ENDIF
+			ENDIF
+		NEXT
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+				CONTINUE
+
+			IF GETVAR(@"%듀얼리스트%_MZ_性:カウンタ") == 1
+				CALL CARD_SET_CATEGORY(듀얼리스트,"필드",カウンタ,"묘상")
+				CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+				IF RESULT != -1
+					조교대상 = RESULT
+					PRINTFORML %CALLNAME:조교대상%은 새하얀 공기를 들이 마셨고,
+					PRINTFORML 메스꺼움과 함께 복부에서 명호가한 혐오감을 느낍니다。
+					CALL EROTIC_MOVE("悪臭汚染",조교대상, -1, 100)
+				ENDIF
+			ENDIF
+		NEXT
+	ENDIF
+ENDIF

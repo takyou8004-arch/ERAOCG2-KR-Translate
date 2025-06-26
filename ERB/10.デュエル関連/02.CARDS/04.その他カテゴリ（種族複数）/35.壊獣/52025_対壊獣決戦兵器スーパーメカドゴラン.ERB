@@ -1,0 +1,262 @@
+﻿@CARDNAME_52025,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 대파괴수용 결전병기 슈퍼 메카도고란
+	CASE "略称"
+RESULTS = 메카도고란
+	CASE "カテゴリ"
+RESULTS:0 = 파괴수
+ENDSELECT
+
+
+@CARD_52025(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 11
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2000
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_52025(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 "파괴수" 몬스터 1장 이상
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 공격력은, 묘지에 있는 "파괴수" 몬스터의 종류 × 800 포인트 올린다.
+PRINTL ②: 이 카드는 묘지에 존재하는 "파괴수" 몬스터의 종류에 따라 이하의 효과를 얻는다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ●2종류 이상: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 　1턴에 1번, 자신 / 상대 필드의 파괴수 카운터를 2개 제거하고 발동할 수 있다.
+PRINTL 　상대 필드의 몬스터를 전부 파괴한다.
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ●4종류 이상: 상대가 마법 / 함정/몬스터의 효과를 발동했을 때 발동할 수 있다.
+PRINTL 　1턴에 1번, 자신 / 상대 필드의 파괴수 카운터를 2개 제거하고 발동할 수 있다.
+PRINTL 　그 발동을 무효로 하고 제외한다.
+CALLFORM CARD_ABLE(3,지속효과)
+PRINTL ●8종류 이상: 이 카드는 완전 내성을 얻는다.
+
+@CARDSUMMON_52025(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 11
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件カテゴリ = 파괴수
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52025) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_52025(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52025)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,52025)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 파괴수
+	효과条件종류 = モン全般
+	효과条件固名前選択 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 파괴수
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT:9 < 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,52025)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 파괴수
+	효과条件종류 = モン全般
+	효과条件固名前選択 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 4
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 파괴수
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT:9 < 2
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 파괴수
+	효과条件종류 = モン全般
+	효과条件固名前選択 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 8
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52025(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 파괴수
+	효과条件종류 = モン全般
+	효과条件固名前選択 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 800
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52025,1)
+	IF RESULT == 0
+		REPEAT 2
+PRINTL 파괴수 카운터를 제거할 카드를 선택
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			효과条件カテゴリ = 파괴수
+			효과条件個Ｃ所持 = 999
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_SELECT(듀얼리스트,RESULT)
+				CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"個Ｃ",-1)
+				条件달성 ++
+			ENDIF
+		REND
+		IF 条件달성 == 2
+			PRINTFORMW ドゴランの魂が赤く輝く！
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52025,2)
+	IF RESULT == 0
+		REPEAT 2
+PRINTL 파괴수 카운터를 제거할 카드를 선택
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			효과条件カテゴリ = 파괴수
+			효과条件個Ｃ所持 = 999
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_SELECT(듀얼리스트,RESULT)
+				CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"個Ｃ",-1)
+				条件달성 ++
+			ENDIF
+		REND
+		IF 条件달성 == 2
+			PRINTFORMW ガメシエルの魂が青く輝く！
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"제외")
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+ENDIF
+

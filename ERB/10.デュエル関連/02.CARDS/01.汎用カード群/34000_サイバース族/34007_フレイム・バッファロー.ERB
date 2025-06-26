@@ -1,0 +1,95 @@
+﻿@CARDNAME_34007,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 플레임 버팔로
+	CASE "略称"
+RESULTS = F 버팔로
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_34007(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 200
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_34007(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,戦破壊→묘지)
+PRINTL ①: 이 카드가 필드에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 패에서 사이버스족 몬스터 1장을 버리고, 자신은 덱에서 2장 드로우한다.
+
+
+@CARDCAN_34007(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,34007)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,34007)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종족 = 사이버스족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1	
+ENDIF
+
+@CARDEFFECT_34007(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,34007,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종족 = 사이버스족
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)	
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		ENDIF
+	ENDIF
+ENDIF

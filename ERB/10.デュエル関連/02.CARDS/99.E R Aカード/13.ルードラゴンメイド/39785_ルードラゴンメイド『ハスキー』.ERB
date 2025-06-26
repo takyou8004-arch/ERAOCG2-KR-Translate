@@ -1,0 +1,279 @@
+﻿@CARDNAME_39785,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 루 드래곤메이드『하스키』
+	CASE "略称"
+		RESULTS = 『하스키』
+	CASE "カテゴリ"
+		RESULTS:0 = 드래곤메이드
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39785(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 2055
+ENDSELECT
+RETURN 0
+
+
+@CARDSUMMON_39785(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+;システムでは소환불가
+RETURN 0
+
+
+@CARD_EXPLANATION_39785(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 서로의 필드에 존재하는 드래곤족 빛속성 몬스터 1장(이 카드와 동명 이외)과 자신에게 900 데미지
+CALL CARD_ABLE(3,EX덱起動)
+PRINTL 이 카드는 1턴에 1번, 상기의 소재를 사용해 수비 표시로 X 소환할 수 있다.
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번 밖에 사용할 수 없다.
+CALL CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 X 소환했을 경우 발동할 수 있다.
+PRINTL EX덱에서 루 드래곤메이드『하스키』를 제외한 『드래곤메이드』X 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터의 효과는 이 턴, 무효화된다.
+CALL CARD_ABLE(2,발동誘発)
+PRINTL ②：상대가 몬스터 효과를 발동했을 때 발동할 수 있다.
+PRINTL 이 카드의 X 소재를 1개 늘림으로서, 그 발동을 무효로 하고 파괴한다.
+PRINTL 이 효과로 파괴한 몬스터가 암성이고, 효과 발동 시 이 카드의 X 소재가 2개 이상일 경우,
+PRINTL 파괴한 몬스터와 같은 이름의 몬스터를 상대 묘지에서 자신 필드로 특수 소환하고,「메이드" 몬스터로 취급한다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39785(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39785)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == EX덱起動
+	SIF 발동済_3(듀얼리스트,39785)
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,39785)
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 900
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	SIF モンスター数(듀얼리스트) < 5
+		효과範囲상대필드 = 1
+	효과条件종족 = 드래곤족
+	효과条件속성 = 빛속성
+	효과条件固名前 = 루 드래곤메이드『하스키』
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,39785)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 드래곤메이드
+	효과条件종류 = 엑시즈
+	효과条件固ID = 39785
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,39785)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39785(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 듀얼元ライフ
+#DIM DYNAMIC 소환素材
+#DIM DYNAMIC 소환素材レベル
+#DIMS DYNAMIC 소환素材名前
+#DIMS DYNAMIC 대상者
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 対面カード使用
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39785,3)
+	IF RESULT == 0
+		;소재를 選択
+		CALL FULLRESET
+		효과範囲필드 = 1
+		SIF モンスター数(듀얼리스트) < 5
+			효과範囲상대필드 = 1
+		효과条件종족 = 드래곤족
+		효과条件속성 = 빛속성
+		효과条件固名前 = 루 드래곤메이드『하스키』
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			소환素材 = RESULT:1
+			対面カード使用 = RESULT:10
+			TRYCALLFORM CARD_{소환素材},"レベル"
+			소환素材レベル = RESULT
+			;ライフコスト
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",900)
+			;フレ-バ-
+			IF 듀얼리스트 == "자신"
+				IF 소환素材 == 2055 && 対面カード使用 == 0 || 소환素材 == 42055 && 対面カード使用 == 0
+					PRINTFORML
+					PRINTFORMW 하스키가 음란한 옷차림으로 나타났다.
+					CALL CARD_EROTICS(소환素材)
+					IF RESULT != -1
+						CALL EROTIC_MOVE("노출単発",RESULT,-1,소환素材レベル*100)
+						WAIT
+					ENDIF
+				ELSE
+					TRYCALLFORM CARDNAME_{소환素材},"名前"
+					소환素材名前 = %RESULTS%
+					PRINTFORML
+					PRINTFORML %CALLNAME:MASTER%는 %소환素材名前%を組み伏せた！
+					PRINTFORMW 저항하는%소환素材名前%를 구속한 채로, 조교를 시작한다!
+					CALL CARD_EROTICS(소환素材)
+					조교대상 = RESULT
+					IF 조교대상 != -1
+						FOR カウンタ,0,소환素材レベル
+							CALL EROTIC_MOVE("全身凌辱",조교대상,MASTER,100)
+						NEXT
+					ENDIF
+					PRINTFORML
+					PRINTFORMW ………
+					PRINTFORMW %소환素材名前%는 %CALLNAME:MASTER%에게 굴복하여, 음란한 의상을 입은 메이드가 되었다.
+					PRINTFORML 
+				ENDIF
+			ENDIF
+			;특수소환
+			CALL FULLRESET
+			효과추가종류:0 = 効追Ｘ素
+			SIF !GROUPMATCH(소환素材, 2055, 42055) 
+				효과추가종류:2 = 効追変化ID + 소환素材
+			CALL CARD_EX_SUMMON(듀얼리스트,ゾーン,場所,"守備표시")
+			リザルト：XYZ소환 = 1
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39785,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 드래곤메이드
+		효과条件종류 = 엑시즈
+		효과条件固ID = 39785
+		효과추가종류 = 22
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39785,2)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+		IF 듀얼리스트 == "자신"
+			소환素材 = GETVAR(@"%듀얼리스트%_MZ_変化元ID:場所")
+			IF 소환素材 == -1
+				PRINTFORML
+				PRINTFORMW 하스키는%NAME:MASTER%로 부터 정기를 받았다!
+				PRINTFORML
+				CALL EROTIC_MOVE("펠라치오",NO_TO_CHARANUM(2055),MASTER,100)
+			ELSE
+				CALL CARD_EROTICS(소환素材)
+				조교대상 = RESULT
+				IF 조교대상 != -1
+					PRINTFORML
+					PRINTFORMW 루 드래곤메이드  %CALLNAME:조교대상%는 %NAME:MASTER%로 부터 정기를 받았다.
+					PRINTFORML
+					CALL EROTIC_MOVE("펠라치오",조교대상,MASTER,100)
+				ELSE
+					TRYCALLFORM CARDNAME_{소환素材},"略称"
+					PRINTFORML
+					PRINTFORMW 루 드래곤메이드 %RESULTS%는 %NAME:MASTER%로 부터 정기를 받았다!
+				ENDIF
+			ENDIF
+		ENDIF
+		
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+
+		TRYCALLFORM CARD_{他参照選択カードID}, "성별"
+		IF RESULT == 牝性 && GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") > 2
+		; && GETVAR(@"%듀얼리스트%_MZ_条達:場所") != 0
+			CALL FULLRESET
+			효과範囲상대묘지 = 1
+			효과条件ID = 他参照選択カードID
+			효과추가カテ = メイド
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+			CALL CARD_EROTICS(RESULT:1)
+			조교대상 = RESULT
+			IF 조교대상 != -1
+				PRINTFORML
+				PRINTFORMW 하스키는 %CALLNAME:MASTER%있는 곳에%NAME:조교대상%를 데려와 새로운 메이드로서 교육해 주었다!
+				PRINTFORML
+				CALL EROTIC_MOVE("全身凌辱",조교대상,MASTER,400)
+			ENDIF
+		ENDIF
+
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+

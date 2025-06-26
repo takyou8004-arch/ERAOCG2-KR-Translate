@@ -1,0 +1,181 @@
+﻿@CARDNAME_57321,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 버제스토마 아노말로카리스
+	CASE "略称"
+RESULTS = 아노말로카리스
+	CASE "カテゴリ"
+RESULTS:0 = 버지스트마
+ENDSELECT
+
+
+@CARD_57321(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_57321(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件レベル = 2
+素材条件数自由 = 1
+지정素材종류 = 함정全般
+
+;추가효과用
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,57321) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_57321(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 2 몬스터 × 2장 이상
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 몬스터 내성을 가진다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ②: 함정 카드가 자신의 패/필드에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 자신의 덱의 맨 위의 카드를 넘긴다.
+PRINTL 그 카드가 함정 카드였을 경우에는 패에 넣고, 아니었을 경우에는 묘지로 보낸다.
+PRINTL 이 효과를 필드의 '버지스트마 아노말로카리스'의 수만큼 반복한다.
+CALLFORM CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ③: 이 카드가 함정 카드를 소재로 엑시즈 소환되어 있을 경우,
+PRINTL 자신 / 상대 턴에 1번, 이 카드의 엑시즈 소재 1개를 제거하고 발동할 수 있다.
+PRINTL 필드의 카드 1장을 파괴한다.
+
+@CARDCAN_57321(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57321)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") != 0
+		RETURN 0
+	CALL FULLRESET
+	SIF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,57321)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 現山札数(듀얼리스트) < 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과破壊")
+	SIF RESULT == 1
+		RETURN 1
+	CALL FULLRESET
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"リリース")
+	SIF RESULT == 1
+		RETURN 1
+	CALL FULLRESET
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"손패墓送")
+	SIF RESULT == 1
+		RETURN 1
+	RETURN 0
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_57321(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC リピート횟수
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57321,10,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57321,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+효과条件名前 = 버제스토마 아노말로카리스
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		リピート횟수 = RESULT
+
+		REPEAT リピート횟수
+			TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_덱:0"))
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_덱:0")}, "종류"
+			IF RESULT == 通常함정 || RESULT == 지속함정
+				CALL CARD_ADD(듀얼리스트,"덱","손패",0)
+			ELSE
+				CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",1)
+			ENDIF
+		REND
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+ENDIF

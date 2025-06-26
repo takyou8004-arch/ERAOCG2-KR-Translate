@@ -1,0 +1,95 @@
+@CARDNAME_26205,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 부정 펭귄
+	CASE "略称"
+RESULTS = 부정 펭귄
+	CASE "カテゴリ"
+RESULTS:0 = 펭귄
+ENDSELECT
+
+
+@CARD_26205(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 100
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26205(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 「펭귄」 카드 효과로 상대 필드에서 패로 되돌아가는 카드는 패로 되돌아가지 않고 제외된다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ②: 이 카드가 묘지에 존재하며,
+PRINTL 「펭귄」 몬스터의 효과가 발동했을 때 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+
+
+@CARDCAN_26205(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26205)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,26205)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,26205,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 펭귄
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동",2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26205(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26205,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "묘지", 場所)
+	ENDIF
+ENDIF
+

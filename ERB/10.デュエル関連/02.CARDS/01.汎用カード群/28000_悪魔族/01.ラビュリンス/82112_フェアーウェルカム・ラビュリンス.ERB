@@ -1,0 +1,106 @@
+﻿@CARDNAME_82112,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 페어 웰컴 라뷰린스
+	CASE "略称"
+		RESULTS = 페어웰컴라뷰린스
+	CASE "カテゴリ"
+		RESULTS:0 = 라뷰린스
+ENDSELECT
+
+
+@CARD_82112(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_82112(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(1,攻撃時誘発)
+PRINTL ①: 자신 필드에 악마족 몬스터가 존재할 경우,
+PRINTL 자신 또는 상대 몬스터의 공격 선언시에, 필드의 카드 1장을 대상으로 하고 발동할 수 있다。
+PRINTL 그 공격을 무효로 하고, 대상의 카드를 파괴한다。
+PRINTL 그후, 덱에서 일반 함정 카드 1장을 선택해 자신 필드에 세트 할 수 있다。
+PRINTL 
+PRINTL 
+
+@CARDCAN_82112(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,82112)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 악마족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_82112(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,82112)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL EVADE_ATTACK(듀얼리스트)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지",82112)
+		CALL FULLRESET
+		효과条件종류 = 通常함정
+		효과条件任意 = 1	
+		CALL CARD_SET_BASIC(듀얼리스트,"덱",ゾーン,場所,"裏側표시")
+
+		IF GETVARS(@"%듀얼리스트%_フィールド名") == "라뷰린스 래버린스"
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지",82112)
+		ENDIF
+	ENDIF
+ENDIF

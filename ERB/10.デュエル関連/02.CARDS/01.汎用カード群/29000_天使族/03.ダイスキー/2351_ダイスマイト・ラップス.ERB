@@ -1,0 +1,160 @@
+﻿@CARDNAME_2351,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 다이스마이트 랩스
+	CASE "略称"
+RESULTS = DM 랩스
+	CASE "カテゴリ"
+RESULTS:0 = 다이스
+ENDSELECT
+
+
+@CARD_2351(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 2700
+	CASE "성별"
+		RETURN 牝性
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_2351(종류)
+#DIM DYNAMIC 종류
+
+PRINTL '다이스' 몬스터를 포함하는 몬스터 2장 이상
+PRINTL '다이스마이트 랩스'는 자신 필드에 1장만 앞면 표시로 존재할 수 없다.
+CALL CARD_ABLE(0,발동誘発)
+PRINTL ①: 상대가 몬스터의 효과를 발동했을 때에 발동할 수 있다.
+PRINTL 주사위를 2회 굴려, 나온 눈의 합계의 효과를 적용한다.
+PRINTL ●2 3 12: 그 발동을 무효로 하고, 덱의 맨 아래로 되돌린다.
+PRINTL ●7 11: 이 카드를 수비 표시로 하고. 상대는 카드를 1장 드로우한다.
+PRINTL ●그 외: 그 발동을 무효로 하고, 이 카드의 공격력을 그 나온 눈의 합계 × 100 다운한다.
+PRINTL 
+
+@CARDSUMMON_2351(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 3
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 다이스
+ELSE
+	PRINT
+ENDIF
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,2351) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_2351(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2351)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_攻:場所") < 1
+		RETURN 0	
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2351(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC サイコロ結果,5
+#DIM DYNAMIC サイコロ合計
+#DIM DYNAMIC 攻撃力修正,5
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2351)
+	IF RESULT == 0
+		PRINTFORMW 「クラップスしましょ～？　입장料は효과１回、ル-ルはまぁ私의 효과欄見てね-」
+		PRINTL 
+PRINTL 주사위를 2회 굴려, 나온 눈의 합계의 효과를 적용한다.
+PRINTL ●2 3 12: 그 발동을 무효로 하고, 덱의 맨 아래로 되돌린다.
+PRINTL ●7 11: 이 카드를 수비 표시로 하고. 상대는 카드를 1장 드로우한다.
+PRINTL ●그 외: 그 발동을 무효로 하고, 이 카드의 공격력을 그 나온 눈의 합계 × 100 다운한다.
+		PRINTW 
+		PRINTW 「ようは７か１１を出せば효과ごと返すよ～♪　確定無効のヒトより断然良心的でしょ～？」
+		PRINTW 「ゲ～ムスタ-トっ♪」
+		FOR カウンタ,0,2
+			CALL DICE_ROLL(듀얼리스트,1)
+			サイコロ結果:カウンタ = RESULT
+		NEXT
+		サイコロ合計 = サイコロ結果:0 + サイコロ結果:1
+		PRINTFORMW 出た目は……{サイコロ結果:0}と{サイコロ結果:1}で{サイコロ合計}だ！
+		SELECTCASE サイコロ合計
+		CASE 2,3,12
+			PRINTFORMW 「はい、ざんね～ん♪　さよ～なら～」
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"덱")
+			RETURN 1
+		CASE 7,11
+			PRINTFORMW 「げっ！？　효과返しますから許して……ドローもあげるからぁ……」
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",2,1)
+			CALL CARDDRAW_BASIC(対面者,1)
+		CASEELSE
+			攻撃力修正 = サイコロ合計 * 100
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",-攻撃力修正)
+			PRINTFORMW 「はいは-い♪　またのお越しを待ってま～す♪」
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+			RETURN 1
+		ENDSELECT
+		RETURN 0
+	ENDIF
+ENDIF
+
+
+

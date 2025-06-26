@@ -1,0 +1,103 @@
+﻿@CARDNAME_92210,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 조－P.U.N.K. 데인저러스 가브
+	CASE "略称"
+RESULTS = 데인저러 가브
+	CASE "カテゴリ"
+RESULTS:0 = P.U.N.K.
+ENDSELECT
+
+@CARD_92210(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92210(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,フリー誘発)
+PRINTL ①: 상대 필드의 효과 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 효과를 턴 종료시까지 무효로 한다.
+PRINTL 자신 필드에 「P.U.N.K.」 몬스터가 존재할 경우,
+PRINTL 추가로 대상의 몬스터의 원래 공격력만큼 자신의 LP를 회복한다.
+
+@CARDCAN_92210(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92210)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,92210)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_92210(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+
+#DIM DYNAMIC カウンタ
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92210,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"無効")
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = P.U.N.K.
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1 && (他参照選択カード != 9999)
+			CALLFORM CARD_{GETVAR(@"%対面者%_필드:他参照選択カード")}("攻撃力")
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",RESULT)			
+		ENDIF
+	ENDIF
+ENDIF

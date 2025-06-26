@@ -1,0 +1,141 @@
+﻿@CARDNAME_72964,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 엔젤 싱
+	CASE "略称"
+RESULTS = A 싱
+	CASE "カテゴリ"
+RESULTS:0 = 발할라
+RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_72964(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72964(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 필드의 앞면 표시 몬스터 1장을 대상으로 하여 이 카드를 발동할 수 있다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 대상 몬스터의 공격력은, 자신 필드의 천사족 몬스터의 수× 300 올린다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 대상 몬스터가 필드를 떠났을 때 이 카드는 파괴된다.
+CALLFORM CARD_ABLE(0,破壊→묘지)
+PRINTL ③: 이 카드가 파괴되어 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 이하의 효과를 각각 적용한다.
+PRINTL ●패의 「발할라」 함정 카드 1장을 세트할 수 있다.
+PRINTL ●자신의 마법 & 함정 존의 뒷면 표시의 「발할라」 카드 1장을 발동 가능하게 한다.
+
+
+@CARDCAN_72964(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72964)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT!= 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72964(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72964)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 천사족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 300
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,攻撃力修正)
+ELSEIF 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72964)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 발할라
+		효과条件종류 = 함정全般
+		효과条件任意 = 1
+		CALL CARD_SET_BASIC(듀얼리스트,"손패",ゾーン,場所,"裏側표시")
+		
+		CALL FULLRESET
+		효과条件カテゴリ = 발할라
+		효과範囲마함 = 1
+		효과条件표시 = 30
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"마함",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"마함",選択カード,"表",2,1)
+		ENDIF
+	ENDIF
+ENDIF

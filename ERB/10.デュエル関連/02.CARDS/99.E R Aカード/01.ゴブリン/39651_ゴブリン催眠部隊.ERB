@@ -1,0 +1,235 @@
+﻿@CARDNAME_39651,参照先
+;ココ39651で지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 고블린 최면부대
+	CASE "略称"
+		RESULTS = 고블린 최면부대
+	CASE "カテゴリ"
+		RESULTS:0 = 고블린
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39651(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39651(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ①②③의 효과는 각각 1턴에 1번 밖에 각각 1턴에 1번밖에 사용할 수 없다。
+CALL CARD_ABLE(3,특수소환時,소환時)
+PRINTL ①：이 카드가 일반 일반 소환 / 특수 소환했을 경우에 발동할 수 있다。
+PRINTL 패 / 묘지에서 "고블린 최면부대」 이외에 "고블린」 몬스터를 1장 특수 소환 한다。
+CALL CARD_ABLE(1,ターン終了時)
+PRINTL ②：자신의 턴 종료시 발동할 수 있다。
+PRINTL 자신 필드의 "고블린」 몬스터의 공격력 합계 이하의 공격력을 가지는 여성 몬스터 1장의 컨트롤을 얻는다。
+CALL CARD_ABLE(2,ターン開始時)
+PRINTL ③：자신 / 상대 스텐바이 페이즈에 발동할 수 있다。
+PRINTL 자신 필드의 여성 몬스터의 수×４００ 만큼 라이프 를 회복한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39651(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM カウンタ
+#DIM DYNAMIC 合計攻撃力
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39651)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 특수소환時 || 종류 == 소환時
+	SIF 발동済_3(듀얼리스트,39651)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 고블린
+	효과条件固名前 = 고블린 최면부대
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,39651)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 고블린
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	合計攻撃力 = RESULT:3
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	효과条件攻撃力 = 合計攻撃力
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,39651)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39651(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ2
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 合計攻撃力
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC レイプ횟수
+
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 특수소환時 || 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39651,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 고블린
+		효과条件固名前 = 고블린 최면부대
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39651,1)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			VARSET RESULT
+			SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "カテゴリ"
+			SIF !MATCH(RESULTS, "고블린")
+				CONTINUE
+			合計攻撃力 += GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ")
+		NEXT
+
+
+		CALL FULLRESET
+		효과条件성별 = 牝性 
+		효과条件攻撃力 = 合計攻撃力
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪",39651)
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",コントロール先)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORMW 고블린이 수상한 기술을 %CALLNAME:조교대상%에게 걸면서, %CALLNAME:조교대상%의 눈이 공허한 눈으로 변합니다。
+			PRINTFORMW 스스로의 발로 이쪽 필드로 이동해 주었다 。
+			PRINTFORMW 세뇌된 %CALLNAME:조교대상%은 고블린을 남편이라고 인정하고 스스로 그 가슴과 입을 사용하여 고블린의 장대에 봉사하기 시작했다。
+			PRINTFORMW
+			PRINTFORMW %CALLNAME:조교대상%은 조련의 영향을 받습니다。
+			CALL EROTIC_MOVE("파이즈리",조교대상)
+			
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39651,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 고블린
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		レイプ횟수 = RESULT
+
+		FOR カウンタ,0,5
+			CALL FULLRESET
+			효과条件성별 = 牝性
+			효과条件표시 = 表側표시
+			CALL CARD_FILTER_SET(듀얼리스트,"필드",カウンタ)
+			SIF RESULT != 1
+				CONTINUE
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",400)
+
+
+			IF 듀얼리스트 == "자신"
+				SIF GETVAR(@"%듀얼리스트%_MZ_所有:{カウンタ}") == 1 && オプション_主従 == 0
+					CONTINUE
+			ELSEIF 듀얼리스트 == "상대"
+				SIF GETVAR(@"%듀얼리스트%_MZ_所有:{カウンタ}") == 2 && オプション_主従 == 0
+					CONTINUE
+			ENDIF
+
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+			IF RESULT != -1
+				조교대상 = RESULT
+				PRINTFORMW 세뇌된 %CALLNAME:조교대상% 은 기꺼이 고블린 파티와 교제하며
+				PRINTFORMW 그 몸을 사용해 남편님이나 당신을 충분히 치유해 주었습니다。
+				FOR カウンタ2,0,レイプ횟수
+					CALL EROTIC_MOVE("両穴凌辱",조교대상)
+				NEXT
+				CALL EROTIC_MOVE("前穴凌辱",조교대상,MASTER,300)
+			ENDIF
+		NEXT
+	ENDIF
+ENDIF
+
+
+

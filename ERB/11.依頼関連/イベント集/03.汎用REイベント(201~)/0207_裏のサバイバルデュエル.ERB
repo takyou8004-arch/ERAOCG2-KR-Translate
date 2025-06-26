@@ -1,0 +1,396 @@
+@IRAI_EVENT_207(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = (裏CP)편하게 돈을 버는 듀얼 이벤트！(반복수주 가능)
+	CASE "이벤트種"
+		RETURN 이벤트_施設
+	CASE "依頼先"
+		RETURN 場所_裏通り
+	CASE "詳細"
+		PRINTL あのレア카드가 欲しい！
+		PRINTL でもパックを剥いたり、シングルで買うお金がない！
+		PRINTL そんなあなたに朗報です。
+		PRINTL 勝てば勝つほど、賞金が倍になるデュエル이벤트を개최中！
+		PRINTL 腕に自信があるのなら、ぜひ参加してください。
+		PRINTL 
+		PRINTL 
+			SETCOLOR C_RED
+		PRINTL （注意！女の子몬스터를 使うと不利になる可能性が高いです！）
+			SETCOLOR C_YELLOW
+		PRINTL （ジャンケン듀얼が할 수 없으며、一定以上の連勝中に特定の카드가 발동できなくなります）
+			RESETCOLOR
+		PRINTL （テスト中の依頼です）
+		PRINTL
+		PRINTL 報酬：巨額の賞金！
+	CASE "条件"
+		SIF 依頼_完了횟수:206 == 0
+			RETURN 0
+		RETURN 1
+	CASE "利用制限"
+		SIF 依頼플래그:207 != 0
+			RETURN 3
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_207(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 대상상대
+#DIM DYNAMIC パック_종류
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC ベットカード
+
+
+PRINTFORMW 裏通りにある例の建物に入り、受付のような場所で店員に例의 이벤트について問い合わせてみた。
+PRINTFORMW 「ああ、이벤트の参加희망ですね！もちろん、今からでも参加できますよ！」
+PRINTFORMW 「ルールは簡単！賞金は1000円からスタート。こちらが用意したデュエルマシンとデュエルしていただき、勝つ度に賞金が倍になります！」
+PRINTFORMW 「ただし、４回勝つまでは勝ち抜けできませんのでご注意ください。そして負けると即脱落！参加費としてベットした카드를 失います！」
+PRINTFORMW うん？参加費があるならともかく、카드를 賭けるって話はネットでは見てないが……？
+PRINTFORMW 「あっ、申し訳ありません！それは広報담당職員のミスだと思います」
+PRINTFORMW 「とにかく、こちらから지정するカードの内 １장을 ベットしていただかないと参加できない事に変わりはありません。
+PRINTFORMW 「それでも参加されますか？」
+PRINTL
+PRINTFORML [0] - 参加する
+PRINTFORML [1] - 参加しない
+BINPUT
+IF RESULT == 1
+	PRINTFORMW 
+	PRINTFORMW 流石に負けた時が怖いので、参加しない事にした。
+	PRINTFORMW 「わかりました。お考えが変わりましたらまたどうぞ！」
+	RETURN 0
+ENDIF
+PRINTFORMW 非常に悩ましいが、카드를 失っても金で買い戻せる点では参加費と大差ないかも知れない。
+PRINTFORMW 取りあえず向こうから지정する카드를 聞いてから決めようと思った。
+PRINTFORMW 「はい。先にベットできるカードの確認ですね！」
+PRINTFORML 
+PRINTFORML 
+PRINTFORML 「こちらのカードでベットできます！」
+CALL MONSTER_LIST(9)
+IF RESULT >= 0 && CFLAG:RESULT:소유함 == 1
+	캐릭터_ID = RESULT
+	CALL PRINT_STATE(캐릭터_ID)
+	PRINTFORMW 「《%NAME:캐릭터_ID%》ですね？」
+    PRINTFORML 
+	PRINTFORMW どうする？この카드를 賭けるか？
+    PRINTFORML 
+	SETCOLOR C_RED
+	PRINTFORMW 《注意！》負けて賭けた카드를 失うと카드와 の관계が붕괴し、失った카드가 酷い目に遭いますが本当に賭けますか？
+    RESETCOLOR
+	PRINTFORML 
+	PRINTL [0] - 賭ける
+	PRINTL [1] - 考え直す
+	BINPUT
+    IF RESULT == 0
+	    PRINTFORMW ……要は負けなければいいのだ。
+	    PRINTFORMW そもそも勝って金を稼ぐつもりでここへ来たのだから。
+	    PRINTFORMW 「《%NAME:캐릭터_ID%》をベットしての参加ですね？分かりました！手続きいたします！」
+        PRINTFORMW 「あっ、이벤트中まではその카드를 使えますのでご安心ください」
+        ベットカード = 캐릭터_ID
+        PRINTFORML 
+        SETCOLOR C_YELLOW
+	    PRINTFORMW 《%NAME:ベットカード%》を賭けた。
+	    RESETCOLOR
+        PRINTFORML 
+	    PRINTFORMW 「ではこちらへどうぞ！」
+	    PRINTFORMW 店員に案内されるまま、店の奥へ入って行った……。
+	    PRINTFORMW ………
+	    PRINTFORMW ……
+	    PRINTFORMW …
+        CALL IRAI_207_SURVIVAL(参照,ベットカード)
+        RETURN 2
+
+    ELSEIF RESULT == 1
+	    PRINTFORML 
+	    PRINTFORMW 「わかりました。お考えが変わりましたらまたどうぞ！」
+        RETURN 1
+    ENDIF
+
+ELSE
+    PRINTFORMW 「おや、ベットできる카드를 お持ちでないようですね」
+	PRINTFORMW 「女の子のイラストの카드 라던가が대상ですので、手に入られましたらまたどうぞ！」
+    RETURN 1
+ENDIF
+
+
+
+
+@IRAI_207_SURVIVAL(参照,ベットカード)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 대상상대
+#DIM DYNAMIC パック_종류
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC ベットカード
+#DIM DYNAMIC 賞金
+#DIM DYNAMIC カウンタ
+
+賞金 = 1000
+
+PRINTFORMW 案内された部屋の奥には、덱が세트된 デュエルマシンが待ち構えていた。
+PRINTFORMW 「あのデュエルマシンとデュエルしていただきます。準備はよろしいですね？」
+PRINTFORMW 「では始めてください！」
+$DUEL_LOOP
+TARGET = -1
+IF 依頼_進行보존:207 == 0
+	CALL DUEL_SYSTEM(1,207)
+ELSEIF 依頼_進行보존:207 >= 1
+	CALL DUEL_SYSTEM(1,207,1)
+ENDIF
+IF RESULT == 1
+    ;勝ち
+    TIME += 20
+    依頼_進行보존:207 += 1
+    賞金 = 賞金 * 2
+	PRINTFORML
+	PRINTFORMW 勝った！
+    PRINTFORML 
+    PRINTFORMW 「おめでとうございます！これで賞金は{賞金}円です！」
+    IF 依頼_進行보존:207 < 4
+        PRINTFORMW 「でもまだ{依頼_進行보존:207}勝ですので、続けてデュエルしていただきます！」
+        PRINTFORMW 「準備はよろしいですね？では始めてください！」
+        GOTO DUEL_LOOP
+    ELSEIF 依頼_進行보존:207 >= 4
+        PRINTFORMW 「現在{依頼_進行보존:207}勝ですが、まだ続けますか？」
+	    PRINTFORML 
+	    PRINTL [0] - 続ける
+	    PRINTL [1] - 抜ける
+	    BINPUT
+        IF RESULT == 0
+            PRINTFORMW 「かしこまりました。では続けてどうぞ！」
+            GOTO DUEL_LOOP
+        ELSEIF RESULT == 1
+            PRINTFORMW 「かしこまりました。ではこちらへどうぞ！」
+            PRINTFORMW 店員と受付まで이동して、賞金の{賞金}円を貰った。
+			CALL MONEY_GET(賞金)
+			SIF 賞金 >= 1000000
+				実績_進行보존:53 = 1
+            PRINTFORMW 「本이벤트は一日一回までです。また後日参加してください！」
+			依頼_進行보존:207 = 0
+			TARGET = LOCAL
+            RETURN
+        ENDIF
+    ENDIF
+ELSE
+;負け
+    TIME += 30
+	PRINTFORML
+	PRINTFORMW 負けてしまった……。
+	PRINTFORMW 「残念でしたねぇ。では決まり通りにベットされた카드를 いただきまーす」
+    PRINTFORML 
+    SETCOLOR C_RED
+    PRINTFORMW 《%NAME:ベットカード%》を失った……
+	RESETCOLOR
+    CFLAG:ベットカード:소유함 = 0
+	ITEM:(NO:ベットカード) -= 1
+	PRINTFORML 
+	PRINTFORMW 失ったカードの중에서、軽率に자신を賭けて失った事への失望と軽蔑の視線を向けられてる気がする。
+    MARK:캐릭터_ID:굴복각인 = 0
+    MARK:ベットカード:반발각인 = 3
+	TALENT:ベットカード:중고 = 1
+    TALENT:ベットカード:애처 = 0
+	TALENT:ベットカード:연모 = 0
+	TALENT:ベットカード:성별기호 = 3
+	TALENT:ベットカード:중고 = 1
+    ABL:ベットカード:친밀 = 0
+    ABL:ベットカード:순종 = 0
+    CFLAG:ベットカード:호감도 = 0
+	CFLAG:ベットカード:기정사실 = -1
+	CFLAG:ベットカード:시작위치 = 100
+	CFLAG:ベットカード:현재위치 = 100
+	PRINTFORML 
+    PRINTFORMW 「本이벤트は一日一回までです。また後日参加してください！」
+    PRINTFORMW ………
+    PRINTFORMW ……
+    PRINTFORMW …
+    IF TALENT:ベットカード:성별 == 1
+        CALL CARD_LOST_AFTER(ベットカード)
+    ENDIF
+	PRINTFORML 失った%NAME:ベットカード%と永遠にお別れしますか？
+	PRINTFORML 
+	PRINTL [0] - 永遠に別れる（캐릭터削除）
+	PRINTL [1] - また会えると願う（캐릭터보존）
+	BINPUT
+	IF RESULT == 0
+		PRINTFORML 
+		PRINTFORMW 失った%NAME:ベットカード%는あれから色んな듀얼리스트とショップをたらい回しされ、어둠へと消えたようだ。
+		PRINTFORML 
+		CALL DELETE_CHARA(ベットカード)
+		DELCHARA ベットカード
+		IF NO:ベットカード >= 1000 && NO:ベットカード <= 10000
+			ADDCHARA NO:ベットカード
+			ベットカード = CHARANUM - 1
+			CALL SET_BODYSIZE(ベットカード,0,1)
+			; CALL SHOP_BUST_RESET(ベットカード)
+			; CALL SHOP_BUTT_RESET(ベットカード)
+			CALL CLOTHES_SETTING(ベットカード)
+			CFLAG:ベットカード:시작위치 = 100
+			CFLAG:ベットカード:현재위치 = 100
+			CFLAG:ベットカード:키스상실상대 = -1
+			CFLAG:ベットカード:처녀버린상대 = -1
+			CFLAG:ベットカード:동정버린상대 = -1
+			IF EXISTCSV(NO:ベットカード)
+				NAME:ベットカード = %CSVNAME(NO:ベットカード)%
+				CALLNAME:ベットカード = %CSVCALLNAME(NO:ベットカード)%
+				FOR カウンタ, 0, VARSIZE("MAXBASE")
+					MAXBASE:ベットカード:カウンタ = CSVBASE(NO:ベットカード,カウンタ)
+				NEXT
+				FOR カウンタ, 0, VARSIZE("BASE")
+					BASE:ベットカード:カウンタ = CSVBASE(NO:ベットカード,カウンタ)
+				NEXT
+				FOR カウンタ, 0, VARSIZE("TALENT")
+					TALENT:ベットカード:カウンタ = CSVTALENT(NO:ベットカード,カウンタ)
+
+				NEXT
+				FOR カウンタ, 0, VARSIZE("ABL")
+					ABL:ベットカード:カウンタ = CSVABL(NO:ベットカード,カウンタ)
+				NEXT
+				FOR カウンタ, 0, VARSIZE("EXP")
+					EXP:ベットカード:カウンタ = CSVEXP(NO:ベットカード,カウンタ)
+				NEXT
+				CFLAG:ベットカード:지금복장 = CSVCFLAG(NO:ベットカード,7)
+
+				CSTR:ベットカード:등장작품 = %CSVCSTR(NO:ベットカード,10)%
+
+				CALL CLOTHES_SETTING(ベットカード)
+				CALL SET_BODYSIZE(ベットカード,0,2)
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 1
+		FOR カウンタ,0,10
+			SIF お気に入り:カウンタ == 캐릭터_ID
+				お気に入り:カウンタ = 0
+		NEXT
+		FOR カウンタ,0,10
+			SIF 소환이력:カウンタ == 캐릭터_ID
+				소환이력:カウンタ = 0
+		NEXT
+		PRINTFORML 
+		PRINTFORMW 失った%NAME:ベットカード%는あれから色んな듀얼리스트とショップをたらい回しされてるようだ。
+		PRINTFORML 
+	ENDIF
+	依頼_進行보존:207 = 0
+	TARGET = LOCAL
+    RETURN
+ENDIF
+
+@IRAI_DUEL_INTRO_207
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 場所
+
+IF 依頼_進行보존:207
+	PRINTFORMW 「それと連勝ハンデを適応させていただきます！」
+	IF 依頼_進行보존:207 < 3
+		PRINTFORMW 「ではデュエルマシンのライフを増やします！」
+		CALL LIFE_CHANGE("상대","増加","효과",1000*(依頼_進行보존:207))
+	ELSEIF 依頼_進行보존:207 >= 3
+		PRINTFORMW 「まずはデュエルマシンのライフを増やします！」
+		CALL LIFE_CHANGE("상대","増加","효과",1000*(依頼_進行보존:207))
+		IF 依頼_進行보존:207 >= 10
+			PRINTFORMW 「それと、ライフを逆手に取る 카드는 발동을 禁止させて貰いますね」
+		ENDIF
+		PRINTFORMW 「さらにもう一つ무작위로 適応させていただきます！」
+		SELECTCASE RAND:3
+			CASE 0
+			PRINTFORMW 「挑戦者さんは손패４장でデュエルを始めていただきます！」
+			PRINTFORML
+			CALL CARD_ADD("자신", "손패", "덱",RAND:5)
+			CALL SHUFFLE("자신")
+			CASE 1
+			PRINTFORMW 「デュエルマシンが패를 二枚増やして始めていただきます！」
+			PRINTFORML
+			CALL CARD_GENERATE_HAND("상대",39610)
+			PRINTFORML
+			CALL CARD_GENERATE_HAND("상대",39611)
+			PRINTFORML
+			PRINTFORMW 「……덱에서 ドローするとは言ってませんよ？」
+			CASE 2
+			PRINTFORMW 「挑戦者さんのライフを半分にして始めていただきます！」
+			CALL LIFE_CHANGE("자신","減少","효과",ライフ_자신 / 2)
+		ENDSELECT
+	ENDIF
+ENDIF
+
+
+@IRAI_DECK_207(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+IF 듀얼리스트 == "상대"
+	SELECTCASE RAND:5
+		CASE 0
+			RETURN 59650
+		CASE 1
+			RETURN 59702
+		CASE 2
+			RETURN 59751
+		CASE 3
+			RETURN 39760
+		CASE 4
+			RETURN 59720
+	ENDSELECT
+ENDIF
+RETURN 0
+
+
+;旧덱。고블린、촉수、슬라임のテンコ盛りで♀がエースだと滅茶苦茶面倒くさいやつ
+; @DUELDECK_20207(듀얼리스트)
+; #DIMS DYNAMIC 듀얼리스트
+
+; SETVAR @"%듀얼리스트%_덱:0", 39610
+; SETVAR @"%듀얼리스트%_덱:1", 39611
+; SETVAR @"%듀얼리스트%_덱:2", 39650
+; SETVAR @"%듀얼리스트%_덱:3", 39650
+; SETVAR @"%듀얼리스트%_덱:4", 39650
+; SETVAR @"%듀얼리스트%_덱:5", 39651
+; SETVAR @"%듀얼리스트%_덱:6", 39651
+; SETVAR @"%듀얼리스트%_덱:7", 39704
+; SETVAR @"%듀얼리스트%_덱:8", 39704
+; SETVAR @"%듀얼리스트%_덱:9", 39704
+; SETVAR @"%듀얼리스트%_덱:10", 39750
+; SETVAR @"%듀얼리스트%_덱:11", 39750
+; SETVAR @"%듀얼리스트%_덱:12", 39750
+; SETVAR @"%듀얼리스트%_덱:13", 39751
+; SETVAR @"%듀얼리스트%_덱:14", 39751
+; SETVAR @"%듀얼리스트%_덱:15", 39752
+; SETVAR @"%듀얼리스트%_덱:16", 39752
+; SETVAR @"%듀얼리스트%_덱:17", 39753
+; SETVAR @"%듀얼리스트%_덱:18", 39753
+; SETVAR @"%듀얼리스트%_덱:19", 39753
+; SETVAR @"%듀얼리스트%_덱:20", 79668
+; SETVAR @"%듀얼리스트%_덱:21", 79668
+; SETVAR @"%듀얼리스트%_덱:22", 79750
+; SETVAR @"%듀얼리스트%_덱:23", 79750
+; SETVAR @"%듀얼리스트%_덱:24", 79750
+; SETVAR @"%듀얼리스트%_덱:25", 79770
+; SETVAR @"%듀얼리스트%_덱:26", 79770
+; SETVAR @"%듀얼리스트%_덱:27", 79770
+; SETVAR @"%듀얼리스트%_덱:28", 99700
+; SETVAR @"%듀얼리스트%_덱:29", 99701
+
+
+
+
+
+; SETVAR @"%듀얼리스트%_EX덱:0", 59650
+; SETVAR @"%듀얼리스트%_EX덱:1", 59650
+; SETVAR @"%듀얼리스트%_EX덱:2", 59650
+; SETVAR @"%듀얼리스트%_EX덱:3", 59750
+; SETVAR @"%듀얼리스트%_EX덱:4", 59750
+; SETVAR @"%듀얼리스트%_EX덱:5", 59750
+; SETVAR @"%듀얼리스트%_EX덱:6", 59751
+; SETVAR @"%듀얼리스트%_EX덱:7", 59751
+; SETVAR @"%듀얼리스트%_EX덱:8", 59751
+; SETVAR @"%듀얼리스트%_EX덱:9", 59752
+; SETVAR @"%듀얼리스트%_EX덱:10", 59752
+; SETVAR @"%듀얼리스트%_EX덱:11", 59752
+; SETVAR @"%듀얼리스트%_EX덱:12", 59700
+; SETVAR @"%듀얼리스트%_EX덱:13", 59700
+; SETVAR @"%듀얼리스트%_EX덱:14", 59702
+
+
+

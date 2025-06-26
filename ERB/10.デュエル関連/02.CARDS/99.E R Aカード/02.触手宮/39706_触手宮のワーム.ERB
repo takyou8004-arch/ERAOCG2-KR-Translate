@@ -1,0 +1,357 @@
+﻿@CARDNAME_39706,参照先
+;ココで지정 카드의 名前、略称を返す予定
+;CALLFORM 等で名前を취득する際に使用されたりする
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 촉수궁의 웜
+	CASE "略称"
+		RESULTS = 촉수궁 웜
+	CASE "カテゴリ"
+		RESULTS:0 = 촉수
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39706(参照先)
+;종족他を설정。
+;CALLFORM 等でステータスを취득する際に使用されたりする
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 200
+	CASE "守備力"
+		RETURN 200
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39706(종류)
+; 카드의 텍스트はここに書く
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ③④의 효과는 각각 1턴에 1번 밖에 사용할 수 없다。
+CALL CARD_ABLE(1,묘지起動)
+PRINTL ①：필드가 「촉수궁」일 경우에, 묘지의 이 카드를 덱으로 돌릴 수 있다。※②의 효과가 발동한 경우 강제로 발동한다
+CALL CARD_ABLE(2,戦破壊→묘지)
+PRINTL ②：필드의 이 카드가 전투 / 효과로 파괴되었을 경우, 상대 필드의 여성 몬스터 1장을 대상으로 발동할 수 있다。
+PRINTL 대상 몬스터의 수비력을 턴 종료시 까지 「촉수」, 「묘상」카드의 수×２００만큼 감소시킨다。
+CALL CARD_ABLE(3,ターン開始時)
+PRINTL ③：이 카드가 묘지에 존재할 경우, 자신 / 상대 스탠바이 페이즈에 발동할 수 있다。
+PRINTL 이카드의 원래 공격력 이하의 수비력을 가진 상대 필드 몬스터 1장을 대상으로 이 카드를 장착시킨다。
+PRINTL 이 카드를 장착하고 있는 몬스터는 수비 표시가 되며, 효과는 무효화 되며 「묘상」 카테고리를 얻는다。
+CALL CARD_ABLE(4,마함起動)
+PRINTL ④：이 카드가 장착되어 있는 경우에 발동할 수 잇다。
+PRINTL 장착되어 있는 몬스터의 공격력 500당 엑시즈 소재 1개를 자신 필드 엑시즈 몬스터에게 추가한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39706(듀얼리스트,종류,ゾーン,場所)
+;효과발동可否判別部分
+;ここを適当にやると全然관계ないときに処理が走り変数の範囲外を触ったりして強制종료한다。
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+;スキドレ等の無効판정他チェック
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39706)
+SIF RESULT == 1
+	RETURN 0
+
+;装備관계の情報を취득
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+;ターンごとの対面者を취득
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;묘지로 보られたときに발동が可能かのチェック
+IF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(RESULTS,"破壊","戦闘破壊")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性 
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ:0 = 묘상
+	효과条件カテゴリ:1 = 촉수
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+;묘지で발동可能かのチェック
+ELSEIF 종류 == 묘지起動
+	;フィールドが"촉수궁"以外であれば발동불가
+	SIF GETVARS(@"%듀얼리스트%_フィールド名") != "촉수궁"
+		RETURN 0
+	;자신의 ターン 이외의 場合は발동불가
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;全部問題なければ발동可能
+	RETURN 1
+
+;ターン開始時に효과が발동可能かのチェック
+ELSEIF 종류 == ターン開始時
+	;この③효과를 すでに발동している場合は발동불가
+	SIF 발동済_3(듀얼리스트,39706)
+		RETURN 0
+	;묘지에 존재하고ない場合は발동불가
+	SIF ゾーン != "묘지"
+		RETURN 0
+	;下の条件の 몬스터가 いなければ발동불가
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性 
+	효과条件守備力 = 200
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;마함 존が埋まっている場合は발동불가
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	;全部問題なければ발동可能
+	RETURN 1
+
+;마함 존で발동可能かのチェック
+ELSEIF 종류 == 마함起動
+	;마함 존에 존재하고ない場合は발동불가
+	SIF ゾーン != "마함"
+		RETURN 0
+	;この④효과를 すでに발동している場合は발동불가
+	SIF 발동済_4(듀얼리스트,39706)
+		RETURN 0
+	;メインフェイズ 이외의 場合は발동불가
+	SIF メインフェイズ != 1
+		RETURN 0
+	;자신의 ターン 이외의 場合は발동불가
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;全部問題なければ발동可能
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	;마함 존에 존재하고ない場合は발동불가
+	SIF ゾーン != "마함"
+		RETURN 0
+	;全部問題なければ발동可能
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39706(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC カードID
+#DIM DYNAMIC X消費
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+IF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	;효과발동選択(ターン１なし)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39706)
+	IF RESULT == 0
+		;덱戻し強制효과의 ために一時的に避難
+		選択カードB = RESULT
+		;検索条件を初期化(全て)
+		CALL FULLRESET
+		;検索条件を설정(촉수の数)
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과範囲마함 = 1
+		효과範囲상대마함 = 1
+		효과条件CNT = 1
+		효과条件カテゴリ = 촉수
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		;촉수分の修正値を설정
+		攻撃力修正 = RESULT * 200
+		
+		;検索条件を설정(묘상の数)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과範囲마함 = 1
+		효과範囲상대마함 = 1
+		효과条件CNT = 1
+		효과条件カテゴリ = 묘상
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		;묘상分の修正値を加算
+		攻撃力修正 = 攻撃力修正 + (RESULT * 200)
+		
+		;상대 필드의  카드를 選択(条件なし)
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			;選択カード(場所)から名称を취득。あえて모든몬스터를 대상。
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:選択カード")},"名前"
+			選択カード名前 = %RESULTS%
+			SETCOLOR C_PINK
+			PRINTFORML
+			IF 攻撃力修正 > 200
+				PRINTFORML %選択カード名前%는 주변의 촉수들에게 일제히 체액을 뒤집어 쓰고 말앗다！！
+				;PRINTFORML 대상이 된 촉수의 수：{攻撃力修正 / 200}
+			ELSE
+				PRINTFORML 웜은 죽기 직전까지 체액을 퍼부었다！！
+			ENDIF
+			RESETCOLOR
+			PRINTFORML %選択カード名前%은 백탁액으로 몸이 더려워져서 기분이 나빠지고 있다… 
+			PRINTFORML
+			;촉수의 체액으로 옷이 녹는다
+			PRINTFORMW %選択カード의 수비력이 {攻撃力修正} 감소되어 버렸다！
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永守",-攻撃力修正,0,1)
+			;조교可能かチェック(可能なら조교IDがかえってくる)
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",選択カード,1)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL EROTIC_MOVE("ぶっかけ",조교대상, -1, 20 + (攻撃力修正 / 4))
+			ENDIF
+
+			;フィールドが"촉수궁"かチェック
+			IF GETVARS(@"%듀얼리스트%_フィールド名") == "촉수궁" && 選択カードB != 9999
+				PRINTFORML 우머은 촉수궁에 흡수되었다……
+				;選択 카드를 묘지에서 덱으로 되돌린다(行先플래그：덱行き)
+				CALL CARD_DISPOSE(듀얼리스트,"묘지",選択カードB,2)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	;효과발동選択(ターン１なし)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39706)
+	IF RESULT == 0
+		PRINTFORML 웜이 촉수궁에 흡수되었습니다…
+		;選択 카드를 묘지에서 덱으로 되돌린다(行先플래그：덱行き)
+		CALL CARD_DISPOSE(듀얼리스트,"묘지",場所,2)
+	ENDIF
+ELSEIF 종류 == ターン開始時
+	;③효과발동選択(ターン１)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39706,3)
+	IF RESULT == 0
+		;検索条件を初期化(すべて)
+		CALL FULLRESET
+		;検索範囲 条件を설정(守備力：200以下)
+		효과範囲상대필드 = 1
+		효과条件守備力 = 200
+		;検索条件に当てはまる 카드를 선택하고、그 카드に装備する
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,"묘지")
+		IF RESULT != 9999
+			カードID = RESULT:1
+			;カードIDから名称を취득
+			TRYCALLFORM CARDNAME_{カードID}, "名前"
+			選択カード名前 = %RESULTS%
+			PRINTFORMW %選択カード名前%의 발밑에 어디서나 작은 윔들이 흩어져 다가오고 있다...
+			PRINTFORML 
+			;カードIDから元々の守備力を취득
+			TRYCALLFORM CARD_{カードID}, "守備力"
+			IF RESULT <= 200
+				PRINTFORML 전방에 공격에 대해서만 의식이 향해 있던 %選択カード名前%은 발밑에 마법 생물등을 눈치채지 못하고 있었다 。
+			ELSE 
+				PRINTFORML 평상시라면 %選択カード名前% 있어서 하찮은 잡몹이겠지만
+				PRINTFORML 거듭되는 방해를 받아, 체력을 소모해버린 %選択カード名前%은 하찮은 마법생물을 쫓아낼 여유가 남아 있지 않았다。
+			ENDIF
+			PRINTFORML 
+			PRINTFORML 
+			PRINTFORML 
+			SETCOLOR C_PINK
+			PRINTFORMW %選択カード가 웜에게 사로잡혔다！！ 
+			PRINTFORML
+			RESETCOLOR
+			CALL CARD_EROTICS(カードID)
+			IF RESULT != -1
+				조교대상 = RESULT
+				;ワ-ム単体だと경험がつかないくらい
+				CALL EROTIC_MOVE("묘상捕縛",조교대상, -1, 80)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動
+	;④효과발동選択(ターン１)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39706,4)
+	IF RESULT == 0
+		CUSTOMDRAWLINE —
+		PRINTFORML 【X소재를 추가する 카드를 골라주세요】
+		CUSTOMDRAWLINE —
+		;検索条件を初期化(すべて)
+		CALL FULLRESET
+		;検索範囲 条件を설정
+		효과範囲필드 = 1
+		효과条件종류 = 엑시즈
+		효과条件표시 = 表側표시
+		;検索条件に当てはまる 카드를 選択
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			;カードIDから名称を취득
+			TRYCALLFORM CARDNAME_{RESULT:99},"名前"
+			選択カード名前 = %RESULTS%
+			;装備先 몬스터의 공격력을 취득して추가するX소재를 설정
+			X消費 = GETVAR(@"%装備者%_MZ_攻:装備先")
+			PRINTFORML %選択カード名前%の攻撃力：{X消費}
+			X消費 = GETVAR(@"%装備者%_MZ_攻:装備先") / 500
+			;설정したX消費を選択カードに加算
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"Ｘ",X消費)
+			PRINTFORMW %選択カード의 엑시즈 소재가 {X消費}만큼 증가했다！
+			;조교可能かチェック(可能なら조교IDがかえってくる)
+			CALL CARD_EROTICS(選択カード)
+			IF RESULT != -1
+				조교대상 = RESULT
+				PRINTFORML %CALLNAME:조교대상%무수한 웜들에게 포박당해 괴롭힘 당하고 있습니다 …
+				CALL EROTIC_MOVE("묘상 포박",조교대상, -1, 50 * X消費)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	;효과処理可能なら이하의 ステータスを付与
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"無効")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"表固")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"表",2)
+	CALL CARD_SET_CATEGORY(듀얼리스트,"필드",装備先,"묘상")
+ENDIF

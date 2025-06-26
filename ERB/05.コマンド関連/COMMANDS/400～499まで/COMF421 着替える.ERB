@@ -1,0 +1,392 @@
+﻿;-------------------------------------------------
+;갈아입는다
+;-------------------------------------------------
+@COM421
+;貯蔵を確認する
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 소환_ページ送り
+#DIM DYNAMIC リスト_표시
+#DIM DYNAMIC 캐릭터クター
+#DIM DYNAMIC カウンタ,2
+#DIM DYNAMIC 衣種
+#DIM DYNAMIC 대상캐릭터
+#DIM DYNAMIC 衣服구입状態
+
+RESULT = 0
+CUSTOMDRAWLINE —
+IF TARGET >= 1
+	FOR カウンタ,1,CHARANUM
+		SIF CFLAG:カウンタ:같은방 && (TALENT:カウンタ:연모 || TALENT:カウンタ:굴복됨)
+			PRINTFORML [{カウンタ,3}] - %CALLNAME:カウンタ%의 옷을 갈아입힌다
+	NEXT
+ENDIF
+CUSTOMDRAWLINE —
+PRINTL [  0] - 자신의 옷을 갈아입는다
+PRINTL 
+CUSTOMDRAWLINE —
+PRINTL [9999] - 돌아간다
+BINPUT
+SIF RESULT == 9999
+	RETURN 1
+IF RESULT == 0
+	대상캐릭터 = MASTER
+ELSE
+	대상캐릭터 = RESULT
+ENDIF
+CALL CHANGE_OUTFIT(대상캐릭터)
+
+@CHANGE_OUTFIT(대상캐릭터,カスタム플래그)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 소환_ページ送り
+#DIM DYNAMIC リスト_표시
+#DIM DYNAMIC 캐릭터クター
+#DIM DYNAMIC カウンタ,2
+#DIM DYNAMIC 衣種
+#DIM DYNAMIC 대상캐릭터
+#DIM DYNAMIC 衣服구입状態
+#DIM DYNAMIC カスタム플래그
+
+SIF CFLAG:대상캐릭터:초기복장 == 0
+	CFLAG:대상캐릭터:초기복장 = CFLAG:대상캐릭터:지금복장
+
+
+$INPUT_LOOP
+VARSET カウンタ:1
+
+CUSTOMDRAWLINE —
+PRINTFORML □ %CALLNAME:대상캐릭터%의 의상을 변경합니다
+CUSTOMDRAWLINE —
+PRINT [ 1] - 머리악세１　：
+PRINTFORML 【%CLOTHNAME(1,(EQUIP:대상캐릭터:악세사리)),30,LEFT%】
+
+PRINT [ 2] - 머리악세２　：
+PRINTFORML 【%CLOTHNAME(2,(EQUIP:대상캐릭터:모자)),30,LEFT%】
+
+PRINT [ 3] - 신발　　　　：
+PRINTFORML 【%CLOTHNAME(3,(EQUIP:대상캐릭터:신발)),30,LEFT%】
+
+PRINT [ 4] - 양말　　　　：
+PRINTFORML 【%CLOTHNAME(4,(EQUIP:대상캐릭터:양말)),30,LEFT%】
+
+PRINT [ 6] - 팬티　　　　：
+PRINTFORML 【%CLOTHNAME(6,(EQUIP:대상캐릭터:하반신속옷２)),30,LEFT%】
+
+PRINT [ 7] - 바지　　　　：
+PRINTFORML 【%CLOTHNAME(7,(EQUIP:대상캐릭터:바지)),30,LEFT%】
+
+PRINT [ 9] - 치마　　　　：
+PRINTFORML 【%CLOTHNAME(9,(EQUIP:대상캐릭터:치마)),30,LEFT%】
+
+PRINT [10] - 브라자　　　：
+PRINTFORML 【%CLOTHNAME(10,(EQUIP:대상캐릭터:상반신속옷１)),30,LEFT%】
+
+PRINT [12] - 외투　　　　：
+PRINTFORML 【%CLOTHNAME(12,(EQUIP:대상캐릭터:외투)),30,LEFT%】
+
+
+PRINT [13] - 이너　　　　：
+PRINTFORML 【%CLOTHNAME(13,(EQUIP:대상캐릭터:이너)),30,LEFT%】
+
+PRINT [15] - 원피스　　　：
+PRINTFORML 【%CLOTHNAME(15,(EQUIP:대상캐릭터:원피스)),30,LEFT%】
+
+PRINT [16] - 악세１　　　：
+PRINTFORML 【%CLOTHNAME(16,(EQUIP:대상캐릭터:16)),30,LEFT%】
+PRINT [17] - 악세２　　　：
+PRINTFORML 【%CLOTHNAME(17,(EQUIP:대상캐릭터:17)),30,LEFT%】
+PRINT [18] - 악세３　　　：
+PRINTFORML 【%CLOTHNAME(18,(EQUIP:대상캐릭터:18)),30,LEFT%】
+
+
+
+CUSTOMDRAWLINE —
+PRINTL [99] - 의상을 초기화한다
+
+PRINTL [200] - 현재 의상을 평상복으로 한다
+PRINTL [300] - 의상세트를 불러온다
+PRINTL [400] - 의상리스트를 작성한다
+
+
+
+PRINTL
+PRINTL [100] - 돌아간다
+
+BINPUT
+IF INRANGE(RESULT,1,18)
+	衣種 = RESULT
+	IF 衣種 == 1 || 衣種 == 2
+		衣服구입状態 = 1000
+	ELSEIF 衣種 == 16 || 衣種 == 17 || 衣種 == 18
+		衣服구입状態 = 16000
+	ELSE
+		衣服구입状態 = 衣種 * 1000
+	ENDIF
+	CUSTOMDRAWLINE —
+	FOR カウンタ,1,50
+		SIF CLOTHNAME(衣種,カウンタ) == ""
+			CONTINUE
+		PRINTPLAIN 　	
+		IF 衣服구입:(衣服구입状態 + カウンタ) == 1 || カスタム플래그 == 1
+			PRINTFORM [{カウンタ,2}] - %CLOTHNAME(衣種,カウンタ),30,LEFT%
+		ELSE
+			SETCOLOR C_GRAY
+			PRINTFORM ({カウンタ,2}) - %CLOTHNAME(衣種,カウンタ),22,LEFT%(未所持)
+			RESETCOLOR
+		ENDIF
+		カウンタ:1 ++
+		IF カウンタ:1 == 3
+			カウンタ:1 = 0
+			PRINTL
+		ENDIF
+	NEXT
+	PRINTL 
+	PRINTL 
+	SIF 衣種 == 6
+		PRINTL [999] - 랜덤 팬티
+	
+	PRINTL [0] - 착용하지 않는다
+	CUSTOMDRAWLINE —
+	PRINT [100] - 돌아간다
+	BINPUT
+	IF RESULT == 999
+		PRINTFORM %CLOTHNAME(衣種,(EQUIP:대상캐릭터:衣種))%를
+		EQUIP:대상캐릭터:衣種 = 今日のぱんつ(대상캐릭터)
+		CFLAG:대상캐릭터:(200 + 衣種) = EQUIP:대상캐릭터:衣種
+		PRINTFORMW %CLOTHNAME(衣種,(EQUIP:대상캐릭터:衣種))%로 바꾸었다
+	ELSEIF RESULT != 100
+		PRINTFORM %CLOTHNAME(衣種,(EQUIP:대상캐릭터:衣種))%를
+		EQUIP:대상캐릭터:衣種 = RESULT
+		CFLAG:대상캐릭터:(200 + 衣種) = RESULT
+		PRINTFORMW %CLOTHNAME(衣種,(EQUIP:대상캐릭터:衣種))%로 바꾸었다
+	ENDIF
+ 	GOTO INPUT_LOOP
+ELSEIF RESULT == 99
+	CFLAG:대상캐릭터:지금복장 = CFLAG:대상캐릭터:초기복장
+	CALL CLOTHES_SETTING(대상캐릭터)
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 300
+	PRINTL
+	PRINTL 의상 세트를 선택해주세요
+	PRINTL
+	PRINTL [0] - 바니걸 세트
+	PRINTL [1] - 메이드 세트
+	PRINTL [2] - 차이나 세트
+	PRINTL [3] - 줄무늬 군복 세트
+	PRINTL [4] - 마법소녀 세트
+	PRINTL 
+	PRINTL [100] - 돌아간다
+	BINPUT
+	IF RESULT != 100	
+		CALL CLOTHES_SETTING(대상캐릭터,(500 + RESULT))	
+	ENDIF
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 200
+	PRINTL
+	PRINTFORML 팬티는 매일 다른 종류를 입게 하시겠습니까？
+	PRINTL
+	PRINTL [0] - 예
+	PRINTL [1] - 아니오
+	BINPUT
+	IF RESULT == 0
+		CFLAG:대상캐릭터:지금복장 = 9998
+	ELSE
+		CFLAG:대상캐릭터:지금복장 = 9999
+	ENDIF
+	FOR 衣種,0,20
+		CFLAG:대상캐릭터:(100 + 衣種) = EQUIP:대상캐릭터:衣種
+	NEXT
+	CALL CLOTHES_SETTING(대상캐릭터)
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 100
+	CLEARLINE 25
+
+	RETURN 0
+ELSEIF RESULT == 400
+	CALL CLOTHES_LIST_GENERATE
+ENDIF
+
+@CLOTHES_LIST_GENERATE
+#DIM DYNAMIC カウンタ,3
+#DIM DYNAMIC カウンタB
+#DIMS DYNAMIC CLOTHES_STR, 450
+#DIMS DYNAMIC CLOTHES_INT, 450
+#DIM DYNAMIC 衣種
+#DIMS DYNAMIC リスト名
+
+CLOTHES_STR:0 = 【ヘッド악세사리ー】
+衣種 = 1
+FOR カウンタ, 1, 51
+	VARSET リスト名
+	カウンタB ++
+	IF CLOTHNAME(衣種,カウンタB) != ""
+		リスト名 = [{カウンタB,2}] %CLOTHNAME(衣種,カウンタB)%
+	ELSE
+		リスト名 = [{カウンタB,2}] 
+	ENDIF
+	CLOTHES_STR:カウンタ = %リスト名%
+NEXT
+
+VARSET カウンタB
+CLOTHES_STR:60 = 【신발】
+衣種 = 3
+FOR カウンタ, 61, 81
+	VARSET リスト名
+	カウンタB ++
+	IF CLOTHNAME(衣種,カウンタB) != ""
+		リスト名 = [{カウンタB,2}] %CLOTHNAME(衣種,カウンタB)%
+	ELSE
+		リスト名 = [{カウンタB,2}] 
+	ENDIF
+	CLOTHES_STR:カウンタ = %リスト名%
+NEXT
+
+VARSET カウンタB
+CLOTHES_STR:90 = 【양말】
+衣種 = 4
+FOR カウンタ, 91, 111
+	VARSET リスト名
+	カウンタB ++
+	IF CLOTHNAME(衣種,カウンタB) != ""
+		リスト名 = [{カウンタB,2}] %CLOTHNAME(衣種,カウンタB)%
+	ELSE
+		リスト名 = [{カウンタB,2}] 
+	ENDIF
+	CLOTHES_STR:カウンタ = %リスト名%
+NEXT
+
+VARSET カウンタB
+CLOTHES_STR:120 = 【팬티】
+衣種 = 6
+FOR カウンタ, 121, 151
+	VARSET リスト名
+	カウンタB ++
+	IF CLOTHNAME(衣種,カウンタB) != ""
+		リスト名 = [{カウンタB,2}] %CLOTHNAME(衣種,カウンタB)%
+	ELSE
+		リスト名 = [{カウンタB,2}] 
+	ENDIF
+	CLOTHES_STR:カウンタ = %リスト名%
+NEXT
+
+VARSET カウンタB
+CLOTHES_STR:160 = 【바지】
+衣種 = 7
+FOR カウンタ, 161, 181
+	VARSET リスト名
+	カウンタB ++
+	IF CLOTHNAME(衣種,カウンタB) != ""
+		リスト名 = [{カウンタB,2}] %CLOTHNAME(衣種,カウンタB)%
+	ELSE
+		リスト名 = [{カウンタB,2}] 
+	ENDIF
+	CLOTHES_STR:カウンタ = %リスト名%
+NEXT
+
+
+VARSET カウンタB
+CLOTHES_STR:190 = 【치마】
+衣種 = 9
+FOR カウンタ, 191, 221
+	VARSET リスト名
+	カウンタB ++
+	IF CLOTHNAME(衣種,カウンタB) != ""
+		リスト名 = [{カウンタB,2}] %CLOTHNAME(衣種,カウンタB)%
+	ELSE
+		リスト名 = [{カウンタB,2}] 
+	ENDIF
+	CLOTHES_STR:カウンタ = %リスト名%
+NEXT
+
+VARSET カウンタB
+CLOTHES_STR:230 = 【ブラジャー】
+衣種 = 10
+FOR カウンタ, 231, 251
+	VARSET リスト名
+	カウンタB ++
+	IF CLOTHNAME(衣種,カウンタB) != ""
+		リスト名 = [{カウンタB,2}] %CLOTHNAME(衣種,カウンタB)%
+	ELSE
+		リスト名 = [{カウンタB,2}] 
+	ENDIF
+	CLOTHES_STR:カウンタ = %リスト名%
+NEXT
+
+VARSET カウンタB
+CLOTHES_STR:260 = 【외투】
+衣種 = 12
+FOR カウンタ, 261, 291
+	VARSET リスト名
+	カウンタB ++
+	IF CLOTHNAME(衣種,カウンタB) != ""
+		リスト名 = [{カウンタB,2}] %CLOTHNAME(衣種,カウンタB)%
+	ELSE
+		リスト名 = [{カウンタB,2}] 
+	ENDIF
+	CLOTHES_STR:カウンタ = %リスト名%
+NEXT
+
+VARSET カウンタB
+CLOTHES_STR:300 = 【이너】
+衣種 = 13
+FOR カウンタ, 301, 331
+	VARSET リスト名
+	カウンタB ++
+	IF CLOTHNAME(衣種,カウンタB) != ""
+		リスト名 = [{カウンタB,2}] %CLOTHNAME(衣種,カウンタB)%
+	ELSE
+		リスト名 = [{カウンタB,2}] 
+	ENDIF
+	CLOTHES_STR:カウンタ = %リスト名%
+NEXT
+
+VARSET カウンタB
+CLOTHES_STR:340 = 【원피스(一体服)】
+衣種 = 15
+FOR カウンタ, 341, 391
+	VARSET リスト名
+	カウンタB ++
+	IF CLOTHNAME(衣種,カウンタB) != ""
+		リスト名 = [{カウンタB,2}] %CLOTHNAME(衣種,カウンタB)%
+	ELSE
+		リスト名 = [{カウンタB,2}] 
+	ENDIF
+	CLOTHES_STR:カウンタ = %リスト名%
+NEXT
+
+VARSET カウンタB
+CLOTHES_STR:400 = 【악세사리ー】
+衣種 = 16
+FOR カウンタ, 401, 431
+	VARSET リスト名
+	カウンタB ++
+	IF CLOTHNAME(衣種,カウンタB) != ""
+		リスト名 = [{カウンタB,2}] %CLOTHNAME(衣種,カウンタB)%
+	ELSE
+		リスト名 = [{カウンタB,2}] 
+	ENDIF
+	CLOTHES_STR:カウンタ = %リスト名%
+NEXT
+
+
+SAVETEXT STRJOIN(CLOTHES_STR, UNICODE(0xA)), @"Deck/옷리스트.txt"
+PRINTFORMW 「옷리스트.txt」로 보존했습니다
+RETURN 0
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;갈아입는다
+@COM_ABLE421
+;이동実行判
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(421)
+	RETURN RESULT
+;クローゼットじゃないとダメ
+SIF CFLAG:MASTER:현재위치 != 場所_収納
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

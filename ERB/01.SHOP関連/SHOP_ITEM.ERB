@@ -1,0 +1,515 @@
+﻿@ITEM_BUY
+#DIM DYNAMIC 아이템_구입
+#DIMS DYNAMIC 아이템_名称
+#DIM DYNAMIC 合計価格
+
+CALL ITEM_SALES
+;PRINT_ITEM
+CUSTOMDRAWLINE ―
+PRINTFORML 구매하실 아이템을 선택해주세요 소지금:{MONEY}円
+CALL SHOW_ITEM
+CUSTOMDRAWLINE ―
+PRINT [9999] - 뒤로
+
+
+$INPUT_LOOP
+BINPUT
+아이템_구입 = RESULT
+IF RESULT == 9999
+	RETURN 0
+ELSEIF ITEMSTOCK(RESULT) == 1 || ITEMSTOCK(RESULT) == 4 || 아이템_구입 < 0 || 아이템_구입 > 200
+	RESTART
+ELSEIF ITEMSTOCK(RESULT) == 2
+	PRINTW 품절입니다
+	RESTART
+ELSEIF ITEMSTOCK(RESULT) == 3
+	PRINTW 소지금이 부족합니다
+	RESTART
+ELSEIF ITEMSTOCK(RESULT) == 5
+	PRINTW 이미 충분히 가지고 있습니다
+	RESTART
+ENDIF
+
+;個別に処理すべきもの
+IF 아이템_구입 == 60 || 아이템_구입 == 61 || 아이템_구입 == 62
+	아이템_名称 = %ITEMNAME:RESULT%를 습득하시겠습니까？
+	CALL CHOICE(아이템_名称, "네", "아니오")
+	SIF RESULT
+		RESTART
+	MONEY -= ITEMPRICE:아이템_구입
+	SELECTCASE 아이템_구입
+		CASE 60
+			TALENT:MASTER:악취내성 = 2
+		CASE 61
+			TALENT:MASTER:조합지식 = 1
+		CASE 62
+			TALENT:MASTER:금단의지식 = 1
+	ENDSELECT
+	ITEMSALES:아이템_구입 = -1
+	RESTART
+ENDIF
+
+
+IF 아이템_구입 == 100
+	CALL CHOICE("결혼반지를 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	MONEY -= ITEMPRICE:아이템_구입
+	ITEM:100 += 1
+	RESTART
+ENDIF
+
+
+IF 아이템_구입 == 200
+	PRINTL 임신 가능한 상태의 캐릭터를 임신시킬 수 있습니다.
+	CALL CHOICE("【영혼의 카드】를 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	MONEY -= ITEMPRICE:아이템_구입
+	ITEM:200 += 1
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 27
+	CALL CHOICE("【소환권＋１】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	MONEY -= ITEMPRICE:아이템_구입
+	最大소환値 += 1
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 63
+	CALL CHOICE("【기교UP】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	MONEY -= ITEMPRICE:아이템_구입
+	ABL:MASTER:기교 += 1
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 64
+	CALL CHOICE("【기교DOWN】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	MONEY -= ITEMPRICE:아이템_구입
+	ABL:MASTER:기교 -= 1
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 65
+	PRINTL 상대를 원하는 타이밍에 밀어 넘어뜨릴 수 있게 됩니다。
+	CALL CHOICE("【정신조작】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	MONEY -= ITEMPRICE:아이템_구입
+	ITEM:70029 ++
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 66
+	PRINTL 대상의 체력과 기력을 바꿉니다。
+	CALL CHOICE("【오른손엔 방패 왼손엔 검】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	아이템플래그 = 66
+	CALL MONSTER_LIST(3)
+	RESTART
+	아이템플래그 = 0
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 67
+	PRINTL 대상의 연령을 설정할 수 있습니다。
+	CALL CHOICE("【시간의 마술사】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	아이템플래그 = 67
+	CALL MONSTER_LIST(3)
+	RESTART
+	아이템플래그 = 0
+	ITEM:71051 ++
+	RESTART
+ENDIF
+
+;Anonym추가
+IF 아이템_구입 == 69
+	PRINTL 듀얼에서 사용한 덱에 들어있는 카드와의 유대감이 더욱 깊어지게 됩니다。
+	PRINTL (옵션에서 OFF로 할 수도 있습니다)
+	CALL CHOICE("【우정 YU-JOU】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	MONEY -= ITEMPRICE:아이템_구입
+	ITEMSALES:아이템_구입 --
+	ITEM:69 ++
+	ITEM:71072 ++
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 70
+	CALL CHOICE("【건강해지는 약】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	PRINTL 누구에게 사용하시겠 습니까？
+	PRINTL [0] - 돌아간다
+	FOR LOCAL:1,1,CHARANUM
+		IF BASE:(LOCAL:1):0 < MAXBASE:(LOCAL:1):0
+			PRINTFORM [{LOCAL:1}] - %CALLNAME:(LOCAL:1)% 
+			CALL PRINT_BASE("체력",LOCAL:1,0,32)
+			PRINTL
+		ENDIF
+	NEXT
+	$INPUT_LOOP_70
+	INPUT
+	IF RESULT == 0
+		RESTART
+	ELSEIF RESULT <= 0 || RESULT >= CHARANUM || BASE:RESULT:0 == MAXBASE:RESULT:0
+		GOTO INPUT_LOOP_70
+	ELSE
+		BASE:RESULT:0 += 300
+		SIF BASE:RESULT:0 > MAXBASE:RESULT:0
+			BASE:RESULT:0 = MAXBASE:RESULT:0
+			
+		PRINTFORMW %CALLNAME:RESULT%의 체력+300
+		CALL MONEY_GET(-ITEMPRICE:아이템_구입)
+
+	ENDIF
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 71
+	PRINTL 대상의 성별을 후타나리로 바꿉니다。
+	CALL CHOICE("【후타나리화 약】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	아이템플래그 = 71
+	CALL MONSTER_LIST(3)
+	아이템플래그 = 0
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 72
+	PRINTL 대상의 성별을 여성으로 바꿉니다。
+	CALL CHOICE("【남근소거약】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	아이템플래그 = 72
+	CALL MONSTER_LIST(3)
+	아이템플래그 = 0
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 73
+	PRINTL 대상을 모유체질로 바꾸거나 모유체질을 해소할 수 있습니다。
+	CALL CHOICE("【블루포션】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	아이템플래그 = 73
+	CALL MONSTER_LIST(3)
+	아이템플래그 = 0
+	RESTART
+ENDIF
+
+
+IF 아이템_구입 == 74
+	PRINTL 대상의 처녀막을 회복시킵니다。
+	CALL CHOICE("【레드포션】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	아이템플래그 = 74
+	CALL MONSTER_LIST(3)
+	아이템플래그 = 0
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 75
+	PRINTL 대상의 젖을 거대화시킵니다。
+	CALL CHOICE("【거대화（젖）】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	아이템플래그 = 75
+	CALL MONSTER_LIST(3)
+	아이템플래그 = 0
+	RESTART
+ENDIF
+
+
+IF 아이템_구입 == 76
+	PRINTL 대상의 젖을 축소시킵니다。
+	CALL CHOICE("【수축（젖）】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	아이템플래그 = 76
+	CALL MONSTER_LIST(3)
+	아이템플래그 = 0
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 77
+	PRINTL 대상을 남자로 바꿀 수 있습니다。
+	CALL CHOICE("【남체화약】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	아이템플래그 = 77
+	CALL MONSTER_LIST(3)
+	아이템플래그 = 0
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 78
+	PRINTL 대상 캐릭터를 늘립니다。
+	CALL CHOICE("【증식】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	CALL CLONING_CHARA
+	RESTART
+ENDIF
+
+
+IF 아이템_구입 == 81
+	PRINTL 연모상태의 듀얼리스트를 카드로 바꿀 수 있습니다。
+	CALL CHOICE("【봉인의 카드】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	아이템플래그 = 81
+	CALL MONSTER_LIST(7)
+	아이템플래그 = 0
+	RESTART
+ENDIF
+
+
+IF 아이템_구입 == 82
+	PRINTL 연모를 가진 대상을 애완동물로 바꿀 수 있습니다。
+	CALL CHOICE("【애완동물의 목줄】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	아이템플래그 = 82
+	CALL MONSTER_LIST(3)
+	아이템플래그 = 0
+	RESTART
+ENDIF
+
+IF 아이템_구입 == 80
+	PRINTL 간이 듀얼에 있어서 상대의 손이 보입니다. （안심 안전 콘택트형）
+	CALL CHOICE("【레플리카 밀레니엄아이】을 구입하시겠습니까？", "네", "아니오")
+	SIF RESULT
+		RESTART
+	MONEY -= ITEMPRICE:아이템_구입
+	ITEM:80 ++
+	RESTART
+ENDIF
+
+
+IF 아이템_구입 == 41
+	MONEY -= ITEMPRICE:아이템_구입
+	ITEM:아이템_구입 ++
+	PRINTW 최음약을 정제했습니다
+	RESTART
+ENDIF
+
+;複数所持아이템
+SELECTCASE 아이템_구입
+	CASE 40 TO 60, 91, 92,
+		PRINTFORM %ITEMNAME:아이템_구입%을 몇개 구입하시겠 습니까？
+		SIF 아이템_구입 == 50
+			PRINTFORM (앞으로{ITEMSALES:아이템_구입}개)
+		PRINTFORML 
+		;金欠、아이템数の超過はあとで合わせる
+		PRINTL [0] - 그만둔다
+
+		PRINT [ 1] - 1　
+		PRINT [ 5] - 5　
+		PRINT [10] - 10　
+		PRINT [20] - 20　
+		PRINT [50] - 50　
+		PRINT [99] - 살 수 있는 만큼
+		INPUT
+		SIF RESULT <= 0
+			RESTART
+		SIF RESULT * ITEMPRICE:아이템_구입 > MONEY
+			RESULT = MONEY / ITEMPRICE:아이템_구입
+
+		;個数限定
+		IF ITEMSALES:아이템_구입
+			IF RESULT >= ITEMSALES:아이템_구입
+				RESULT = ITEMSALES:아이템_구입
+				ITEMSALES:아이템_구입 = -1
+			ELSE
+				ITEMSALES:아이템_구입 -= RESULT
+			ENDIF
+		ELSE
+			ITEM:아이템_구입 += RESULT
+			IF ITEM:아이템_구입 > 99
+				RESULT = 99 - (ITEM:아이템_구입 - RESULT)
+				ITEM:아이템_구입 = 99
+			ENDIF
+		ENDIF
+		PRINTFORMW %ITEMNAME:아이템_구입%을{RESULT}개、{RESULT * ITEMPRICE:아이템_구입}円에 구입했습니다
+		合計価格 = RESULT * -ITEMPRICE:아이템_구입
+		CALL MONEY_GET(合計価格)
+		RESTART
+;単品아이템
+	CASE 0 TO 39, 68
+		PRINTFORML %ITEMNAME:아이템_구입%을 구입하시겠습니까？
+		PRINTL [0] - 예  [1] - 아니오
+		INPUT
+		SIF RESULT
+			RESTART
+		ITEM:아이템_구입 ++
+		ITEMSALES:아이템_구입 --
+		CALL MONEY_GET(-ITEMPRICE:아이템_구입)
+		RESTART
+ENDSELECT
+
+@SHOW_ITEM
+#DIM DYNAMIC 아이템_구입
+#DIMS DYNAMIC 아이템_名称
+
+
+CUSTOMDRAWLINE ―
+LOCAL:2 = 0
+FOR 아이템_구입,0,100
+	IF 아이템_구입 == 0
+		PRINTFORML ―조련용 아이템――――
+		LOCAL:2 = 0
+	ELSEIF 아이템_구입 == 40
+		SIF LOCAL:2 % 3 != 0
+			PRINTL
+		PRINTFORML ―소비 아이템―――――
+		LOCAL:2 = 0
+	ELSEIF 아이템_구입 == 60
+		SIF LOCAL:2 % 3 != 0
+			PRINTL
+		PRINTFORML ―소질계――――――――
+		LOCAL:2 = 0
+	ELSEIF 아이템_구입 == 70
+		SIF LOCAL:2 % 3 != 0
+			PRINTL
+		PRINTFORML ―약품계――――――――
+		LOCAL:2 = 0
+
+	ELSEIF 아이템_구입 == 80
+		SIF LOCAL:2 % 3 != 0
+			PRINTL
+		PRINTFORML ―그 외――――――――
+		LOCAL:2 = 0
+	ENDIF
+    ;표시しない
+	SIF ITEMSTOCK(아이템_구입) == 1
+		CONTINUE
+	SIF ITEMSTOCK(아이템_구입) == 4
+		CONTINUE
+	아이템_名称 = [{아이템_구입,3}] %ITEMNAME:(아이템_구입),25,LEFT% (${ITEMPRICE:(아이템_구입),6,RIGHT})
+	;売り切れ
+	IF ITEMSTOCK(아이템_구입) == 2
+
+		아이템_名称 = [{아이템_구입,3}] %ITEMNAME:아이템_구입,25,LEFT% (売切)
+		SETCOLOR C_GRAY
+	ELSEIF ITEMSTOCK(아이템_구입) == 5
+		아이템_名称 = [{아이템_구입,3}] %ITEMNAME:아이템_구입,25,LEFT%
+		SETCOLOR C_GRAY
+	ENDIF
+	SIF GROUPMATCH(아이템_구입, 63)
+		아이템_名称 = [{아이템_구입,3}] %ITEMNAME:(아이템_구입),25,LEFT% (${ITEMPRICE_SPECIAL(아이템_구입),6,RIGHT})
+	SIF 아이템_구입 == 78
+		아이템_名称 = [{아이템_구입,3}] %ITEMNAME:(아이템_구입),25,LEFT% ($ 時価 )
+;	PRINTFORM RESULT:{ITEMSTOCK(아이템_구입)}/ITEMSALES:{ITEMSALES:(아이템_구입}
+	PRINTFORM 　%아이템_名称,45,LEFT%　
+
+	RESETCOLOR
+	LOCAL:2 += 1
+	SIF LOCAL:2 % 3 == 0
+		PRINTL
+NEXT
+PRINTL
+PRINTFORML ―기타중요 아이템――――――――
+아이템_名称 = [{100,3}] %ITEMNAME:(100),25,LEFT% (${ITEMPRICE:(100),6,RIGHT})
+PRINTFORM 　%아이템_名称,45,LEFT%　
+아이템_名称 = [{200,3}] %ITEMNAME:(200),25,LEFT% (${ITEMPRICE:(200),6,RIGHT})
+PRINTFORM 　%아이템_名称,45,LEFT%　
+
+PRINTL
+
+
+;특수な아이템の値段
+@ITEMPRICE_SPECIAL(아이템_구입)
+#FUNCTION
+#DIM DYNAMIC 아이템_구입
+
+SELECTCASE 아이템_구입
+	CASE 63
+		;기교UP
+		SELECTCASE ABL:MASTER:기교
+			CASE IS < 5
+				RETURNF ITEMPRICE:(아이템_구입)
+			CASE IS < 10
+				RETURNF ITEMPRICE:(아이템_구입) * 2 * (ABL:MASTER:기교 - 3)
+			CASE IS < 19
+				RETURNF ITEMPRICE:(아이템_구입) * 2 * (POWER(ABL:MASTER:기교 - 9, 2) + 6)
+			CASEELSE
+				RETURNF 999999
+		ENDSELECT
+	CASEELSE
+		RETURNF ITEMPRICE:(아이템_구입)
+ENDSELECT
+
+
+;条件付き아이템の処理
+@ITEM_SALES
+;ITEMSALES = 0 구입可
+;ITEMSALES = -1 売切
+;ITEMSALES = -2 封印
+
+SIF 最大소환値 == 10
+	ITEMSALES:27 = -1
+
+SIF ITEM:70029 >= 1
+	ITEMSALES:65 = -1
+IF ABL:MASTER:기교 < 5
+	ITEMSALES:63 = 0
+ELSE
+	ITEMSALES:63 = -2
+ENDIF
+IF ABL:MASTER:기교
+	ITEMSALES:64 = 0
+ELSE
+	ITEMSALES:64 = -2
+ENDIF
+SIF ITEM:80
+	ITEMSALES:80 = -1
+SIF TALENT:MASTER:금단의지식
+	ITEMSALES:62 = -1
+SIF TALENT:MASTER:조합지식
+	ITEMSALES:61 = -1
+SIF TALENT:MASTER:악취내성 == 2
+	ITEMSALES:60 = -1
+
+;미약
+IF ABL:MASTER:교양 < 1
+	ITEMSALES:41 = -2
+ELSE
+	IF ITEM:41
+		ITEMSALES:41 = -1
+	ELSE
+		ITEMSALES:41 = 0
+	ENDIF
+ENDIF
+;금단
+FOR LOCAL,70,100
+	;売切の場合は그대로 
+	SIF ITEMSALES:LOCAL == -1
+		CONTINUE
+	ITEMSALES:LOCAL = -2
+	;금단의지식
+	IF (LOCAL > 70 && LOCAL < 91) || LOCAL == 90
+		SIF TALENT:MASTER:금단의지식
+			ITEMSALES:LOCAL = 0
+	;조합지식
+	ELSEIF LOCAL == 70 || LOCAL == 91 || LOCAL == 92
+		SIF TALENT:MASTER:조합지식
+			ITEMSALES:LOCAL = 0
+	ENDIF
+NEXT
+
+
+

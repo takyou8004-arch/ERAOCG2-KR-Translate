@@ -1,0 +1,113 @@
+﻿@CARDNAME_1227,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 트릭스터 만주 시카
+	CASE "略称"
+RESULTS = 만주 시카
+	CASE "カテゴリ"
+RESULTS:0 = 트릭스터
+ENDSELECT
+
+
+@CARD_1227(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1227(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 자신 / 상대 턴에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환하고,
+PRINTL "트릭스터 만주 시카" 이외의 자신 필드의 "트릭스터" 몬스터 1장을 패로 되돌린다.
+CALLFORM CARD_ABLE(0,효과後強制誘発)
+PRINTL ②: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 상대의 패에 카드가 더해질 때마다 상대에게 200 데미지를 준다.
+
+
+@CARDCAN_1227(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1227)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,1227)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,1227,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 트릭스터
+	효과条件固名前 = 트릭스터 만주 시카
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"손패취득+D",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1227(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1227)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ = 트릭스터
+			효과条件固名前 = 트릭스터 만주 시카
+			효과条件行先플래그 = 손패行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後強制誘発
+	CALL LIFE_CHANGE(듀얼리스트,"減少","효과",200,1)
+ENDIF

@@ -1,0 +1,182 @@
+@CARDNAME_59760,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = MIA 프레데터
+	CASE "略称"
+RESULTS = Ｍ프레데터
+	CASE "カテゴリ"
+RESULTS:0 = MIA
+RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59760(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1600
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_59760(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+素材条件속성 = 어둠속성
+素材条件종족 = 기계족
+
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,59760) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_59760(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 기계족·어둠 속성 레벨 4 몬스터 ×2
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+PRINTL 상대의 제외된 몬스터가 3장 이상인 경우, 이 카드는 각성 상태가 된다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①：자신 메인 페이즈에 이 카드의 X 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 상대의 덱 위에서 카드 3장을 제외한다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드가 각성 상태라면, 이 카드는 관통 능력을 가지고, 배틀 페이즈 중 2회까지 공격할 수 있다.
+CALL CARD_ABLE(2,ターン終了時)
+PRINTL ③：자신 / 상대 엔드 페이즈에 발동할 수 있다.
+PRINTL 무덤의 이 카드를 EX덱으로 되돌리고, 자신은 300 데미지를 받으며,
+PRINTL 덱에서 기계족·어둠 속성 몬스터 1장을 패에 넣는다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_59760(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59760)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,59760)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == バトル開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時
+	SIF 발동済_2(듀얼리스트,59760)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件속성 = 어둠속성
+	효과条件종족 = 기계족
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59760(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59760,1,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		FOR カウンタ,0,3
+			CALL CARD_DISPOSE(対面者,"덱",0,제외行き)
+		NEXT		
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") != 0
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"貫通")
+
+	CALL FULLRESET
+	효과範囲상대제외 = 1
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT >= 3
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,上書きモード)
+ELSEIF 종류 == バトル開始時強制
+	CALL FULLRESET
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",2,1)
+
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59760,2)
+	IF RESULT == 0
+        CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+		CALL SHUFFLE(듀얼리스트)
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",300)
+		CALL FULLRESET
+		효과条件속성 = 어둠속성
+		효과条件종족 = 기계족
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+    ENDIF
+
+ENDIF

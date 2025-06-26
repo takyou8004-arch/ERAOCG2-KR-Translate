@@ -1,0 +1,156 @@
+﻿@CARDNAME_50546,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 찬환승룡 바이던트 드라기온
+	CASE "略称"
+RESULTS = 찬환승룡
+	CASE "カテゴリ"
+RESULTS:0 = 찬환
+ENDSELECT
+
+
+@CARD_50546(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 2000
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50546(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 7
+素材条件종족 = 드래곤족
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50546) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50546(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 드래곤족 튜너 ＋ 튜너 이외의 드래곤족 몬스터 1체 이상
+PRINTL 이 카드명의, ①의 효과는 1턴에 1번밖에 사용할 수 없으며, ②의 효과는 듀얼 중에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 싱크로 소환했을 경우, 자신 묘지의 드래곤족 화염 속성 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터를 특수 소환한다. 이 턴, 자신은 드래곤족 몬스터밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(20,묘지起動,フリー誘発)
+PRINTL ②: 몬스터가 3회 이상 공격한 자신 / 상대 턴에 발동할 수 있다.
+PRINTL 이 카드를 묘지에서 특수 소환한다. 그 후, 필드의 마법 / 함정 카드 1장을 파괴할 수 있다.
+
+
+@CARDCAN_50546(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50546)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,50546)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 드래곤족
+	효과条件속성 = 화염속성
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
+	SIF 발동済_D1(듀얼리스트,50546)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,50546,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	SIF ターン中攻撃횟수 < 3
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50546(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50546,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 드래곤족
+		효과条件속성 = 화염속성
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		SS소환可能종족 = 드래곤족
+		CALL CARD_SS_RESTRICTION(듀얼리스트)
+	ENDIF
+ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50546,20)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"묘지",場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件任意 = 1
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"両마함単体",場所,"묘지")
+		ENDIF
+	ENDIF
+ENDIF

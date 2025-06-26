@@ -1,0 +1,143 @@
+﻿@CARDNAME_1097,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 사랑에 빠진 소녀
+	CASE "略称"
+RESULTS = 사랑에 빠진 소녀
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1097(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 400
+	CASE "守備力"
+		RETURN 300
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1097(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 공격표시로 존재하는 한, 전투 내성과 공격 유도를 얻는다.
+PRINTL ②: 이 카드와 전투하는 웅성 몬스터는 데미지 계산 종료 시까지 전투 내성을 얻고, 데미지 스텝 종료 후에 자신은 그 몬스터의 컨트롤을 얻는다.
+PRINTL ③: 이 카드의 공격력은, 자신 필드에 존재하는 원래 주인이 상대가 되는 몬스터의 공격력의 합계만큼 올린다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ③：이 카드의 攻撃力は、자신 필드에 存在する元々の持ち主が상대となる몬스터의 攻撃力の合計分오른다。
+
+
+@CARDCAN_1097(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1097)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:{場所}") != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	TRYCALLFORM CARD_{戦闘カードID(듀얼리스트,1)}("성별")
+	SIF RESULT != 雄性
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件성별 = 雄性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1097(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 所有者
+#DIM DYNAMIC 合計攻撃力
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻誘")
+
+	TRYCALLFORM CARD_{戦闘カードID(듀얼리스트,1)}("성별")
+	SIF RESULT == 雄性
+		CALL STATCHANGE_EFFECT(対面者,"自身",戦闘場所(듀얼리스트,1),"戦耐")
+
+ELSEIF 종류 == 攻撃後強制誘発
+	選択カード = 戦闘場所(듀얼리스트,1)
+	CALL FULLRESET
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"強奪")
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	IF 듀얼리스트 == "자신"
+		所有者 = 1
+	ELSEIF 듀얼리스트 == "상대"
+		所有者 = 2
+	ENDIF
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_MZ_所有:{カウンタ}") == 所有者
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}("성별")
+		SIF RESULT != 雄性
+			CONTINUE
+		合計攻撃力 += GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ")
+	NEXT
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,合計攻撃力)
+ENDIF

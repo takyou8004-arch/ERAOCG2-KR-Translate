@@ -1,0 +1,154 @@
+﻿@CARDNAME_52333,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 크리스트론-피니키시온
+	CASE "略称"
+RESULTS = CS-피니키시온
+	CASE "カテゴリ"
+RESULTS:0 = 크리스트론
+ENDSELECT
+
+
+@CARD_52333(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52333(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 9
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件종류 = 싱크로
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件종류 = 싱크로
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52333) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52333(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 싱크로 몬스터 튜너 + 튜너 이외의 싱크로 몬스터 1장 이상
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 싱크로 소환했을 경우에 발동할 수 있다.
+PRINTL 상대 필드 / 묘지의 마법 / 함정 카드를 전부 제외한다.
+CALLFORM CARD_ABLE(0,戦闘→묘지 ,破壊→묘지)
+PRINTL ②: 이 카드가 전투 / 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 이 카드 이외의 자신 묘지에서 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_52333(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52333)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件他所 = 1
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52333(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52333)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 마함全般
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"제외")
+		FOR カウンタ,0,紙束最大値
+			SIF GETVAR(@"%対面者%_묘지:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARD_{GETVAR(@"%対面者%_묘지:カウンタ")}, "종류"
+			SIF RESULT < 10
+				CONTINUE
+			CALL CARD_DISPOSE(対面者,"묘지",カウンタ)
+		NEXT
+	ENDIF
+
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52333)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件他所 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,場所)
+	ENDIF
+ENDIF

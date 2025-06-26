@@ -1,0 +1,197 @@
+﻿@CARDNAME_41341,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 퀸마돌체 티아라프레즈
+	CASE "略称"
+RESULTS = 티아라프레즈
+	CASE "カテゴリ"
+RESULTS:0 = 마돌체
+ENDSELECT
+
+
+@CARD_41341(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_41341(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 5
+素材条件カテゴリ = 마돌체
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,41341) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_41341(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 5 "마돌체" 몬스터 x 3
+CALLFORM CARD_ABLE(1,EX덱起動)
+PRINTL "퀸마돌체 티아라프레즈"는 1턴에 1번,
+PRINTL 자신 필드의 "퀸마돌체 티아라미스" 위에 겹쳐 엑시즈 소환할 수도 있다.
+CALLFORM CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ①: 상대 턴에 1번, 이 카드의 엑시즈 소재를 1개 제거하고, 자신 묘지의 "마돌체" 카드를 2장까지 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 덱으로 되돌리고, 되돌린 수까지 상대 필드의 카드를 덱으로 되돌린다.
+CALLFORM CARD_ABLE(0,破壊→묘지 ,戦闘→묘지)
+PRINTL ②: 이 카드가 파괴되어 묘지로 보내졌을 경우에 발동한다.
+PRINTL 이 카드를 엑스트라 덱으로 되돌린다.
+
+
+
+@CARDCAN_41341(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,41341)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,41341)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,41341)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = 퀸마돌체 티아라미스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 마돌체
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF ゾーン != "묘지"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_41341(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戻した数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41341,1)
+	IF RESULT == 0
+		CALL RESETCONDITION_MAT
+		必要素材数 = 1
+		효과条件名前 = 퀸마돌체 티아라미스
+		重ねてＸ = 1
+		TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41341,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 마돌체
+		효과条件任意 = 1
+		IF GETVARS(@"%듀얼리스트%_フィールド名")  ==  "マドル シャト-"
+			효과条件行先플래그 = 손패行き
+		ELSE
+			효과条件行先플래그 = 덱行き
+		ENDIF
+		효과条件複数 = 98
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件複数 = 100 - 戻した数
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"덱")	
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL FULLRESET
+	효과条件名前 = 퀸마돌체 티아라프레즈
+	
+	IF GETVARS(@"%듀얼리스트%_フィールド名")  ==  "マドル シャト-"
+		효과条件行先플래그 = 손패行き
+	ELSE
+		효과条件行先플래그 = 덱行き
+	ENDIF
+	CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+ENDIF

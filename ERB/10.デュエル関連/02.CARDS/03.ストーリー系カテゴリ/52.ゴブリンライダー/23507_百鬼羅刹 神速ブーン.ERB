@@ -1,0 +1,114 @@
+﻿@CARDNAME_23507,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 고블린라이더 마하 부웅
+	CASE "略称"
+		RESULTS = 마하 부웅
+	CASE "カテゴリ"
+		RESULTS:0 = 고블린
+		RESULTS:1 = 고블린라이더
+ENDSELECT
+
+
+@CARD_23507(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1300
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23507(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動 ,묘지起動 ,フリー誘発)
+PRINTL ①: 이 카드가 패 / 묘지에 존재할 경우, 자신 / 상대의 메인 페이즈에 발동할 수 있다.
+PRINTL 필드의 엑시즈 소재를 1개 제거하고, 이 카드를 특수 소환한다.
+
+@CARDCAN_23507(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23507)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動 || 종류 == フリー誘発
+	SIF !GROUPMATCH(ゾーン,"손패","묘지")
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,23507)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,23507,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件Ｘ素所持 = 999
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23507(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動 || 종류 == 묘지起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23507,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과条件Ｘ素所持 = 999
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		SIF 選択カード == 9999
+			RETURN 0
+		CALL CARD_SELECT(듀얼리스트,選択カード)
+		選択カード = RESULT
+		CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"Ｘ",-1)
+
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

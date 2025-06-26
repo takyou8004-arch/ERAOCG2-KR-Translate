@@ -1,0 +1,131 @@
+﻿@CARDNAME_54652,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 사이버 엔젤－이다텐－
+	CASE "略称"
+RESULTS = CA－이다텐－
+	CASE "カテゴリ"
+RESULTS:0 = 사이버 엔젤
+ENDSELECT
+
+
+@CARD_54652(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 의식
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족 
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 2000		
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_54652(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 出処
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 6
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,54652) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_54652(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「기계천사의 의식」에 의해 강림.
+CALL CARD_ABLE(0,EX소환時)
+PRINTL ①：이 카드가 의식 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 자신 덱 / 묘지에서 의식 마법 카드 1장을 선택하여 패에 넣는다.
+CALL CARD_ABLE(0,R素材時효과)
+PRINTL ②：이 카드가 의식 소환을 위해 릴리스되었을 경우에 발동할 수 있다.
+PRINTL 자신 필드의 모든 의식 몬스터의 공격력 / 수비력은 1000 증가한다.
+
+
+@CARDCAN_54652(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54652)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = 通常마법
+	효과条件カテゴリ = 의식마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == R素材時효과
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54652(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 손패選択
+#DIM 選択カード
+#DIM 選択カード_ID
+#DIM 소환カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54652)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件종류 = 通常마법
+		효과条件カテゴリ = 의식마법
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == R素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54652)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 의식
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"永攻",1000)
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"永守",1000)
+	ENDIF
+ENDIF

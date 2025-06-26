@@ -1,0 +1,136 @@
+﻿@CARDNAME_55608,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 젬나이트 프리즘 오라
+	CASE "略称"
+RESULTS = GemK P 오라
+	CASE "カテゴリ"
+RESULTS:0 = 젬나이트
+ENDSELECT
+
+
+@CARD_55608(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 원소정령족 
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2450
+	CASE "守備力"
+		RETURN 1400
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_55608(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「젬나이트」 몬스터 ＋ 원소정령족 몬스터
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ①: 패에서 「젬나이트」 카드 1장을 묘지로 보내고,
+PRINTL 상대 필드의 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 앞면 표시의 카드를 파괴한다.
+
+@CARDSUMMON_55608(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 젬나이트
+ELSEIF EX参照 >= 10
+	素材条件종족 = 원소정령족
+ENDIF
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,55608) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_55608(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,55608)
+SIF RESULT == 1
+	RETURN 0
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,55608)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 젬나이트
+	CALL CARD_CHECK_ADV(듀얼리스트,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_55608(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55608)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 젬나이트
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		ENDIF
+	ENDIF
+ENDIF

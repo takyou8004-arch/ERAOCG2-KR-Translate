@@ -1,0 +1,381 @@
+﻿@CARDNAME_59560,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 아누스피어 텐타 룩터
+	CASE "略称"
+		RESULTS = 항학의 묘상공주
+	CASE "カテゴリ"
+		RESULTS:0 = 아누스피어
+		RESULTS:1 = 촉수
+		RESULTS:2 = 묘상
+		RESULTS:3 = E.R.A
+ENDSELECT
+
+
+@CARD_59560(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 牝性
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_59560(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 아누스피어
+	素材条件튜너 = 1
+	CALLFORM 素材条件レベル_ADV(7, "以下")
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件성별 = 牝性
+	RETURN RESULT
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,59560) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_59560(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL "아누스피어"튜너＋암컷 몬스터 １장 이상
+
+PRINTL "항학의 묘상공주"는 필드 위에 １장밖에 앞면 표시로 존재할 수 없다。
+PRINTL 이 카드명의  ①②의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+PRINTL ②의 효과는 이 카드의 컨트롤러가【금단의 지식】을 습득하고있는 경우에만 발동할 수 있다。
+
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①：자신 메인 페이즈에 발동할 수 있다。
+PRINTL 이 카드를 릴리스하고、덱에서 랜덤으로 성별이 없는 몬스터 １장을 패에 넣는다。
+PRINTL 그 후、패를 １장 덱으로 되돌린다。
+
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②：이 카드가 묘지에서 특수 소환된 경우에 발동할 수 있다。
+PRINTL 상대의 덱、EX덱의 암컷 몬스터 １장을 제외하고、덱 밖에서 "항학당한 묘상" １장을 상대 필드에 수비 표시로 특수 소환한다。
+PRINTL 이 효과로 특수 소환된 몬스터는、이 효과로 제외한 몬스터와 같은 명칭이 되며、묘상으로의 기능 이외의 사용물이 되지 않는다。
+
+CALLFORM CARD_ABLE(3,지속효과)
+PRINTL ③：이 카드가 필드에 존재하는 한、이하의 효과를 적용한다。
+PRINTL ●상대의 암컷 몬스터는 직접공격 할 수 있다。
+PRINTL ●상대의 암컷 몬스터는 직접공격 선언 시、공격력이 절반이 된다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_59560(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59560)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,59560)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件성별 = 0
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,59560)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+
+	효과条件ID = 59560
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種묘지
+		RETURN 0
+	
+	;상대의 덱 / EX덱の牝性몬스터를 チェック
+	CALL FULLRESET
+	효과範囲상대덱 = 1
+	효과範囲상대EX덱 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 0
+		RETURN 0
+	
+	IF !TALENT:MASTER:금단의지식
+		PRINTFORML 
+		PRINTFORML 항학의 묘상공주의 ②의 조건을 만족했지만【금단의지식】을 소지하고있지 않다…
+		PRINTFORMW 
+		RETURN 0
+	ENDIF
+	
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 対面者
+		RETURN 0
+	;直接攻撃時
+	SIF 戦闘場所(듀얼리스트) != 5
+		RETURN 0
+	SIF GETVAR(@"%対面者%_MZ_性:戦闘場所(対面者)") != 牝性
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_59560(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 제외カード名
+#DIM DYNAMIC 제외カードID
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 덱위치
+#DIM DYNAMIC 最小場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59560,1)
+	IF RESULT == 0
+		
+		;이 카드를 リリース
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件성별 = 0
+
+		IF RESULT != -1
+			選択カード = -1
+			FOR カウンタ,0,現山札数(듀얼리스트)
+				제외カードID = GETVAR(@"%듀얼리스트%_덱:カウンタ")
+				CALLFORM CARD_{제외カードID},"종류"
+				SIF RESULT != 효과モン
+					CONTINUE
+				
+				CALLFORM CARD_{제외カードID},"성별"
+				SIF RESULT == 牝性 || RESULT == 雄性 || RESULT == ふたなり 
+					CONTINUE
+				
+				選択カード = カウンタ
+				BREAK
+			NEXT
+			
+			PRINTFORMW 항학의 묘상공주는 부들부들 떨고 어딘가로 사라져버렸다…
+			IF 選択カード != -1
+				TRYCALLFORM CARDNAME_{제외カードID},"名前"
+				
+				PRINTFORMW 아까까지 항학의 묘상공주가 안장있던 장소엔 커다란 물웅덩이가 생겨있다…
+				SETCOLOR C_GRAY
+				PRINTFORML 아니、설마…
+				RESETCOLOR
+				PRINTFORML 
+				CALL CARD_DISPOSE(듀얼리스트, "덱", 選択カード,손패行き)
+				PRINTFORML 패를 １장 덱으로 되돌립니다。
+				PRINTFORML 
+				IF RESULT == 1
+					CALL FULLRESET
+					효과範囲손패 = 1
+					효과条件行先플래그 = 덱行き
+					CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+				ENDIF
+				;CALL CARD_SP_SUMMON(듀얼리스트, "덱", 選択カード)
+				
+			ELSE
+				PRINTFORML
+				PRINTFORMW 대상 카드는 보이지 않는것같다…
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59560,2)
+	IF RESULT == 0
+		PRINTFORML 항학의 묘상공주는 희생자를 품평하고있다…
+		SETCOLOR C_PINK
+		PRINTFORML 「…❤」
+		RESETCOLOR
+		
+		;상대의 덱 / EX덱에서 선택한 카드를 제외한다
+		CALL FULLRESET
+		효과範囲상대덱 = 1
+		효과範囲상대EX덱 = 1
+		효과条件성별 = 牝性
+		효과条件行先플래그 = 제외行き
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		
+		IF RESULT != 0
+			제외カードID = RESULT:99
+			TRYCALLFORM CARDNAME_{제외カードID}, "略称"
+			제외カード名 = %RESULTS%
+			
+			PRINTFORML 항학의 묘상공주에게서 촉수가 뻗으니、상대 덱의 카드에 평행세계의 정보를 새겨간다！
+			PRINTFORMW %제외カード名%는 평행세계에서、항학의 기억을 덮어씌워지고말았다…
+			CALL CARD_DISPOSE(対面者,参照先（CS）,選択カード（CS）,제외行き)
+			
+			CALL CARD_EROTICS(제외カードID)
+			IF RESULT != -1
+				조교대상 = RESULT
+				憑依状態 = 1
+				EXP:조교대상:Ａ확장경험 += 1 + RAND:2
+				EXP:조교대상:절정경험 += 1 + RAND:3
+				CALL EROTIC_MOVE("애널解し",조교대상,-1,300)
+				憑依状態 = 0
+			ENDIF
+			
+			CALL FULLRESET
+			효과추가종류:0 = 1000000 + 제외カードID
+			;효과추가종류だとこのターン中のみみたいなのでコメント化
+			;효과추가종류:1 = 効追不材
+			
+			CALL FULLRESET
+			CALL CARD_GENERATE(対面者,159560,"守備표시")
+			
+			CALL FULLRESET
+			효과条件ID = 159560
+			CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",,"不材",2,59560)
+			
+			PRINTFORML %제외カード名%는 자신에게 일어난 변화에 대응할 틈도 없이
+			PRINTFORMW 개발되어버린 몸에 따라、묘상으로서의 역할을 누리고있다…
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件성별 = 牝性
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"直攻",0,59560)
+ELSEIF 종류 == 攻撃時強制誘発
+
+	選択カードID = GETVAR(@"%対面者%_필드:戦闘場所(対面者)")
+	TRYCALLFORM CARDNAME_{選択カードID},"略称"
+	IF GETVARS(@"%듀얼리스트%_フィールド名")  ==  "촉수궁"
+		PRINTFORML %RESULTS%는 묘상공주의 모습을 쫓지만 잃어버리고말았다。
+		PRINTFORML …어느샌가 들러붙어있던 촉수를 뿌리치지만、독을 받아버린것인지 묘한 권태감을 느끼고있다。
+		PRINTFORMW 돌아가야하나……하고、뒤돌아보니 그곳에 있던것은 고기벽이었다。%RESULTS%늬 눈앞에는 촉수궁이 펼쳐져있다…
+	ENDIF
+	CALL SET_FIELD_INFO(対面者,"필드",戦闘場所(対面者),"一時",-(GETVAR(@"%対面者%_MZ_攻:戦闘場所(対面者)")) / 2)
+
+ENDIF
+
+
+@CARDNAME_159560,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 항학당한 묘상
+	CASE "略称"
+		RESULTS = 항학당한 묘상
+	CASE "カテゴリ"
+		RESULTS:0 = 묘상
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_159560(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 50
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARDCAN_159560(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+RETURN 0
+
+@CARD_EXPLANATION_159560(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 【금단의지식】에 의해、평행세계에 존재하는 개발된 묘상의 정보를 입력당해버린듯 하다。
+PRINTL …용모는 닮았지만、그 몸은 크게 바뀌어버렸다。
+PRINTL 크게 부풀은 배는 가끔 크게 요동치며、장내에 깃든 생명의 존재를 이야기하고있다……
+PRINTL 개발당한 장내는 자궁보다도 효율좋게 "묘상"으로서의 역할을 하는듯 하다。
+PRINTL 
+PRINTL 한번이라도 필드를 벗어난다면 묘상의 판별은 어렵다。
+PRINTL 그녀들에게 가능한것은、그렇게 되지 않도록 비는것 뿐이겠지。

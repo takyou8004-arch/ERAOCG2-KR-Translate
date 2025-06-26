@@ -1,0 +1,121 @@
+﻿@CARDNAME_23070,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 닌자마스터 HANZO
+	CASE "略称"
+RESULTS = 닌자 HANZO
+	CASE "カテゴリ"
+RESULTS:0 = 닌자
+ENDSELECT
+
+
+@CARD_23070(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_23070(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(10,소환時 ,표시변경誘発)
+PRINTL ①: 1턴에 1번, 이 카드가 소환에 성공했을 때, 또는 이 카드의 표시 형식이 변경되었을 경우에 발동할 수 있다.
+PRINTL 덱에서 "인법" 카드 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(0,특수소환時)
+PRINTL ②: 이 카드가 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 덱에서 "닌자마스터 HANZO" 이외의 "닌자" 몬스터 1장을 패에 넣는다.
+
+@CARDSUMMON_AA_23070
+
+
+@CARDCAN_23070(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23070)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 표시변경誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 인법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 닌자
+	효과条件종류 = モン全般
+	효과条件固名前 = 닌자마스터 HANZO
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23070(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 표시변경誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23070,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 인법
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23070)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 닌자
+		효과条件종류 = モン全般
+		효과条件固名前 = 닌자마스터 HANZO
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

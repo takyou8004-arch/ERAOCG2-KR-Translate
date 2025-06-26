@@ -1,0 +1,126 @@
+﻿@CARDNAME_39734,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 드래곤의 애완 해피 퀸
+	CASE "略称"
+		RESULTS = 용의 애완전여왕
+	CASE "カテゴリ"
+		RESULTS:0 = 해피
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39734(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+	CASE "別途ID"
+		RETURN 1055
+	CASE "連動ID"
+		RETURN 1055
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39734(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드는 룰상 "해피 퀸" 으로 취급한다。
+PRINTL 이 카드명의  ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：이 카드를 패에서 묘지로 버리고 발동할 수 있다。
+PRINTL 덱에서 "해피의 사랑의 둥지" １장을 패에 넣는다。
+CALL CARD_ABLE(2,지속효과)
+PRINTL ②：이 몬스터가 필드에 존재하는 한、
+PRINTL 자신 필드의 수컷인 "해피" 몬스터의 공격은 관통한다。
+CALL TEXT_DECORATION("ROGUE")
+ 
+
+@CARDCAN_39734(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1055)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,1055)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件名前 = 해피의 사랑의 둥지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39734(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39734,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件名前 = 해피의 사랑의 둥지
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		PRINTFORML 
+		PRINTFORMW 드래곤의 애완노예가 된 전 여왕인 해피는 드래곤을 위해 둥지를 정돈했다。
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 해피
+	효과条件성별 = 雄性
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"貫通")
+ENDIF
+

@@ -1,0 +1,175 @@
+﻿@CARDNAME_56533,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성령수기 가이아페라이오
+	CASE "略称"
+RESULTS = 가이아페라이오
+	CASE "カテゴリ"
+RESULTS:0 = 령수
+ENDSELECT
+
+
+@CARD_56533(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3200
+	CASE "守備力"
+		RETURN 2100
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_56533(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「령수」 몬스터 3장
+;PRINTL このカードは이 카드의 효과以外では융합소환할 수 없다。
+CALLFORM CARD_ABLE(0,EX덱起動)
+PRINTL ①: 자신 필드 위의 위의 카드를 제외하고 발동할 수 있다.
+PRINTL 이 카드를 EX덱에서 융합 소환으로 취급하여 특수 소환한다.
+CALLFORM CARD_ABLE(10,발동誘発)
+PRINTL ②: 1턴에 1번, EX덱에서 특수 소환한 이 카드가 존재할 경우,
+PRINTL 상대의 몬스터의 효과, 마법 / 함정 카드가 발동했을 때, 패에서 「령수」 카드 1장을 제외하고 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 파괴한다.
+
+
+
+
+@CARDSUMMON_56533(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 령수사
+ELSEIF EX参照 >= 10
+	素材条件カテゴリ = 령수
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,56533) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_56533(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,56533)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,56533)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 령수
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 령수
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_56533(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,56533)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 령수
+		효과条件行先플래그 = 제외行き
+		효과条件종류 = モン全般
+		효과条件複数 = 3
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_EX_SUMMON(듀얼리스트, "EX덱", 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,56533,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 령수
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ENDIF

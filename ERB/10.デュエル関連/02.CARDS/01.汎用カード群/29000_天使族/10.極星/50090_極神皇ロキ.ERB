@@ -1,0 +1,174 @@
+﻿@CARDNAME_50090,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 극신황 로키
+	CASE "略称"
+RESULTS = 극신 로키
+	CASE "カテゴリ"
+RESULTS:0 = 극신
+ENDSELECT
+
+
+@CARD_50090(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"	
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 신속성
+	CASE "종족"
+		RETURN 환신야수족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3300
+	CASE "守備力"
+		RETURN 3000
+	CASE "C불가"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50090(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「극성」 튜너 ＋ 튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드의 효과 발동에 대해 상대는 효과를 발동할 수 없다.
+
+CALL CARD_ABLE(10,발동誘発)
+PRINTL ①: 1턴에 1번, 상대가 마법 / 함정 카드를 발동했을 때, 그 발동을 무효로 하고 파괴할 수 있다.
+CALL CARD_ABLE(0,破壊→묘지 ,戦闘→묘지)
+PRINTL ②: 필드의 이 카드가 파괴되어 묘지로 보내진 턴의 엔드 페이즈에 발동할 수 있다.
+PRINTL 자신 묘지에서 「극성」 몬스터 1장을 제외하고, 「극신황 로키」 1장을 묘지에서 특수 소환한다.
+PRINTL 그 후, 묘지의 함정 카드 1장을 필드에 세트한다.
+
+@CARDSUMMON_50090(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+    素材条件カテゴリ = 극성
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50090) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50090(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50090)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	CALL CARD_SS_CHECK(듀얼리스트,50090,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 극성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件名前 = 극신황 로키
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50090(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50090,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+		RETURN 1
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50090,1)
+	IF RESULT == 0
+		CALL CARD_RESERV(듀얼리스트,50090)
+	ENDIF
+ELSEIF 종류 == ターン終了時予約
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50090)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 극성
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)	
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+효과条件名前 = 극신황 로키
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1 && 마함数(듀얼리스트) < 5
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件종류 = 함정全般
+				CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+			ENDIF
+		ENDIF
+	ENDIF
+
+ENDIF

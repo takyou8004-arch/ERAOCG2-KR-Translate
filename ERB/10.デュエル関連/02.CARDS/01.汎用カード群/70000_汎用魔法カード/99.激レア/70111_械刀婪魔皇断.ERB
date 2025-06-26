@@ -1,0 +1,160 @@
+﻿@CARDNAME_70111,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 골디온 슈나이더
+	CASE "略称"
+RESULTS = 계도난마황참
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_70111(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "C불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_70111(종류)
+#DIM DYNAMIC 종류
+
+;PRINTL 이 카드의 효과의 발동と효과は無効化されない。
+PRINTL 이 카드 발동에 대해 상대는 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,ターン開始時 ,バトル終了時)
+PRINTL ①: 자신 메인 페이즈 1 개시 시, 배틀 페이즈 종료 시에,
+PRINTL 필드의 앞면 표시 카드를 임의의 수만큼 대상으로 발동할 수 있다.
+PRINTL 대상 카드 1장당, 자신 패 1장 또는 자신 엑스트라 덱의 카드 6장을 완전 제외한다.
+PRINTL (완전 제외된 카드는 「제외되었을 때」 등의 유발 효과를 발동할 수 없다)
+PRINTL 그 후, 대상 카드를 패로 되돌린다.
+
+@CARDCAN_70111(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,70111)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン開始時 || 종류 == バトル終了時
+	SIF !GROUPMATCH(ゾーン,"손패","마함")
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件달성 ++
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT >= 6
+		条件달성 ++
+	CALL FULLRESET
+	IF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+	ENDIF
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_70111(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 대상可能数
+#DIM DYNAMIC 제외数
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ターン開始時 || 종류 == バトル終了時
+	;カード발동確認
+	효과無効不能 = 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70111)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		IF 듀얼리스트 == "자신"
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+		ENDIF
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件표시 = 表側표시
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		대상可能数 = RESULT
+
+		REPEAT 대상可能数
+			IF 손패数(듀얼리스트) > 0 && 現EX山札数(듀얼리스트) >= 6
+				IF 듀얼리스트 == "자신"
+					CALL YN_CHOICE(듀얼리스트,"●패를 제외한다！","●ＥＸ덱を제외한다！")
+				ELSE
+					RESULT = 1
+				ENDIF
+			ELSEIF 손패数(듀얼리스트) > 0
+				RESULT = 0
+			ELSEIF 現EX山札数(듀얼리스트) >= 6
+				RESULT = 1
+			ENDIF
+
+			IF RESULT == 0
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과条件行先플래그 = 完全제외行き
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ELSEIF RESULT == 1
+				CALL FULLRESET
+				효과範囲EX덱 = 1
+				효과条件複数 = 6
+				효과条件行先플래그 = 完全제외行き
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+			SIF RESULT != 1
+				RETURN 0
+			
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場単体",場所,"손패")
+			SIF RESULT != 1 && 듀얼리스트 != "자신"
+				RETURN 0
+		REND
+	ENDIF
+ENDIF

@@ -1,0 +1,246 @@
+﻿@CARDNAME_92560,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 네무렐리아 클라이맥스
+	CASE "略称"
+		RESULTS = Nemleria Climax
+	CASE "カテゴリ"
+		RESULTS:0 = 네무렐리아
+ENDSELECT
+
+
+@CARD_92560(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250530
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92560(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①：상대 필드에 몬스터카드가 ４장이상 존재할 경우、이하의 효과에서 １개를 선택해서 발동한다。
+PRINTL ＥＸ덱에서「꿈꾸는 네무렐리아」１장을 특수 소환한다。
+PRINTL 이 효과로 특수소환된 몬스터는 엔드 페이즈에 ＥＸ덱으로 돌아간다。
+PRINTL ●ＥＸ덱에서「꿈꾸는 네무렐리아」이외의 카드를 전부 제외한다。
+PRINTL 　（이 효과로 제외된 카드는「제외 되었을 때」의 효과를 발동 할 수 없다）
+PRINTL ●덱 위에서 １２장까지 제외하고、자신은 제외한 수×２００ＬＰ 잃는다。
+PRINTL 　（이 효과로 제외된 카드는「제외 되었을 때」의 효과를 발동 할 수 없다）
+CALL CARD_ABLE(0,身代효과)
+PRINTL ②：자신의 마법＆함정 존의「네무렐리아」카드가 파괴 될 경우、
+PRINTL 대신에 묘지의 이 카드를 제외할 수 있다。
+
+@CARDCAN_92560(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92560)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	SIF 발동済_1(듀얼리스트,92560)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 2
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件名前 = 꿈꾸는 네무렐리아
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 4
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF 破壊대상ゾーン != "마함"
+		RETURN 0
+	SIF 破壊종류 != "효과"
+		RETURN 0
+	TRYCALLFORM CARDNAME_{破壊대상ID},"カテゴリ"
+	SIF !MATCH(RESULTS,"네무렐리아")
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:破壊대상場所") != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_92560(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 발동不可
+#DIM DYNAMIC 제외枚数
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 듀얼리스트名前
+#DIMS DYNAMIC 対面者名前
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92560,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT < 2
+			발동不可 = 1
+
+		IF 듀얼리스트 == "자신"
+			IF 발동不可 != 1
+				CALL YN_CHOICE(듀얼리스트,"●ＥＸ덱에서「꿈꾸는 네무렐리아」이외를 쫒아낸다","●덱의 위에서 １２장까지 제외한다")
+			ELSE
+				RESULT = 1
+			ENDIF
+		ELSE
+			IF 발동不可 != 1
+				RESULT = RAND:2
+			ELSE
+				RESULT = 1
+			ENDIF
+		ENDIF
+
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲EX덱 = 1
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			제외枚数 = RESULT
+			PRINTFORMW 제외매수:{제외枚数}
+			REPEAT 제외枚数
+				FOR カウンタ,0,제외枚数
+					SIF GETVAR(@"%듀얼리스트%_EX덱:カウンタ") == -1
+						CONTINUE
+					TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_EX덱:カウンタ")},"名前"
+					IF RESULTS == "꿈꾸는 네무렐리아"
+						CONTINUE
+					ENDIF
+					CALL CARD_DISPOSE(듀얼리스트,"EX덱",カウンタ,完全제외行き)
+				NEXT
+			REND
+		ELSEIF RESULT == 1
+			IF 듀얼리스트 == "자신"
+				PRINTL 【제외할 매수를 선택】
+				PRINTL
+				PRINT [0]　
+				PRINT [1]　
+				PRINT [2]　
+				PRINT [3]　
+				PRINT [4]　
+				PRINT [5]　
+				PRINTL [6]
+				PRINT [7]　
+				PRINT [8]　
+				PRINT [9]　
+				PRINT [10]　
+				PRINT [11]　
+				PRINT [12]　
+				BINPUT
+				제외枚数 = RESULT
+			ELSE
+				IF 現山札数(듀얼리스트) < 12
+					제외枚数 = 現山札数(듀얼리스트)
+				ELSE
+					제외枚数 = 12
+				ENDIF
+			ENDIF
+			REPEAT 제외枚数
+				CALL CARD_DISPOSE(듀얼리스트,"덱",0,完全제외行き)
+			REND
+			CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",제외枚数*200)
+		ENDIF
+		PRINTL
+
+		조교대상 = NO_TO_CHARANUM(1350)
+		CALL CARD_EROTICS(상대プレイヤー,対面者)
+		IF RESULT != -1
+			듀얼리스트名前 = %CALLNAME:RESULT%
+		ELSE
+			듀얼리스트名前 = %듀얼리스트%
+		ENDIF
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			対面者名前 = %CALLNAME:RESULT%
+		ELSE
+			対面者名前 = %対面者%
+		ENDIF
+		
+		SETCOLOR C_PINK
+		PRINTFORML %듀얼리스트名前%는 자고있는 %CALLNAME:조교대상%의 옷을 벗기고、
+		PRINTFORMW 그대로 %CALLNAME:조교대상%의 비부를 %対面者名前%에게 보이도록 안아올렸다。
+		PRINTFORML 대체 뭘 할 생각인가 하며 의아한 얼굴을 하는 %対面者名前%과 몬스터들을 향해서、
+		PRINTFORMW %듀얼리스트名前%는 %CALLNAME:조교대상%의 성감대를 격하게 애무해보였다！
+		PRINTL
+		PRINTFORMW 땀、타액、애액……%CALLNAME:조교대상%은 비몽사몽중에、위에서 아래까지 액체를 흩뿌리면서%듀얼리스트名前%에게 그대로 당하고있다。
+		PRINTFORM 눈앞에서 나이가 모자란 소녀가 능욕당하는 모습에서、%対面者名前%
+		SIF 対面者名前 != CALLNAME:MASTER
+			PRINTFORM 와 그
+		PRINTFORMW 몬스터는 눈을 뗄 수 없는것 같다……
+
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		CALL EROTIC_MOVE("全身愛撫",조교대상,RESULT,1000)
+		IF RESULT:1 != 0
+			PRINTFORMW %CALLNAME:조교대상%는 여운에 몸을 부르르 떨며、무거운 눈꺼풀을 천천히 뜨기 시작했다！
+		ELSE
+			PRINTFORMW 몸을 마구 희롱당한 %CALLNAME:조교대상%는、불쾌감에 눈을 떴습니다！
+		ENDIF
+		RESETCOLOR
+
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件名前 = 꿈꾸는 네무렐리아
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"終処",EX덱行き)
+	ENDIF
+
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92560)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

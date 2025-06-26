@@ -1,0 +1,400 @@
+﻿@MYDECK(듀얼리스트,選択덱)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 選択덱
+#DIM DYNAMIC カウンタ
+
+SELECTCASE 選択덱
+CASE 100
+	FOR カウンタ,0,50
+		SETVAR @"%듀얼리스트%_덱:{カウンタ}", CFLAG:TARGET:(700 + カウンタ)
+	NEXT
+	FOR カウンタ,0,15
+		SETVAR @"%듀얼리스트%_EX덱:{カウンタ}", CFLAG:TARGET:(770 + カウンタ)
+	NEXT
+CASEELSE
+	FOR カウンタ,0,紙束最大値
+		IF 마이덱:選択덱:カウンタ <= 0
+			SETVAR @"%듀얼리스트%_덱:{カウンタ}", -1
+		ELSE
+			SETVAR @"%듀얼리스트%_덱:{カウンタ}", 마이덱:選択덱:カウンタ
+		ENDIF
+	NEXT
+
+	FOR カウンタ,0,紙束最大値
+		IF マイEX덱:選択덱:カウンタ <= 0
+			SETVAR @"%듀얼리스트%_EX덱:{カウンタ}", -1
+		ELSE
+			SETVAR @"%듀얼리스트%_EX덱:{カウンタ}", マイEX덱:選択덱:カウンタ
+		ENDIF
+	NEXT
+
+	SETVAR @"%듀얼리스트%_切り札", 마이덱_切り札:選択덱
+	SETVAR @"%듀얼리스트%_エース", 마이덱_エース:選択덱
+	SETVAR @"%듀얼리스트%_アイドル", 마이덱_アイドル:選択덱
+
+	SETVAR @"%듀얼리스트%_切り札_技名", 마이덱_切り札_技名:選択덱
+	SETVAR @"%듀얼리스트%_エース_技名", 마이덱_エース_技名:選択덱
+	SETVAR @"%듀얼리스트%_アイドル_技名", 마이덱_アイドル_技名:選択덱
+
+	;ザポルグ追記20250309
+	SETVAR @"%듀얼리스트%_切り札_소환구상", 마이덱_切り札_소환구상:選択덱
+	SETVAR @"%듀얼리스트%_エース_소환구상", 마이덱_エース_소환구상:選択덱
+	SETVAR @"%듀얼리스트%_アイドル_소환구상", 마이덱_アイドル_소환구상:選択덱
+ENDSELECT
+
+@MYDECK_SAVE(選択덱)
+#DIM DYNAMIC 選択덱
+#DIM DYNAMIC カウンタ
+
+SELECTCASE 選択덱
+CASE 100
+	FOR カウンタ,700,760
+		CFLAG:TARGET:カウンタ = -1
+	NEXT
+	FOR カウンタ,770,790
+		CFLAG:TARGET:カウンタ = -1
+	NEXT
+
+	FOR カウンタ,0,50
+		CFLAG:TARGET:(700 + カウンタ) = 編集_덱:カウンタ
+	NEXT
+	FOR カウンタ,0,15
+		CFLAG:TARGET:(770 + カウンタ) = 編集_EX덱:カウンタ
+	NEXT
+
+CASEELSE
+	FOR カウンタ,0,紙束最大値
+		마이덱:選択덱:カウンタ = -1
+		マイEX덱:選択덱:カウンタ = -1
+	NEXT
+	FOR カウンタ,0,紙束最大値
+		마이덱:選択덱:カウンタ = 編集_덱:カウンタ
+	NEXT
+	FOR カウンタ,0,15
+		マイEX덱:選択덱:カウンタ = 編集_EX덱:カウンタ
+	NEXT
+
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件ID = 編集_切り札
+	CALL CARD_CHECK_ADV("編集")
+	IF RESULT == 1
+		마이덱_切り札:選択덱 = 編集_切り札
+	ELSE
+		마이덱_切り札:選択덱 = 0
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件ID = 編集_エース
+	CALL CARD_CHECK_ADV("編集")
+	IF RESULT == 1
+		마이덱_エース:選択덱 = 編集_エース
+	ELSE
+		마이덱_エース:選択덱 = 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件ID = 編集_アイドル
+	CALL CARD_CHECK_ADV("編集")
+	IF RESULT == 1
+		마이덱_アイドル:選択덱 = 編集_アイドル
+	ELSE
+		마이덱_アイドル:選択덱 = 0
+	ENDIF
+
+	마이덱_切り札_技名:選択덱 = %編集_切り札_技名%
+	마이덱_エース_技名:選択덱 = %編集_エース_技名%
+	마이덱_アイドル_技名:選択덱 = %編集_アイドル_技名%
+
+	;ザポルグ追記20250309
+	마이덱_切り札_소환구상:選択덱 = %編集_切り札_소환구상%
+	마이덱_エース_소환구상:選択덱 = %編集_エース_소환구상%
+	마이덱_アイドル_소환구상:選択덱 = %編集_アイドル_소환구상%
+ENDSELECT
+
+@CHOOSE_DECK_RANDOM
+#DIM DYNAMIC 설정
+#DIM DYNAMIC 덱リスト,1000
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択덱
+FOR カウンタ,2,1000
+	VARSET RESULT
+	TRYCALLFORM DUELDECK_{10000 + カウンタ}("存在確認")
+	SIF RESULT != 1
+		CONTINUE
+	덱リスト:カウンタB = 10000 + カウンタ
+	カウンタB ++
+NEXT
+
+選択덱 = 덱リスト:(RAND:カウンタB)
+RETURN 選択덱
+
+
+
+@DECK_LIST(설정)
+#DIM DYNAMIC 설정
+#DIM DYNAMIC 덱リスト
+#DIM CONST 덱リスト最大値 = 3
+#DIM DYNAMIC 덱モード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIMS DYNAMIC 덱名
+#DIM DYNAMIC 選択덱
+#DIM DYNAMIC 덱リスト2,1000
+#DIM DYNAMIC ページ開始
+#DIM DYNAMIC ページ最大値
+#DIM DYNAMIC MODE2ページ最大値
+
+
+IF 설정 == 2
+	덱モード = 2
+ELSE
+	덱モード = 1
+ENDIF
+
+FOR カウンタ,1,1000
+	VARSET RESULT
+	TRYCALLFORM DUELDECK_{10000 + カウンタ}("存在確認")
+	SIF RESULT != 1
+		CONTINUE
+	덱リスト2:カウンタB = 10000 + カウンタ
+	カウンタB ++
+	SIF カウンタB % 60 == 0
+		MODE2ページ最大値 ++
+NEXT
+
+
+
+$INPUT_LOOP
+IF 덱モード == 2
+	ページ最大値 = MODE2ページ最大値
+ELSEIF 덱モード == 1
+	ページ最大値 = 2
+ENDIF
+
+
+CUSTOMDRAWLINE ―
+IF 설정 == 2
+	PRINTFORML 　【상대 덱 선택】
+ELSE
+	PRINTFORML 　【덱 선택】
+ENDIF
+CUSTOMDRAWLINE ―
+
+
+IF 덱モード == 1
+	FOR カウンタ,0 + (ページ開始 * 20) ,20 + (ページ開始 * 20)
+		CALL DECK_ABLE_CHECK(カウンタ)
+		IF RESULT == 0 && 설정 != 3
+			SETCOLOR C_GRAY
+			IF 마이덱名:カウンタ != ""
+				PRINTFORM <{カウンタ,2,LEFT}> - 【%마이덱名:カウンタ%】
+			ELSE
+				PRINTFORM <{カウンタ,2,LEFT}> - 마이덱({カウンタ,2})
+			ENDIF
+			PRINT [사용불가]
+			RESETCOLOR
+		ELSE
+			IF 마이덱名:カウンタ != ""
+				PRINTFORM [{カウンタ,2,LEFT}] - 【%마이덱名:カウンタ%】
+			ELSE
+				PRINTFORM [{カウンタ,2,LEFT}] - 마이덱({カウンタ,2})
+			ENDIF
+		ENDIF
+		VARSET RESULTS
+		IF 마이덱_エース:カウンタ > 0
+			TRYCALLFORM CARDNAME_{마이덱_エース:カウンタ}, "略称"
+		ELSE
+			TRYCALLFORM CARDNAME_{마이덱:カウンタ:0}, "略称"
+		ENDIF	
+		SIF RESULTS != ""
+			PRINTFORM 　[%RESULTS,18,LEFT%]
+		VARSET RESULTS
+		IF 마이덱_アイドル:カウンタ > 0
+			TRYCALLFORM CARDNAME_{마이덱_アイドル:カウンタ}, "略称"
+		ELSE
+			TRYCALLFORM CARDNAME_{마이덱:カウンタ:14}, "略称"
+		ENDIF
+		SIF RESULTS != ""
+			PRINTFORM 　[%RESULTS,18,LEFT%]
+		
+		VARSET RESULTS
+		IF 마이덱_切り札:カウンタ > 0
+			TRYCALLFORM CARDNAME_{마이덱_切り札:カウンタ}, "略称"
+		ELSE
+			TRYCALLFORM CARDNAME_{마이덱:カウンタ:29}, "略称"
+		ENDIF
+		SIF RESULTS != ""
+			PRINTFORM 　[%RESULTS,18,LEFT%]	
+		PRINTL
+	NEXT
+	PRINTFORML PAGES（{ページ開始 + 1,2}/{ページ最大値 + 1,2}）―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+	SIF ページ開始 == 0
+		SETCOLOR C_GRAY
+	PRINTBUTTON "[ ◁◁ ]",8500
+	RESETCOLOR
+	PRINTFORM %"",90%
+	SIF ページ開始 == ページ最大値
+		SETCOLOR C_GRAY
+	PRINTBUTTON "[ ▷▷ ]",8501
+	RESETCOLOR
+ELSEIF 덱モード == 2
+	VARSET カウンタB
+	FOR カウンタ,0 + (ページ開始 * 60),60 + (ページ開始 * 60)
+		VARSET RESULT
+		TRYCALLFORM DUELDECK_{덱リスト2:カウンタ}("存在確認")
+		IF RESULT != 1
+			PRINTFORM %"",50,LEFT%
+		ELSE
+			덱名 = 【%RESULTS%】
+			IF RESULT != 0
+				PRINTFORM 　[{カウンタ,3}] - %덱名,40,LEFT%
+			ENDIF
+		ENDIF
+		カウンタB ++
+		SIF カウンタB % 3 == 0
+			PRINTL
+	NEXT
+	PRINTFORML PAGES（{ページ開始 + 1,2}/{ページ最大値 + 1,2}）―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+	SIF ページ開始 == 0
+		SETCOLOR C_GRAY
+	PRINTBUTTON "[ ◁◁ ]",8500
+	RESETCOLOR
+	PRINTFORM %"",90%
+	SIF ページ開始 == ページ最大値
+		SETCOLOR C_GRAY
+	PRINTBUTTON "[ ▷▷ ]",8501
+	RESETCOLOR
+
+ELSEIF 덱モード == 3
+	;Anonym修正
+	FOR カウンタ,0,1000
+		SIF ストラク_ID:カウンタ != 1
+			CONTINUE
+
+		VARSET RESULT
+		TRYCALLFORM DUELDECK_{15000 + カウンタ}("存在確認")
+		SIF RESULT != 1
+			CONTINUE
+		덱名 = 【%RESULTS%】-%RESULTS:1%-
+		IF RESULT != 0
+			PRINTFORM [{カウンタ,3}] - %덱名%
+			PRINTL
+		ENDIF
+	NEXT
+ELSEIF 덱モード == 4
+	CALL MONSTER_LIST(8)
+	SIF RESULT == -1
+		RESULT = 9999
+ENDIF
+
+
+IF 덱モード != 4
+	PRINTL
+	CUSTOMDRAWLINE ―
+	SIF 덱モード == 1
+		SETCOLOR C_GREEN
+	PRINTBUTTON "[마이 덱]", 6666
+	RESETCOLOR
+	PRINT 　　
+	SIF 덱モード == 2
+		SETCOLOR C_GREEN
+	PRINTBUTTON "[렌탈 덱]", 6667
+	RESETCOLOR
+	PRINT 　　
+	SIF 덱モード == 3
+		SETCOLOR C_GREEN
+	PRINTBUTTON "[스트럭쳐]", 6668
+	RESETCOLOR
+	PRINT 　　
+	SIF 덱モード == 4
+		SETCOLOR C_GREEN
+	PRINTBUTTON "[대전상대 덱]", 6669
+	RESETCOLOR
+	PRINTL
+	CUSTOMDRAWLINE ―
+	IF 설정 == 2
+		PRINT [8888] - 자신의 덱을 다시 고른다
+		PRINTFORM %"",20%
+		PRINTFORM [8600] - 랜덤한 덱을 지니게 한다
+		PRINTL
+		PRINTL [9999] - 돌아간다
+		BINPUT
+	ELSE
+		PRINTL 	
+		PRINTL [9999] - 돌아간다
+		BINPUT
+	ENDIF
+ENDIF
+
+IF RESULT == 7776
+	덱リスト --
+	SIF 덱リスト < 1
+		덱リスト = 1
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 7777
+	덱リスト ++
+	SIF 덱リスト > 덱リスト最大値
+		덱リスト = 덱リスト最大値
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 6666
+	덱モード = 1
+	ページ開始 = 0
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 6667
+	덱モード = 2
+	ページ開始 = 0
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 6668
+	덱モード = 3
+	CALL CHECK_STRUC_GET
+
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 6669
+	덱モード = 4
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 8500
+	ページ開始 --
+	SIF ページ開始 <= 0
+		ページ開始 = 0
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 8501
+	ページ開始 ++
+	SIF ページ開始 >= ページ最大値
+		ページ開始 = ページ最大値
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 8600
+	CALL CHOOSE_DECK_RANDOM
+	RETURN RESULT
+ELSEIF RESULT == 8888
+	RETURN 8888
+ELSEIF RESULT == 9999
+	RETURN 9999
+ENDIF
+
+
+IF 덱モード == 1
+	選択덱 = RESULT
+
+ELSEIF 덱モード == 2
+	選択덱 = 덱リスト2:RESULT
+ELSEIF 덱モード == 3
+	選択덱 = RESULT + 15000
+ELSEIF 덱モード == 4
+	CALL ENEMYDECK_CHECK(RESULT)
+	RETURN RESULT
+ENDIF
+
+IF 설정 == 3
+	CALL CARD_DECK_CHECK(選択덱,2)
+	IF RESULT == 1
+		GOTO INPUT_LOOP
+	ENDIF
+ENDIF
+RETURN 選択덱
+

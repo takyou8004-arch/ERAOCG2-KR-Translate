@@ -1,0 +1,177 @@
+﻿@CARDNAME_12377,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = PMR―블라우
+	CASE "略称"
+RESULTS = PMR 블라우
+	CASE "カテゴリ"
+RESULTS:0 = 플라즈마틱 모델
+		RESULTS:1 = 리추어
+ENDSELECT
+
+
+@CARD_12377(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 초차원
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250531
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_12377(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「플라즈마틱 모델」 의식 마법 카드에 의해 강림.
+PRINTL 이 카드명의 ③ 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①： 의 마법 & 함정 존의 카드는 효과로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ②：1턴에 1번, 상대 필드의 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+PRINTL 의 마법 & 함정 존에 앞면 표시의 「플라즈마틱 모델」 카드가 3장 이상 존재할 경우, 이 효과는 상대 턴에도 발동할 수 있다.
+CALLFORM CARD_ABLE(3,戦破壊→묘지)
+PRINTL ③：이 카드가 필드에서 벗어났을 경우에 발동할 수 있다.
+PRINTL 의 묘지에서 「플라즈마틱 모델」 카드 3장을 덱으로 되돌리고, 덱에서 2장 드로우한다.
+
+@CARDSUMMON_12377(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,12377) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_12377(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,12377)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲마함 = 1
+효과条件カテゴリ = 플라즈마틱 모델
+	효과条件표시 = 表側표시
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT < 3
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		SIF 종류 == フリー誘発
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 戦破壊→묘지
+	SIF 발동済_3(듀얼리스트,12377)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件カテゴリ = 플라즈마틱 모델
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_12377(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,12377,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,12377,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件カテゴリ = 플라즈마틱 모델
+		효과条件複数 = 3
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL SHUFFLE(듀얼리스트)
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐")
+ENDIF

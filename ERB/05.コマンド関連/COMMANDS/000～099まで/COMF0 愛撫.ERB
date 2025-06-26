@@ -1,0 +1,92 @@
+﻿;-------------------------------------------------
+;애무
+;애무계커맨드　レベル2
+;-------------------------------------------------
+@COM0
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+;ボディタッチで발기UP
+IF BASE:MASTER:발기 <= 1000
+	TCVAR:MASTER:사정쾌락강도 = 500
+	TCVAR:MASTER:사정대상캐릭터_1 = TARGET
+	TCVAR:MASTER:사정부위플래그 = 8
+ENDIF
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 5
+DOWNBASE:기력 += 50
+
+;혀を使う조교では、혀사용자,고양이혀에 따라、쾌락のソース増減
+LOCAL = 80
+SIF TALENT:MASTER:혀사용자
+	TIMES LOCAL , 1.50
+SIF TALENT:MASTER:고양이혀
+	TIMES LOCAL , 0.75
+
+CALL SOURCE_CALC_쾌Ｃ(TARGET, MASTER, LOCAL)
+CALL SOURCE_CALC_쾌Ｂ(TARGET, MASTER, LOCAL)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 100)
+
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+IF (FIRSTTIME(TOSTR(312),1) || FIRSTTIME(TOSTR(20),1)) || (MASTER_POSE(4,4) != TARGET && MASTER_POSE(0,4)) || (STAIN:입 >= 2 && (STAIN:입 != 16 && STAIN:입 != 17) && TALENT:MASTER:악취내성 < 2) || TEQUIP:20
+;奴隷の口の汚れがあるとき키스はない（愛液と모유よごれはＯＫ、汚れ無視か助手조교時は問題なし）
+;볼개그사용중もなし
+	SOURCE:불결 = 0
+	SOURCE:정애 /= 4
+	SOURCE:액체 /= 2
+ELSE
+	CALL SOURCE_CALC_접촉(TARGET, MASTER, 80)
+	;키스경험
+	EXP:키스경험 ++
+	EXP:MASTER:키스경험 ++
+	;애널、파과血、촉수の汚れ
+	IF (STAIN:MASTER:0 & 8) || (STAIN:MASTER:0 & 32) || (STAIN:MASTER:0 & 64)
+		CALL SOURCE_CALC_불결(TARGET, MASTER, 300)
+	;정액汚れ
+	ELSEIF STAIN:MASTER:0 & 4
+		CALL SOURCE_CALC_불결(TARGET, MASTER, 100)
+	;愛液、페니스汚れ
+	ELSEIF (STAIN:MASTER:0 & 1) || (STAIN:MASTER:0 & 2)
+		CALL SOURCE_CALC_불결(TARGET, MASTER, 50)
+	ENDIF
+
+	;奴隷の口⇔조교者の口の汚れが이동
+	STAIN:0 |= STAIN:MASTER:0
+	STAIN:MASTER:0 |= STAIN:0
+ENDIF
+
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 5
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 5
+ENDIF
+
+;조교者が고양이혀持ちの場合は、조교者に가학쾌락경험を추가
+SIF TALENT:MASTER:고양이혀
+	EXP:MASTER:가학쾌락경험 += 1
+;수음경험
+;EXP:MASTER:수음경험 ++
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE0
+;애무実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(0)
+	RETURN RESULT
+RETURN 1

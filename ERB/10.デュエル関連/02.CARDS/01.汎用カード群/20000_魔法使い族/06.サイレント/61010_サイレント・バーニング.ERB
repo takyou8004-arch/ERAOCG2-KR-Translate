@@ -1,0 +1,130 @@
+﻿@CARDNAME_61010,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 사일런트 버닝
+	CASE "略称"
+RESULTS = S 버닝
+	CASE "カテゴリ"
+RESULTS:0 = 사일런트
+ENDSELECT
+
+
+@CARD_61010(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "C불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61010(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드의 발동과 효과는 무효화되지 않는다.
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①: 자신 필드에 「사일런트」 몬스터가 존재할 경우, 서로의 배틀 페이즈에 발동할 수 있다.
+PRINTL 서로의 플레이어는, 각각 손패가 6장이 되도록 덱에서 드로우한다.
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ②: 자신 메인 페이즈에 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 덱에서 「사일런트」 몬스터 1장을 패에 추가한다.
+PRINTL 
+
+
+@CARDCAN_61010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61010)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,61010)
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	;最低でもモンスター1枚あればOK
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 사일런트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 사일런트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_61010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 소환カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC ドロー枚数
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61010,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		IF  손패数(듀얼리스트) < 6
+			ドロー枚数 = 6 - 손패数(듀얼리스트)
+			CALL CARDDRAW_BASIC(듀얼리스트,ドロー枚数)
+		ENDIF
+		VARSET ドロー枚数
+		IF 손패数(対面者) < 6
+			ドロー枚数 = 6 - 손패数(対面者)
+			CALL CARDDRAW_BASIC(対面者,ドロー枚数)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61010)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 사일런트
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF

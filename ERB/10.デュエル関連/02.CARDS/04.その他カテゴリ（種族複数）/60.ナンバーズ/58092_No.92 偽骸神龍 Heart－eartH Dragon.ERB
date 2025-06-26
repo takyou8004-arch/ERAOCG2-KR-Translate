@@ -1,0 +1,165 @@
+﻿@CARDNAME_58092,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = No.92 위해신룡 Heart－eartH Dragon
+	CASE "略称"
+RESULTS = #92 H-H 드래곤
+	CASE "カテゴリ"
+RESULTS:0 = 넘버즈
+ENDSELECT
+
+
+@CARD_58092(参照先)
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_58092(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 9
+;추가효과用
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,58092) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_58092(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 9 몬스터 × 3
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 전투로는 파괴되지 않으며, 이 카드의 전투로 발생하는 자신에게 주는 전투 데미지는 대신 상대가 받는다.
+CALLFORM CARD_ABLE(0,ターン終了時)
+PRINTL ②: 상대 엔드 페이즈에 이 카드의 엑시즈 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 상대 필드의 카드를 전부 제외한다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ③: 엑시즈 소재를 가지고 있는 이 카드가 파괴되어 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 이 카드의 공격력은, 제외되어 있는 카드의 수× 1000 올린다.
+
+
+@CARDCAN_58092(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58092)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊")
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,58092,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_58092(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ反射",1)
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58092,0,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"제외")
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58092)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과範囲상대제외 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		攻撃力修正 = 1000 * RESULT
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前 = No.92 위해신룡 Heart－eartH Dragon
+		효과추가종류 = 100000 + 攻撃力修正
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

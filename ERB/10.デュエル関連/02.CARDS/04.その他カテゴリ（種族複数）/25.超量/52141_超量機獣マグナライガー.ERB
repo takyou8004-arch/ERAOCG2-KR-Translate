@@ -1,0 +1,175 @@
+﻿@CARDNAME_52141,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초량기수 마그나 라이거-
+	CASE "略称"
+RESULTS = 마그나 라이거-
+	CASE "カテゴリ"
+RESULTS:0 = 초량
+ENDSELECT
+
+
+@CARD_52141(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250427
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52141(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 5
+지정素材名前 = 초량士レッドレイヤ-
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,52141) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52141(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 5 몬스터 2장
+PRINTL 「초량사 레드 레이어-」를 소재로 하여 X 소환한 이 카드는 「각성」한다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①: X 소재가 없는 이 카드는 공격할 수 없다.
+CALL CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ②: 1턴에 1번, 이 카드의 X 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 필드의 몬스터 1장을 파괴한다.
+PRINTL 이 카드가 「각성」하고 있을 경우, 이 효과는 상대 턴에도 발동할 수 있다.
+CALL CARD_ABLE(0,ターン終了時)
+PRINTL ③: 자신 엔드 페이즈에 발동할 수 있다.
+PRINTL 자신의 패 / 필드의 레벨 3 이상의 「초량」 몬스터 1장을 묘지로 보내고, 이 카드의 X 소재를 1개 늘린다.
+PRINTL 보낸 몬스터가 「초량사 레드 레이어-」였을 경우, 이 카드는 「각성」한다.
+
+
+@CARDCAN_52141(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52141)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,52141)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	IF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		SIF 종류 == フリー誘発
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	SIF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+	효과条件종류 = レベル持ち
+	효과条件固名前:0 = 초량요정 알판
+	효과条件固名前:1 = 초량요정 제-탄
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") > -1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52141(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52141,10,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52141)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲필드 = 1
+		효과条件종류 = レベル持ち
+		효과条件固名前:0 = 초량요정 알판
+		효과条件固名前:1 = 초량요정 제-탄
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			SIF RESULT:1 == 23025
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+ENDIF

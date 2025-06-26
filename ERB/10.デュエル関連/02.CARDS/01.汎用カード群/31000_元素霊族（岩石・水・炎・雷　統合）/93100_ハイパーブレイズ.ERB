@@ -1,0 +1,163 @@
+﻿@CARDNAME_93100,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 하이퍼 블레이즈
+	CASE "略称"
+RESULTS = 하이퍼 블레이즈
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_93100(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93100(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ①② 효과는 각각 1턴에 한 번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 이 카드의 발동 시 효과 처리로서,
+PRINTL 덱에서 「신염황제 우리아」 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(2,攻撃時誘発)
+PRINTL ②: 자신의 「신염황제 우리아」가 전투를 실행하는 공격 선언 시에 1번, 패 / 덱에서 함정 카드 1장을 묘지로 보내고 발동할 수 있다.
+PRINTL 이 턴, 그 몬스터의 공격력 / 수비력은 서로의 필드 / 묘지의 함정 카드의 수× 1000 올린다.
+CALLFORM CARD_ABLE(10,마함起動)
+PRINTL ③: 1턴에 1번, 손패 1장을 버리고 발동할 수 있다.
+PRINTL 「신염황제 우리아」 「강뢰황 하몬」 「환마황 라비엘」 중 1장을 자신의 묘지에서 선택하고,
+PRINTL 소환 조건을 무시하여 특수 소환한다.
+
+@CARDCAN_93100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,93100)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF 손패数(듀얼리스트) <= 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前:0 = 신염황제 우리아
+	효과条件名前:1 = 강뢰황 하몬
+	효과条件名前:2 = 환마황 라비엘
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함" 
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,93100)
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("名前")
+	SIF RESULTS != "신염황제ウリア"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,93100)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件名前 = 신염황제 우리아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1	
+ENDIF
+
+
+
+@CARDEFFECT_93100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93100,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件名前:0 = 신염황제 우리아
+			효과条件名前:1 = 강뢰황 하몬
+			효과条件名前:2 = 환마황 라비엘
+			효과条件特不無視 = 1
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93100,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲손패 = 1
+		효과条件종류 = 함정全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲상대필드 = 1
+			효과範囲묘지 = 1
+			효과範囲상대묘지 = 1
+			효과条件종류 = 함정全般
+			효과条件CNT = 1			
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			攻撃力修正 = RESULT * 1000
+			選択カード = 戦闘場所(듀얼리스트)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"一時",攻撃力修正)
+			PRINTFORML ハイパ-ブレイズ！！！攻撃力{攻撃力修正}アップ！！
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93100,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+효과条件名前 = 신염황제 우리아
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF

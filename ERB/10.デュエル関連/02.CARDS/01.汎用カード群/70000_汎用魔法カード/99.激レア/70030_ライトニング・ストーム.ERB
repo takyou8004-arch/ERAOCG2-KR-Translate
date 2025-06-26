@@ -1,0 +1,117 @@
+﻿@CARDNAME_70030,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 라이트닝 스톰
+	CASE "略称"
+		RESULTS = 라이트닝 스톰
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_70030(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_70030(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의  카드는 1턴에 1장 밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：자신 필드에 앞면 표시의 카드가 존재하지 않을 경우에 이하의 효과로부터 1개를 선택하여 발동할 수 있다.
+PRINTL ●상대 필드의 공격 표시 몬스터를 모두 파괴한다.
+PRINTL ●상대 필드의 마법 / 함정 카드를 모두 파괴한다.
+PRINTL 
+PRINTL 
+
+@CARDCAN_70030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,70030)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,70030)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_70030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70030,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		IF モンスター数(対面者) != 0 && 마함数(対面者) != 0 
+			PRINTL 상대 필드의 마법 / 함정을 파괴합니까?
+			CALL YN_CHOICE(듀얼리스트)
+		ELSEIF モンスター数(対面者) == 0 && 마함数(対面者) != 0 
+			RESULT = 0
+		ELSEIF モンスター数(対面者) != 0 && 마함数(対面者) == 0 
+			RESULT = 1
+		ENDIF
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함全体",場所,"묘지")
+		ELSE
+			CALL FULLRESET
+			효과条件표시 = 1
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+		ENDIF
+
+
+	ENDIF
+ENDIF

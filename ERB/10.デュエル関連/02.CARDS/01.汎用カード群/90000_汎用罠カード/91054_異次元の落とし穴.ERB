@@ -1,0 +1,100 @@
+﻿@CARDNAME_91054,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 이차원의 함정 속으로
+	CASE "略称"
+		RESULTS = 이차원의 함정
+	CASE "カテゴリ"
+		RESULTS:0 = 함정 속으로
+		RESULTS:1 = 이차원
+		RESULTS:2 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_91054(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91054(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①：상대가 수비력이 1500 이하인 몬스터를 일반 소환·특수 소환했을 때 발동할 수 있다.
+PRINTL 그 몬스터를 제외한다.
+PRINTL 
+PRINTL 
+
+@CARDCAN_91054(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91054)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 효과後誘発
+	IF ゾーン == "손패"
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件名前 = アトラの충혹마
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+
+	SIF FINAL_SUMMON_TARGET(듀얼리스트,1) == 5 
+		RETURN 0
+	효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+	SIF GETVAR(@"%対面者%_MZ_守:효과先") > 1500
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_91054(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 효과後誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91054)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",효과先,"제외")
+	ENDIF
+ENDIF

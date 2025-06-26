@@ -1,0 +1,137 @@
+@CARDNAME_79791,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 빙의령의 회귀
+	CASE "略称"
+		RESULTS = 빙의령의 회귀
+	CASE "カテゴリ"
+		RESULTS:0 = 포제션
+        RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79791(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79791(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 "포제션"카드로 취급한다。
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드가 필드에 존재하는 한、
+PRINTL "빙의령의 회귀" 이외의 자신 필드의 "포제션" 카드는 효과로는 파괴되지 않는다。
+CALL CARD_ABLE(10,마함起動)
+PRINTL ②：１턴에 １번、자신의 묘지의 "포제션" 카드３장을 대상으로 발동할 수 있다。
+PRINTL 그 카드를 덱으로 되돌린다。
+PRINTL 그 후、자신은 덱에서 １장 드로우한다。
+PRINTL
+
+@CARDCAN_79791(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79791)
+SIF RESULT == 1
+	RETURN 0
+
+;묘지의 포제션3장을 덱으로 되돌리고 1ドロー
+;参考：탐욕의壺
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 포제션
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+;패에서 起動する효과
+;参考：아로마ガ-デン
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+;필드의 포제션カードに破壊耐性を付与
+;参考：아로마ガ-デン、아마조네스女帝王
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79791(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+
+
+;参考：탐욕의壺
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79791,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 포제션		
+		효과条件複数 = 3
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+		PRINTFORML 고스트들은 묘지로 가도 없어지는것이 아니다。
+		PRINTFORMW 덱으로 돌아가、다시 희생자를 기다리기 시작했다……
+	ENDIF
+;参考：아로마ガ-デン
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79791)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+;参考：아마조네스女帝王、아마조네스王女、珠の御巫フゥリ
+ELSEIF 종류 == 지속효과
+	;耐性付与
+	CALL FULLRESET
+	효과条件カテゴリ = 포제션
+    효과条件固名前 = 빙의령의 회귀
+	CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐")
+ENDIF

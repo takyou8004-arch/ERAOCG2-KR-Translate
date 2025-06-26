@@ -1,0 +1,169 @@
+﻿@CARDNAME_72130,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 빛의 영당
+	CASE "略称"
+RESULTS = 빛의 영당
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_72130(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72130(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「빛의 영당」이 된다.
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 마법 & 함정 존에 존재하는 한, 일반 소환에 더해 1번만,
+PRINTL 빛 속성 레벨 1 튜너 1장을 소환할 수 있다.
+CALLFORM CARD_ABLE(10,마함起動)
+PRINTL ②: 1턴에 1번, 자신 필드의 앞면 표시 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 패 / 덱에서 일반 몬스터 1장을 묘지로 보내고, 대상 몬스터의 공격력 / 수비력을 턴 종료시까지,
+PRINTL 묘지로 보낸 몬스터의 원래 레벨 × 100 올린다.
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ③: 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 덱에서 「파멸의 폭렬질풍탄」 1장을 패에 추가한다.
+PRINTL 
+
+@CARDCAN_72130(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과使用불가,3
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72130)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件표시 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲손패 = 1
+	효과条件종류 = 通常モン
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件名前 = 파멸의 버스트 스트림
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_72130(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+
+
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72130,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과範囲손패 = 1
+			효과条件종류 = 通常モン
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)			
+			IF RESULT == 1
+				CALLFORM CARD_{RESULT:1}("レベル")
+				攻撃力修正 = RESULT * 100
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"一攻",攻撃力修正)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"一守",攻撃力修正)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72130)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72130)
+	IF RESULT == 0
+		;通常마법汎用발동後묘지送り処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+효과条件名前 = 파멸의 버스트 스트림
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트,"光の영당")
+	CALL FULLRESET
+	효과条件속성 = 빛속성
+	효과条件レベル = 1
+	효과条件튜너 = 1
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+ENDIF

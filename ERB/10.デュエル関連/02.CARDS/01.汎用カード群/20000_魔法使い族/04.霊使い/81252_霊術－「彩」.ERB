@@ -1,0 +1,197 @@
+﻿@CARDNAME_81252,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 령술－「채」
+	CASE "略称"
+RESULTS = 령술－「채」
+	CASE "カテゴリ"
+RESULTS:0 = 령사
+		RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_81252(参照先)
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_81252(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,마함起動 ,フリー誘発)
+PRINTL ①: 자신 필드의 몬스터 1장을 릴리스한다.
+PRINTL 그 몬스터의 속성에 따라, 이하의 효과를 적용한다.
+PRINTL (속성을 여러 개 가질 경우, 위의 처리가 우선된다)
+PRINTL ●어둠 속성: 자신은 2장 드로우한다.
+PRINTL ●물 속성: 상대의 패를 확인하고, 그 중 1장을 골라 묘지로 보낸다.
+PRINTL ●화염 속성: 릴리스한 몬스터의 원래 공격력만큼의 데미지를 상대에게 준다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 묘지의 이 카드를 덱으로 되돌리고, 덱에서 빛/땅/바람 속성의 "령사" 몬스터 1장을 패에 넣는다.
+
+
+@条件달성속성検出_령술彩(듀얼리스트,종류,ゾーン,場所,条達속성)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM REF 条達속성, 0
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 検出속성, 8
+
+VARSET 条達속성
+FOR カウンタ, 0, 5
+	CALL 複数속성検出(듀얼리스트,"필드",カウンタ,検出속성)
+
+	IF 検出속성:어둠속성 == 1
+		CALL CARD_DRAW_CHECK
+		条達속성:어둠속성 = 1
+		CONTINUE
+	ENDIF
+	IF 検出속성:물속성 == 1
+		CALL FULLRESET
+		효과範囲상대손패 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			条達속성:물속성 = 1
+			CONTINUE
+		ENDIF
+	ENDIF
+	IF 検出속성:화염속성 == 1
+		CALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}, "攻撃力"
+		IF RESULT > 0
+			条達속성:화염속성 = 1
+			CONTINUE
+		ENDIF
+	ENDIF
+NEXT
+
+
+@CARDCAN_81252(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC 条達속성, 8
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,81252)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0	
+
+	CALL 条件달성속성検出_령술彩(듀얼리스트,종류,ゾーン,場所,条達속성)
+	SIF !MATCH(条達속성, 1)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,81252)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件속성:0 = 빛속성
+	효과条件속성:1 = 땅속성
+	효과条件속성:2 = 바람속성
+효과条件カテゴリ = 령사
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_81252(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 検出속성, 8
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81252,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL 条件달성속성検出_령술彩(듀얼리스트,종류,ゾーン,場所,検出속성)
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		CALL 효과条件속성_複数(検出속성)
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		選択カード_ID = RESULT:99
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			CALL 複数속성検出(대상者（CS）,参照先（CS）,選択カード（CS）,検出속성)
+			CALL CARD_DISPOSE(대상者（CS）,参照先（CS）,選択カード（CS）,묘지行き)
+
+			IF 検出속성:어둠속성 == 1
+				CALL CARDDRAW_BASIC(듀얼리스트,2)
+				RETURN 1
+			ENDIF
+			IF 検出속성:물속성 == 1
+				CALL FULLRESET
+				효과範囲상대손패 = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF RESULT == 1
+					CALL FULLRESET
+					효과範囲상대손패 = 1
+					CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+					RETURN 1
+				ENDIF
+			ENDIF
+			IF 検出속성:화염속성 == 1
+				CALLFORM CARD_{選択カード_ID}, "攻撃力"
+				IF RESULT > 0
+					CALL LIFE_CHANGE(듀얼리스트,"減少","효과",RESULT,1)
+					RETURN 1
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81252,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+		CALL FULLRESET
+		효과条件속성:0 = 빛속성
+		효과条件속성:1 = 땅속성
+		효과条件속성:2 = 바람속성
+효과条件カテゴリ = 령사
+		효과条件종류 = モン全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF

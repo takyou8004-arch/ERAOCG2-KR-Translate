@@ -1,0 +1,130 @@
+﻿@CARDNAME_82330,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 러브 메모리
+	CASE "略称"
+RESULTS = 러브 메모리
+	CASE "カテゴリ"
+RESULTS:0 = 러브
+ENDSELECT
+
+
+@CARD_82330(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_82330(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①: 자신 필드의 몬스터가 상대의 공격 효과에 의해 파괴되었을 경우에 발동할 수 있다.
+PRINTL 자신 묘지의 몬스터(천사족 / 공격력 0) 1장을 고르고 특수 소환한다.
+CALLFORM CARD_ABLE(1,ターン終了時)
+PRINTL ②: 자신 필드에 "러브" 몬스터(레벨 7 이상)가 2장 이상 존재할 경우, 자신 엔드 페이즈에 발동할 수 있다.
+PRINTL 묘지의 이 카드를 자신 필드에 세트한다.
+
+
+@CARDCAN_82330(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,82330)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 処理中_듀얼리스트 == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件攻撃力 = 1
+	효과条件종족 = 천사족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	SIF 발동済_1(듀얼리스트,82330)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 러브
+	CALL 효과条件レベル_ADV(7,"以上")
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_82330(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 속성数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,82330)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件攻撃力 = 1
+		효과条件종족 = 천사족
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,82330,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 러브 메모리
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF

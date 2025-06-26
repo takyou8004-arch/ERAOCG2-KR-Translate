@@ -1,0 +1,116 @@
+﻿@CARDNAME_25655,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 방해꾼 핑크
+	CASE "略称"
+RESULTS = 방해꾼 피
+	CASE "カテゴリ"
+RESULTS:0 = 방해꾼
+ENDSELECT
+
+
+@CARD_25655(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 1000
+	CASE "추가日"
+		RETURN 250322
+ENDSELECT
+
+@CARD_EXPLANATION_25655(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패→묘지,필드→묘지,破壊→묘지)
+PRINTL ①: 이 카드가 패 / 필드에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 서로의 플레이어는 덱에서 1장 드로우하고, 그 후 손패를 1장 골라 버린다.
+PRINTL 이 효과로 자신이 '방해꾼' 카드를 버렸을 경우,
+PRINTL 자신 필드의 앞면 표시의 카드 1장을 고를 수 있다.
+PRINTL 그 카드가 필드에 존재하는 한, 상대의 몬스터 존 1곳을 사용 불가능하게 한다.
+
+@CARDCAN_25655(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 대상あり
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25655)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패→묘지 || 종류 == 필드→묘지 || 종류 == 破壊→묘지
+	SIF 발동済_1(듀얼리스트,25655)
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25655(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패→묘지 || 종류 == 필드→묘지 || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25655,1)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+		CALL CARDDRAW_BASIC(対面者,1)
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			TRYCALLFORM CARDNAME_{RESULT:1},"カテゴリ"
+			SIF MATCH(RESULTS,"방해꾼")
+				条件달성 = 1
+		ENDIF
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(対面者,ゾーン,場所)
+		IF 条件달성 == 1
+
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과条件표시 = 表側표시
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_SELECT(듀얼리스트,RESULT)
+				選択カード = RESULT
+				CALL FULLRESET
+				CALL RESRICT_FIELD(듀얼리스트,参照先（CS）,選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,203 @@
+﻿;-------------------------------------------------
+;대전상대를 찾는다
+;-------------------------------------------------
+@COM444
+;LOCALの대신에 소환リスト機能の下で표시캐릭터を지정
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 소환_ページ送り
+#DIM DYNAMIC リスト_표시
+#DIM DYNAMIC 캐릭터クター
+#DIM DYNAMIC カフェ_カウンタ
+#DIM DYNAMIC リスト_カウンタ
+#DIM DYNAMIC リスト_リセット
+#DIM DYNAMIC 모브選出
+#DIM DYNAMIC 듀얼리스트収納,9999
+#DIM DYNAMIC 듀얼리스트数
+#DIM DYNAMIC 初めての대상 
+
+IF TIME_ZONE() == T_夜時間
+	PRINTFORML 역시 이젠 아무도 없는것 같다…。
+	RETURN 0
+ENDIF
+
+
+$INPUT_LOOP
+IF 初めての대상 == 0
+	SETCOLOR C_YELLOW
+	PRINTFORML 일단은 적당한 여자아이에게 말을 걸어서、듀얼에 이겨서、아는사이가 되자！
+	RESETCOLOR
+ENDIF
+
+SIF DUELROOM(CFLAG:MASTER:현재위치)
+	PRINTFORML [ 0 ] - 지인에게 전화를 건다。
+PRINTFORML [ 1 ] - 적당한 사람에게 말을 건네본다
+PRINTFORML [ 2 ] - 매칭 어플로 찾는다（1번 1200円）
+PRINTFORML 
+PRINTFORM [ 3 ] - 부적을 변경한다:
+
+IF 설정お守り == 0
+	PRINTFORML 없음
+ELSE
+	PRINTFORML %ITEMNAME:설정お守り%
+ENDIF
+
+PRINTFORML 
+PRINTFORML [100] - 돌아간다
+PRINTFORML
+
+BINPUT
+IF RESULT == 0
+	CALL MONSTER_LIST(10)
+	SIF RESULT != 1
+		GOTO INPUT_LOOP
+	NEXTCOM = 480
+	RETURN 1
+ELSEIF RESULT == 1
+	$CHOICE_LOOP
+	PRINTFORML 당신은 적당한 사람에게 말을 건네보았다。
+	IF CFLAG:MASTER:현재위치 >= 500
+		VARSET 듀얼리스트数
+		FOR 캐릭터_ID,1,CHARANUM
+			SIF TALENT:캐릭터_ID:듀얼리스트 >= 1
+				CONTINUE
+			SIF TALENT:캐릭터_ID:연령 <= -1 && TIME < KANTAN_TIME(15,00)
+				CONTINUE
+			듀얼리스트収納:듀얼리스트数 = 캐릭터_ID
+			듀얼리스트数 ++
+		NEXT
+		캐릭터_ID = 듀얼리스트収納:(RAND:듀얼리스트数)
+		CALL PRINT_STATE(캐릭터_ID)
+		PRINTFORML %NAME:캐릭터_ID%에게 말을 건네겠습니까？
+		PRINTFORML [0] - 예
+		PRINTFORML [1] - 아니오
+		PRINTFORML [2] - 다시 찾는다
+		BINPUT
+		IF RESULT == 1
+			GOTO INPUT_LOOP
+		ELSEIF RESULT == 2
+			GOTO CHOICE_LOOP
+		ELSEIF RESULT == 0
+			CALL SUMMON_SHORI(캐릭터_ID,1)
+			NEXTCOM = 480
+		ENDIF
+	ELSE
+		모브選出 = RAND:2
+		;名無しのお守り（모브のみ出る）
+		IF 설정お守り == 110
+			모브選出 = 1
+		;名在りのお守り（모브が出なくなる）
+		ELSEIF 설정お守り == 111
+			모브選出 = 0
+		ENDIF
+		IF 모브選出 == 0
+			VARSET 듀얼리스트数
+			FOR 캐릭터_ID,1,CHARANUM
+				SIF TALENT:캐릭터_ID:듀얼리스트 != 1
+					CONTINUE
+				IF CFLAG:MASTER:현재위치 == 場所_学校内
+					SIF TALENT:캐릭터_ID:연령 >= 0
+						CONTINUE
+				ELSE
+					SIF TALENT:캐릭터_ID:연령 <= -1 && TIME < KANTAN_TIME(15,00)
+						CONTINUE
+				ENDIF
+				듀얼리스트収納:듀얼리스트数 = 캐릭터_ID
+				듀얼리스트数 ++
+			NEXT
+			캐릭터_ID = 듀얼리스트収納:(RAND:듀얼리스트数)
+			CALL PRINT_STATE(캐릭터_ID)
+			PRINTFORML %NAME:캐릭터_ID%에게 말을 건네시겠습니까？
+			PRINTFORML [0] - 예
+			PRINTFORML [1] - 아니오
+			PRINTFORML [2] - 다시 찾는다
+			BINPUT
+			IF RESULT == 1
+				GOTO INPUT_LOOP
+			ELSEIF RESULT == 2
+				GOTO CHOICE_LOOP
+			ELSEIF RESULT == 0
+				CALL SUMMON_SHORI(캐릭터_ID,1)
+				NEXTCOM = 480
+			ENDIF
+		ELSE
+			CALL HELLO_MOBS(RAND:17 + 1)
+			캐릭터_ID = RESULT
+			CALL PRINT_STATE(캐릭터_ID)
+			PRINTFORML 【%GET_TALENTNAME(200,TALENT:캐릭터_ID:모브)%】인%NAME:캐릭터_ID%에게 말을 걸겠습니까？
+			PRINTFORML [0] - 예
+			PRINTFORML [1] - 아니오
+			PRINTFORML [2] - 다시 찾는다
+			BINPUT
+			IF RESULT == 1
+				DELCHARA 캐릭터_ID
+				GOTO INPUT_LOOP
+			ELSEIF RESULT == 2
+				DELCHARA 캐릭터_ID
+				GOTO CHOICE_LOOP
+			ELSEIF RESULT == 0
+				CALL SUMMON_SHORI(캐릭터_ID,1)
+				NEXTCOM = 480
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF RESULT == 2
+IF CFLAG:MASTER:현재위치 >= 500
+		PRINTFORMW 이세계에선 사용할수 없습니다！
+		GOTO INPUT_LOOP
+	ENDIF
+	CALL MONSTER_LIST(14)
+	SIF RESULT != 1
+		GOTO INPUT_LOOP
+	NEXTCOM = 480
+	RETURN 1
+ELSEIF RESULT == 3
+	SIF ITEM:이름없는부적
+		PRINTFORML [0] - %ITEMNAME:110%
+	SIF ITEM:이름있는부적
+		PRINTFORML [1] - %ITEMNAME:111%
+	PRINTFORML 
+	SIF 설정お守り >= 1
+		PRINTFORML [99] - 뺀다
+	PRINTFORML 
+	
+
+	PRINTFORML [100] - 돌아간다
+	PRINTFORML
+	BINPUT
+	IF RESULT == 99
+		설정お守り = 0
+	ELSEIF RESULT != 100
+		설정お守り = RESULT + 110
+	ENDIF
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 100
+	PRINTFORML 여기선"보"면서 돌자！
+ENDIF
+
+
+TIME += 5
+初めての대상 = 1
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;대전상대를 찾는다
+@COM_ABLE444
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(444)
+	RETURN RESULT
+SIF CFLAG:우후후 == 2
+	RETURN 0
+
+SIF CFLAG:MASTER:현재위치 <= 20 || CFLAG:MASTER:현재위치 == 場所_직장
+	RETURN 0
+SIF CFLAG:MASTER:현재위치 >= 800
+	RETURN 0
+SIF 依頼플래그:依頼_受領中 == 1
+	RETURN 0
+RETURN 1
+

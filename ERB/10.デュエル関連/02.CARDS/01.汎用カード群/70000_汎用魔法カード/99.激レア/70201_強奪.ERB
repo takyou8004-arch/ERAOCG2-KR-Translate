@@ -1,0 +1,163 @@
+﻿@CARDNAME_70201,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 강탈
+	CASE "略称"
+		RESULTS = 강탈
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_70201(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 装備마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_70201(종류)
+#DIM DYNAMIC 종류
+
+PRINTL	상대 필드의 앞면 표시 몬스터에게 장비할 수 있다.
+CALLFORM CARD_ABLE(1,지속효과)
+PRINTL ①：장비 몬스터의 컨트롤을 얻는다.
+CALLFORM CARD_ABLE(0,ターン開始時強制)
+PRINTL ②：상대 스탠바이 페이즈에 발동한다.
+PRINTL 상대는 1000 LP 회복한다.
+PRINTL 
+
+@CARDCAN_70201(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,70201)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ELSE
+		SIF 마함数(듀얼리스트) >= 5
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	IF ゾーン == "마함"
+		SIF GETVAR(@"%装備者%_필드:装備先") != -1
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") > 0
+		RETURN 0
+	CALL 装備판정(듀얼리스트,場所,ゾーン)
+	装備者 = %RESULTS%
+	装備先 = RESULT
+	SIF GETVAR(@"%듀얼리스트%_필드:装備先") == -1
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時強制
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_70201(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC セット先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70201)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		IF 종류 == 손패起動
+			セット先 = カード설치先
+		ELSE
+			セット先 = 場所
+		ENDIF
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과추가종류 = 30 + セット先
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",セット先,"装",コントロール先,1)
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",1)
+	ENDIF
+ELSEIF 종류 == 효과後強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70201)
+	IF RESULT == 0
+		CALL 装備판정(듀얼리스트,場所,ゾーン)
+		装備者 = %RESULTS%
+		装備先 = RESULT
+		CALL FULLRESET
+		효과추가종류 = 30 + 場所
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",装備先,"強奪")
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"装",コントロール先,1)
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",1)
+	ENDIF
+ELSEIF 종류 == ターン開始時強制
+	CALL LIFE_CHANGE(対面者,"増加","효과",1000)
+ENDIF

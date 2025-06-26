@@ -1,0 +1,160 @@
+﻿@CARDNAME_72383,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 바이론 로드-캐스트
+	CASE "略称"
+RESULTS = 바이 캐스트
+	CASE "カテゴリ"
+RESULTS:0 = 바이론
+RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_72383(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 装備마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72383(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL "바이론" 몬스터에만 장착 가능.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 장착 몬스터는 마법 내성을 얻는다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ②: 자신이 사용한 효과로 장착 카드가 장착되었을 경우에 발동할 수 있다.
+PRINTL 자신 마법 & 함정 존의 이 카드 이외의 앞면 표시 카드 1장과,
+PRINTL 상대 필드의 카드 1장을 파괴한다.
+CALLFORM CARD_ABLE(2,破壊→묘지)
+PRINTL ③: 필드의 앞면 표시의 이 카드가 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 덱에서 "바이론" 마법 카드 1장을 패로 추가한다.
+PRINTL 
+
+
+@CARDCAN_72383(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72383)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 바이론
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 필드→묘지
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 바이론
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,72383)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_装備成功") != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件표시 = 表側표시
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72383(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力상승
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72383)
+	IF RESULT == 0
+		;패에서 발동後、마법トラップ 존에 カード이동
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 바이론
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 필드→묘지
+CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72383)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 바이론
+		효과条件종류 = 마법全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"魔耐")
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72383,1)
+	IF RESULT == 0
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			효과範囲마함 = 1
+			효과条件他所 = 1
+			효과条件行先플래그 = 破壊行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+			ENDIF
+	ENDIF
+ENDIF
+

@@ -1,0 +1,146 @@
+﻿@CARDNAME_1132,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 조현의 마술사
+	CASE "略称"
+RESULTS = 조현의 마술사
+	CASE "カテゴリ"
+RESULTS:0 = 마술사
+ENDSELECT
+
+
+@CARD_1132(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1132(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①：이 카드가 마법 & 함정 존에 존재하는 한, 자신 필드의 몬스터의 공격력 수비력은,
+PRINTL 자신의 EX덱의 EX 몬스터 이외의 "마술사" P 몬스터의 종류 × 100 올린다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 카드명의 몬스터 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,특수소환時)
+PRINTL ①：이 카드가 특수 소환에 성공했을 때에 발동할 수 있다.
+PRINTL 덱에서 "조현의 마술사" 이외의 "마술사" P 몬스터 1장을 수비 표시로 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터의 효과는 무효화되며, 필드에서 벗어났을 경우에 제외된다.
+
+
+@CARDSUMMON_AA_1132
+
+
+@CARDCAN_1132(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1132)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,1132)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 마술사
+	효과条件分割 = 펜듈럼
+	효과条件固名前 = 조현의 마술사
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_1132(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1132)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 마술사
+	효과条件종류 = EX以外全般
+	효과条件分割 = 펜듈럼
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 100
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻撃力修正,攻撃力修正)
+
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1132,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 마술사
+		효과条件分割 = 펜듈럼
+		효과条件固名前 = 조현의 마술사
+		효과추가종류:0 = 効追無効
+		효과추가종류:1 = 効追除処
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+ENDIF

@@ -1,0 +1,261 @@
+@CARDNAME_59643,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 바르모니카의 음란신-Lussuria
+	CASE "略称"
+		RESULTS = Lussuria
+	CASE "カテゴリ"
+		RESULTS:0 = 바르모니카
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59643(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 3000
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 2140
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_59643(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(0,손패起動)
+CALL TEXT_DECORATION("P_MAGIC")
+CALL CARD_ABLE(0,ライフ変強制誘発)
+PRINTL ①：자신의 LP가 변동될 때 마다, 이카드에 향명 카운터를 1개 놓는다.
+CALL CARD_ABLE(0,攻守変動)
+PRINTL ②：자신 필드의 몬스터의 공격력은
+PRINTL 자신 필드의「바르모니카」카드 위에 놓인 향명 카운터의 수X100 만큼 올린다.
+CALL CARD_ABLE(0,마함起動)
+PRINTL ③：자신 필드의「셀레트리체 바르모니카」1장을 릴리스 하고 발동할 수 있다.
+PRINTL 이 카드를 마법 & 함정 존에서 특수 소환한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 「바르모니카」튜너＋튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의  ②의 몬스터 효과는 1턴에 1번 밖에 사용 할 수 없다.
+CALL CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：이 카드가 특수 소환 했을 경우에 발동할 수 있다.
+PRINTL 필드의 남성 몬스터를 모두 제외한다.
+CALL CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ②：자신 / 상대의 턴에 발동할 수 있다.
+PRINTL 자신의 묘지/제외 존에「바르모니카 서키아레」또는,「음도의 바르모니카」1장의 발동시 효과를 적용한다.
+CALL CARD_ABLE(3,戦破壊→묘지)
+PRINTL ③：몬스터 존에 존재하는 이 카드가 파괴되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 마법 & 함정 존에 둔다.
+;(隠し지속효과で常に접촉可能）
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_59643(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+IF EX参照 == 0 || EX参照 == 1
+	CALLFORM 素材条件レベル_ADV(8, "以下")
+	素材条件カテゴリ = 바르모니카
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,59643) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_59643(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59643)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == ライフ変強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	SIF ダメージ受者 != 듀얼리스트
+		RETURN 0
+	SIF !GROUPMATCH(ダメージ増減,"減少","増加")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,59643,"마함",1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = 셀레트리체 바르모니카
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL FULLRESET
+	SIF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件성별 = 雄性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,59643)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 바르모니카
+	효과条件名前:0 = 바르모니카 서키아레
+	효과条件名前:1 = 음도의 바르모니카
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF !GROUPMATCH(ゾーン,"필드","마함")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59643(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ライフ変強制誘発
+	CALL FULLRESET
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",1)
+	PRINTFORML
+	PRINTFORMW 분홍색 잔이 가득 차 간다（현재의 響鳴카운터{GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所")}개）
+	PRINTFORML
+	CALL EROTIC_MOVE("淫紋の疼き",NO_TO_CHARANUM(2140),,100)
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 바르모니카
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = 100 * RESULT:9
+
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻撃力修正)
+ELSEIF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59643)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件名前 = 셀레트리체 바르모니카
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59643)
+	IF RESULT == 0
+		IF GETVAR(@"%듀얼리스트%_MZ_言発:場所") != 0
+			PRINTFORML
+			PRINTFORMW 다른 남자들에게 보여지는 것을 부끄러워한 셀레트리체는 다른 남자들을 모두 내쫓았다!
+			PRINTFORML
+		ENDIF
+		CALL FULLRESET
+		효과条件성별 = 雄性
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드全体",場所,"제외")
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59643,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 바르모니카
+		효과条件名前:0 = 바르모니카 서키아레
+		효과条件名前:1 = 음도의 바르모니카
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			CALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_%参照先（CS）%:RESULT")}(듀얼리스트,마함起動,"효과処理",選択カード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59643)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件名前 = 바르모니카의 음란신－Lussuria
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"接可")
+ENDIF
+
+

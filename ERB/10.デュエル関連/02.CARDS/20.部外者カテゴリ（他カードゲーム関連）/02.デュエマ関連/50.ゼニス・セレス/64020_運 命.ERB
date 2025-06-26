@@ -1,0 +1,155 @@
+﻿@CARDNAME_64020,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 　　운명
+	CASE "略称"
+RESULTS = 　　운명
+	CASE "カテゴリ"
+RESULTS:0 = 베토벤
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_64020(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_64020(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,攻撃時誘発)
+PRINTL ①: 자신의 "베토벤" 몬스터의 공격 선언시에 발동할 수 있다.
+PRINTL 자신은, 손패가 5장이 되도록 덱에서 드로우한다.
+PRINTL 그 후, 자신의 모든 손패 중에서, 상대가 무작위로 3장을 고르고, 그것들을 앞면 표시로 한다.
+PRINTL 그 중에서 원하는 매수만큼 드래곤족 또는 레벨 7 이하의 "세레스" 몬스터를 특수 소환할 수 있다.
+PRINTL 
+
+
+@CARDCAN_64020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,64020)
+SIF RESULT == 1
+	RETURN 0
+	
+IF 종류 == 攻撃時誘発
+	IF ゾーン == "손패"
+		PRINT
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,64020)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT >= 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF !MATCH(RESULTS, "ベ-ト-ベン")
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_64020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC ドロー枚数
+#DIM DYNAMIC 選択カード,5
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 現選択カード
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,64020,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		IF  손패数(듀얼리스트) < 5
+			ドロー枚数 = 5 - 손패数(듀얼리스트)
+			CALL CARDDRAW_BASIC(듀얼리스트,ドロー枚数)
+		ENDIF
+		IF 손패数(듀얼리스트) > 3
+			VARSET 選択カード, -1
+			$INPUT_HAND_LOOP
+			CALL CARD_RANDOM_HAND(듀얼리스트)
+			現選択カード = RESULT
+			IF カウンタ >= 1 && MATCH(選択カード,現選択カード)
+				GOTO INPUT_HAND_LOOP
+			ELSE	
+				IF カウンタ < 3
+					TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_손패:現選択カード")}, "名前"
+					PRINTFORML 選ばれたカード:「{現選択カード}」 %RESULTS%
+					選択カード:カウンタ = 現選択カード
+					カウンタ ++		
+					GOTO INPUT_HAND_LOOP
+				ENDIF
+			ENDIF
+			
+			VARSET カウンタ
+			REPEAT 3
+				VARSET 条件달성
+				TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_손패:(選択カード:カウンタ)")}, "カテゴリ"
+				IF MATCH(RESULTS, "세레스")
+					条件달성 ++
+				ENDIF
+				TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_손패:(選択カード:カウンタ)")}, "レベル"
+				SIF RESULT > 7
+					条件달성 = 0
+
+				TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_손패:(選択カード:カウンタ)")}, "종족"
+				SIF RESULT == 드래곤족
+					条件달성 ++
+
+				TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_손패:(選択カード:カウンタ)")}, "종류"
+				SIF RESULT >= 10
+					条件달성 = 0
+
+				IF 条件달성 >= 1
+					TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_손패:(選択カード:カウンタ)")}, "名前"
+					PRINTFORML %RESULTS%を특수소환しますか？
+					CALL YN_CHOICE(듀얼리스트)
+					IF RESULT == 0
+						CALL FULLRESET
+						CALL CARD_SP_SUMMON(듀얼리스트, "손패", (選択カード:カウンタ))
+					ENDIF
+				ENDIF
+				カウンタ ++
+			REND
+		ENDIF
+	ENDIF
+ENDIF

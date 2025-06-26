@@ -1,0 +1,282 @@
+﻿@CARDNAME_40000,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 오시리스의 천공룡
+	CASE "略称"
+		RESULTS = 오시리스
+	CASE "カテゴリ"
+		RESULTS:0 = 삼환신
+ENDSELECT
+
+
+@CARD_40000(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 신속성
+	CASE "종족"
+		RETURN 환신야수족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "소환불가"
+		RETURN 1
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_40000(종류)
+#DIM DYNAMIC 종류
+
+SETCOLOR C_RED
+PRINTL
+PRINTL 천공에 천둥이 울리는 혼돈의 시기. 쇠사슬 속에 고대의 마도서를 하나로 묶으니, 그 힘은 무한의 한계를 자랑할지어다.
+PRINTL
+RESETCOLOR
+
+@CARDCAN_40000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과先
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,40000)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과소환 
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 最終소환決者 == 듀얼리스트
+		RETURN 0
+	SIF 最終소환타입 == ""
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,40000)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") <= 召種通常
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_40000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃修正
+#DIM DYNAMIC 守備修正
+#DIM DYNAMIC 효과先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과소환
+	CALL FULLRESET
+	효과条件複数 = 3
+	CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,40000)
+	IF RESULT == 0
+		;召雷弾！
+		SETCOLOR C_RED
+			PRINTFORML 
+			PRINTFORML 오시리스의 제2의 입에서 소뢰탄이 터졌다!
+			PRINTFORMW 
+		RESETCOLOR
+		효과先 = 最終소환場所
+		IF GETVAR(@"%対面者%_MZ_攻:효과先") < 2001 || GETVAR(@"%対面者%_MZ_守:효과先") < 2001
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",最終소환場所,"묘지")
+		ELSEIF GETVAR(@"%対面者%_MZ_モ耐:효과先") == 0
+			CALL FULLRESET
+			효과추가종류 = 10
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",最終소환場所,"永攻DOWN",2000)
+		ELSE
+			SETCOLOR C_RED
+				PRINTFORML 
+				PRINTFORML 그러나 오시리스의 소뢰탄은 불발!
+				PRINTFORMW 
+			RESETCOLOR
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,40000,1)
+	IF RESULT == 0
+		SETCOLOR C_RED
+			PRINTFORML 
+			PRINTFORML 신 앞에서 사라져라, 초전도파 썬더포스!!!
+			PRINTFORMW 
+		RESETCOLOR
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		CALL CARDDRAW_BASIC(듀얼리스트,RESULT)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃修正 = RESULT * 1000
+	CALL STATCHANGE_BASIC(듀얼리스트,"자신",場所,攻撃修正,攻撃修正)
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲묘지 = 1
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲제외 = 1
+	효과条件名前 = 오시리스의 천공룡
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1 
+		CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"モ耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"魔耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"함정耐")
+	ENDIF
+ELSEIF 종류 == ターン終了時強制
+	CALL FULLRESET
+	CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+ENDIF
+
+
+@CARDSUMMON_AA_40000
+ALIGNMENT CENTER
+	PRINTFORML
+SETCOLOR C_RED
+	PRINTFORML 3체의 제물을 하늘에 바치고 신을 소환한다!
+RESETCOLOR
+	PRINTFORML
+ALIGNMENT LEFT
+WAIT
+CALLFORM CHARA_CUTIN("SAINT DRAGON - THE GOD OF OSIRIS","오　시　리　스　의　천　공　룡",,,,,1)
+WAIT
+
+
+;텍스트確認用
+@CARDNAME_140000,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 오시리스의 천공룡
+	CASE "略称"
+		RESULTS = 오시리스의 천공룡
+	CASE "カテゴリ"
+		RESULTS:0 = 삼환신
+ENDSELECT
+
+
+@CARD_140000(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 신속성
+	CASE "종족"
+		RETURN 환신야수족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "소환불가"
+		RETURN 1
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_140000(종류)
+#DIM DYNAMIC 종류
+
+PRINTL ①: 이 카드를 통상 소환할 경우, 3장을 릴리스하고 일반 소환해야 한다.
+PRINTL ②: '오시리스의 천공룡'이 필드·패·덱·묘지에 이 카드만 있을 경우 이 카드는 완전 내성을 얻는다.
+PRINTL ③: 이 카드의 공격력 / 수비력은, 자신 패의 수× 1000 올린다.
+PRINTL ④: 상대 필드에 몬스터가 공격 표시로 일반 일반 소환 / 특수 소환될 때마다 발동한다.
+PRINTL 그 몬스터의 공격력은 2000 내린다. 0이 되었을 경우 그 몬스터를 파괴한다.
+PRINTL ⑤：자신 메인 페이즈에 발동할 수 있다.
+PRINTL 상대 필드의 몬스터 수만큼 드로우 하고, 그후 상대 필드의 몬스터를 전부 파괴한다.
+PRINTL ⑥：이 카드가 특수 소환되어 있을 경우, 엔드 페이즈에 발동한다. 이 카드를 묘지로 보낸다.
+
+[SKIPSTART]
+PRINTL 𓇋𓏏𓇋𓎡𓍯𓈖𓍯𓎡𓄿𓂧𓍯𓅱𓄿𓅓𓍯𓈖𓋴𓍢𓏏𓄿𓋴𓄿𓈖𓏏𓄿𓇋𓍯𓇋𓎡𓇌𓈖𓇋𓇌𓈖𓇋𓋴𓄿𓋴𓄿𓎼𓇌𓂋𓍢𓎡𓍯𓏏𓍯𓂧𓇌𓋴𓉔𓍯𓎡𓄿𓈖𓂧𓇌𓎡𓇋𓂋𓍢𓎡𓍯𓈖𓍯𓋴𓉔𓍯𓎡𓄿𓈖𓅱𓄿𓏏𓍢𓆓𓍯𓋴𓉔𓍯𓎡𓄿𓈖𓂧𓇌𓎡𓇋𓂋𓍢𓎡𓄿𓇋𓋴𓍢𓍯𓋴𓉔𓍯𓉔𓇋𓋴𓇋𓈖𓄿𓇋
+PRINTL 𓍯𓋴𓇋𓂋𓇋𓋴𓍢𓈖𓍯𓏏𓇌𓈖𓎡𓍢𓂋𓇋𓍢𓎼𓄿𓉔𓍢𓃭𓇋𓂋𓍢𓂧𓍯𓋴𓉔𓍢𓋴𓄿𓏏𓍢𓂧𓇌𓎡𓎡𓇋𓃀𓍯𓏏𓇋𓈖𓇋𓎡𓍯𓈖𓍯𓎡𓄿𓂧𓍯𓂧𓄿𓎡𓇌𓈖𓍯𓃀𓄿𓄿𓇋𓎡𓍯𓈖𓍯𓎡𓄿𓂧𓍯𓅱𓄿𓎡𓄿𓈖𓊃𓇌𓈖𓏏𓄿𓇋𓋴𓇌𓍯𓍢𓂋𓍢
+PRINTL 𓎡𓍯𓈖𓍯𓎡𓄿𓂧𓍯𓈖𓍯𓎡𓍯𓎼𓇌𓎡𓇋𓂋𓇋𓍯𓎡𓍢𓋴𓉔𓍢𓃀𓇋𓂋𓇋𓍯𓎡𓍢𓅱𓄿𓊃𓇋𓃀𓍢𓈖𓈖𓍯𓏏𓇌𓉔𓍢𓂧𓄿𓈖𓍯𓎡𓄿𓊃𓍢𓎡𓄿𓎡𓇌𓂋𓍢𓋴𓇌𓈖𓄿𓊪𓊪𓍢𓋴𓍢𓂋𓍢
+PRINTL 𓄿𓇋𓏏𓇌𓉔𓍢𓃭𓇋𓂋𓍢𓂧𓍯𓈖𓇋𓅓𓍯𓈖𓋴𓍢𓏏𓄿𓎼𓄿𓋴𓉔𓍯𓎡𓄿𓈖𓏏𓍯𓎡𓍢𓋴𓉔𓍢𓋴𓉔𓍯𓎡𓄿𓈖𓋴𓄿𓂋𓇌𓂋𓍢𓏏𓄿𓃀𓇋𓈖𓇋𓉔𓄿𓏏𓍢𓂧𓍯𓋴𓍢𓂋𓍢
+PRINTL 𓋴𓍯𓈖𓍯𓅓𓍯𓈖𓋴𓍢𓏏𓄿𓈖𓍯𓎡𓍯𓎼𓇌𓎡𓇋𓂋𓇋𓍯𓎡𓍢𓎼𓄿𓈖𓇋𓋴𓇌𓈖𓇋𓎡𓄿𓈖𓄿𓂋𓄿𓉔𓄿𓎡𓄿𓇋𓋴𓇋𓈖𓇋𓋴𓇌𓈖𓇋𓍯𓂋𓇋𓏏𓄿𓎡𓄿𓇋𓈖𓄿𓂋𓄿𓎡𓍯𓎼𓇌𓎡𓇋𓂋𓇋𓍯𓎡𓍢𓍯𓈖𓇋𓋴𓇌𓈖𓂧𓄿𓍢𓈖𓋴𓍢𓂋𓍢
+PRINTL 𓊃𓇋𓃀𓍢𓈖𓅓𓇌𓇋𓈖𓉔𓍢𓃭𓇌𓊃𓍢𓈖𓇋𓉔𓄿𓏏𓍢𓂧𓍯𓂧𓇌𓎡𓇋𓂋𓍢
+PRINTL 𓄿𓇋𓏏𓇌𓉔𓍢𓃭𓇋𓂋𓍢𓂧𓍯𓈖𓍯𓅓𓍯𓈖𓋴𓍢𓏏𓄿𓈖𓍯𓎡𓄿𓊃𓍢𓂧𓄿𓎡𓇌𓂧𓍯𓂋𓍯𓋴𓇋𓋴𓍯𓈖𓍯𓎼𓍯𓄿𓇋𓏏𓇌𓉔𓍢𓃭𓇋𓂋𓍢𓂧𓍯𓈖𓍯𓅓𓍯𓈖𓋴𓍢𓏏𓄿𓍯𓋴𓍢𓃀𓇌𓏏𓇌𓉔𓄿𓎡𓄿𓇋𓋴𓍢𓂋𓍢
+PRINTL 𓎡𓍯𓈖𓍯𓎡𓄿𓂧𓍯𓍯𓏏𓍯𓎡𓍢𓋴𓉔𓍢𓋴𓉔𓍯𓎡𓄿𓈖𓋴𓄿𓂋𓇌𓏏𓇌𓇋𓂋𓍢𓃀𓄿𓄿𓇋𓇌𓈖𓂧𓍯𓉔𓍢𓃭𓇌𓊃𓍢𓈖𓇋𓉔𓄿𓏏𓍢𓂧𓍯𓋴𓍢𓂋𓍢𓎡𓍯𓈖𓍯𓎡𓄿𓂧𓍯𓍯𓃀𓍯𓏏𓇋𓇌𓍯𓎡𓍢𓂋𓍢
+[SKIPEND]

@@ -1,0 +1,144 @@
+﻿@CARDNAME_79611,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 뿔 깎는 세 도구
+	CASE "略称"
+RESULTS = 뿔 깎는 세 도구
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79611(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79611(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 카드는 1턴에 1번밖에 발동할 수 없다.
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：필드의 악마족 / 드래곤족의 암컷 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 　그 몬스터의 효과를 무효로 하고, 공격력을 0으로 한다.
+PRINTL 　그 후, 대상 몬스터의 원래 공격력만큼의 대미지를 상대에게 주고, 1장 드로우한다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79611(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79611)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79611)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	효과条件종족:0 = 악마족
+	효과条件종족:1 = 드래곤족
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79611(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 元攻撃力
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79611,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과条件표시 = 表側표시
+		효과条件종족:0 = 악마족
+		효과条件종족:1 = 드래곤족
+		효과条件성별 = 牝性
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		SIF 選択カード == 9999
+			RETURN 0
+		CALL CARD_SELECT(듀얼리스트,選択カード)
+		選択カード = RESULT
+		CALL CARD_EROTICS_FIELD(대상者（CS）,参照先（CS）,選択カード（CS）)
+		조교대상 = RESULT
+		SIF RESULT == -1
+			RETURN 0
+
+		IF TALENT:조교대상:뿔이남 != 0 && ABL:조교대상:순종 > 3 && ABL:조교대상:마조끼 > 3 && TALENT:MASTER:금단의지식 != 0 && 듀얼리스트 == "자신"
+			TARGET = 조교대상
+			PRINTFORML 
+			CALL COM151
+			CALL CARD_EROTICS_END(조교대상)
+			WAIT
+			TARGET = LOCAL
+		ENDIF
+
+		CALL FULLRESET
+		IF 대상者（CS） == "상대"
+			효과추가종류 = 5
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"永攻DOWN")
+		ELSEIF 대상者（CS）== "자신"
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"無効",2,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永攻",-99999,1)
+		ENDIF
+		TRYCALLFORM CARD_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:選択カード")}, "攻撃力"
+		SIF RESULT >= 0
+			元攻撃力 = RESULT
+		CALL FULLRESET
+		SIF 元攻撃力 >= 0
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",元攻撃力,1)
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ENDIF
+
+

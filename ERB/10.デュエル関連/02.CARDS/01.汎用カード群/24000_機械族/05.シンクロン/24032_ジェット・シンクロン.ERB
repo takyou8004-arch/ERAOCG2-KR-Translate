@@ -1,0 +1,127 @@
+﻿@CARDNAME_24032,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 제트 싱크론
+	CASE "略称"
+RESULTS = 제트 싱크로
+	CASE "カテゴリ"
+RESULTS:0 = 싱크론
+ENDSELECT
+
+
+@CARD_24032(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 0
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24032(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 어느 쪽이든 1개밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,S素材時효과)
+PRINTL ①: 이 카드가 싱크로 소재로서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 덱에서 "정크" 몬스터 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ②: 이 카드가 묘지에 존재할 경우, 손패 1장을 묘지로 보내고 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 이 카드는, 필드에서 벗어났을 경우에 제외된다.
+
+@CARDCAN_24032(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24032)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == S素材時효과
+	SIF 발동済_1(듀얼리스트,24032)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 정크
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,24032)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24032,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	SIF 손패数(듀얼리스트) == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24032(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択レベル
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == S素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24032,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 정크
+		효과条件종류 = モン全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24032,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과추가종류 = 2
+			CALL CARD_SP_SUMMON(듀얼리스트, "묘지", 場所)
+		ENDIF
+	ENDIF
+ENDIF
+

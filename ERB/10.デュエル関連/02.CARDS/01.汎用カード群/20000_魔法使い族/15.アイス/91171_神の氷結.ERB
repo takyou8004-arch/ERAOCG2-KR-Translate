@@ -1,0 +1,153 @@
+﻿@CARDNAME_91171,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신의 빙결
+	CASE "略称"
+RESULTS = 신의 빙결
+	CASE "カテゴリ"
+RESULTS:0 = 블리자드
+ENDSELECT
+
+
+@CARD_91171(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250615
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91171(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(0,마함起動,フリー誘発)
+PRINTL ①: 자신 필드에 물 속성 몬스터가 2장 이상 존재할 경우,
+PRINTL 또는 "블리자드 프린세스" 몬스터가 존재할 경우, 상대 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터는 효과 무효・공격 불가 상태가 된다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 이 카드가 묘지에 존재하는 상태에서,
+PRINTL 자신 필드에 레벨 5 이상의 물 속성 몬스터가 소환 / 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지의 "신의 빙결" 1장을 자신 필드에 세트한다.
+PRINTL 이 효과로 세트된 카드는, 필드에서 벗어났을 경우에 제외된다.
+
+;元々は물속성モンスターがフィールドに２体必要という발동条件がついた代わりに、無効＋攻撃不可がついたモンスター효과를 無効にする함정
+;再利用효과がついていて묘지から再セットして２回撃てるという点も悪くない感触があるが、それ含めても「迷い風」で十分とも思える。
+;とはいえ、발동条件さえ満たせれば효과そのものはモンスターへの妨害手段として優秀なので、「블리자드 프린세스」が居るなら撃てるという
+;条件を추가することで、よりテーマで使う意味を持たせつつ、サーチができるようにしてテーマ内の妨害함정として機能しやすいようにした。
+;묘지からセットする효과も、展開中に손패コストとして切っても展開後にフィールドにセットできるようになって旨味が出ている。
+
+@CARDCAN_91171(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91171)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;SIF 발동済_1(듀얼리스트,91171)
+	;	RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件종류 = モン全般
+	효과条件표시 = 表側표시
+	효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前:0 = 블리자드 프린세스
+	효과条件名前:1 = 앱솔루트 블리자드 프린세스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = モン全般
+		효과条件속성 = 물속성
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT < 2
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,91171)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	;자신 필드에 レベル５以上の물속성モンスターが소환・특수소환されたかチェック
+	CALL FULLRESET
+	효과条件속성 = 물속성
+	효과条件종류 = モン全般
+	CALLFORM 효과条件レベル_ADV(5, "以上")
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_91171(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 설정レベル
+
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91171)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과추가종류 = 効追戦無
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"지속無効")
+	ENDIF
+ELSEIF 종류 ==효과後誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91171,2)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件名前 = 신의 빙결
+		효과추가종류 = 500
+		CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF
+
+

@@ -1,0 +1,144 @@
+﻿@CARDNAME_99607,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 정력 강화제 슈퍼 Z
+	CASE "略称"
+RESULTS = 정력 강화제
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_99607(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+@CARD_EXPLANATION_99607(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(0,마함起動,フリー誘発)
+PRINTL ①：양쪽 플레이어는 각각 다음 효과를 적용한다.
+PRINTL ●상대 묘지에 있는 카드 중 6장까지 선택하여 덱으로 돌려보내고 셔플한다.
+PRINTL 그 후, 상대는 [덱으로 돌려보낸 카드 수] × 500 회복하고,
+PRINTL 돌려보낸 카드 수 2장당 카드를 1장 드로우한다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99607(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99607)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	SIF 듀얼리스트 == "자신"
+		효과範囲묘지 = 1
+	효과範囲상대묘지 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99607(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戻した数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99607)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과条件行先플래그 = 덱行き
+		효과条件複数 = 94
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			戻した数 = RESULT:2
+			CALL SHUFFLE(対面者)
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",戻した数*500,1)
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+				IF EXP:조교대상:약물경험 >= 30
+					PRINTFORMW %CALLNAME:조교대상%는 페트병에서 나는 약품 냄새에 얼굴을 붉히며 단숨에 들이켰다.
+				ELSE
+					PRINTFORMW %CALLNAME:조교대상%는 페트병에서 나는 약품 냄새에 얼굴을 찡그리며 단숨에 들이켰다.
+				ENDIF
+				CALL EROTIC_MOVE("媚毒汚染",조교대상,-1,300)
+				CALL RECOVER_PERMIL(조교대상,戻した数*500,"체력",1)
+				CALL RECOVER_PERMIL(조교대상,戻した数*500,"기력",1)
+			ENDIF
+			CALL CARDDRAW_BASIC(対面者,戻した数/2)
+		ENDIF
+
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과条件行先플래그 = 덱行き
+		효과条件複数 = 94
+		CALL CARD_ADD_GY_ADV(対面者,ゾーン,場所)
+		IF RESULT == 1
+			戻した数 = RESULT:2
+			CALL SHUFFLE(듀얼리스트)
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",戻した数*500)
+			CALL CARD_EROTICS(상대プレイヤー,対面者)
+			IF RESULT != -1
+				조교대상 = RESULT
+				IF EXP:조교대상:약물경험 >= 30
+					PRINTFORMW %CALLNAME:조교대상%는 페트병에서 나는 약품 냄새에 얼굴을 붉히며 단숨에 들이켰다.
+				ELSE
+					PRINTFORMW %CALLNAME:조교대상%는 페트병에서 나는 약품 냄새에 얼굴을 찡그리며 단숨에 들이켰다.
+				ENDIF
+				CALL EROTIC_MOVE("媚毒汚染",조교대상,-1,300)
+				CALL RECOVER_PERMIL(조교대상,戻した数*500,"체력",1)
+				CALL RECOVER_PERMIL(조교대상,戻した数*500,"기력",1)
+			ENDIF
+			CALL CARDDRAW_BASIC(듀얼리스트,戻した数/2)
+		ENDIF
+
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+

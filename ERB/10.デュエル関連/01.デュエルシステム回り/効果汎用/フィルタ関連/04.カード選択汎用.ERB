@@ -1,0 +1,374 @@
+﻿@CARD_CHOOSE_BASIC(듀얼리스트,元参照先,ゾーン,場所,めくり数)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 대상者
+#DIMS DYNAMIC 元参照先
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード,99
+#DIM DYNAMIC めくり数
+
+#DIM DYNAMIC 複数カウンタ
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+VARSET 選択カード,-1
+
+SELECTCASE 元参照先
+	CASE "필드","마함","손패","묘지","덱","EX덱","제외"
+		대상者 = %듀얼리스트%
+		参照先 = %元参照先%
+	CASE "상대필드"
+		대상者 = %対面者%
+		参照先 = 필드
+	CASE "상대마함"
+		대상者 = %対面者%
+		参照先 = 마함
+	CASE "상대손패"
+		대상者 = %対面者%
+		参照先 = 손패
+	CASE "상대묘지"
+		대상者 = %対面者%
+		参照先 = 묘지
+	CASE "상대덱"
+		대상者 = %対面者%
+		参照先 = 덱
+	CASE "상대EX덱"
+		대상者 = %対面者%
+		参照先 = EX덱
+	CASE "상대제외"
+		대상者 = %対面者%
+		参照先 = 제외	
+ENDSELECT
+$CHOICE_LOOP
+カードID = 処理中_효과ID
+
+IF 듀얼리스트 == "자신"
+	CUSTOMDRAWLINE —
+	PRINTL 【카드를 선택해주세요】
+	CUSTOMDRAWLINE —
+	PRINTL 
+ELSEIF 듀얼리스트 == "상대"
+	CALL ENEMY_RUTIN_CARD_ADD(元参照先,場所,カードID)
+	
+ENDIF
+
+
+$INPUT_LOOP
+IF 효과条件複数
+	FOR カウンタ,0,複数カウンタ
+		효과条件選択済:カウンタ = 選択カード:カウンタ 
+	NEXT
+ENDIF
+
+
+
+CALL CARD_FILTER_BASIC(듀얼리스트,元参照先,ゾーン,場所,めくり数)
+条件달성 = RESULT:1
+
+IF 듀얼리스트 == "자신"
+	IF  (INRANGE(효과条件複数,90,99) || 효과条件複数 == 任意の数) && 複数カウンタ >= 1
+		PRINTL 　[8888] - 결정
+	ENDIF
+	IF 条件달성 != 0 && 효과条件任意 != 1
+		SETCOLOR C_GRAY
+		PRINTL 　(9999) - 돌아간다(선택 가능한 카드가 있습니다)
+		RESETCOLOR
+	ELSE
+		PRINTL 　[9999] - 돌아간다
+	ENDIF
+	PRINTL
+	BINPUT
+	選択カード:複数カウンタ = RESULT
+
+ELSEIF 듀얼리스트 == "상대"
+	IF RESULT == 9999 &&  (INRANGE(효과条件複数,90,99) || 효과条件複数 == 任意の数) && 複数カウンタ >= 1 
+		選択カード:複数カウンタ = 8888
+	ELSE
+		選択カード:複数カウンタ = RESULT
+	ENDIF
+	SETCOLOR C_W_RED
+	IF 選択カード:複数カウンタ == 9999
+		CUSTOMDRAWLINE —
+		PRINTL 【선택 가능한 카드가 없습니다】
+		CUSTOMDRAWLINE —
+		RESETCOLOR
+	ENDIF
+	PRINTL
+	WAIT
+ENDIF
+
+
+IF 選択カード:複数カウンタ == 9999
+	PRINTFORMW 돌아갑니다。
+	RETURN 9999
+ELSEIF 選択カード:複数カウンタ == 8888
+	選択カード:複数カウンタ = -1
+	GOTO INPUT_SKIP
+ELSEIF 選択カード:複数カウンタ != 9999
+	選択カード_ID = GETVAR(@"%대상者%_%参照先%:{選択カード:複数カウンタ}")
+	CALL SELECT_UI_SET(듀얼리스트,選択カード_ID,4)
+	IF RESULT == 1
+		GOTO CHOICE_LOOP
+	ENDIF
+ENDIF
+
+
+IF 효과条件複数 != 0 && 효과条件複数 > (複数カウンタ + 1)
+	IF 효과条件固名前選択
+		TRYCALLFORM CARDNAME_{GETVAR(@"%대상者%_%参照先%:{選択カード:複数カウンタ}")},"名前"
+		효과条件固名前:複数カウンタ = %RESULTS%
+	ENDIF
+	複数カウンタ ++
+	SIF INRANGE(효과条件複数,90,99) && 複数カウンタ >= (100 - 효과条件複数)
+		GOTO INPUT_SKIP
+	GOTO INPUT_LOOP
+ENDIF
+
+$INPUT_SKIP
+VARSET RESULT
+IF 효과条件複数 != 0
+	FOR カウンタ,0,(複数カウンタ + 1)
+		SIF 選択カード:カウンタ == -1
+			CONTINUE
+		RESULT:カウンタ = 選択カード:カウンタ
+	NEXT
+ENDIF
+
+選択カード_ID = GETVAR(@"%대상者%_%参照先%:選択カード")
+RESULT:99 = 選択カード_ID
+RESULT:100 = 複数カウンタ
+
+;WAIT
+RETURN 選択カード
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 대상者
+#DIMS DYNAMIC カード名
+#DIMS DYNAMIC 参照先
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード,99
+#DIM DYNAMIC 上級値
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 複数カウンタ
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+
+#DIM DYNAMIC 最大値
+#DIM DYNAMIC 消去カード
+#DIM DYNAMIC 一時보존,99
+#DIM DYNAMIC 選択カード_ID
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+$CHOICE_LOOP
+カードID = 処理中_효과ID
+IF 듀얼리스트 == "자신"
+	CUSTOMDRAWLINE —
+	PRINTL 【카드를 선택해주세요】
+	CUSTOMDRAWLINE —
+	PRINTL 
+ELSEIF 듀얼리스트 == "상대"
+	CALL ENEMY_RUTIN_CARD_ADD(参照先,場所,カードID)
+ENDIF
+
+$INPUT_LOOP
+IF 효과条件複数
+	FOR カウンタ,0,複数カウンタ
+		효과条件選択済:カウンタ = 選択カード:カウンタ 
+	NEXT
+ENDIF
+
+CALL CARD_FILTER_BASIC(듀얼리스트,"上級",ゾーン,場所)
+条件달성 = RESULT:1
+
+IF 듀얼리스트 == "자신"
+	IF 条件달성 != 0 && 효과条件任意 != 1
+		SETCOLOR C_GRAY
+		PRINTL 　(9999) - 돌아간다(선택 가능한 카드가 있습니다)
+		RESETCOLOR
+	ELSE
+		PRINTL 　[9999] - 돌아간다
+	ENDIF
+	PRINTL
+	BINPUT
+	選択カード:複数カウンタ = RESULT
+ELSEIF 듀얼리스트 == "상대"
+	選択カード:複数カウンタ = RESULT
+	IF 選択カード:複数カウンタ != 9999
+		SETCOLOR C_W_RED
+		CUSTOMDRAWLINE —
+		PRINTL 【선택 가능한 카드가 없습니다】
+		CUSTOMDRAWLINE —
+		RESETCOLOR
+		WAIT
+	ENDIF
+ENDIF
+
+IF 選択カード:複数カウンタ == 9999
+	PRINTFORMW 돌아갑니다。
+	RETURN 9999
+ELSEIF 選択カード:複数カウンタ != 9999
+	CALL CARD_SELECT(듀얼리스트,選択カード:複数カウンタ)
+	選択カード_ID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{選択カード（CS）}")
+	CALL SELECT_UI_SET(듀얼리스트,選択カード_ID,4)
+	IF RESULT == 1
+		GOTO CHOICE_LOOP
+	ENDIF
+ENDIF
+
+IF 효과条件複数 != 0
+	IF 효과条件複数 > (複数カウンタ + 1)
+		複数カウンタ ++
+		GOTO INPUT_LOOP
+	ELSE
+		FOR カウンタ,0, (複数カウンタ + 1)
+			最大値 = -1
+			FOR カウンタB,0,(複数カウンタ + 1)
+				IF 選択カード:カウンタB >= 最大値
+					最大値 = 選択カード:カウンタB
+					一時보존:カウンタ = 選択カード:カウンタB
+					消去カード = カウンタB
+				ENDIF
+			NEXT
+			ARRAYREMOVE 選択カード, 消去カード, 1
+		NEXT
+		VARSET カウンタ
+		REPEAT (複数カウンタ + 1)
+			選択カード:カウンタ = 一時보존:カウンタ
+			カウンタ ++
+		REND
+
+		VARSET RESULT
+		FOR カウンタ,0,(複数カウンタ + 1)
+			RESULT:カウンタ = 選択カード:カウンタ
+		NEXT
+
+	ENDIF
+ENDIF
+
+CALL CARD_SELECT(듀얼리스트,選択カード)
+選択カード_ID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{選択カード（CS）}")
+RESULT:99 = 選択カード_ID
+
+RETURN 選択カード
+
+
+
+
+@CARD_SELECT(듀얼리스트,選択カード)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+
+VARSET 대상者（CS）
+VARSET 参照先（CS）
+VARSET 本参照先（CS）
+VARSET 選択カード（CS）
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF INRANGE (選択カード , 0, 5)
+	参照先（CS） = 필드
+	本参照先（CS） = 필드
+	대상者（CS） = %듀얼리스트%
+	選択カード（CS） = 選択カード
+	RETURN 選択カード
+ELSEIF INRANGE (選択カード , 10, 15)
+	参照先（CS） = 마함
+	本参照先（CS） = 마함
+	대상者（CS） = %듀얼리스트%
+	選択カード（CS） = 選択カード - 10
+	RETURN 選択カード - 10
+ELSEIF INRANGE (選択カード , 100, 199)
+	参照先（CS） = 손패
+	本参照先（CS） = 손패
+	대상者（CS） = %듀얼리스트%
+	選択カード（CS） = 選択カード - 100
+	RETURN 選択カード - 100
+ELSEIF INRANGE (選択カード , 200, 299)
+	参照先（CS） = 묘지
+	本参照先（CS） = 묘지
+	대상者（CS） = %듀얼리스트%
+	選択カード（CS） = 選択カード - 200
+	RETURN 選択カード - 200
+ELSEIF INRANGE (選択カード , 300, 399)
+	参照先（CS） = 덱
+	本参照先（CS） = 덱
+	대상者（CS） = %듀얼리스트%
+	選択カード（CS） = 選択カード - 300
+	RETURN 選択カード - 300
+ELSEIF INRANGE (選択カード , 400, 499)
+	参照先（CS） = EX덱
+	本参照先（CS） = EX덱
+	대상者（CS） = %듀얼리스트%
+	選択カード（CS） = 選択カード - 400
+	RETURN 選択カード - 400
+ELSEIF INRANGE (選択カード , 500, 599)
+	参照先（CS） = 제외
+	本参照先（CS） = 제외
+	대상者（CS） = %듀얼리스트%
+	選択カード（CS） = 選択カード - 500
+	RETURN 選択カード - 500
+ELSEIF INRANGE (選択カード , 2000, 2005)
+	参照先（CS） = 필드
+	本参照先（CS） = 상대필드
+	대상者（CS） = %対面者%
+	選択カード（CS） = 選択カード - 2000
+	RETURN 選択カード - 2000
+ELSEIF INRANGE (選択カード , 2010, 2015)
+	参照先（CS） = 마함
+	本参照先（CS） = 상대마함
+	대상者（CS） = %対面者%
+	選択カード（CS） = 選択カード - 2010
+	RETURN 選択カード - 2010
+ELSEIF INRANGE (選択カード , 2100, 2199)
+	参照先（CS） = 손패
+	本参照先（CS） = 상대손패
+	대상者（CS） = %対面者%
+	選択カード（CS） = 選択カード - 2100
+	RETURN 選択カード - 2100
+ELSEIF INRANGE (選択カード , 2200, 2299)
+	参照先（CS） = 묘지
+	本参照先（CS） = 상대묘지
+	대상者（CS） = %対面者%
+	選択カード（CS） = 選択カード - 2200
+	RETURN 選択カード - 2200
+ELSEIF INRANGE (選択カード , 2300, 2399)
+	参照先（CS） = 덱
+	本参照先（CS） = 상대덱
+	대상者（CS） = %対面者%
+	選択カード（CS） = 選択カード - 2300
+	RETURN 選択カード - 2300
+ELSEIF INRANGE (選択カード , 2400, 2499)
+	参照先（CS） = EX덱
+	本参照先（CS） = 상대EX덱
+	대상者（CS） = %対面者%
+	選択カード（CS） = 選択カード - 2400
+	RETURN 選択カード - 2400
+ELSEIF INRANGE (選択カード , 2500, 2599)
+	参照先（CS） = 제외
+	本参照先（CS） = 상대제외
+	대상者（CS） = %対面者%
+	選択カード（CS） = 選択カード - 2500
+	RETURN 選択カード - 2500
+ENDIF

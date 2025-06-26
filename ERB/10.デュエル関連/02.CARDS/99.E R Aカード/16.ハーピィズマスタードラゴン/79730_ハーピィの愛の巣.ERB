@@ -1,0 +1,189 @@
+﻿@CARDNAME_79730,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 해피의 사랑의 둥지
+	CASE "略称"
+		RESULTS = 해피의 사랑둥지
+	CASE "カテゴリ"
+		RESULTS:0 = 해피
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79730(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79730(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 자신 필드는 "해피의 사랑의 둥지"가 된다。
+PRINTL 이 카드명의  ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,마함起動)
+PRINTL ①：자신 필드에 암컷인 "해피" 몬스터가 존재하는 경우에 발동할 수 있다。
+PRINTL 덱에서 암컷인 "해피" 몬스터 １장을 골라 패에 넣는다。
+CALL CARD_ABLE(2,攻守変動)
+PRINTL ②：자신 필드의 수컷인 "해피" 몬스터의 공격력은 ２００올리고、
+PRINTL 자신 필드의 암컷인 "해피" 몬스터는 대상내성을 얻는다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79730(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79730)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,79730)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 해피
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 해피
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 해피
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == リアクション효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 해피
+	효과条件성별 = 雄性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 해피
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79730(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79730,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 해피
+		효과条件성별 = 牝性
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79730)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "해피의 사랑의 둥지")
+	CALL FULLRESET
+	효과条件カテゴリ = 해피
+	효과条件성별 = 牝性
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ = 해피
+	효과条件성별 = 雄性
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,200,0)
+ELSEIF 종류 == リアクション효과
+	IF GETVAR(@"%듀얼리스트%_魔_リ数:場所") < 4
+		PRINTFORML
+		PRINTFORML 해피들은 둥지 안에서 드래곤에게 씨뿌리기를 당하고있다。
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:カウンタ")},"カテゴリ"
+			SIF !MATCH(RESULTS,"해피")
+				CONTINUE
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カウンタ")},"성별"
+			SIF RESULT != 牝性
+				CONTINUE
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL EROTIC_MOVE("前穴凌辱",조교대상)
+			ENDIF
+		NEXT
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"リ数",1)
+	ENDIF
+ENDIF
+

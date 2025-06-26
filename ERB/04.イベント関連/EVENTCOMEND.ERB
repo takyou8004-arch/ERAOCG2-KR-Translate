@@ -1,0 +1,426 @@
+﻿
+;ターン終了の処理
+@EVENTCOMEND0
+#DIM DYNAMIC 캐릭터_ID
+CALL TURN_RESET
+;팬티没収、수집
+IF TFLAG:COMABLE관리 < 2
+	IF TARGET > 0 && !CFLAG:수면
+		IF STRLENS(CSTR:MASTER:모은팬티) && RAND:2
+			PRINTL 
+			PRINTFORMW %CALLNAME:TARGET%에게 의심을 받아 신체 검사를 받았다…
+			PRINTFORMW 
+			PRINTFORMW 
+			PRINTFORMW 
+			PRINTFORMW 훔친 팬티를 몰수당했다
+			SIF !GETBIT (CFLAG:TARGET:약점취득 ,0)
+				PRINTFORMW %CALLNAME:TARGET%에게 약점을 잡혔다
+			SETBIT CFLAG:TARGET:약점취득 ,0
+			CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 9, 0)
+			CSTR:MASTER:모은팬티 =
+		ENDIF
+	ENDIF
+ENDIF
+
+;임신システム
+;子供が出来たことを知らせる
+FOR 캐릭터_ID,0,CHARANUM
+	SIF CFLAG:캐릭터_ID:ECE임신플래그 == 1
+		CONTINUE
+	IF TALENT:캐릭터_ID:임신가능 == 1
+		PRINTL
+		PRINTFORMW %CALLNAME:캐릭터_ID%는 질 내에서 톡톡하고 무언가가 결합된 듯한 느낌을 받았다。
+		CFLAG:캐릭터_ID:ECE임신플래그 = 1
+	ENDIF
+NEXT
+
+
+IF BASE:MASTER:체력 <= 300 || BASE:MASTER:술기운 >= 1500
+	PRINTW ……끄응～～～읏……꽈당……
+	IF BASE:MASTER:술기운 >= 1500
+		PRINTW （과음입니다 하루를 종료합니다）
+	ELSE
+		PRINTW （체력이 한계에 와있습니다. 하루를 마무리합니다）
+	ENDIF
+	;캐릭터クターの체력最大値상승
+	SIF オプション_체력기력상승 == 1
+		CFLAG:MASTER:401 += 10
+
+	CFLAG:MASTER:수면 = 1
+	CFLAG:MASTER:취침시간 = DAY * 1440 + TIME
+	SIF INRANGE(CFLAG:MASTER:시작위치,場所_依頼用エリア１,場所_依頼用エリア３)
+		CFLAG:MASTER:현재위치 = CFLAG:MASTER:시작위치
+	IF TARGET > 0 && TALENT:연모 && BASE:체력 >= 500
+		PRINTFORMW %CALLNAME%가 %CALLNAME:MASTER%를 개인실로 옮겨 주었다…
+		CFLAG:MASTER:현재위치 = CFLAG:MASTER:시작위치
+		CFLAG:현재위치 = CFLAG:MASTER:시작위치
+		CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 3, 6)
+	ENDIF
+	FOR 캐릭터_ID,0,CHARANUM
+		CALL RESET_SEXCON(캐릭터_ID)
+	NEXT
+
+	IF CFLAG:MASTER:시작위치 != CFLAG:MASTER:시작위치
+		FOR 캐릭터_ID,0,CHARANUM
+			IF CFLAG:캐릭터_ID:시작위치 == CFLAG:MASTER:시작위치
+				PRINTFORMW 동거인이 쓰러진 %CALLNAME:MASTER%를 발견하고、개인실로 옮겨 주었다…
+				CFLAG:MASTER:현재위치 = CFLAG:MASTER:시작위치				
+				BREAK
+			ENDIF
+		NEXT
+		IF CFLAG:MASTER:시작위치 != CFLAG:MASTER:시작위치
+			IF RAND:5
+				CFLAG:MASTER:감기플래그 = 5
+			ENDIF
+		ENDIF
+	ENDIF
+	徹底虐めモード = 0
+	FLAG:1 = 1
+	CALL TOUCH_SET(0,0,0,1)
+ENDIF
+IF TARGET && TCVAR:기분나쁨
+	PRINTFORMW %CALLNAME:TARGET%을 화나게 하고 말았다…
+	FOR 캐릭터_ID,0,CHARANUM
+		CALL RESET_SEXCON(캐릭터_ID)
+	NEXT
+	徹底虐めモード = 0
+	CALL TOUCH_SET(0,0,0,1)
+ENDIF
+
+IF TARGET && BASE:TARGET:체력 < 300 && 徹底虐めモード == 0
+	PRINTFORMW （ %CALLNAME:TARGET%의 체력이 한계에 와 있습니다）
+	IF GROUPMATCH(CFLAG:MASTER:현재위치,CFLAG:MASTER:시작위치,場所_캐릭터家,場所_ラブホ) && 徹底虐めモード == 0 && CFLAG:TARGET:우후후 && TALENT:TARGET:즉시타락 >= 1
+		PRINTFORML 체력의 한계를 넘어서、 %CALLNAME:TARGET%를 괴롭히시겠습니까？
+		PRINTL [0] - 예
+		PRINTL [1] - 아니오
+		BINPUT
+		IF RESULT == 0
+			徹底虐めモード = 1
+			RETURN 0
+		ENDIF
+	ENDIF
+	IF ITEM:천년카메라 >= 1
+		IF BEDROOM(CFLAG:MASTER:현재위치) && CFLAG:TARGET:우후후 && !GETBIT(CFLAG:TARGET:사진플래그 ,写真_더블ピース)
+			PRINTFORML …… %CALLNAME:TARGET%의 부끄러운 사진을 찍겠습니까？
+			PRINTL [0] - 예
+			PRINTL [1] - 아니오
+			BINPUT
+			IF RESULT == 0
+				PRINTFORML 너무 기분이 좋아서 뇌가 작동하지 않는 %CALLNAME:TARGET%에게 피스를 하라고 명령하면、
+				PRINTFORMW 자신이 무슨 일을 당하고 있는지 이해하지 못하는 듯이 장난을 쳤다。
+				CALL SOURCE_CALC_노출(TARGET, MASTER, 200)
+				CALL SOURCE_CALC_정복(TARGET, MASTER, 500)
+				SETBIT CFLAG:TARGET:사진플래그 , 写真_더블ピース
+				CALL GET_YOWAMI(TARGET)
+			ENDIF
+		ENDIF
+	ENDIF
+	徹底虐めモード = 0
+	CFLAG:쇠약 = 300
+	;캐릭터_IDの체력最大値상승
+	SIF オプション_체력기력상승 == 1
+		CFLAG:TARGET:401 += 10
+	CALL KOJO_MESSAGE_SEND("EVENT", TARGET, 3, 5)
+	CALL CHARA_SLEEP(TARGET)
+	FOR 캐릭터_ID,0,CHARANUM
+		CFLAG:캐릭터_ID:우후후 = 0
+	NEXT
+	CALL TOUCH_SET(0,0,0,1)
+	IF GROUPMATCH(CFLAG:MASTER:현재위치,場所_캐릭터家)
+		PRINTFORMW 혼자서 상대의 방에 있는 것도 나쁜 생각이 드니 돌아간다고 하자。
+		CFLAG:MASTER:현재위치 = 1
+		CALL RECOVER_PERMIL(MASTER,-100,"체력")
+		CALL RECOVER_PERMIL(MASTER,-50,"기력")
+		캐릭터家_名称 = ""
+		TIME += 30
+	ENDIF
+ENDIF
+;WAIT
+
+
+
+
+
+
+@TURN_RESET
+#DIM LOOP_CHR
+#DIM LOOP_I	
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 경험番号
+
+#DIM DYNAMIC 사정부위
+#DIM DYNAMIC 체위番号
+
+#DIM DYNAMIC TCVAR番号
+#DIM DYNAMIC 確認用
+
+;처녀喪失
+FOR 캐릭터_ID,0,CHARANUM
+	SIF TCVAR:캐릭터_ID:파과
+		TALENT:캐릭터_ID:처녀 = 0
+NEXT
+;동정喪失
+IF TALENT:MASTER:동정 == 0
+	SELECTCASE SELECTCOM
+		CASE 60,61,65,67,68
+			;PRINTFORML 동정졸업통과
+			TALENT:MASTER:동정 |= 1
+		CASE 62,63,66,69,70
+			TALENT:MASTER:동정 |= 2
+	ENDSELECT
+ENDIF
+
+IF HAS_PENIS(TARGET)
+	SELECTCASE SELECTCOM
+	CASE 64
+		TALENT:동정 |= 1
+	CASE 92,93,94
+		TALENT:동정 |= 2
+	CASE 71
+		IF MASTER_POSE(6,1,1)
+			TALENT:동정 |= 2
+		ELSE
+			TALENT:동정 |= 1
+		ENDIF
+	ENDSELECT
+ENDIF
+
+;기정사실
+FOR 캐릭터_ID,1,CHARANUM
+	SIF CFLAG:캐릭터_ID:우후후
+		SETBIT CFLAG:캐릭터_ID:1 , 1
+NEXT
+;식사
+SIF SELECTCOM == 414 || SELECTCOM == 415
+	FLAG:20 = 0
+;탈의コマンド
+SELECTCASE SELECTCOM
+	;상반신탈의
+	CASE 200
+		EQUIP:외투 = 0
+		EQUIP:이너 = 0
+		EQUIP:바디슈트 = 0
+		EQUIP:원피스 = 0
+		EQUIP:기모노 = 0
+		EQUIP:레오타드 = 0
+		CALL CLOTHES_SETTING_TRAIN(TARGET)
+	;하반신탈의
+	CASE 201
+		EQUIP:바지 = 0
+		EQUIP:하반신겉옷 = 0
+		EQUIP:치마 = 0
+		CALL CLOTHES_SETTING_TRAIN(TARGET)
+	;상반신속옷탈의
+	CASE 202
+		EQUIP:상반신속옷１ = 0
+		EQUIP:상반신속옷２ = 0
+		CALL CLOTHES_SETTING_TRAIN(TARGET)
+	;하반신속옷탈의
+	CASE 203
+		EQUIP:하반신속옷１ = 0
+		EQUIP:하반신속옷２ = 0
+		CALL CLOTHES_SETTING_TRAIN(TARGET)
+	;속옷바람으로 한다
+	CASE 204
+		EQUIP:신발 = 0
+		EQUIP:양말 = 0
+		EQUIP:외투 = 0
+		EQUIP:이너 = 0
+		EQUIP:바디슈트 = 0
+		EQUIP:원피스 = 0
+		EQUIP:바지 = 0
+		EQUIP:하반신겉옷 = 0
+		EQUIP:치마 = 0
+		CALL CLOTHES_SETTING_TRAIN(TARGET)
+	;全裸にする
+	CASE 205
+		CALL CLOTHES_ZENRA(TARGET)
+
+	CASE 211 TO 228
+		EQUIP:(SELECTCOM - 210) = 0
+		CALL CLOTHES_SETTING_TRAIN(TARGET)
+ENDSELECT
+
+
+
+;조교이력を1ターン보존
+FOR 캐릭터_ID,0,CHARANUM
+	TCVAR:캐릭터_ID:110 = TCVAR:캐릭터_ID:10
+	TCVAR:캐릭터_ID:112 = TCVAR:캐릭터_ID:12
+	
+	SIF TCVAR:캐릭터_ID:질내사정플래그
+		TCVAR:캐릭터_ID:질내사정플래그 --
+	SIF !TCVAR:캐릭터_ID:질내사정플래그
+		TCVAR:캐릭터_ID:질내사정대상 = -1
+		
+	SIF TCVAR:캐릭터_ID:애널사정플래그
+		TCVAR:캐릭터_ID:애널사정플래그 --
+	SIF !TCVAR:캐릭터_ID:애널사정플래그
+		TCVAR:캐릭터_ID:애널사정대상 = -1
+
+	SIF TCVAR:캐릭터_ID:절정여운
+		TCVAR:캐릭터_ID:절정여운 --
+
+	SIF TCVAR:캐릭터_ID:도게자중
+		TCVAR:캐릭터_ID:도게자중 --
+
+	IF TCVAR:캐릭터_ID:전회절정보존 >= 2
+		TCVAR:캐릭터_ID:전회절정보존 --
+	ELSE
+		TCVAR:캐릭터_ID:전회절정부위 = 0
+	ENDIF
+	SIF TCVAR:캐릭터_ID:전CT행동
+		TCVAR:캐릭터_ID:전CT행동 = 0
+
+	;체위の보존
+	;(111,페니스２) (112,클리토리스２) (113,손가락２) (114,口２) 
+	;(115,가슴２)(116,질２) (117,애널２) (120,체위２)
+	FOR 체위番号,1,11
+		TEQUIP:캐릭터_ID:(110 + 체위番号) = TEQUIP:캐릭터_ID:(100 + 체위番号)
+	NEXT
+	;자세제어
+	IF TCVAR:캐릭터_ID:자세제어
+		TCVAR:캐릭터_ID:자세제어 --
+		SIF TCVAR:캐릭터_ID:자세제어 == 0
+			TCVAR:캐릭터_ID:자세 = 0
+	ENDIF
+	;위치관계제어
+	IF TCVAR:캐릭터_ID:위치관계제어
+		TCVAR:캐릭터_ID:위치관계제어 --
+		SIF TCVAR:캐릭터_ID:위치관계제어 == 0
+			TCVAR:캐릭터_ID:위치관계 = 0
+	ENDIF
+	;ついでに사정処理用文字列変数の初期化
+	CSTR:캐릭터_ID:10 = /
+	CSTR:캐릭터_ID:11 = /
+	;服装플래그
+	CALL CLOTHES_SETTING_TRAIN(캐릭터_ID)
+NEXT
+
+
+;BASEの変動
+FOR 캐릭터_ID,0,CHARANUM
+	;발기도
+	;加算後
+	CFLAG:캐릭터_ID:발기도２ = BASE:캐릭터_ID:발기
+	BASE:캐릭터_ID:발기 = MIN(MAXBASE:캐릭터_ID:발기,BASE:캐릭터_ID:발기)
+	IF NOWEX:캐릭터_ID:사정
+		IF !MASTER_POSE(6,1) && !MASTER_POSE(7,1)
+;			BASE:캐릭터_ID:발기 = BASE:캐릭터_ID:발기 * (ABL:캐릭터_ID:욕망 + 1) * (BASE:캐릭터_ID:정력 + 200) / ((MAXBASE:캐릭터_ID:정력 + 200) * (ABL:캐릭터_ID:욕망 + 10))
+			TIMES BASE:캐릭터_ID:발기, 0.50
+		ELSE
+			BASE:캐릭터_ID:발기 = 1000
+		ENDIF
+	ENDIF
+NEXT
+
+FOR 캐릭터_ID, 0, CHARANUM
+	TCVAR:캐릭터_ID:전턴절정 = NOWEX:캐릭터_ID:절정
+	TCVAR:캐릭터_ID:전CT행동 = TCVAR:캐릭터_ID:CT행동
+NEXT
+
+
+;플래그のリセット
+TFLAG:SELECTCOM분기 = 0
+TFLAG:194 = 0
+TSTR:2 = 
+
+
+;TCVARのリセット
+FOR TCVAR番号,0,100
+	FOR 캐릭터_ID,0,CHARANUM
+		TCVAR:캐릭터_ID:TCVAR番号 = 0
+	NEXT
+NEXT
+
+
+
+;CUP等のリセット
+FOR 캐릭터_ID, 0, CHARANUM
+	VARSET CUP:캐릭터_ID:0, 0
+	VARSET CDOWN:캐릭터_ID:0, 0
+	VARSET DOWNBASE:캐릭터_ID:0, 0
+NEXT
+;NOWEXのリセット
+FOR 캐릭터_ID, 0, CHARANUM
+	VARSET NOWEX:캐릭터_ID:0, 0
+NEXT
+
+
+FOR LOOP_I,0,100
+	FOR LOOP_CHR,0,CHARANUM
+		TCVAR:LOOP_CHR:LOOP_I = 0
+	NEXT
+NEXT
+
+
+;삽입이력
+FOR 캐릭터_ID,0,CHARANUM
+	TCVAR:캐릭터_ID:100 = TEQUIP:캐릭터_ID:50
+	TCVAR:캐릭터_ID:101 = TEQUIP:캐릭터_ID:51
+NEXT
+
+TFLAG:110 = TCVAR:MASTER:친밀감
+
+;ビデオテープの残量
+SIF TEQUIP:비디오촬영
+	TEQUIP:비디오촬영 --
+
+
+;FIRSTTIMEにSELECTCOMをぶっこむ
+	CALLF FIRSTTIME(TOSTR(SELECTCOM))
+FOR 캐릭터_ID,1,CHARANUM
+	SIF EXP_UP(15,캐릭터_ID)
+		CALLF FIRSTTIME("정음",0,캐릭터_ID)
+NEXT
+;사정부위
+FOR 사정부위,0,60
+	IF GETBIT(TFLAG:1,사정부위)
+		LOCALS = "사정"{사정부위}
+		CALLF FIRSTTIME(LOCALS,0,TARGET)
+	ENDIF
+NEXT
+PREVCOM = SELECTCOM
+;파생コマンド의 이력
+TFLAG:151 = TFLAG:50
+;前回のTARGET
+TFLAG:103 = TARGET
+TFLAG:150 = ASSIPLAY
+
+;경험値取표시용
+FOR 캐릭터_ID,0,CHARANUM
+	;현재위치の보존
+	SIF CFLAG:캐릭터_ID:전턴위치 != CFLAG:캐릭터_ID:현재위치
+		CFLAG:캐릭터_ID:전턴위치 = CFLAG:캐릭터_ID:현재위치
+	FOR 경험番号,0,100
+		TCVAR:캐릭터_ID:(400 + 경험番号) = EXP:캐릭터_ID:(경험番号)
+	NEXT
+NEXT
+
+
+;TFLAGのリセット
+REPEAT 100
+	TFLAG:COUNT = 0
+REND
+
+
+IF CALL_COMスキップ != 2
+	;眠いと기력이 減少していく
+	IF TIME_PROGRESS(CFLAG:MASTER:314) >= 960 && !CFLAG:MASTER:수면
+		BASE:MASTER:체력 = MAX(BASE:MASTER:체력 - 3 * TIME_PROGRESS(TFLAG:시간경과) , 0)
+		BASE:MASTER:기력 = MAX(BASE:MASTER:기력 - 5 * TIME_PROGRESS(TFLAG:시간경과) , 0)
+	ENDIF
+ENDIF
+
+
+@GET_YOWAMI(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+
+SIF CFLAG:캐릭터_ID:약점장악 == 1
+	RETURN 0
+
+IF CFLAG:캐릭터_ID:약점장악 != 1
+	PRINTFORML %CALLNAME:캐릭터_ID%의 약점을 잡았다。
+	CFLAG:TARGET:약점장악 = 1
+	RETURN 1
+ENDIF

@@ -1,0 +1,130 @@
+﻿@CARDNAME_2321,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 세레브로즈 위치
+	CASE "略称"
+RESULTS = CR 위치
+	CASE "カテゴリ"
+RESULTS:0 = 세레브로즈
+ENDSELECT
+
+
+@CARD_2321(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2321(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 자신의 묘지에 「세레브로즈 매지션」이 있을 경우,
+PRINTL 패의 빛 속성 마법사족 몬스터 1체 또는 마법 카드 1장을 묘지로 보내고 발동할 수 있다.
+PRINTL 자신의 묘지의 「세레브로즈 매지션」 또는 레벨 9 이하의 마법사족 융합 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_2321(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2321)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件속성 = 빛속성
+	효과条件종족 = 마법사족
+	효과条件スーパー종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件スーパー名前 = セレブ로즈 マジシャン
+	CALLFORM 효과条件レベル_ADV(9,"以下")
+	효과条件종족 = 마법사족
+	효과条件종류 = 융합
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2321(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戦闘カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2321,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件속성 = 빛속성
+		효과条件종족 = 마법사족
+		효과条件スーパー종류 = 마법全般
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件スーパー名前 = セレブ로즈 マジシャン
+			CALLFORM 효과条件レベル_ADV(9,"以下")
+			효과条件종족 = 마법사족
+			효과条件종류 = 융합
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

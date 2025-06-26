@@ -1,0 +1,153 @@
+﻿@CARDNAME_58240,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = SNo.39 유토피아 더 라이트닝
+	CASE "略称"
+RESULTS = 호프 라이트
+	CASE "カテゴリ"
+RESULTS:0 = 넘버즈
+RESULTS:1 = 유토피아
+ENDSELECT
+
+
+@CARD_58240(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족 
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_58240(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 5
+素材条件속성 = 빛속성
+;추가효과用
+지정素材カテゴリ = 유토피아
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,58240) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_58240(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 빛 속성 레벨 5 몬스터 x 3
+PRINTL 이 카드는 자신 필드의 랭크 4의 "유토피아" 몬스터 위에 겹쳐 엑시즈 소환할 수도 있다.
+PRINTL 이 카드는 특수 소환의 소재로 할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 전투를 실행할 경우, 상대는 데미지 스텝 종료시까지 카드의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ②: 이 카드가 "유토피아" 몬스터를 엑시즈 소재로 하고 있을 경우,
+PRINTL 이 카드가 상대 몬스터와 전투를 실행할 경우 1번, 이 카드의 엑시즈 소재를 2개 제거하고 발동할 수 있다.
+PRINTL 이 카드의 공격력은 그 데미지 계산시에만 5000이 된다.
+
+@CARDCAN_58240(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58240)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,58240)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件レベル = 4
+	효과条件カテゴリ = 유토피아
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_58240(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58240)
+	IF RESULT == 0
+		CALL RESETCONDITION_MAT
+		必要素材数 = 1
+		素材条件カテゴリ = 유토피아
+		重ねてＸ = 1
+		TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦阻")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"不材")
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58240,0,X消費2)
+	IF RESULT == 0
+		攻撃力修正 = 5000 - GETVAR(@"%듀얼리스트%_MZ_攻:場所")
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一時",攻撃力修正)
+	ENDIF
+ENDIF

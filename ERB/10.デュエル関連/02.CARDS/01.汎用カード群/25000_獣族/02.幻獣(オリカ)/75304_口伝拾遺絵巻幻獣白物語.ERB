@@ -1,0 +1,185 @@
+﻿@CARDNAME_75304,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 구전습유회권 환상수백이야기
+	CASE "略称"
+RESULTS = 환상수백이야기
+	CASE "カテゴリ"
+RESULTS:0 = 환상수
+RESULTS:1 = 구전
+RESULTS:2 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_75304(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_75304(종류)
+#DIM DYNAMIC 종류
+
+PRINTL ①: 자신의 묘지의 「환상수」 몬스터가 몬스터의 종류에 따라, 이하의 효과를 얻는다.
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ●3종류 이상: 자신의 「환상수」 몬스터가 전투에 의해 상대 몬스터를 파괴했을 때에 발동할 수 있다.
+PRINTL 자신은 1장 드로우한다.
+CALLFORM CARD_ABLE(2,ターン終了時)
+PRINTL ●5종류 이상: 상대 엔드 페이즈에 발동할 수 있다.
+PRINTL 묘지의 레벨 4 이하의 「환상수」 몬스터 1장을 고르고 특수 소환한다.
+PRINTL 이 카드명의 이 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(3,バトル開始時強制)
+PRINTL ●7종류 이상: 자신 배틀 페이즈 개시 시에 발동한다.
+PRINTL 이 턴에, 자신의 「환상수」 몬스터는, 1번의 배틀 페이즈 중에 2번 공격할 수 있다.
+PRINTL 이 카드명의 이 효과는 1턴에 1번만 사용할 수 있다.
+
+@CARDCAN_75304(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,75304)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}, "カテゴリ"
+	SIF RESULTS != "환상수"
+		RETURN 0
+    CALL FULLRESET
+    효과範囲묘지 = 1
+    효과条件固名前起動 = 1
+    효과条件종류 = モン全般
+    효과条件カテゴリ = 환상수
+    효과条件CNT = 1
+    CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,75304)
+    SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	SIF 발동済_2(듀얼리스트,75304)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+    CALL FULLRESET
+    효과範囲묘지 = 1
+    효과条件固名前起動 = 1
+    효과条件종류 = モン全般
+    효과条件カテゴリ = 환상수
+    효과条件CNT = 1
+    CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,75304)
+    SIF RESULT < 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 환상수
+	CALL 효과条件レベル_ADV(4, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 종류 == バトル開始時強制
+	SIF 발동済_3(듀얼리스트,75304)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+    CALL FULLRESET
+    효과範囲묘지 = 1
+    효과条件固名前起動 = 1
+    효과条件종류 = モン全般
+    효과条件カテゴリ = 환상수
+    효과条件CNT = 1
+    CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,75304)
+    SIF RESULT < 7
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_75304(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択肢
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,75304)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,75304,1)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,75304,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 환상수
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == バトル開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,75304,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 환상수
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦",2)
+	ENDIF
+ENDIF

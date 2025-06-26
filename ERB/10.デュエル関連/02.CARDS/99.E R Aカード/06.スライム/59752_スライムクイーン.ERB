@@ -1,0 +1,281 @@
+@CARDNAME_59752,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 음란한 슬라임 퀸
+	CASE "略称"
+		RESULTS = 슬라임 퀸
+	CASE "カテゴリ"
+		RESULTS:0 = 슬라임
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59752(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_59752(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 레벨 5이상 「슬라임」 몬스터 ＋ 몬스터 2장
+PRINTL 이 카드명의  ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,EX소환時強制)
+PRINTL ①：융합 소환한 이 카드의 이름은, 2번째 소재에 사용한 여성 몬스터 1장과 동명의 카드로도 ​​취급한다。
+CALL CARD_ABLE(2,발동誘発)
+PRINTL ②：상대가 마법 / 함정 / 몬스터의 효과를 발동했을 경우에 발동할 수 있다。
+PRINTL 필드의 "묘상」1장을 묘지로 보내고, 그 발동과 효과를 무효로 하고 주인의 덱으로 되돌린다。
+CALL CARD_ABLE(3,필드起動)
+PRINTL ③：자신 메인 페이즈에 발동할 수 있다。
+PRINTL 상대의 패와 덱에서 각각 여성 몬스터 1장까지 선택해,
+PRINTL 원래 소유자의 마법 & 함정 존에 "묘상」 카테고리를 부여해 앞면 표시로 둔다。
+CALL CARD_ABLE(0,지속효과)
+PRINTL ④：자신 필드의 공격 표시의 "슬라임」 몬스터는 전투 / 효과로 파괴되지 않는다。
+CALL TEXT_DECORATION("ROGUE")
+;
+
+@CARDSUMMON_AA_59752
+
+
+
+@CARDSUMMON_59752(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件素材ID起動 = 2
+
+;素材１장 目＝レベル５ 이상의 슬라임
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 슬라임
+	CALLFORM 素材条件レベル_ADV(5, "以上")
+;素材２장目＝몬스터 ２장
+ELSEIF EX参照 >= 10
+	素材条件종류 = モン全般
+ENDIF
+
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,59752) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_59752(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59752)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == EX소환時強制
+	;場にいないかチェック
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	;②を발동済みなら침묵
+	SIF 발동済_2(듀얼리스트,59752)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 묘상
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	;③を발동済みなら침묵
+	SIF 발동済_3(듀얼리스트,59752)
+		RETURN 0
+	;コントロ-ラ-のターンじゃないなら침묵
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;メインフェイズじゃないなら침묵
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF 마함数(対面者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대손패 = 1
+	효과範囲상대덱 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;それ以外ならOK
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_59752(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 出処
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件合致数
+#DIM DYNAMIC 選択カード,10
+#DIM DYNAMIC 選択カードB,10
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 이동カード名
+#DIM DYNAMIC 取込カードID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時強制
+	;汎数に기록した素材があるかチェック
+	IF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") >= 0
+		;汎数読み込み
+		取込カードID = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+		;기록した素材の성별をチェック
+		TRYCALLFORM CARD_{取込カードID}, "성별"
+		;♀かふたなりなら続行
+		IF GROUPMATCH(RESULT,1,3)
+			;変化元IDに汎数を打ち込み
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",取込カードID,上書きモード)
+			;フレ-バ-、캐릭터リスト読み込み
+			CALL CARD_EROTICS(取込カードID)
+			SIF RESULT != -1
+				PRINTFORMW 슬라임 퀸은 %NAME:RESULT%의 유전자를 이어 받고 있다…！
+		ENDIF
+	ENDIF
+	;使い終わった汎数を削除
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",0,上書きモード)
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59752,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件カテゴリ = 묘상
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			取込カードID = RESULT:1
+			CALL CARD_EROTICS(取込カードID)
+			조교대상 = RESULT
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"덱")
+
+			IF 조교대상 != -1
+				PRINTFORML
+				PRINTFORMW 슬라임 퀀은 묘상 %NAME:조교대상%을 대신하여 변신해있다…！
+				PRINTFORML
+				CALL EROTIC_MOVE("묘상捕縛",조교대상,-1,200)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59752,3)
+	IF RESULT == 0
+		;♀몬스터를 묘상に/손패
+		CALL FULLRESET
+		효과範囲상대손패 = 1
+		효과条件성별 = 牝性
+		효과条件任意 = 1
+		효과추가カテ = 묘상
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시",1)
+		;フレ-バ-
+		조교대상 = RESULT:1
+		CALL CARD_EROTICS(조교대상)
+		IF RESULT != -1
+			조교대상 = RESULT
+			SETCOLOR C_PINK
+			PRINTFORML
+			PRINTFORMW  슬라임 퀸은 앞에서 대기하고 있던 %CALLNAME:조교대상%을 삼키고, 전신을 범하면서 순식간에 묘상으로 만들어 버렸다…！
+			PRINTFORML
+			RESETCOLOR
+			CALL EROTIC_MOVE("묘상捕縛",조교대상, -1, 500)
+		ENDIF
+		IF 마함数(対面者) <= 4
+			;♀몬스터를 묘상に/덱
+			CALL FULLRESET
+			효과範囲상대덱 = 1
+			효과条件성별 = 牝性
+			효과条件任意 = 1
+			효과추가カテ = 묘상
+			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시",1)
+			;フレ-バ-
+			조교대상 = RESULT:1
+			CALL CARD_EROTICS(조교대상)
+			IF RESULT != -1
+				조교대상 = RESULT
+				SETCOLOR C_PINK
+				PRINTFORML
+				PRINTFORMW 슬라임 퀸은 앞에서 대기하고 있던 %CALLNAME:조교대상%을 삼키고, 전신을 범하면서 순신간에 묘상으로 만들어 버렸다…！
+				PRINTFORML
+				RESETCOLOR
+				CALL EROTIC_MOVE("묘상捕縛",조교대상, -1, 500)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	;耐性付与
+	CALL FULLRESET
+	효과条件カテゴリ = 슬라임
+	효과条件표시 = 攻撃표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+ENDIF
+

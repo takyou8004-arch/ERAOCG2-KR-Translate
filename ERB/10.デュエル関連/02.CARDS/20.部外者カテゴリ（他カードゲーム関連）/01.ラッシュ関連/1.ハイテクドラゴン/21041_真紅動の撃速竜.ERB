@@ -1,0 +1,144 @@
+﻿@CARDNAME_21041,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 레드부트 버스트 드래곤
+	CASE "略称"
+RESULTS = 진홍동의 격속룡
+	CASE "カテゴリ"
+RESULTS:0 = 하이테크 드래곤
+ENDSELECT
+
+
+@CARD_21041(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_21041(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 방법에 의한 특수 소환은 1턴에 1번밖에 할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：자신의 덱 위에서 카드를 3장 묘지로 보냄으로써, 패의 이 카드는 특수 소환할 수 있다.
+PRINTL 이 효과로 묘지로 보내진 카드의 효과는 유발하지 않는다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②：1턴에 1번, 발동할 수 있다.
+PRINTL 자신의 묘지의 드래곤족 몬스터를 7체까지 덱으로 되돌린다.
+PRINTL 그 후, 되돌린 몬스터의 수× 100 데미지를 상대에게 주고,
+PRINTL 이 카드의 공격력은 턴 종료시까지, 되돌린 몬스터의 수× 100 업한다.
+
+
+@CARDCAN_21041(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21041)
+SIF RESULT == 1
+	RETURN 0
+	
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,21041)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,21041,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 드래곤족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+	
+
+@CARDEFFECT_21041(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択数
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21041,1)
+	IF RESULT == 0
+		CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",3,完全묘지行き)
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21041,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종족 = 드래곤족
+		효과条件行先플래그 = 덱行き
+		효과条件複数 = 93
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			選択数 = RESULT:2
+			CALL FULLRESET
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",100*選択数,1)
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",100*選択数)
+		ENDIF
+	ENDIF
+ENDIF
+

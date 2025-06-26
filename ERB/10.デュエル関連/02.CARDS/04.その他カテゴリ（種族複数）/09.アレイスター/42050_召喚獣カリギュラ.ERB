@@ -1,0 +1,116 @@
+﻿@CARDNAME_42050,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 소환수 칼리굴라
+	CASE "略称"
+RESULTS = 칼리굴라
+	CASE "カテゴリ"
+RESULTS:0 = 소환수
+ENDSELECT
+
+
+@CARD_42050(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1800
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_42050(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "소환사 알레이스터" + 어둠 속성 몬스터
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 그 동안은 서로, 1턴에 1번밖에 몬스터의 효과를 발동할 수 없고,
+PRINTL 1번의 배틀 페이즈 중에 몬스터 1체로밖에 공격할 수 없다.
+
+
+
+
+@CARDSUMMON_42050(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+素材条件名前 = 소환사 알레이스터
+ELSEIF EX参照 >= 10
+	素材条件속성 = 어둠속성
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,42050) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_42050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,42050)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_42050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 現在最大攻撃力
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	SIF GETVAR(@"%듀얼리스트%_モン발동数") >= 1
+		CALL SET_PLAYER_INFO(듀얼리스트,"モン효과無効",3)
+	SIF GETVAR(@"%対面者%_モン발동数") >= 1
+		CALL SET_PLAYER_INFO(対面者,"モン효과無効",3)
+	CALL SET_PLAYER_INFO(듀얼리스트,"単体攻撃",3)
+	CALL SET_PLAYER_INFO(対面者,"単体攻撃",3)
+ENDIF

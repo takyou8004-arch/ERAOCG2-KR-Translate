@@ -1,0 +1,153 @@
+﻿@CARDNAME_41922,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성 아자미나
+	CASE "略称"
+RESULTS = 성 아자미나
+	CASE "カテゴリ"
+RESULTS:0 = 아자미나
+ENDSELECT
+
+
+@CARD_41922(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 4000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_41922(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 6 이상의 융합 몬스터 + 레벨 6 이상의 S 몬스터
+PRINTL 이 카드명의 2의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,지속효과)
+PRINTL 1: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 이 카드 및 상대 필드 묘지 / 제외 상태의 카드를 상대는 효과의 대상으로 할 수 없으며,
+PRINTL 자신이 받는 전투 데미지는 대신에 상대가 받는다.
+CALLFORM CARD_ABLE(11,필드起動,フリー誘発)
+PRINTL 2: EX덱에서 특수 소환한 이 카드가 필드에 존재하는 한 1번만,
+PRINTL 자신 상대 턴에 발동할 수 있다.
+PRINTL 덱 EX덱에서 레벨 9 이하의 「아자미나」 몬스터 1장을 특수 소환한다.
+
+
+
+@CARDSUMMON_41922(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件종류 = 융합
+	CALLFORM 素材条件レベル_ADV(6,"以上")
+ELSEIF EX参照 >= 10
+	素材条件종류 = 싱크로
+	CALLFORM 素材条件レベル_ADV(6,"以上")
+ENDIF
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,41922) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_41922(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,41922)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種EX덱
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 아자미나
+	CALLFORM 素材条件レベル_ADV(9,"以下")
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_41922(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL FULLRESET
+	CALL SET_PLAYER_INFO(듀얼리스트,"아자미나呪",3,1)
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ反射",1)
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41922,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 아자미나
+		CALLFORM 素材条件レベル_ADV(9,"以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		SIF RESULT == 1
+			SETVAR @"%듀얼리스트%_MZ_効済:場所", 2
+	ENDIF
+ENDIF

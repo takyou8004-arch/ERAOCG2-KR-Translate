@@ -1,0 +1,129 @@
+﻿@CARDNAME_1163,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 문라이트 블랙 시프
+	CASE "略称"
+RESULTS = 문라이트흑양
+	CASE "カテゴリ"
+RESULTS:0 = 문라이트
+ENDSELECT
+
+
+@CARD_1163(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 600
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1163(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 이 카드를 패에서 버리고, 이하의 효과 중 1개를 선택하여 발동한다.
+PRINTL ●덱에서 "문라이트" 몬스터 카드 1장을 패에 넣는다.
+PRINTL ●덱에서 "융합" 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(0,F素材時효과)
+PRINTL ②: 이 카드가 융합 소환의 소재로서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 묘지에서 이 카드명 이외의 "문라이트" 몬스터 카드 1장을 패에 넣는다.
+
+
+@CARDSUMMON_AA_1163
+
+
+@CARDCAN_1163(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1163)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,1163)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 문라이트
+	효과条件スーパー名前 = 융합
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == F素材時효과
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件固名前 = 문라이트 블랙 시프
+	효과条件カテゴリ = 문라이트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1163(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1163)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 문라이트
+		효과条件スーパー名前 = 융합
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == F素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1163)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件固名前 = 문라이트 블랙 시프
+		효과条件カテゴリ = 문라이트
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ENDIF

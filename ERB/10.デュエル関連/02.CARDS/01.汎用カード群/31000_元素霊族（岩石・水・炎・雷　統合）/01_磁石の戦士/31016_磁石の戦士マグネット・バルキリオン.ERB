@@ -1,0 +1,193 @@
+﻿@CARDNAME_31016,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마그넷 워리어 마그넷 발키리온
+	CASE "略称"
+RESULTS = M 발키리온
+	CASE "カテゴリ"
+RESULTS:0 = 마그넷 워리어
+ENDSELECT
+
+
+@CARD_31016(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3500
+	CASE "守備力"
+		RETURN 3850
+	CASE "소환불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_31016(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 일반 소환할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 자신의 패 / 필드에서, 「마그넷 워리어 α」, 「마그넷 워리어 β」, 「마그넷 워리어 γ」를
+PRINTL 1장씩 릴리스하고 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(0,필드起動,フリー誘発)
+PRINTL ②: 자신 / 상대 턴에 이 카드를 릴리스하고,
+PRINTL 자신의 묘지의 「마그넷 워리어 α」, 「마그넷 워리어 β」, 「마그넷 워리어 γ」를 1장씩 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 특수 소환한다.
+
+
+@CARDCAN_31016(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31016)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,31016,"손패",1)
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+효과条件名前 = 마그넷 워리어α
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+효과条件名前 = 마그넷 워리어β
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+효과条件名前 = 마그넷 워리어γ
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件名前 = 마그넷 워리어α
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件名前 = 마그넷 워리어β
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件名前 = 마그넷 워리어γ
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	SIF モンスター数(듀얼리스트) >= 4
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31016(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31016)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲필드 = 1
+효과条件名前 = 마그넷 워리어α
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲필드 = 1
+효과条件名前 = 마그넷 워리어β
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과範囲필드 = 1
+효과条件名前 = 마그넷 워리어γ
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+				IF RESULT == 1
+					CALL FULLRESET
+					CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)	
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31016)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 마그넷 워리어α
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 마그넷 워리어β
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 마그넷 워리어γ
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

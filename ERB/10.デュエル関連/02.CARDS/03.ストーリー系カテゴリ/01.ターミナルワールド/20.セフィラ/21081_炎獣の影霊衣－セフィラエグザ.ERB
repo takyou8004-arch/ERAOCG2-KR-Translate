@@ -1,0 +1,182 @@
+﻿@CARDNAME_21081,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 화염수의 네크로즈－세피라 엑사
+	CASE "略称"
+RESULTS = 세피라 엑사
+	CASE "カテゴリ"
+RESULTS:0 = 네크로즈
+RESULTS:1 = 세피라
+ENDSELECT
+
+
+@CARD_21081(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+
+@CARD_EXPLANATION_21081(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL 이 카드명의 P효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL ①: 자신의 마법 & 함정 존에 이 카드명 이외의 P 몬스터 카드가 존재할 경우, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 패 / EX덱에서 EX 몬스터 이외의 「네크로즈」 「세피라」 몬스터 1장을 특수 소환한다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 카드명의 몬스터 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ①: 이 카드가 패 / 묘지에 존재하고,
+PRINTL 「화염수의 네크로즈－세피라 엑사」 이외의 자신의 「네크로즈」 「세피라」 카드가
+PRINTL 파괴되었을 경우 또는 릴리스되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+
+
+@CARDCAN_21081(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21081)
+SIF RESULT == 1
+	RETURN 0
+;P
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件名前 = 화염수의 네크로즈－세피라 엑사
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,21081)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件固名前 = 화염수의 네크로즈－세피라 엑사
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ:0 = 네크로즈
+	효과条件カテゴリ:1 = 세피라
+	효과条件종류 = 효과モン
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+;M
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,21081)
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン, "손패", "묘지")
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,21081,ゾーン)
+		SIF RESULT == 1
+			RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ:0 = 세피라
+	효과条件カテゴリ:1 = 네크로즈
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"묘지送り全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_21081(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;P
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21081)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21081,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ:0 = 네크로즈
+		효과条件カテゴリ:1 = 세피라
+		효과条件종류 = 효과モン
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+;モンスター효과-------------------------
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21081,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, ゾーン, 場所)
+	ENDIF
+ENDIF

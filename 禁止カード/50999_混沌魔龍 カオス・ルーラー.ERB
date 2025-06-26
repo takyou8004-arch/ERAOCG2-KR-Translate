@@ -1,0 +1,199 @@
+﻿@CARDNAME_50999,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 混沌魔龍　카오스・ルーラー
+	CASE "略称"
+		RESULTS = カオル
+	CASE "カテゴリ"
+		RESULTS:0 = 카오스
+ENDSELECT
+
+
+@CARD_50999(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+	CASE "制限"
+		RETURN 制限
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50999(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50999) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50999(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너＋튜너 이외의 몬스터 １体以上
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：この카드가 Ｓ소환했을 경우에 발동할 수 있다。
+PRINTL 자신의 덱 위에서 카드를 ５장めくる。
+PRINTL 그 중에서 光・어둠 속성 몬스터１体を選んで패에 加えることが할 수 있다。
+PRINTL 残りの 카드는 묘지로 보낸다。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：이 카드 이외의 光・어둠 속성 몬스터를 １体ずつ、자신의 패 / 묘지から제외하고 발동할 수 있다。
+PRINTL この카드를 묘지から특수  소환한다。
+PRINTL 이 효과로 특수 소환한 この 카드는 、필드에서 벗어난 경우에 제외된다。
+
+
+@CARDCAN_50999(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50999)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,50999)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,50999)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件속성 = 빛속성
+	효과条件종류 = モン全般
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件속성 = 어둠속성
+	효과条件종류 = モン全般
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50999(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50999,1)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_덱:カウンタ"))
+			PRINTW
+		NEXT
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件속성:0 = 빛속성
+		효과条件속성:1 = 어둠속성
+		효과条件종류 = モン全般
+		효과条件山切り無し = 1
+		효과条件任意 = 1
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",4)
+		ELSE
+			CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",5)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50999,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件속성 = 빛속성
+		효과条件종류 = モン全般
+		효과条件他所 = 1
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件속성 = 어둠속성
+			효과条件종류 = モン全般
+			효과条件他所 = 1
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件名前 = 混沌魔龍　카오스・ルーラー
+				효과추가종류 = 効追除処
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

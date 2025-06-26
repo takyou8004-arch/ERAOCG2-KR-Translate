@@ -1,0 +1,158 @@
+﻿@CARDNAME_24232,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 기황병 와이젤 아인
+	CASE "略称"
+RESULTS = 와이젤 1
+	CASE "カテゴリ"
+RESULTS:0 = 기황
+		RESULTS:1 = 기황병
+		RESULTS:2 = 와이젤
+ENDSELECT
+
+
+@CARD_24232(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 0
+	CASE "추가日"
+		RETURN 250602
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24232(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환에 성공했을 때 발동할 수 있다.
+PRINTL 덱에서 「기황」 카드 1장을 패에 추가한다.
+CALLFORM CARD_ABLE(0,지속효과,攻守変動)
+PRINTL ②: 이 카드의 공격력은, 이 카드 이외의 필드의 기계족 몬스터 수×100 상승하고,
+PRINTL 자신 필드의 「기황」 몬스터는 관통 공격을 얻으며, 「기황제」 몬스터는 전투 파괴 내성을 얻는다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ③: 1턴에 1번, 자신 / 상대 필드의 마법・함정 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+PRINTL 
+
+@CARDCAN_24232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24232)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,24232)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件カテゴリ = 기황
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 破壊
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,24232)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_24232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24232,1)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件カテゴリ = 기황
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24232,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両마함単体",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+    효과条件他所 = 1
+	효과条件종족 = 기계족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 100
+	CALL STATCHANGE_BASIC(듀얼리스트,"자신",場所,攻撃力修正)
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+효과条件カテゴリ = 기황
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"貫通")
+
+	CALL FULLRESET
+효과条件カテゴリ = 기황제
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦阻")
+ENDIF
+

@@ -1,0 +1,88 @@
+﻿;카드를 선물
+@COM417
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カードID_2
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 환락강도
+#DIM DYNAMIC レアリティ
+
+CUSTOMDRAWLINE ―
+PRINTFORML 【넘겨줄 카드를 골라주세요】
+;카드를 選択する효과
+CALL EDIT_DECK_COLLECTION
+IF RESULT > 0
+	カードID = RESULT
+	ITEM:カードID -= 1
+	;レア度の確認、193（구상などに渡して消滅する플래그）に渡す
+	CALL CARDPRICE(カードID,"レア度")
+	レアリティ = RESULT	
+	TFLAG:SELECTCOM분기 = レアリティ
+	;レア度ERAなら、呪いを付与、悪辣度が상승。
+	IF レアリティ == ERA
+		CALL EVILTY_POINT(5)
+	ELSE
+		;속성이 빛속성、なら呪い状態を解く
+		TRYCALLFORM CARD_{カードID},"속성"
+		SIF RESULT == 빛속성
+			条件달성++
+		SIF レアリティ == SPR
+			条件달성++
+		SIF レアリティ == ULR
+			条件달성++
+	ENDIF
+ELSE
+	RETURN -1
+ENDIF
+
+;환락강도が300スタートで、レアリティによって反応が変わる
+환락강도 = 300
+SELECTCASE レアリティ
+	CASE CMN
+		TIMES 환락강도 , 0.70
+	CASE RARE
+		TIMES 환락강도 , 1.00
+	CASE SPR
+		TIMES 환락강도 , 1.50
+	CASE ULR
+		TIMES 환락강도 , 2.00
+	CASE ERA
+		TIMES 환락강도 , 0.50
+ENDSELECT
+
+DOWNBASE:기력 += 10
+DOWNBASE:MASTER:기력 += 10
+CALL SOURCE_CALC_환락(TARGET, MASTER, 환락강도)
+
+TIME += 5
+
+;プレゼントした플래그
+TCVAR:선물가능여부 = 1440 * DAY + TIME
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE417
+;プレゼントする実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(417)
+	RETURN RESULT
+SIF CFLAG:수면
+	RETURN 0
+;1時間間隔
+SIF TIME_PROGRESS(TCVAR:선물가능여부) < 60 && TALENT:TARGET:연모 != 2
+	RETURN 0
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+;상대가 いないとできない
+SIF TARGET:1 <= 0
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

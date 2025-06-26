@@ -1,0 +1,197 @@
+﻿@CARDNAME_52354,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = ＶＷ－타이가－캐터펄트
+	CASE "略称"
+RESULTS = VW－T C
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_52354(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 2200
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_52354(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「Ｖ－타이가－제트」＋「Ｗ－윙 캐터펄트」
+PRINTL 이 카드는 자신 필드 / 묘지의 상기 카드를 제외했을 경우에만 EX덱에서 특수 소환할 수 있다.
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①: 이 카드가 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 덱에서, 「유니온」이라는 이름이 붙은 카드 또는 유니온 몬스터 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 상대 필드의 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 대상으로 한 몬스터의 효과를 무효로 하고, 표시 형식을 변경한다.
+
+
+
+@CARDSUMMON_52354(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+素材条件名前:0 = V─타이거 제트
+素材条件名前:1 = W-윙 캐터펄트
+
+RETURN 0
+
+@CARDCAN_52354(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 使用済み
+#DIM DYNAMIC 효과使用불가,3
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52354)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,52354)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲묘지 = 1
+	효과条件ID = 24156
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲묘지 = 1
+	효과条件ID = 24157
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,52354)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件分割 = 유니온
+	효과条件スーパーカテゴリ = 유니온
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 표시변경
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52354(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 제외カードA
+#DIM DYNAMIC 제외カードB
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52354)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과範囲묘지 = 1
+		효과条件行先플래그 = 제외行き
+		효과条件ID:0 = 24156
+		효과条件ID:1 = 24157
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			제외カードA = RESULT:1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과範囲묘지 = 1
+			효과条件行先플래그 = 제외行き
+			IF 제외カードA == 24156
+				효과条件ID:0 = 24157
+			ELSEIF 제외カードA == 24157
+				효과条件ID:1 = 24156
+			ENDIF
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트,"EX덱",場所)	
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52354,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件分割 = 유니온
+		효과条件スーパーカテゴリ = 유니온
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52354,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 8
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"표시변경")
+	ENDIF
+ENDIF
+

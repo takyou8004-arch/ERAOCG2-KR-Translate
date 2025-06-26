@@ -1,0 +1,160 @@
+﻿@CARDNAME_50151,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 드래그마 알버스 나이트
+	CASE "略称"
+RESULTS = 흉도의 백기사
+	CASE "カテゴリ"
+RESULTS = 드래그마
+ENDSELECT
+
+
+@CARD_50151(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 의식
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_50151(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,50151) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50151(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「흉도의 복음」에 의해 강림.
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한, 자신은 ＥＸ덱에서 몬스터를 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(2,EX소환時,효과後誘発)
+PRINTL ②: 이 카드가 의식 소환에 성공했을 때, 또는 상대가 효과를 발동했을 경우에 발동할 수 있다.
+PRINTL 자신의 ＥＸ덱에서 몬스터 1장을 묘지로 보내고,
+PRINTL 상대의 ＥＸ덱을 확인하여, 그 중 몬스터 1장을 선택하여 묘지로 보낸다.
+PRINTL 그 후, 이 카드의 공격력은 묘지로 보낸 몬스터의 공격력을 합계한 수치의 절반만큼 업한다.
+
+
+@CARDCAN_50151(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50151)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時
+	SIF 발동済_2(듀얼리스트,50151)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,50151)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과추가종류 = 効追無効
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동",1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50151(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+
+IF 종류 == 지속효과
+	CALL SET_TMP_EX_RST(듀얼리스트,"全般")
+
+;	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"EX阻")
+ELSEIF 종류 == EX소환時 || 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50151,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALLFORM CARD_{GETVAR(@"%듀얼리스트%_EX덱:選択カード")}, "攻撃力"
+			攻撃力修正 += RESULT
+			CALL CARD_DISPOSE(듀얼리스트,"EX덱",選択カード)
+		ENDIF
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "상대EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALLFORM CARD_{GETVAR(@"%対面者%_EX덱:選択カード")}, "攻撃力"
+			攻撃力修正 += RESULT
+			CALL CARD_DISPOSE(対面者,"EX덱",選択カード)
+		ENDIF
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",(攻撃力修正 / 2))
+	ENDIF
+ENDIF
+

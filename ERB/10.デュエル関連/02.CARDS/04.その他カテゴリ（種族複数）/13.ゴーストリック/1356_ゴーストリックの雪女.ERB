@@ -1,0 +1,136 @@
+﻿@CARDNAME_1356,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 고스트릭의 설녀
+	CASE "略称"
+RESULTS = GhTr설녀
+	CASE "カテゴリ"
+RESULTS:0 = 고스트릭
+ENDSELECT
+
+
+@CARD_1356(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1356(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,소환時強制)
+PRINTL ①: 이 카드가 소환에 성공했을 때, 자신 필드 위에 다른 "고스트릭" 몬스터가 존재하지 않을 경우,
+PRINTL 이 카드는 뒷면 수비표시가 된다.
+CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ②: 자신 / 상대의 메인 페이즈에 발동할 수 있다,
+PRINTL 이 카드를 뒷면 수비표시로 하고, 상대 필드의 몬스터 1장을 선택하여 뒷면 수비표시로 한다.
+PRINTL 이 효과로 뒷면 수비표시가 된 상대 몬스터는 표시 형식을 변경할 수 없다.
+CALLFORM CARD_ABLE(3,攻撃時誘発)
+PRINTL ③: 상대 몬스터의 직접 공격 선언 시에 발동할 수 있다.
+PRINTL 그 상대 몬스터를 뒷면 수비표시로 하고, 이 카드를 패에서 뒷면 수비표시로 특수 소환한다.
+
+@CARDCAN_1356(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1356)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時強制
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 고스트릭
+	효과条件他所 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,1356)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,1356)
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 5
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,1356,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1356(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 소환時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",3,1)
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1356,2)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",3,1)
+		CALL FULLRESET
+		효과추가종류 = 1
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"표시변경")
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1356,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所,"裏側守備표시")
+		選択カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"표시변경")
+		CALL EVADE_ATTACK(듀얼리스트)	
+	ENDIF
+ENDIF

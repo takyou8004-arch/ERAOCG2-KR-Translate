@@ -1,0 +1,174 @@
+﻿@CARDNAME_28402,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 가이스트-치 골렘
+	CASE "略称"
+RESULTS = 가이스트-치
+	CASE "カテゴリ"
+RESULTS:0 = 유벨
+ENDSELECT
+
+
+@CARD_28402(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 300
+	CASE "특수制限"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_28402(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신은 「가이스트-치 골렘」을 1턴에 1번밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 패의 레벨 10 이상의 「유벨」 몬스터 1장을 상대에게 보여주고 발동할 수 있다.
+PRINTL 이 카드를 패에서 상대 필드에 공격 표시로 특수 소환한다.
+PRINTL 그 후, 보여준 몬스터를 자신 필드에 공격 표시로 특수 소환한다.
+CALLFORM CARD_ABLE(10,攻撃時強制誘発)
+PRINTL ②: 1턴에 1번, 이 카드가 레벨 10 이상의 「유벨」 몬스터와
+PRINTL 전투를 실행하는 데미지 계산 시에 발동한다.
+PRINTL 상대는 3000 LP 회복한다.
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ③: 이 카드가 묘지에 존재하는 상태에서, 자신이 「유벨」을 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 이 카드를 상대 필드에 특수 소환한다.
+
+
+@CARDSUMMON_AA_28402
+
+
+@CARDCAN_28402(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28402)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 손패起動
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,28402,"손패",1)
+	SIF RESULT == 1
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 유벨
+	CALLFORM 효과条件レベル_ADV(10,"以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트,1)}("カテゴリ")
+	SIF RESULTS != "유벨"
+		RETURN 0
+	CALLFORM CARD_{戦闘カードID(듀얼리스트,1)}("レベル")
+	SIF RESULT < 10
+		RETURN 0
+	RETURN 1	
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,28402,"묘지")
+	SIF RESULT != 1
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	CALL FULLRESET
+효과条件名前 = 유벨
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_28402(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28402)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 유벨
+		CALLFORM 효과条件レベル_ADV(10,"以上")
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所,"攻撃표시",1)
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,"손패",選択カード,"攻撃표시")
+			; 효과条件カテゴリ = 유벨
+			; CALLFORM 효과条件レベル_ADV(10,"以上")
+			; 효과条件任意 = 1
+			; CALL CARD_SP_SUMMON(듀얼리스트,"손패",選択カード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28402,10)
+	IF RESULT == 0
+		PRINTFORML
+		PRINTFORML 【ガイスト-チ ゴ-レム의 효과】
+		PRINTFORML
+		CALL LIFE_CHANGE(対面者,"増加","효과",3000)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28402)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所,,1)
+	ENDIF
+ENDIF

@@ -1,0 +1,224 @@
+﻿@CARDNAME_20060,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 창성마도왕 엔디미온
+	CASE "略称"
+RESULTS = 엔디미온
+	CASE "カテゴリ"
+RESULTS:0 = 엔디미온
+RESULTS:1 = 마력카운터
+ENDSELECT
+
+
+@CARD_20060(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2800 
+	CASE "守備力"
+		RETURN 1700
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_20060(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 P효과는, 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①：자신 필드의 마력카운터를 6개 이상 존재할 경우에 발동할 수 있다.
+PRINTL 마법 & 함정 존의 이 카드를 특수 소환한다.
+PRINTL 그 후, 자신 필드의 마력카운터를 놓을 수 있는 카드 수까지, 필드의 카드를 선택하여 파괴하고,
+PRINTL 파괴한 수만큼 이 카드에 마력카운터를 놓는다.
+
+CALL TEXT_DECORATION("P_MAGIC_2")
+CALLFORM CARD_ABLE(10,발동誘発)
+PRINTL ①：1턴에 1번, 상대가 마법 / 함정 카드의 효과가 발동했을 때에 발동할 수 있다.
+PRINTL 자신 필드의 마력카운터가 놓여 있는 카드 1장을 선택하여 주인의 패로 되돌리고,
+PRINTL 그 발동을 무효로 하고 파괴한다. 그 후 이 카드에 마력카운터를 2개 놓는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：마력카운터가 놓여 있는 이 카드는 대상 내성과 파괴 내성을 가진다.
+CALLFORM CARD_ABLE(0,戦闘→묘지)
+PRINTL ③：이 카드가 전투로 파괴되었을 때에 발동할 수 있다.
+PRINTL 덱에서 일반 마법 카드 1장을 패에 넣는다.
+
+
+@CARDSUMMON_AA_20060
+
+
+@CARDCAN_20060(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 발동불가,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20060)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+
+
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,20060)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,20060,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT:8 < 6
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件魔Ｃ所持 = 999
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_魔Ｃ:場所") == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦闘→묘지
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = 通常마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_20060(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC リピート횟수
+#DIM DYNAMIC 破壊成功
+#DIM DYNAMIC カード위치
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;P
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20060)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20060,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "마함", 場所)
+		カード위치 = カード소환先
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = 마력카운터
+		효과条件CNT = 1
+		효과条件限界値 = 10
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		リピート횟수 = RESULT
+		CALL FULLRESET
+		효과条件複数 = 100 - リピート횟수
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",カード위치,"魔Ｃ",RESULT:1)		
+	ENDIF
+;モンスター효과-------------------------
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20060)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件行先플래그 = 손패行き
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")	
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"魔Ｃ",2)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+ELSEIF 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20060)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 通常마법
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF
+
+

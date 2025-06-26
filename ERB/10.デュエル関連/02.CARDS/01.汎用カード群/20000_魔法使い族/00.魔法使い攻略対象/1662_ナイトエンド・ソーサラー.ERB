@@ -1,0 +1,91 @@
+﻿@CARDNAME_1662,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 나이트 엔드 소서러
+	CASE "略称"
+RESULTS = 나이트 엔드
+
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1662(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1300
+	CASE "守備力"
+		RETURN 400
+	CASE "성별"
+		RETURN 雄性
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1662(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 특수소환에 성공했을 경우,
+PRINTL 상대의 묘지의 카드를 2장까지 대상으로 하여 발동할 수 있다. 그 카드를 제외한다.
+PRINTL 
+
+@CARDCAN_1662(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1662)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1662(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1662)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件任意 = 1
+		효과条件複数 = 98
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"상대묘지",ゾーン,場所)	
+	ENDIF
+ENDIF
+

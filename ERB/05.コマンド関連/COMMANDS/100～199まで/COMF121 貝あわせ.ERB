@@ -1,0 +1,86 @@
+﻿;-------------------------------------------------
+;貝あわせ
+;助手によるコマンド、及び레즈プレイ、レベル1
+;-------------------------------------------------
+@COM121
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+TFLAG:봉사쾌락플래그 = 1
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 30
+DOWNBASE:기력 += 90
+
+CALL SOURCE_CALC_쾌Ｃ(MASTER, TARGET, 200)
+CALL SOURCE_CALC_쾌Ｃ(TARGET, MASTER, 200)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 150)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 80)
+CALL SOURCE_CALC_봉사(TARGET, MASTER, 200)
+;애널、파과血、촉수の汚れ
+IF (STAIN:MASTER:3 & 8) || (STAIN:MASTER:3 & 32) || (STAIN:MASTER:3 & 64)
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 600)
+;정액汚れ
+ELSEIF STAIN:MASTER:3 & 4
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 300)
+ELSE
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 150)
+ENDIF
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;奴隷のＶ⇔조교者のＶの汚れが이동
+STAIN:3 |= STAIN:MASTER:3
+STAIN:MASTER:3 |= STAIN:3
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 8
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 8
+ENDIF
+;애정경험
+SIF !ASSIPLAY
+	EXP:애정경험 += 2 * TALENT:연모
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE121
+;貝あわせ実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(121)
+	RETURN RESULT
+;オトコか후타나리だとダメ
+SIF TALENT:MASTER:성별 & 2 || TALENT:2 & 2
+	RETURN 0
+
+;밧줄사용중/手足が使えないと불가
+SIF TEQUIP:밧줄 || TEQUIP:사지없음
+	RETURN 0
+;하반신속옷착의
+SIF TEQUIP:0 > 1
+	RETURN 0
+;바이브/딜도/로터삽입중はダメ
+SIF TEQUIP:바이브 || TEQUIP:딜도 || TEQUIP:로터
+	RETURN 0
+;클리캡사용중はダメ
+SIF TEQUIP:11
+	RETURN 0
+;목욕탕플레이 중は플레이매트が無いとダメ
+IF TEQUIP:목욕탕플레이
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ENDIF
+;침대ルームでないとダメ
+SIF !BEDROOM(CFLAG:MASTER:현재위치)
+	RETURN 0
+RETURN 1

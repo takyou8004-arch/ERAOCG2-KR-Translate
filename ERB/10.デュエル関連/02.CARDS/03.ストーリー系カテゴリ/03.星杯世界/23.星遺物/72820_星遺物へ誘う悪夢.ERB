@@ -1,0 +1,124 @@
+﻿@CARDNAME_72820,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성유물로 이끄는 악몽
+	CASE "略称"
+RESULTS = 성유물이끄는악몽
+	CASE "カテゴリ"
+RESULTS:0 = 성유물
+ENDSELECT
+
+
+@CARD_72820(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72820(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「성유물로 이끄는 악몽」이 된다.
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①: 이 카드의 발동 시의 효과처리로서, 덱에서 「트로이메어」 몬스터 1장을 패에 추가할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신의 「트로이메어」가 아닌 링크 몬스터는 「트로이메어」가 된다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 자신 필드에 링크 몬스터가 2장 이상 존재할 경우, 자신이 받는 모든 데미지는 0이 된다.
+
+@CARDCAN_72820(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72820)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72820)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_72820(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72820)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+
+		CALL FULLRESET
+		효과条件カテゴリ = 트로이메어
+		효과条件종류 = モン全般
+		효과条件任意 = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "성유물へ誘う악몽")
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 링크
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT >= 2
+		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ無効",3)
+		CALL SET_PLAYER_INFO(듀얼리스트,"효과ダメージ無効",3)	
+	ENDIF
+
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+			CONTINUE
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "カテゴリ"	
+		SIF MATCH(RESULTS, "트로이메어")
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "종류"	
+		SIF !MATCH(RESULT,링크)
+			CONTINUE
+		CALL CARD_SET_CATEGORY(듀얼리스트,"필드",カウンタ,"트로이메어")
+	NEXT
+ENDIF

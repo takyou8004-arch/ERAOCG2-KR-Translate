@@ -1,0 +1,143 @@
+﻿@CARDNAME_2111,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 라뷰린스 서번츠 아리안나
+	CASE "略称"
+		RESULTS = 아리안나
+	CASE "カテゴリ"
+		RESULTS:0 = 라뷰린스
+ENDSELECT
+
+
+@CARD_2111(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 2100
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2111(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  ①②의 효과는 1턴에 1번, 어느 쪽이든 1개밖에 사용할 9수 없다。
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①: 이 카드를 일반 일반 소환 / 특수 소환했을 경우에 발동할 수 있다。
+PRINTL 덱에서 "라뷰린스 서번츠 아리안나」 이외의 "라뷰린스」카드 1장을 패에 넣는다。
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ②: 자신의 일반 함정 카드의 효과로 몬스터가 필드에서 벗어났을 경우에 발동할 수 있다。
+PRINTL 자신은 1장 드로우한다. 그 후, 이하의 효과를 적용할 수 있다。
+PRINTL ●패에서, 악마족 몬스터 1장을 특수 소환하거나, 마법 / 함정 카드 1장을 세트한다。
+PRINTL 
+
+@CARDCAN_2111(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2111)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,2111)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 라뷰린스
+	효과条件固名前 = 라뷰린스 서번츠 아리안나
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,2111)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"除去成功")
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2111(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2111,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 라뷰린스
+		효과条件固名前 = 라뷰린스 서번츠 아리안나
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2111,1)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+		CALL FULLRESET
+		SIF モンスター数(듀얼리스트) != 5
+			효과条件종류 = モン全般
+			효과条件종족 = 악마족
+		SIF 마함数(듀얼리스트) != 5
+			효과条件スーパー종류 = 마함全般
+		효과条件任意 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALLFORM CARD_{GETVAR(@"%듀얼리스트%_손패:選択カード")}("종류")
+			IF RESULT >= 通常마법
+				CALL CARD_DISPOSE(듀얼리스트,"손패",選択カード,4,1)
+			ELSEIF RESULT == 通常モン || RESULT == 효과モン
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트, "손패", 選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

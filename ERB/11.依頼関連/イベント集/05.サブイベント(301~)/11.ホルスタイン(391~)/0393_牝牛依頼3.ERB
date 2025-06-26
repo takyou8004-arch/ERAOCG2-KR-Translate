@@ -1,0 +1,144 @@
+@IRAI_EVENT_393(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP-HLS3)호루스타인・프리티
+	CASE "이벤트種"
+		RETURN 이벤트_通常
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL 임세티から連絡が届いた…
+		PRINTL 新しいカードの開発に成功したのだろうか。
+		PRINTL 
+		PRINTL 報酬：암소착유(ドリップ)、【애유】등록
+	CASE "条件"
+		SIF 依頼_完了済 != 0
+			RETURN 0
+		SIF 依頼_完了횟수:392 == 0 
+			RETURN 0
+		;(メインストーリー2章)「白銀の城を救い出せ！」のクリアか、「VS_ERA구울즈2」のクリア
+		SIF 依頼_完了횟수:14 != 0 || 依頼_完了횟수:115 != 0 
+			RETURN 1
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_393(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(2501);イシズ
+
+IF 依頼_달성상황 == 0
+	PRINTFORMW …임세티から連絡が届いた。
+	PRINTFORML 
+	PRINTFORMW そろそろ新しいカードの開発に成功したのだろうか。
+	PRINTFORMW 임세티の居るビルに向かってみよう
+	PRINTFORML 
+	TIME += 10
+	依頼_場所 = 場所_事務所
+	依頼_달성상황 ++
+	CFLAG:MASTER:현재위치 = 場所_事務所
+
+ELSEIF 依頼_달성상황 == 1
+
+	CUSTOMDRAWLINE —
+	PRINTFORML
+	PRINTFORML -"호루스"タインビル-
+	PRINTFORML
+	CUSTOMDRAWLINE —
+	CALL HORUSTEIN_RAND_COW_TXT(2,1)
+	PRINTFORML どこからか암소の鳴き声が響いている気がする…
+	PRINTFORML
+	
+	PRINTFORMW 임세티が入口で迎えてくれると、さっそく듀얼スペースに案内してくれた…
+	PRINTFORML
+	PRINTFORMW 『今日は케벤세누프君が開発した카드를 使ってもらおう』
+	PRINTFORMW 『ちなみに、담당자によって元々の암소の속성이 変わるよ。私が어둠、ハーピ君が바람、케벤세누프君は땅…といった感じだね。』
+	PRINTFORMW 『패 / 묘지 / 덱 / 제외 상태인 카드는 こっちの속성になるから、다른 카드를 使う場合は気を付けよう。』
+	PRINTFORML
+	PRINTFORMW 『今回は「암소착유(ドリップ)」と「【애유】등록」の紹介だ。』
+	PRINTFORMW 『【애유】등록は발동時、「호루스타인」通常마법…つまりは다른 【미유】등록や【지유】등록を패에 加えることが出来る。』
+	PRINTFORMW 『「○○登録」はデュエル中１번밖에 使えない都合上、出来るだけ早めに패에 揃えたいカードだね。』
+	PRINTFORML
+	PRINTFORMW 『「ドリップ」は…、試す方が早いね。早速듀얼に行こうか。』
+
+$RETRY_SHORT
+	TARGET = -1
+	OPPOSER名 = 가호케벤세누프
+	詰め플래그 = 1
+	CALL DUEL_SYSTEM(1,395)
+	IF RESULT != 1
+		PRINTFORMW 『おっと、大丈夫かい？』
+		CALL CHOICE("『リトライしようか』", "はい", "いいえ")
+		IF RESULT == 0
+			GOTO RETRY_SHORT
+		ELSE
+			GOTO RETRY_END
+		ENDIF
+	ELSE
+		;勝ち
+		PRINTFORMW 『【애유】の選択肢はどちらを選んだかな？케벤세누프君が「貧乳」したそうに君を見ていたりするけど…そこはまぁ、君の自由にして欲しい。』
+		PRINTFORMW 『ちなみに、なぜか「貧乳」이하의 乳は買取価格が高くなってるみたいだ。』
+		PRINTFORMW 『…こっちで特に買取価格を上げる…ってことはしてないから、たぶん케벤세누프君のポケットマネーから高額買取してるんじゃないかな…』
+		PRINTFORMW 『君にとって마이너스にはならないと思うから良いけどね……気が向いたら乳の小さい子を選んであげてくれ。』
+		PRINTFORML
+		PRINTFORMW 『ちょっと話が長くなってしまったね…よし、듀얼を続けよう。』
+	ENDIF
+	
+	
+$RETRY_SHORT2
+	TARGET = -1
+	OPPOSER名 = 가호케벤세누프
+	詰め플래그 = 1
+	CALL DUEL_SYSTEM(1,396)
+	IF RESULT != 1
+		PRINTFORMW 『おっと、大丈夫かい？』
+		CALL CHOICE("『リトライしようか』", "はい", "いいえ")
+		IF RESULT == 0
+			GOTO RETRY_SHORT2
+		ELSE
+			GOTO RETRY_END
+		ENDIF
+	ELSE
+		
+		;勝ち
+		PRINTFORMW 『「ドリップ状態」を維持できれば、毎ターン암소の乳を効率的に抽出することが할 수 있다。』
+		PRINTFORMW 『場合によっては【지유】などで攻撃誘導をしてあげると良いだろう。』
+		PRINTFORML 
+		PRINTFORMW …ビルの奥から何か大きな音が聞こえた気がする。
+		PRINTFORML 
+		PRINTFORMW 『すまない、用事が出来たようだ…。次もよろしく頼むよ。』
+		
+		CALL CARD_GET_SINGLE(99554,,3);암소착유(ドリップ)
+		CALL CARD_GET_SINGLE(79557,,3);애유登録
+		
+		PRINTFORML 
+		PRINTFORMW ※次の話は「メインストーリー」の依頼を進めると出現します。
+		PRINTFORML 
+		
+		CFLAG:MASTER:현재위치 = 場所_寝室
+		TIME += 60
+		RETURN 2;依頼成功
+	ENDIF
+	
+
+$RETRY_END
+
+	PRINTFORMW …一旦ここまでにしてもらおう。
+	CFLAG:MASTER:현재위치 = 場所_寝室
+	;DOWNBASE:MASTER:체력 = 250
+	;DOWNBASE:MASTER:기력 = 250
+	TIME += 50
+	RETURN 3;依頼失敗
+
+ENDIF
+

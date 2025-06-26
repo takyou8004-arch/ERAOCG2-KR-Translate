@@ -1,0 +1,321 @@
+﻿;-------------------------------------------------
+;カード을 산다
+;-------------------------------------------------
+@COM470
+#DIM DYNAMIC 初回カウンタ
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択덱
+#DIM DYNAMIC カウンタB
+
+$INPUT_LOOP1
+CALL CHECK_STRUC_GET
+
+IF 初回カウンタ == 0
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 점원「어서오세요ー」
+ELSE 
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 점원「달리 뭔가 필요하신가요？」
+ENDIF
+CUSTOMDRAWLINE ―
+IF CFLAG:MASTER:현재위치 == 場所_カドショ
+	PRINTL 【카드샵「주사위놀이」4호점】
+ELSEIF CFLAG:MASTER:현재위치 == 場所_裏通り
+	PRINTL 【카드샵「카드헌터」9호점】
+ENDIF
+PRINTPLAINFORM 소지금:{MONEY}円　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+SETCOLOR C_BLACK
+PRINTL [9999] - 모든 팩 출현
+RESETCOLOR
+CUSTOMDRAWLINE ―
+初回カウンタ = 1
+
+IF CFLAG:MASTER:현재위치 == 場所_カドショ
+	;SIF FLAG:게임모드 == 0
+	PRINTL [0] - 마스터팩을 산다　　　(1팩 150円)
+	PRINTL [1] - 테마팩을 산다　　　　(1팩 150円)
+	PRINTL 
+	PRINTL [4] - 스트럭쳐 덱을 산다(2500円)
+	PRINTL 
+	PRINTL [2] - 고액 싱글을 본다
+	PRINTL 
+	PRINTL [3] - 카드 트레이더
+ELSEIF CFLAG:MASTER:현재위치 == 場所_裏通り
+	PRINTL 
+	PRINTL [1] - 테마팩을 산다　　　　(1팩 2500円)
+	PRINTL 
+	PRINTL [4] - 스트럭쳐 덱을 산다(25000円)
+	PRINTL 
+	PRINTL [9] - 매입
+ENDIF
+
+CUSTOMDRAWLINE ―
+PRINTL 
+PRINTL [100] - 돌아간다
+
+$INPUT_LOOP
+BINPUT
+IF RESULT == 0
+	IF パック_合計구입数 == 30
+		PRINTFORMW 「죄송합니다 지금 팩이 품절이라서요……」
+		PRINTFORMW 「내일 와주세요！」
+	ELSE
+		CALL CARD_PACK(0)
+	ENDIF
+ELSEIF RESULT == 1
+	IF パック_合計구입数 == 30
+		PRINTFORMW 「죄송합니다 지금 팩이 품절이라서요……」
+		PRINTFORMW 「내일 와주세요！」
+	ELSE
+		IF CFLAG:MASTER:현재위치 == 場所_カドショ
+			CALL CARD_PACK_CHOOSE(1)
+
+		ELSEIF CFLAG:MASTER:현재위치 == 場所_裏通り
+			CALL CARD_PACK_CHOOSE(2)
+		ENDIF
+	ENDIF
+ELSEIF RESULT == 2
+	$INPUT_LOOP_LIST
+	CALL MONSTER_LIST(2)
+ELSEIF RESULT == 3
+	CALL CARD_TRADER
+
+ELSEIF RESULT == 4
+	$DECK_CHOICE
+
+	IF CFLAG:MASTER:현재위치 == 場所_カドショ
+		CUSTOMDRAWLINE ―
+		PRINTL 구입하고싶은 덱을 선택해주세요：（일률：2500円）
+		CUSTOMDRAWLINE ―
+		FOR カウンタ,0,20
+			IF カウンタ == 1
+				PRINTL -『시동 시리즈』- (초심자용)
+			ELSEIF カウンタ == 10
+				PRINTL -『스트럭쳐』- (중급자용)
+			ENDIF
+			VARSET RESULT
+			TRYCALLFORM DUELDECK_{15000 + カウンタ}("存在確認")
+			SIF RESULT != 1
+				CONTINUE
+			IF ストラク_ID:カウンタ == 1
+				SETCOLOR C_GRAY
+				PRINTPLAINFORM 　[{カウンタ,3}] - 【%RESULTS%】 -%RESULTS:1%-（구입됨）
+			ELSE
+				PRINTFORM 　[{カウンタ,3}] - 【%RESULTS%】 -%RESULTS:1%-
+			ENDIF
+			PRINTL
+			RESETCOLOR
+		NEXT
+	;Anonym추가、裏ショップストラクチャー구입
+	ELSEIF CFLAG:MASTER:현재위치 == 場所_裏通り
+		CUSTOMDRAWLINE ―
+		PRINTL 구입하고싶은 덱을 선택해주세요：（일률：25000円）
+		CUSTOMDRAWLINE ―
+
+		FOR カウンタ,500,510
+			VARSET RESULT
+			TRYCALLFORM DUELDECK_{15000 + カウンタ}("存在確認")
+			SIF RESULT != 1
+				CONTINUE
+			IF ストラク_ID:(カウンタ) == 1
+				SETCOLOR C_GRAY
+				PRINTPLAINFORM [{カウンタ,3}] - 【%RESULTS%】 -%RESULTS:1%-（구입됨）
+			ELSE
+				PRINTFORM [{カウンタ,3}] - 【%RESULTS%】 -%RESULTS:1%-
+			ENDIF
+			PRINTL
+			RESETCOLOR
+		NEXT
+	ENDIF
+	CUSTOMDRAWLINE ―
+	PRINTL 
+	PRINTL [1000] - 돌아간다
+	BINPUT
+	SIF RESULT == 1000
+		GOTO INPUT_LOOP1
+	選択덱 = RESULT
+	CALL CARD_DECK_CHECK(選択덱 + 15000,1)
+	IF RESULT == 0
+		IF (MONEY < 2500 && CFLAG:MASTER:현재위치 == 場所_カドショ) || (MONEY < 25000 && CFLAG:MASTER:현재위치 == 場所_裏通り)
+			PRINTFORMW 「お金が足りませんよ？」
+			GOTO INPUT_LOOP1
+		ELSEIF MONEY >= 2500 && CFLAG:MASTER:현재위치 == 場所_カドショ
+			CALL MONEY_GET(-2500)
+			CALLFORM CARD_STRUC_GET(選択덱)
+		ELSEIF MONEY >= 25000 && CFLAG:MASTER:현재위치 == 場所_裏通り
+			CALL MONEY_GET(-25000)
+			CALLFORM CARD_STRUC_GET(選択덱)
+		ENDIF
+	ELSEIF RESULT == 1
+		GOTO DECK_CHOICE
+
+	ENDIF
+
+ELSEIF RESULT == 9
+	CALL CARD_SELL
+	GOTO INPUT_LOOP1
+ELSEIF RESULT == 100
+	PRINTFORML 「감사합니다～」
+	RETURN 1
+ELSEIF RESULT == 9999
+	CALL CARD_PACK_CHOOSE(3)
+ENDIF
+GOTO INPUT_LOOP1
+
+
+@CARD_TRADER
+PRINTFORMW 「필요없는 카드를 이 머신에 넣으면 좋은 카드가 나올지도 몰라요」
+$INPUT_LOOP
+PRINTFORM UR카드×【{ITEM:UR카드}】
+PRINTFORM SR카드×【{ITEM:SR카드}】
+PRINTFORM R카드×【{ITEM:R카드}】
+PRINTFORM N카드×【{ITEM:N카드}】
+PRINTL
+PRINTFORML 「1번에 1500円이에요」 소지금:{MONEY}円
+PRINTL [0] - UR로 돌린다（필요 수UR카드 5장）
+PRINTL [1] - SR로 돌린다（필요 수SR카드 30장）
+PRINTL [2] - R로 돌린다 （필요 수R카드 200장）
+PRINTL [3] - N로 돌린다 （필요 수N카드 500장）
+PRINTL 
+PRINTL [100] - 돌아간다
+
+INPUT
+IF RESULT == 0
+	IF MONEY > 1500 && ITEM:UR카드 >= 5
+		ITEM:UR카드 -= 5
+		CALL MONEY_GET(-1500)
+		CALL CARD_PACK_SHORI(1,0,1,1)
+	ELSE
+		PRINTFORMW 「카드나 돈이 부족한데요？」
+	ENDIF
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 1
+	IF MONEY > 1500 && ITEM:SR카드 >= 30
+		ITEM:SR카드 -= 30
+		CALL MONEY_GET(-1500)
+		CALL CARD_PACK_SHORI(1,0,1,1)
+	ELSE
+		PRINTFORMW 「카드나 돈이 부족한데요？」
+	ENDIF
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 2
+	IF MONEY > 1500 && ITEM:R카드 >= 200
+		ITEM:R카드 -= 200
+		CALL MONEY_GET(-1500)
+		CALL CARD_PACK_SHORI(1,0,1,1)
+	ELSE
+		PRINTFORMW 「카드나 돈이 부족한데요？」
+	ENDIF
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 3 && ITEM:N카드 >= 500
+	IF MONEY > 1500
+		ITEM:N카드 -= 500
+		CALL MONEY_GET(-1500)
+		CALL CARD_PACK_SHORI(1,0,1,1)
+	ELSE
+		PRINTFORMW 「카드나 돈이 부족한데요？」
+	ENDIF
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 100
+	PRINTW
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+
+@CARD_PACK(パック_종류)
+#DIM DYNAMIC パック_구입数
+#DIM DYNAMIC パック_종류
+#DIM DYNAMIC パック_価格
+#DIM DYNAMIC 合計価格
+
+;ここ修正
+IF パック_종류 >= 90
+	パック_価格 = 2500
+ELSE
+	パック_価格 = 150
+ENDIF
+$INPUT_LOOP2
+CALL CARD_PACK_NAME(パック_종류)
+PRINTFORML 팩：%RESULTS%
+PRINTFORML 무슨 팩을 구입하시겠습니까？ 소지금:{MONEY}円
+CUSTOMDRAWLINE —
+;PRINTFORML 오늘 구입 제한 나머지【{(パック_最大구입数 - パック_合計구입数)}】팩
+PRINTL
+PRINTBUTTON "[＋1  ]", 9998
+PRINTBUTTON "[＋10 ]", 9997
+PRINTBUTTON "[＋30]", 9996
+PRINTL
+PRINTBUTTON "[－1  ]", 9995
+PRINTBUTTON "[－10 ]", 9994
+PRINTBUTTON "[－30]", 9993
+
+
+PRINTL
+PRINTFORM 【{パック_구입数}】팩　【({パック_구입数 * パック_価格})円】
+PRINTBUTTON "[구입]", 9990
+PRINTL
+PRINTBUTTON "[종료]", 9999
+BINPUT
+
+IF RESULT == 9999
+	RETURN 0
+ELSEIF RESULT == 9990
+	IF MONEY >= パック_구입数 * パック_価格
+		CALL CARD_PACK_SHORI(パック_구입数,パック_종류)
+		PRINTFORML 「구입 갑사합니다！」
+		合計価格 = パック_구입数 * パック_価格
+		CALL MONEY_GET(-合計価格)
+	ELSE
+		PRINTFORMW 「돈이 부족하신데요？」
+	ENDIF
+ELSEIF RESULT == 9998
+	パック_구입数 += 1
+	SIF パック_구입数 >= 30
+		パック_구입数 = 30
+ELSEIF RESULT == 9997
+	パック_구입数 += 10
+	SIF パック_구입数 >= 30
+		パック_구입数 = 30
+ELSEIF RESULT == 9996
+	パック_구입数 += 30
+	SIF パック_구입数 >= 30
+		パック_구입数 = 30
+ELSEIF RESULT == 9995
+	パック_구입数 -= 1
+	SIF パック_구입数 <= 0
+		パック_구입数 = 0
+ELSEIF RESULT == 9994
+	パック_구입数 -= 10
+	SIF パック_구입数 <= 0
+		パック_구입数 = 0
+ELSEIF RESULT == 9993
+	パック_구입数 -= 30
+	SIF パック_구입数 <= 0
+		パック_구입数 = 0
+ENDIF
+GOTO INPUT_LOOP2
+
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;카드를 구입する
+@COM_ABLE470
+;一括관리
+SIF GLOBAL_COMABLE(470)
+	RETURN RESULT
+;デュエリストカフェ
+SIF CFLAG:MASTER:현재위치 == 場所_カドショ
+	RETURN 1
+;裏通り
+SIF CFLAG:MASTER:현재위치 == 場所_裏通り && パック_解放:99 == 1
+	RETURN 1
+;수면中
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 0

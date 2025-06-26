@@ -1,0 +1,115 @@
+﻿@CARDNAME_2078,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = Live☆Twin 리일라
+	CASE "略称"
+		RESULTS = L☆T 리일라
+	CASE "カテゴリ"
+		RESULTS:0 = Live☆Twin
+		RESULTS:1 = 리일라
+ENDSELECT
+
+
+@CARD_2078(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2078(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  ①의 효과는 1턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：이 카드가 일반 / 특수 소환에 성공했을 경우에, 자신 필드에 다른 몬스터가 존재하지 않으면 발동할 수 있다。
+PRINTL 패 / 덱에서 "키스킬」 몬스터 1장을 특수 소환한다。
+CALLFORM CARD_ABLE(2,攻撃時強制誘発)
+PRINTL ②：이 카드가 몬스터 존에 존재하는 한,
+PRINTL 상대 몬스터가 공격 선언할 때마다, 상대는 500LP 데미지를 받는다。
+
+
+@CARDCAN_2078(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2078)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,2078)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件カテゴリ = 키스킬
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2078(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2078,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과条件カテゴリ = 키스킬
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL 対面者판정(듀얼리스트)
+	対面者 = %RESULTS%
+	PRINT Live☆Twin 리일라의 효과로 데미지!
+	CALL LIFE_CHANGE(듀얼리스트,"減少","효과",500,1)
+ENDIF
+

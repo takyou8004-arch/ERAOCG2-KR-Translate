@@ -1,0 +1,159 @@
+﻿@CARDNAME_24540,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초중무사 장류-버스터 건틀릿
+	CASE "略称"
+RESULTS = 비즈 건틀릿
+	CASE "カテゴリ"
+RESULTS:0 = 초중무사
+RESULTS:1 = 초중무사 장류
+ENDSELECT
+
+
+@CARD_24540(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 효과モン
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 400
+
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24540(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,손패起動,필드起動)
+PRINTL ①: 자신 메인 페이즈에 자신 필드의 "초중무사" 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 자신의 패 / 필드에서, 이 카드를 수비력 400 올리는 장착 카드 취급하여
+PRINTL 그 자신 몬스터에게 장착한다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ②: 자신 "초중무사" 몬스터가 상대 몬스터와 전투를 실행할 경우,
+PRINTL 이 카드를 패에서 묘지로 보내고 발동할 수 있다
+PRINTL (이 효과는 자신 묘지에 마법 / 함정 카드가 존재하지 않을 경우에 발동 및 처리가 가능하다).
+PRINTL 그 전투를 실행하는 자신 몬스터의 수비력은 턴 종료시까지 원래 수비력의 배가 된다.
+
+
+@CARDCAN_24540(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24540)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 필드起動 
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 초중무사
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트) },"カテゴリ"
+	SIF !MATCH(RESULTS,"초중무사")
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_24540(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 戦闘カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動 || 종류 == 필드起動 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24540)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 초중무사
+		효과条件他所 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,0,400)
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24540)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		戦闘カード = 戦闘場所(듀얼리스트)
+		CALLFORM CARD_{戦闘カードID(듀얼리스트)}("守備力")
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘カード,"一守",RESULT)
+	ENDIF
+ENDIF
+
+
+

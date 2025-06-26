@@ -1,0 +1,143 @@
+﻿@CARDNAME_73162,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 범신 제왕
+	CASE "略称"
+RESULTS = 범신 제왕
+	CASE "カテゴリ"
+RESULTS:0 = 제왕
+ENDSELECT
+
+
+@CARD_73162(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "レア度"
+		RETURN SPR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73162(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,마함起動 ,손패起動)
+PRINTL ①: 패의 「제왕」 마법 / 함정 카드 1장을 묘지로 보내 발동할 수 있다.
+PRINTL 자신은 덱에서 2장 드로우한다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 덱에서 「제왕」 마법 / 함정 카드 3장을 상대에게 보여주고, 상대는 그 중에서 1장을 고른다.
+PRINTL 그 카드 1장을 자신의 패에 넣고, 나머지를 덱으로 되돌린다.
+
+
+@CARDCAN_73162(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73162)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 제왕
+	효과条件종류 = 마함全般
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,73162)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73162(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ランダム
+#DIM DYNAMIC 選択カード,3
+#DIMS DYNAMIC 選択カード名前,3
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73162)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 제왕
+		효과条件종류 = 마함全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73162,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 제왕
+		효과条件종류 = 마함全般
+		효과条件複数 = 3
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "덱",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード:0 = RESULT:0
+			選択カード:1 = RESULT:1
+			選択カード:2 = RESULT:2
+			IF 選択カード:2 != 9999
+				FOR カウンタ,0,3
+					TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_덱:(選択カード:カウンタ)")}
+					選択カード名前:カウンタ = %RESULTS%
+				NEXT
+
+				IF 듀얼리스트 != "자신"
+PRINTL 카드를 선택해 주세요
+					PRINTL
+					FOR カウンタ,0,3
+						PRINTFORML [{カウンタ}] - %選択カード名前:カウンタ%
+					NEXT
+					BINPUT
+					ランダム = RESULT
+				ELSE
+					ランダム = RAND:3
+				ENDIF
+				CALL CARD_ADD(듀얼리스트, "덱", "손패", 選択カード:ランダム)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

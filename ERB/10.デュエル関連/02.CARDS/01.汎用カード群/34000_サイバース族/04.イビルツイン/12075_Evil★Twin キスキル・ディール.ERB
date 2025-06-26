@@ -1,0 +1,169 @@
+﻿@CARDNAME_12075,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = Evil★Twin 키스킬 딜
+	CASE "略称"
+		RESULTS = E★T 키스킬 딜
+	CASE "カテゴリ"
+		RESULTS:0 = Evil★Twin
+		RESULTS:1 = 키스킬
+ENDSELECT
+
+
+@CARD_12075(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 100
+	CASE "성별"
+		RETURN 牝性
+	CASE "특수制限"
+		RETURN 1
+	CASE "連動ID"
+		RETURN 2075
+ENDSELECT
+
+
+RETURN 0
+
+
+@CARD_EXPLANATION_12075(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 「키스킬」 몬스터 1장
+PRINTL 자신은 「Evil★Twin 키스킬 딜」은 1턴에 1번 밖에 특수 소환할 수 없다。
+PRINTL 이 카드명의  ①의 효과는 1턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ①：덱 / 엑스트라덱에서 "리일라" 몬스터 1장을 묘지로 보내고 발동할 수 있다。
+PRINTL 이 턴 다음과 같은 효과르 적용한다。
+PRINTL ● 자신의「키스킬" 몬스터나 「리일라」 몬스터의 효과 발동에 대해 체인해 상대가 효과르 발동할 때마다,
+PRINTL 자신은 1장 드로우한다。
+
+@CARDSUMMON_12075(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 키스킬
+ELSE
+	PRINT
+ENDIF
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,12075) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_12075(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,12075)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,12075)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 리일라
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_12075(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,12075,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 리일라
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			PRINTFORMW 상대방은 키스킬과 계약을 체결한 거 같다。
+			CALL SET_PLAYER_INFO(듀얼리스트,"ディ-ル효과",1,1)
+		ENDIF
+	ENDIF
+ENDIF
+
+@CARDEFFECT_12075_1(実行者)
+#DIMS DYNAMIC 実行者
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(実行者)
+対面者 = %RESULTS%
+
+SIF 効後_カウンタ < 2
+	RETURN 0
+SIF 効後_実行者:(効後_カウンタ - 2) != 対面者
+	RETURN 0
+TRYCALLFORM CARDNAME_{効後_효과ID:(効後_カウンタ - 2)},"カテゴリ"
+SIF GROUPMATCH(RESULTS:0,"키스킬","리일라")
+	条件달성 = 1
+SIF GROUPMATCH(RESULTS:1,"키스킬","리일라")
+	条件달성 = 1
+SIF 条件달성 != 1
+	RETURN 0
+
+SETCOLOR C_H_PINK
+PRINTFORMW 「이런 、계약 위반이네!。입금 잘해줘야 해？」
+CALL CARDDRAW_BASIC(対面者,1)
+RESETCOLOR
+RETURN 1

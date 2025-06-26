@@ -1,0 +1,155 @@
+@CARDNAME_61932,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 하얀 숲의 악마
+	CASE "略称"
+RESULTS = 하얀 숲의 악마
+	CASE "カテゴリ"
+RESULTS:0 = 하얀 숲
+ENDSELECT
+
+
+@CARD_61932(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61932(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①: 자신 필드의 S 몬스터 1장을 릴리스하고, 상대 필드의 앞면 표시 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드의 효과를 턴 종료시까지 무효로 한다.
+PRINTL 「하얀 숲」 S 몬스터를 릴리스하고 발동했을 경우, 추가로 자신 묘지에서 미확인족 몬스터 1장을 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 「하얀 숲의 악마」가 몬스터의 효과로 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 묘지에서 「하얀 숲의 악마」 1장을 자신 필드에 세트한다.
+
+
+@CARDCAN_61932(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61932)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	;효과①발동済みかチェック
+	SIF 발동済_1(듀얼리스트,61932)
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+    효과条件종류 = 싱크로
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	;효과②발동済みかチェック
+	SIF 발동済_2(듀얼리스트,61932)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	;他의 효과의 발동チェック
+	CALL FULLRESET
+	효과条件名前 = 하얀 숲의 악마
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"モン효과墓送")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_61932(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 行先플래그
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61932,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+        ;손패に戻す
+        CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 싱크로
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		選択カードID = RESULT:1
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"無効")
+		ENDIF
+
+		TRYCALLFORM CARD_{選択カードID},"종류"
+		SIF RESULT != 싱크로
+			RETURN 0
+		TRYCALLFORM CARDNAME_{選択カードID},"カテゴリ"
+		IF MATCH(RESULTS,"하얀 숲")
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件종족 = 미확인족
+			효과条件任意 = 1
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61932,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前 = 하얀 숲의 악마
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_DISPOSE(듀얼리스트,"묘지",選択カード,마함行き,1)
+		ENDIF
+	ENDIF
+ENDIF

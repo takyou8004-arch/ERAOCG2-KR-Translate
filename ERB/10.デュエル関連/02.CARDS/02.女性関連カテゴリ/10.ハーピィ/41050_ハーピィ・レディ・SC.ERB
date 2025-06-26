@@ -1,0 +1,186 @@
+﻿@CARDNAME_41050,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 해피 레이디 SC
+	CASE "略称"
+RESULTS = 하피 레이디 SC
+	CASE "カテゴリ"
+RESULTS:0 = 해피
+ENDSELECT
+
+
+@CARD_41050(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 1400
+
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_41050(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,41050) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_41050(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너＋튜너 이외의 몬스터 1체 이상
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL 이 카드명의 카드는 1턴에 1번, 싱크로 소환 이외에도 이하의 방법으로 EX덱에서 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(3,EX덱起動)
+PRINTL ●자신 필드의 「해피」 몬스터 1장을 묘지로 보내고,
+PRINTL 패 / 필드의 마법 카드를 1장 파괴하는 것으로,
+PRINTL 이 카드를 EX덱에서 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(1,발동誘発)
+PRINTL ①: 마법 / 함정 카드의 효과가 발동했을 때,
+PRINTL 상대 필드의 몬스터 1체 또는 자신 필드의 「해피」 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터를 패로 되돌린다.
+
+@CARDCAN_41050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,41050)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_3(듀얼리스트,41050)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,41050)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲마함 = 1
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 해피
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,41050)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_41050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41050,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲마함 = 1
+		효과条件종류 = 마법全般
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1	
+			CALL FULLRESET
+			효과条件カテゴリ = 해피
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트, "EX덱", 場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41050,1)
+	IF RESULT == 0
+PRINTL 상대 몬스터를 패로 되돌리시겠습니까?
+		CALL YN_CHOICE(듀얼리스트)
+		IF RESULT == はい
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",選択カード,"손패")
+		ELSEIF RESULT == いいえ
+			CALL FULLRESET
+			효과条件カテゴリ = 해피
+			CALL CARD_CHOOSE_BASIC(듀얼리스트, "필드",ゾーン,場所)	
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL CARD_DISPOSE(듀얼리스트,"필드",選択カード,3)
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 0
+ENDIF
+

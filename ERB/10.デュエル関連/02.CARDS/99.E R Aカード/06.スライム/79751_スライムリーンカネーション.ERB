@@ -1,0 +1,186 @@
+﻿@CARDNAME_79751,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 슬라임 리인 카네이션
+	CASE "略称"
+		RESULTS = 슬라임 리인카
+	CASE "カテゴリ"
+		RESULTS:0 = 슬라임
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79751(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_79751(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 1턴에 1번, 어느 1개 밖에 사용할 수 없다。
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신 / 상대의 메인 페이즈에 발동할 수 있다。
+PRINTL 자신 필드 / 묘지로 부터 융합소재를 덱으로 되돌려, 원소정령족 종족 / 물속성의 융합 몬스터 1장을 융합 소환한다 。
+PRINTL 그 때, 자신 / 상대의  마법 & 함정존의 카드도 융합소재로 할 수 있다。
+CALL CARD_ABLE(2,묘지起動)
+PRINTL ②：묘지의 이 카드를 덱으로 되돌리고 발동할 수 있다。
+PRINTL 묘지에서 "슬라임」 융합 몬스터 1장을 엑스트라 덱으로 되돌리고,
+PRINTL 그 몬스터보다 레벨이 낮은「슬라임」 융합 몬스터를 1장을 엑스트덱에서 융합 소환 취급하여 특수 소환한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79751(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79751)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,79751)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79751)
+		RETURN 0
+
+	SIF メインフェイズ != 1
+		RETURN 0
+
+
+
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲마함 = 1
+	素材範囲묘지 = 1
+	素材範囲상대마함 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	효과条件종족 = 원소정령족
+	효과条件속성 = 물속성
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,79751)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79751)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 융합
+	효과条件カテゴリ = 슬라임
+	CALL 효과条件レベル_ADV(7, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	효과条件カテゴリ = 슬라임
+	CALL 효과条件レベル_ADV(7, "以上")
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79751(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択カードレベル
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79751,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲마함 = 1
+		素材範囲묘지 = 1
+		素材範囲상대마함 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件종족 = 원소정령족
+		효과条件속성 = 물속성
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		;戻らない
+		IF 選択カード != 9999
+			; 카드의 条件を読み込む：
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			;素材処理を読み込む
+			CALL FUSSUMMON(듀얼리스트,選択カード,덱行き)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79751,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 융합
+		효과条件カテゴリ = 슬라임
+		CALL 효과条件レベル_ADV(7, "以上")
+		효과条件行先플래그 = EX덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			TRYCALLFORM CARD_{選択カード_ID},"レベル"
+			選択カードレベル = RESULT - 1
+			CALL FULLRESET
+			효과条件종류 = 융합
+			효과条件カテゴリ = 슬라임
+			CALL 효과条件レベル_ADV(選択カードレベル, "以下")
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",RESULT)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,135 @@
+@CARDNAME_1490,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스파이랄－그레이스
+	CASE "略称"
+RESULTS = 스파이 그레이스
+	CASE "カテゴリ"
+RESULTS:0 = 스파이랄
+ENDSELECT
+
+
+@CARD_1490(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 2800
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250420
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1490(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 덱에서 「스파이랄 미션」 카드 1장을 패에 추가한다.
+
+CALLFORM CARD_ABLE(2,戦破壊→묘지)
+PRINTL ①: 이 카드가 필드에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 덱에서 「스파이랄－그레이스」 이외의 「스파이랄」 몬스터 1장과 「스파이랄 리조트」 1장을 패에 추가한다.
+
+@CARDCAN_1490(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1490)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 스파이랄 MISSION
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,1490)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 스파이랄
+	효과条件固名前 = 스파이랄－그레이스
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件名前 = 스파이랄 RESORT
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_1490(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1490,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 스파이랄 MISSION
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1490,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 스파이랄
+		효과条件固名前 = 스파이랄－그레이스
+		효과条件종류 = モン全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+		CALL FULLRESET
+		효과条件名前 = 스파이랄 RESORT
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF	
+ENDIF

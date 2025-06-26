@@ -1,0 +1,94 @@
+﻿@CARDNAME_74413,参照先
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 운명의 인도
+	CASE "略称"
+RESULTS = 운명의 인도
+	CASE "カテゴリ"
+RESULTS:0 = 위치 클래스
+ENDSELECT
+
+
+@CARD_74413(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250428
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_74413(종류)
+#DIM DYNAMIC 종류
+
+CALL CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①：자신의 묘지의 「위치 클래스」마법 카드를 3장 제외하는 것으로,
+PRINTL 자신은 2장 드로우한다.
+
+
+@CARDCAN_74413(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,74413)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 위치 클래스
+	효과条件종류 = 마법全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_74413(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,74413)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 위치 클래스
+		효과条件종류 = 마법全般
+		효과条件複数 = 3
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		SIF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

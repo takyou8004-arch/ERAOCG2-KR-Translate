@@ -1,0 +1,190 @@
+﻿@CARDNAME_54650,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 사이버 엔젤－나사테이야－
+	CASE "略称"
+RESULTS = CA－나사테이야－
+	CASE "カテゴリ"
+RESULTS:0 = 사이버 엔젤
+ENDSELECT
+
+
+@CARD_54650(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 의식
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족 
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "특수불가"
+		RETURN 1		
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_54650(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 出処
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 5
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,54650) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_54650(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「기계천사의 의식」에 의해 강림.
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(10,필드起動)
+PRINTL ①：1턴에 1번, 자신 필드의 앞면 표시 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터의 공격력의 절반만큼 자신의 LP를 회복한다.
+CALL CARD_ABLE(0,攻撃時誘発)
+PRINTL ②：자신의 의식 몬스터가 공격대상에 선택되었을 때 발동할 수 있다.
+PRINTL 그 공격을 무효로 한다.
+CALL CARD_ABLE(1,묘지起動)
+PRINTL ③：이 카드가 묘지에 존재할 경우, 자신의 묘지에서 이 카드명 이외의 「사이버 엔젤」 몬스터 1장을 제외하고,
+PRINTL 상대 필드의 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 이 카드를 묘지에서 특수 소환하고, 대상의 몬스터의 컨트롤을 얻는다.
+
+
+
+@CARDCAN_54650(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54650)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	TRYCALLFORM CARD_{戦闘カードID(듀얼리스트)}("종류")
+	SIF RESULT != 의식
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,54650)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,54650,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 4
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 사이버 엔젤
+	효과条件종류 = モン全般
+	효과条件固名前 = 사이버 엔젤－나사테이야－
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54650(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 손패選択
+#DIM 選択カード
+#DIM 選択カード_ID
+#DIM 소환カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54650,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:選択カード")}("攻撃力")
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",(RESULT / 2))
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54650)
+	IF RESULT == 0
+		CALL EVADE_ATTACK(듀얼리스트)
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54650,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 사이버 엔젤
+		효과条件종류 = 효과モン
+		효과条件固名前 = 사이버 엔젤－나사테이야－
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,"묘지",場所)
+
+			CALL FULLRESET
+			효과추가종류 = 5
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,93 @@
+﻿@CARDNAME_31131,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 빙제 뫼비우스
+	CASE "略称"
+RESULTS = 빙제 뫼비우스
+	CASE "カテゴリ"
+RESULTS:0 = 제
+ENDSELECT
+
+
+@CARD_31131(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_31131(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환되었을 경우, 발동할 수 있다.
+PRINTL 필드의 마법 / 함정 카드를 2장까지 파괴한다.
+PRINTL 
+
+@CARDSUMMON_AA_31131
+
+
+@CARDCAN_31131(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31131)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	SIF 마함数(듀얼리스트) < 1 && 마함数(対面者) < 1
+		RETURN 0
+	SIF 듀얼리스트 != "자신" && 마함数(対面者) < 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31131(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31131)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件複数 = 98
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,"묘지")
+	ENDIF
+ENDIF

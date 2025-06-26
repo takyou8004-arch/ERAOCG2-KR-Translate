@@ -1,0 +1,104 @@
+﻿@CARDNAME_81835,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 섀도르츠
+	CASE "略称"
+		RESULTS = 섀도르츠
+	CASE "カテゴリ"
+		RESULTS:0 = 섀도르
+ENDSELECT
+
+
+@CARD_81835(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 1450
+	CASE "守備力"
+		RETURN 1950
+	CASE "융합代用"
+		RETURN 10
+	CASE "分割"
+		RETURN 효과なし
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_81835(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ①：이 카드는 발동 후 몬스터 존에 특수 소환한다。
+CALLFORM CARD_ABLE(0,필드→묘지 ,손패→묘지 ,덱→묘지 ,破壊→묘지)
+PRINTL ②：이 카드가 파괴 이외의 방법으로 묘지로 보내졌을 경우
+PRINTL 「섀도르츠」이외의 자신의 묘지의 "섀도르」마법 / 함정 카드 1장을 대상으로 하여 발동할 수 있다.。
+PRINTL 그 카드를 패에 넣는다。 
+PRINTL ③：이 카드는 융합소재의 대용카드로 사용할 수 있다。
+PRINTL （소재 대용 카드는 2번째 이후의 어떤 융합 소재로서도 대용할 수 있다）
+
+@CARDCAN_81835(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,81835)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動
+
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,81835,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지; || 종류 == 破壊→묘지
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_81835(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81835)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "마함", 場所)
+	ENDIF
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지; || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,81835)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 마함全般
+		효과条件カテゴリ = 섀도르
+		효과条件固名前 = 섀도르츠
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ENDIF
+

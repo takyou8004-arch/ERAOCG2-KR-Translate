@@ -1,0 +1,126 @@
+﻿@CARDNAME_50571,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 월화룡 블랙 로즈
+	CASE "略称"
+RESULTS = 월화룡BR
+	CASE "カテゴリ"
+RESULTS:0 = 로즈
+RESULTS:1 = 듀얼룡
+ENDSELECT
+
+
+@CARD_50571(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50571(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1체 이상
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,효과後誘発,EX소환時強制,특수소환時強制)
+PRINTL ①: 이 카드가 특수 소환했을 때, 또는 레벨 5 이상의 몬스터가 상대 필드에 특수 소환되었을 때,
+PRINTL 상대 필드의 특수 소환된 몬스터 1장을 대상으로 발동한다.
+PRINTL 그 몬스터 1장을 주인의 패로 되돌린다.
+
+
+@CARDSUMMON_50571(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 7
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50571) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50571(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50571)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時強制 || 종류 == 특수소환時強制
+	SIF 발동済_1(듀얼리스트,50571)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,50571)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = レベル持ち
+	CALL 효과条件レベル_ADV(5,"以上")
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50571(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時強制 || 종류 == 특수소환時強制 || 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50571,1)
+	CALL FULLRESET
+	효과条件召種 = 召種全특수
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"손패")
+ENDIF

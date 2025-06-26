@@ -1,0 +1,147 @@
+﻿@CARDNAME_27002,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 영혼을 먹는 오비랍토르
+	CASE "略称"
+RESULTS = 오비랍토르
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_27002(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 500
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_27002(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「영혼을 먹는 오비랍토르」의 ①② 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,소환時 ,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 덱에서 비늘야수족 몬스터 1장을 고르고, 패에 넣거나 묘지로 보낸다.
+CALL CARD_ABLE(2,필드起動)
+PRINTL ②: 이 카드 이외의 자신 필드의 레벨 4 이하의 비늘야수족 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 파괴한다.
+PRINTL 그 후, 자신 묘지에서 비늘야수족 몬스터 1장을 고르고 수비 표시로 특수 소환한다.
+PRINTL 
+
+@CARDCAN_27002(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,27002)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,27002)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 비늘야수족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,27002)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 비늘야수족
+	효과条件他所 = 1
+	CALL 효과条件レベル_ADV(4, "以下")	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 비늘야수족
+	효과条件소환可 = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_27002(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27002,1)
+	IF RESULT == 0
+PRINTL 카드를 패에 넣겠습니까?
+		CALL YN_CHOICE(듀얼리스트)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과条件종류 = モン全般
+			효과条件종족 = 비늘야수족
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ELSE
+			CALL FULLRESET
+			효과条件종류 = モン全般
+			효과条件종족 = 비늘야수족
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27002,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件他所 = 1
+		효과条件종족 = 비늘야수족
+		CALL 효과条件レベル_ADV(4, "以下")
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件종류 = モン全般
+			효과条件종족 = 비늘야수족
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		ENDIF
+	ENDIF
+ENDIF

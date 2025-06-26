@@ -1,0 +1,182 @@
+﻿@CARDNAME_53040,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = BF－완전무장 윙
+	CASE "略称"
+RESULTS = BFFA 윙
+	CASE "カテゴリ"
+RESULTS:0 = 블랙 페더
+ENDSELECT
+
+
+@CARD_53040(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_53040(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 블랙 페더
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,53040) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_53040(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「BF」튜너 ＋ 튜너 이외의 몬스터 1장 이상
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 완전 내성을 가진다.
+CALLFORM CARD_ABLE(0,발동誘発)
+PRINTL ②：상대 몬스터의 효과가 발동했을 때 발동할 수 있다.
+PRINTL 상대 필드의 앞면 표시 몬스터 1장에 악성 카운터를 1개 놓는다.
+
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ③：1턴에 1번, 상대 필드의 악성 카운터가 놓여있는 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 컨트롤을 얻는다.
+CALLFORM CARD_ABLE(0,ターン終了時)
+
+PRINTL ④：자신 엔드 페이즈에 발동할 수 있다.
+PRINTL 악성 카운터가 놓여있는 몬스터를 전부 파괴한다.
+
+
+@CARDCAN_53040(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,53040)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 10
+	효과条件悪Ｃ所持 = 888
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과条件悪Ｃ所持 = 999
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_53040(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53040)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 10
+		효과条件悪Ｃ所持 = 888
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"悪Ｃ")
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58040,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 10
+		효과条件悪Ｃ所持 = 999
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58040)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 10
+		효과条件悪Ｃ所持 = 999
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드全体",場所,"묘지")
+	ENDIF
+ENDIF
+

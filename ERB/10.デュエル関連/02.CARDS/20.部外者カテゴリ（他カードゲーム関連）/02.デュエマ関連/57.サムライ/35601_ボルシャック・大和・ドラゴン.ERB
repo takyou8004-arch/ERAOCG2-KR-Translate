@@ -1,0 +1,148 @@
+﻿@CARDNAME_35601,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 볼샤크 야마토 드래곤
+	CASE "略称"
+RESULTS = 야마토 드래곤
+	CASE "カテゴリ"
+RESULTS:0 = 사무라이
+RESULTS:1 = 볼샤크
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_35601(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 효과モン
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 화염속성
+
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 1500
+	;牝性/雄性があるよ
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_35601(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드의 ①③의 효과는 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,소환時 ,특수소환時)
+PRINTL ①: 이 카드가 소환 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 덱/묘지에서 「볼메테우스 무사 드래곤」을 1장 고르고, 특수 소환한다.
+CALLFORM CARD_ABLE(0,攻守変動 )
+PRINTL ②: 자신 턴 동안, 이 카드의 공격력은 자신의 묘지의 화염 속성 몬스터 1장당 200 포인트 올린다.
+CALLFORM CARD_ABLE(3,필드起動)
+PRINTL ③: 자신 필드에 「볼메테우스 무사 드래곤」이 존재할 경우, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 상대 필드에 존재하는 몬스터 1장을 파괴한다.
+PRINTL 
+
+@CARDCAN_35601(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,35601)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,35601)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲덱 = 1
+효과条件名前 = 볼메테우스 무사 드래곤
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_3(듀얼리스트,35601)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件名前 = 볼메테우스 무사 드래곤
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1 
+ENDIF
+@CARDEFFECT_35601(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35601,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲덱 = 1
+효과条件名前 = 볼메테우스 무사 드래곤
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)	
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 화염속성
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 200
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35601,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+ENDIF
+

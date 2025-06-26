@@ -1,0 +1,113 @@
+﻿@CARDNAME_1390,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아로마지 로즈마리
+	CASE "略称"
+RESULTS = AM 로즈마리
+	CASE "カテゴリ"
+RESULTS:0 = 아로마
+ENDSELECT
+
+
+@CARD_1390(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 700
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1390(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,常在無効)
+PRINTL ①: 자신의 LP가 상대보다 많고, 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 배틀 페이즈 중, 상대 몬스터의 효과는 무효화된다.
+CALLFORM CARD_ABLE(10,효과後誘発)
+PRINTL ②: 1턴에 1번, 자신의 LP가 회복했을 경우, 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 표시 형식을 변경한다.
+
+@CARDCAN_1390(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1390)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 常在無効
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= GETVAR(@"ライフ_%対面者%") 
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+
+	SIF GETVAR(@"%듀얼리스트%_回復者") != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1390(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 常在無効
+	CALL FULLRESET
+;	효과元カードID = 1390
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効",0,1390)
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1390,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과추가종류 = 3
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"표시변경")
+	ENDIF
+ENDIF
+
+
+

@@ -1,0 +1,93 @@
+﻿@CARDNAME_33250,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 령수사의 장로
+	CASE "略称"
+RESULTS = 령수사의 장로
+	CASE "カテゴリ"
+RESULTS:0 = 령수
+RESULTS:1 = 령수사
+ENDSELECT
+
+
+@CARD_33250(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 사이킥족 
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 200
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수制限"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_33250(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신은 「령수사의 장로」를 1턴에 1번만 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,소환時強制)
+PRINTL ①: 이 카드가 소환했을 때 발동한다.
+PRINTL 이 턴, 자신은 일반 소환에 추가하여 1번만, 자신 메인 페이즈에 「령수」 몬스터 1장을 소환할 수 있다.
+
+@CARDCAN_33250(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,33250)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時強制
+
+	RETURN 1
+ELSEIF 종류 == 短紋章起動
+	RETURN 1
+ENDIF
+@CARDEFFECT_33250(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC レベル合計
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33250)
+	IF RESULT == 0
+		CALL CARD_RESERV(듀얼리스트,33250,短紋章予約)
+	ENDIF
+ELSEIF 종류 == 短紋章起動
+	CALL FULLRESET
+	효과条件カテゴリ = 령수
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+ENDIF
+

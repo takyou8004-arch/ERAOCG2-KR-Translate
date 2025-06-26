@@ -1,0 +1,177 @@
+﻿@CARDNAME_71650,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 세렌의 주안
+	CASE "略称"
+RESULTS = 세렌의 주안
+	CASE "カテゴリ"
+RESULTS:0 = 주안
+ENDSELECT
+
+
+@CARD_71650(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 装備마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71650(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "주안" 몬스터에게만 장착 가능.
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 장착 몬스터는 전투 내성, 파괴 내성, 대상 내성을 얻는다.
+CALLFORM CARD_ABLE(0,발동強制誘発)
+PRINTL ②: 장착 몬스터와 동명의 카드 또는 "세렌의 주안" 이외의 "주안" 마법 / 함정 카드의 효과가 발동했을 때 발동한다.
+PRINTL 장착 몬스터의 공격력을 500 올리고, 자신은 500 LP를 잃는다.
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ③: 500 LP를 지불하고, 묘지의 다른 "주안" 마법 / 함정 카드 1장을 제외하고 발동할 수 있다.
+PRINTL 묘지의 "세렌의 주안" 1장을 패로 추가한다.
+
+@CARDCAN_71650(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 装備先名前
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71650)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 주안
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%装備者%_필드:装備先") == -1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,71650)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件他所 = 1
+	효과条件종류 = 마함全般
+	효과条件カテゴリ = 주안
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 500
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF GETVAR(@"%装備者%_필드:装備先") == -1
+		RETURN 0
+	CALL FULLRESET
+	TRYCALLFORM CARDNAME_{GETVAR(@"%装備者%_필드:装備先")}, "名前"
+	효과条件スーパー名前 = %RESULTS%
+	효과条件カテゴリ = 주안
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_START_DATA_2(듀얼리스트)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1 
+ENDIF
+
+@CARDEFFECT_71650(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 選択カード
+
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71650)
+	IF RESULT == 0
+		;패에서 발동後、마법トラップ 존에 カード이동
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件표시 = 表側표시
+		효과条件カテゴリ = 주안
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+
+ELSEIF 종류 == 발동強制誘発
+	CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",500)
+	CALL SET_FIELD_INFO(装備者,"필드",装備先,"永攻",500)
+
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71650,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 마함全般
+		효과条件カテゴリ = 주안
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",500)
+			CALL FULLRESET
+			효과範囲묘지 = 1
+효과条件名前 = 세렌의 주안
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"破耐")
+ENDIF

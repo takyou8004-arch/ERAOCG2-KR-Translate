@@ -1,0 +1,166 @@
+﻿@CARDNAME_41485,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 해황정 어비스라인
+	CASE "略称"
+RESULTS = 해황 어비스라인
+	CASE "カテゴリ"
+RESULTS:0 = 해황
+ENDSELECT
+
+
+@CARD_41485(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2100
+	CASE "守備力"
+		RETURN 2800
+	CASE "성별"
+		RETURN 牝性	
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_41485(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件レベル = 7
+素材条件속성 = 물속성
+素材条件数自由 = 1
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,41485) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_41485(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 물속성 레벨 ７ 몬스터 ２장 이상
+PRINTL 이 카드명의 ①③의 효과는 각각 １턴에 １번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 엑시즈 소환했을 경우, 자신의 묘지의 레벨 ７ 이하의 바다생물족 몬스터 １장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 특수 소환한다.
+CALL CARD_ABLE(0,攻守変動)
+PRINTL ②：이 카드가 몬스터 존에 존재하는 한,
+PRINTL 자신 필드의 물속성 몬스터의 공격력 ∙ 수비력은, 이 카드의 엑시즈 소재의 수×３００ 올린다.
+CALL CARD_ABLE(3,필드起動)
+PRINTL ③：이 카드의 엑시즈 소재를 １개 제거하고 발동할 수 있다.
+PRINTL 덱에서 「어비스」함정 카드 １장을 자신 필드에 세트한다.
+
+@CARDCAN_41485(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,41485)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,41485)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 바다생물족
+	CALLFORM 효과条件レベル_ADV(7, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_3(듀얼리스트,41485)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 어비스
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_41485(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41485,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 바다생물족
+		CALLFORM 효과条件レベル_ADV(7, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+	ENDIF
+ELSEIF 종류 == 지속효과
+	攻撃力修正 = (GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") + 1) * 300
+	CALL FULLRESET
+	효과条件속성 = 물속성
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻撃力修正,攻撃力修正)	
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41485,3,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 어비스
+		효과条件종류 = 함정全般
+		CALL CARD_SET_BASIC(듀얼리스트,"덱",ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF
+

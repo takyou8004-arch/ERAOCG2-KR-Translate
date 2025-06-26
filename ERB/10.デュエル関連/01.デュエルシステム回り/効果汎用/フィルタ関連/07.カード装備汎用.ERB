@@ -1,0 +1,471 @@
+﻿@CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン,強奪플래그)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 대상者
+#DIMS DYNAMIC 参照先
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 出処
+#DIMS DYNAMIC 装備カード名
+#DIM DYNAMIC 종류
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 上級値
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 所有先
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 強奪플래그
+
+VARSET RESULT
+
+カードID = GETVAR(@"%듀얼리스트%_%ゾーン%:場所")
+TRYCALLFORM CARDNAME_{カードID}, "名前"
+装備カード名 = %RESULTS%
+VARSET RESULTS
+
+
+효과条件표시 = 表側표시
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+$CHOICE_LOOP
+IF 효과条件固定 != -1
+	選択カード = 효과条件固定
+	GOTO INPUT_SKIP
+ENDIF
+
+IF 듀얼리스트 == "자신"
+	CUSTOMDRAWLINE —
+	PRINTL 【장착처의 카드를 선택해주세요】
+	CUSTOMDRAWLINE —
+	PRINTL 
+ENDIF
+
+CALL CARD_FILTER_BASIC(듀얼리스트,"上級",ゾーン,場所)
+条件달성 = RESULT:1
+
+IF 듀얼리스트 == "자신"
+	PRINTL
+	IF 条件달성 != 0 && 효과条件任意 != 1
+		SETCOLOR C_GRAY
+		PRINTL 　(9999) - 돌아간다(선택 가능한 카드가 있습니다)
+		RESETCOLOR
+	ELSE
+		PRINTL 　[9999] - 돌아간다
+	ENDIF
+	PRINTL
+	BINPUT
+	選択カード = RESULT
+ELSEIF 듀얼리스트 == "상대"
+	選択カード = RESULT
+	SETCOLOR C_W_RED
+	IF 選択カード == 9999
+		CUSTOMDRAWLINE —
+		PRINTL 【장착대상이 되는 카드가 없습니다】
+		CUSTOMDRAWLINE —
+		RESETCOLOR
+	ENDIF
+	PRINTL
+	WAIT
+ENDIF
+
+
+
+IF 選択カード == 9999
+	PRINTFORMW 아무것도 하지 않았습니다。
+	RETURN 0
+ELSE
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	選択カード_ID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{選択カード（CS）}")
+	CALL SELECT_UI_SET(듀얼리스트,選択カード_ID,6)
+	IF RESULT == 1
+		GOTO CHOICE_LOOP
+	ENDIF
+ENDIF
+
+$INPUT_SKIP
+SIF 選択カード >=2000
+	選択カード = (選択カード - 2000) + 6
+
+IF 듀얼리스트 == "자신"
+	カード설치先 = 現마함("자신")
+	所有先 = 1
+ELSE
+	カード설치先 = 現마함("상대")
+	所有先 = 2
+ENDIF
+
+
+IF ゾーン == "마함"
+	SETVAR @"%듀얼리스트%_魔_表:場所", 1
+	SETVAR @"%듀얼리스트%_魔_装:場所", 選択カード
+
+ELSE
+	SETVAR @"%듀얼리스트%_魔_所有:カード설치先", 所有先
+	SETVAR @"%듀얼리스트%_魔_表:カード설치先", 1
+
+	SETVAR @"%듀얼리스트%_마함:カード설치先", GETVAR(@"%듀얼리스트%_%ゾーン%:場所")
+	SETVAR @"%듀얼리스트%_魔_装:カード설치先", 選択カード
+
+ENDIF
+
+IF ゾーン == "손패"
+	SELECTCASE 듀얼리스트
+		CASE "자신"
+			자신_손패:場所 = -1
+		CASE "상대"
+			상대_손패:場所 = -1
+	ENDSELECT
+
+ELSEIF ゾーン == "묘지"
+	SELECTCASE 듀얼리스트
+		CASE "자신"
+			자신_묘지:場所 = -1
+		CASE "상대"
+			상대_묘지:場所 = -1
+	ENDSELECT
+ELSEIF ゾーン == "필드"
+	SELECTCASE 듀얼리스트
+		CASE "자신"
+			자신_필드:場所 = -1
+		CASE "상대"
+			상대_필드:場所 = -1
+	ENDSELECT
+ELSEIF ゾーン == "덱"
+	SELECTCASE 듀얼리스트
+		CASE "자신"
+			ARRAYREMOVE 자신_덱, 場所, 1
+			자신_덱:(VARSIZE("자신_덱")-1) = -1
+		CASE "상대"
+			ARRAYREMOVE 상대_덱, 場所, 1
+			상대_덱:(VARSIZE("상대_덱")-1) = -1
+	ENDSELECT
+ELSEIF ゾーン == "EX덱"
+	SELECTCASE 듀얼리스트
+		CASE "자신"
+			ARRAYREMOVE 자신_EX덱, 場所, 1
+			자신_EX덱:(VARSIZE("자신_EX덱")-1) = -1
+		CASE "상대"
+			ARRAYREMOVE 상대_EX덱, 場所, 1
+			상대_EX덱:(VARSIZE("상대_EX덱")-1) = -1
+	ENDSELECT
+ENDIF
+
+SIF ゾーン == "덱"
+	CALL SHUFFLE(듀얼리스트)
+
+
+IF 選択カード >= 6	
+	選択カード_ID = GETVAR(@"%対面者%_필드:(選択カード - 6)")
+ELSE
+	選択カード_ID = GETVAR(@"%듀얼리스트%_필드:選択カード")
+ENDIF
+VARSET RESULT
+TRYCALLFORM CARDNAME_{選択カード_ID}, "名前"
+PRINTFORML %듀얼리스트%는 %装備カード名%를 %RESULTS%에 장착했다
+SETVAR @"%듀얼리스트%_装備成功_保", 1
+RESULT:1 = 選択カード_ID
+RESULT:2 = 選択カード
+RETURN 1
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@CARD_EQUIP_MONSTER(듀얼리스트,場所,出処,選択カード,装備종류)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 대상者
+
+#DIMS DYNAMIC 出処
+#DIMS DYNAMIC 出処２
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 装備종류
+#DIM DYNAMIC 所有先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 듀얼리스트 == "자신"
+	IF 出処 == "상대묘지" || 出処 == "상대필드"
+		所有先 = 2
+	ELSE
+		所有先 = 1
+	ENDIF
+ELSEIF 듀얼리스트 == "상대"
+	IF 出処 == "상대묘지" || 出処 == "상대필드"
+		所有先 = 1
+	ELSE
+		所有先 = 2
+	ENDIF
+ENDIF
+
+IF 出処 == "필드"
+	대상者 = %듀얼리스트%
+	出処２ = 필드
+ELSEIF 出処 == "손패"
+	대상者 = %듀얼리스트%
+	出処２ = 손패
+
+ELSEIF 出処 == "묘지"
+	대상者 = %듀얼리스트%
+	出処２ = 묘지
+ELSEIF 出処 == "덱"
+	대상者 = %듀얼리스트%
+	出処２ = 덱
+
+ELSEIF 出処 == "EX덱"
+	대상者 = %듀얼리스트%
+	出処２ = EX덱
+ELSEIF 出処 == "제외"
+	대상者 = %듀얼리스트%
+	出処２ = 제외
+
+
+
+ELSEIF 出処 == "상대필드"
+	대상者 = %対面者%
+	出処２ = 필드
+ELSEIF 出処 == "상대손패"
+	대상者 = %対面者%
+	出処２ = 손패
+ELSEIF 出処 == "상대묘지"
+	대상者 = %対面者%
+	出処２ = 묘지
+ELSEIF 出処 == "상대덱"
+	대상者 = %対面者%
+	出処２ = 덱
+ELSEIF 出処 == "상대EX덱"
+	대상者 = %対面者%
+	出処２ = EX덱
+ELSEIF 出処 == "제외"
+	대상者 = %対面者%
+	出処２ = 제외
+ENDIF
+
+IF 마함数(듀얼리스트) >= 5
+	CALL CARD_DISPOSE(대상者,出処２,選択カード)
+	RETURN 0
+ENDIF
+
+IF 듀얼리스트 == "자신"
+	カード설치先 = 現마함("자신")
+ELSE
+	カード설치先 = 現마함("상대")
+ENDIF
+
+
+;武装종류
+;0000 0001( 1) = 攻撃UP
+;0000 0010( 2) = 守備UP 
+;0000 0011( 3) = 攻撃UP + 守備UP
+;0000 0100( 4) = 一時破壊자세 + 一時戦闘자세
+;0000 1000( 8) = 
+;0000 1100(12) = 
+;0001 0000(16) = 묘지送り再攻撃
+
+
+SETVAR @"%듀얼리스트%_装備成功_保", 1
+
+SETVAR @"%듀얼리스트%_魔_所有:カード설치先", 所有先
+SETVAR @"%듀얼리스트%_魔_装:カード설치先", 場所
+SETVAR @"%듀얼리스트%_魔_武種:カード설치先", 装備종류
+SETVAR @"%듀얼리스트%_魔_表:カード설치先", 1
+SIF 효과추가カテ != ""
+	SETVAR @"%듀얼리스트%_魔_追カテ:カード설치先", 효과추가カテ
+
+SETVAR @"%듀얼리스트%_마함:カード설치先", GETVAR(@"%대상者%_%出処２%:選択カード")
+
+
+
+SELECTCASE 듀얼리스트
+	CASE "자신"
+		SELECTCASE 出処
+			CASE "필드"
+				자신_필드:選択カード = -1
+			CASE "손패"
+				자신_손패:選択カード = -1
+			CASE "묘지"
+				자신_묘지:選択カード = -1
+			CASE "덱"
+				ARRAYREMOVE 자신_덱, 選択カード, 1
+				자신_덱:(VARSIZE("자신_덱")-1) = -1
+			CASE "EX덱"
+				ARRAYREMOVE 자신_EX덱, 選択カード, 1
+				자신_EX덱:(VARSIZE("자신_EX덱")-1) = -1
+			CASE "상대필드"
+				상대_필드:選択カード = -1
+			CASE "상대묘지"
+				상대_묘지:選択カード = -1
+		ENDSELECT
+	CASE "상대"
+		SELECTCASE 出処
+			CASE "필드"
+				상대_필드:選択カード = -1
+			CASE "손패"
+				상대_손패:選択カード = -1
+			CASE "묘지"
+				상대_묘지:選択カード = -1
+			CASE "덱"
+				ARRAYREMOVE 상대_덱, 選択カード, 1
+				상대_덱:(VARSIZE("상대_덱")-1) = -1			
+			CASE "EX덱"
+				ARRAYREMOVE 상대_EX덱, 選択カード, 1
+				상대_EX덱:(VARSIZE("상대_EX덱")-1) = -1
+			CASE "상대필드"
+				자신_필드:選択カード = -1
+			CASE "상대묘지"
+				자신_묘지:選択カード = -1
+		ENDSELECT
+ENDSELECT
+
+
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+
+@CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,場所,装備종류,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 대상者
+#DIMS DYNAMIC カード名
+#DIMS DYNAMIC 参照先
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード,99
+#DIM DYNAMIC 上級値
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 装備종류
+#DIM DYNAMIC 最大値
+#DIM DYNAMIC 消去カード
+#DIM DYNAMIC 一時보존,99
+#DIM DYNAMIC 選択カード_ID
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+SIF 마함数(듀얼리스트) >= 5
+	RETURN 0
+
+$CHOICE_LOOP
+IF 듀얼리스트 == "자신"
+	CUSTOMDRAWLINE —
+	PRINTL 【카드를 선택해 주세요】
+	CUSTOMDRAWLINE —
+	PRINTL 
+ELSEIF 듀얼리스트 == "상대"
+	CALL ENEMY_RUTIN_CARD_ADD(参照先,場所,カードID)
+ENDIF
+
+CALL CARD_FILTER_BASIC(듀얼리스트,"上級",ゾーン,場所)
+条件달성 = RESULT:1
+
+IF 듀얼리스트 == "자신"
+	PRINTL
+	IF 条件달성 != 0 && 효과条件任意 != 1
+		SETCOLOR C_GRAY
+		PRINTL 　(9999) - 돌아간다(선택 가능한 카드가 있습니다)
+		RESETCOLOR
+	ELSE
+		PRINTL 　[9999] - 돌아간다
+	ENDIF
+	PRINTL
+	BINPUT
+	選択カード = RESULT
+ELSEIF 듀얼리스트 == "상대"
+	選択カード = RESULT
+	SETCOLOR C_W_RED
+	IF 選択カード == 9999
+		CUSTOMDRAWLINE —
+		PRINTL 【선택 가능한 카드가 없습니다】
+		CUSTOMDRAWLINE —
+		RESETCOLOR
+	ENDIF
+	PRINTL
+	WAIT
+ENDIF
+
+IF 選択カード == 9999
+	PRINTFORMW 돌아갑니다。
+	RETURN 0
+ELSEIF 選択カード != 9999
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	選択カード_ID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{選択カード（CS）}")
+	CALL SELECT_UI_SET(듀얼리스트,選択カード_ID,7)
+	IF RESULT == 1
+		GOTO CHOICE_LOOP
+	ENDIF
+	CALL CARD_SELECT(듀얼리스트,選択カード)
+	CALL CARD_EQUIP_MONSTER(듀얼리스트,場所,本参照先（CS）,選択カード（CS）,装備종류)
+	RESULT:1 = 選択カード_ID
+	RETURN 1
+ENDIF
+
+
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタC
+#DIM DYNAMIC 装備枚数
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+SIF ゾーン != "필드"
+	RETURN 0
+
+FOR カウンタ,0,5
+	SIF GETVAR(@"%듀얼리스트%_마함:カウンタ") == -1
+		CONTINUE	
+	SIF GETVAR(@"%듀얼리스트%_魔_装:カウンタ") != 場所
+		CONTINUE
+	CALL CARD_S_FILTER_SET(듀얼리스트,"마함",カウンタ)
+	SIF RESULT == 1
+		条件달성 = 1
+	CALL CARD_FILTER_SET(듀얼리스트,"마함",カウンタ)
+	SIF RESULT == 1
+		条件달성 = 1
+	SIF 条件달성 != 1
+		RETURN 0
+	装備枚数 ++
+NEXT
+
+FOR カウンタ,0,5
+	SIF GETVAR(@"%対面者%_마함:カウンタ") == -1
+		CONTINUE	
+	SIF GETVAR(@"%対面者%_魔_装:カウンタ") != 場所 + 6
+		CONTINUE
+	CALL CARD_S_FILTER_SET(対面者,"마함",カウンタ)
+	SIF RESULT == 1
+		条件달성 = 1
+	CALL CARD_FILTER_SET(対面者,"마함",カウンタ)
+	SIF RESULT == 1
+		条件달성 = 1
+	SIF 条件달성 != 1
+		RETURN 0
+	装備枚数 ++
+NEXT
+
+;PRINTFORM 장착매수:{装備枚数} / 장소:{場所}
+IF 효과条件CNT == 1
+	RETURN 装備枚数
+ELSE
+	IF 装備枚数 >= 1
+		RETURN 1
+	ELSE
+		RETURN 0
+	ENDIF
+ENDIF

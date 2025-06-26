@@ -1,0 +1,115 @@
+﻿@CARDNAME_33000,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 로맨스 픽
+	CASE "略称"
+RESULTS = R 픽
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_33000(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_33000(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 500 LP를 지불하고 발동할 수 있다.
+PRINTL 자신의 덱 위에서 카드 3장을 묘지로 보낸다.
+PRINTL 그 중에 사이킥족 몬스터가 있었을 경우,
+PRINTL 자신의 덱에서 레벨 7 이상의 사이킥족 몬스터 1장을 선택하여 패에 넣는다.
+
+
+
+@CARDCAN_33000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,33000)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,33000)
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 500
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	CALL 효과条件レベル_ADV(7, "以上")
+	효과条件종류 = モン全般
+	효과条件종족 = 사이킥족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_33000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33000,1)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",500)
+		REPEAT 3
+			CALLFORM CARD_{GETVAR(@"%듀얼리스트%_덱:0")},"종족"
+			SIF RESULT == 사이킥족
+				条件달성 = 1
+			CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",0)
+		REND
+		IF 条件달성
+			CALL FULLRESET
+			CALL 효과条件レベル_ADV(7, "以上")
+			효과条件종류 = モン全般
+			효과条件종족 = 사이킥족
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+

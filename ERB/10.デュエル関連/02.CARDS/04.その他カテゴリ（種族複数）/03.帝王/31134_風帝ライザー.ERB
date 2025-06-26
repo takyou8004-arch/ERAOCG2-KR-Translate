@@ -1,0 +1,104 @@
+﻿@CARDNAME_31134,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 바람 제왕 라이저
+	CASE "略称"
+RESULTS = 바람제왕 라이저
+	CASE "カテゴリ"
+RESULTS:0 = 제
+ENDSELECT
+
+
+@CARD_31134(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_31134(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환했을 경우에 발동할 수 있다.
+PRINTL 필드의 카드 1장을 선택하여 덱의 맨 위로 되돌린다.
+PRINTL 
+
+@CARDSUMMON_AA_31134
+
+
+@CARDCAN_31134(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31134)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	CALL FULLRESET
+	IF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+	ENDIF
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31134(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31134)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場単体",場所,"選択")
+		IF RESULT:1 != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT:1)
+			選択カード = RESULT
+			CALL CARD_ADD_DECK_SPC(대상者（CS）,参照先（CS）,選択カード)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,103 @@
+﻿@CARDNAME_1730,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 도미누스 퍼지
+	CASE "略称"
+RESULTS = 성광의 분쇄
+	CASE "カテゴリ"
+RESULTS:0 = 도미누스
+ENDSELECT
+
+
+@CARD_1730(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1730(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+PRINTL 상대 필드에 카드가 존재할 경우, 이 카드의 발동은 패에서도 할 수 있다.
+CALLFORM CARD_ABLE(1,발동誘発)
+PRINTL ①: 상대가 효과를 발동했을 경우에 발동할 수 있다.
+PRINTL 이 턴에 1번, 덱에서 카드를 패로 더하는 상대의 효과 처리를 무효로 한다.
+PRINTL 이 카드를 패에서 발동했을 경우, 발동 후,
+CALLFORM CARD_ABLE(20,永紋章起動)
+PRINTL 이 듀얼 중에 자신은 어둠, 물, 화염속성 몬스터의 효과를 발동할 수 없다.
+
+
+@CARDCAN_1730(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1730)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,1730)
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF 마함数(対面者) == 0 && モンスター数(対面者) == 0
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 2
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_1730(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 발동誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1730,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL SET_PLAYER_INFO(듀얼리스트,"パ-ジ효과",1,1)
+		IF ゾーン == "손패"
+			CALL SET_PLAYER_INFO(듀얼리스트,"超속성효과無効",1)
+			CALL CARD_EFFECT_D1USE(듀얼리스트,1730)
+		ENDIF
+	ENDIF
+ENDIF

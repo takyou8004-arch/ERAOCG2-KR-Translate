@@ -1,0 +1,91 @@
+﻿@IRAI_EVENT_201(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE  "名前"
+		;표시するタイトル
+		RESULTS = (CP1)실체화한 몬스터를 쫒아라！(반복수주 가능)
+	CASE "이벤트種"
+		;이벤트の종류
+		;이벤트_物語：クリアするまで遊べる이벤트、メインストーリーに関連するならばここ
+		;이벤트_通常：クリアするまで遊べる이벤트、メインストーリーに関連しないのならばここ
+		;이벤트_ＲＥ：何度でも挑める이벤트、完了状態が翌日にリセットされる。
+		RETURN 이벤트_ＲＥ
+	CASE "依頼先"
+		;이벤트が発生する場所、場所名に関してはDIM.ERHを確認（ERBの99.その他内にある）
+		;RETURN 即時開始で受けた後すぐに이벤트を開始することもできる
+		RETURN 場所_繁華街
+	CASE "詳細"
+		;単純な説明文、ここに必要な情報を書く：
+		PRINTL インターネット上で実体化した몬스터의 目撃情報が相次いでいる。
+		PRINTL 繁華街へと向かい、実体化した몬스터를 探してみよう！
+		PRINTL
+		PRINTL
+		PRINTL 報酬：確保モンスター
+	CASE "条件"
+		;下の依頼_完了횟수:○○は、○○に入るIDの依頼を見て、그것이 クリアされていない状態なら受けられませんよって返す
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_201(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 획득モンスター
+
+
+CALL RECOVER_PERMIL(MASTER,-50,"체력")
+CALL RECOVER_PERMIL(MASTER,-100,"기력")
+
+PRINTFORMW 目を拗らして辺りを見渡し、人間に化けているモンスターが居ないか確認しました。
+PRINT .
+WAIT
+PRINT .
+WAIT
+PRINT .
+WAIT
+PRINTFORML ！！
+
+TARGET = RAND:CHARANUM
+획득モンスター = TARGET
+IF TALENT:TARGET:듀얼리스트 >= 1
+	PRINTFORMW いや……ただの人間のようだ。
+	RETURN 1
+ELSEIF TALENT:TARGET:외부자 >= 1
+	PRINTFORMW ……いや、気のせいだったようだ。
+	RETURN 1
+ELSEIF CFLAG:TARGET:소유함 == 1
+	PRINTFORML どうやらネットを騒がせていたのは、こっそりあなたの컬렉션から抜け出していた
+	PRINTFORMW %CALLNAME:TARGET%だったようだ、もう帰るぞと伝えると残念そうな顔でカードに戻っていった。
+	
+	RETURN 2
+ENDIF
+PRINTL
+PRINTFORMW 見つけた！ %CALLNAME:TARGET%だ！
+PRINTFORMW 見られていると気づいた%NAME:TARGET%는その場から도망친다も、追い詰められ……。
+PRINTFORMW 観念したのか最後のあがきでデュエルに挑んできた。
+
+CALL CHOICE_DUEL_TYPE
+
+IF RESULT == 1
+	TIME += 60
+	CALL CARD_GET_CHARA(획득モンスター)
+	PRINTFORMW %CALLNAME:획득モンスター%を倒したところ、カードの姿に戻った！
+	RETURN 2
+ELSE
+	PRINTFORML ぎゃあ！？
+	PRINTFORML …………！！
+	PRINTFORML どうやら気絶しているうちに逃げられてしまったようだ……。
+	CALL RECOVER_PERMIL(MASTER,-500,"체력")
+	CALL RECOVER_PERMIL(MASTER,-2000,"기력")
+	TIME += 180
+	RETURN 3
+ENDIF
+RETURN 1
+
+
+

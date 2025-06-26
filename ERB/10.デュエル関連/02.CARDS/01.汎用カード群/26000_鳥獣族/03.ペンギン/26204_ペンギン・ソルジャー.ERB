@@ -1,0 +1,98 @@
+@CARDNAME_26204,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 펭귄 솔저
+	CASE "略称"
+RESULTS = PG솔저
+	CASE "カテゴリ"
+RESULTS:0 = 펭귄
+ENDSELECT
+
+
+@CARD_26204(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 750
+	CASE "守備力"
+		RETURN 500
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26204(종류)
+#DIM DYNAMIC 종류
+
+SIF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == 戦闘→묘지
+	SETCOLOR C_YELLOW
+CALLFORM CARD_ABLE(0,소환時 ,특수소환時 ,戦闘→묘지)
+PRINTL ①: 이 카드가 소환 / 특수 소환되었을 경우, 또는 전투로 파괴되었을 경우,
+PRINTL 상대 필드의 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 이 상대의 카드를 주인의 패로 되돌린다.
+RESETCOLOR
+
+@CARDCAN_26204(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26204)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == 戦闘→묘지
+	;상대場にモンスターがいないなら침묵
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26204(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 除去種
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26204)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+효과条件名前 = 부정펭귄
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			除去種 = 제외
+		ELSE
+			除去種 = 손패
+		ENDIF
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,除去種)
+	ENDIF
+ENDIF
+

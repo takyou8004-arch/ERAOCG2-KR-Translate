@@ -1,0 +1,261 @@
+@CARDNAME_99715,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = E.R.ANSOM M∀licious Ware
+	CASE "略称"
+		RESULTS = M∀licious Ware
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.ANSOM
+		RESULTS:1 = 멜리스
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_99715(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99715(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드는 자신 필드에 사이버스 몬스터 카드가 존재할 경우에만 발동할 수 있다.
+CALLFORM CARD_ABLE(10,마함起動)
+PRINTL ①：1턴에 1번, 상대 메인 페이즈에 상대 덱에 "ERANSOM 웜"이 존재할 경우에 발동할 수 있다.
+PRINTL 상대는 이하의 효과로 부터 1개를 선택해 적용한다.
+PRINTL ●발동 플레이어로 부터 상대 덱의 맨위와 상대의 패에 랜덤으로 "MC" 통상 마법을 1장씩 생성한다.
+IF 賭け内容 <= 1
+	PRINTL ●듀얼에 지면 데이트 약속을 하는 일로, 발동 플레이어로 부터 상대는 덱으로 부터 "ERANSOM 웜" 1장을 패에 넣는다.
+ELSEIF 賭け内容 == 2
+	PRINTL ●듀얼에 지면 팬티를 건네줄 약속을 하는 일로, 발동 플레이어로 부터 상대는 덱으로 부터 "ERANSOM 웜" 1장을 패에 넣는다.
+ELSEIF 賭け内容 == 3
+	PRINTFORML ●듀얼에 지면 %NAME:MASTER%의 방에 갈 약속을 하는 일로, 발동 플레이어로 부터 상대는 덱으로 부터 "ERANSOM 웜" 1장을 패에 넣는다.
+ELSE
+ENDIF
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：상대 덱에 "ERANSOM 웜"이 존재하는 한,
+PRINTL 필드의 이 카드는 효과로 파괴되지 않고, 상대는 이 카드를 효과의 대상으로 할 수 없다.
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ③：상대의 엔드 페이즈에, 상대의 묘지에 "MC" 통상 마법과 "ERANSOM 웜"이 합계 4장 이상 존재할 경우에 발동할 수 있다.
+PRINTL 이 카드를 묘지에 보내고, 상대는 덱으로 부터 "ERANSOM 웜"을 원하는 만큼 패로 가져올 수 있다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99715(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99715)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대덱 = 1
+	효과条件ID = 179716
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") > 1
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 사이버스족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대덱 = 1
+	효과条件ID = 179716
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과条件スーパー名前 = ERANSOM 웜
+	효과条件カテゴリ = MC
+	효과条件종류 = 通常마법
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 4
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99715(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 조교대상名前
+#DIMS DYNAMIC 이동カード名
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || 종류 == フリー誘発
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99715,10)
+	IF RESULT == 0
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상名前 = %NAME:RESULT%
+		ELSE
+			조교대상名前 = %対面者%
+		ENDIF
+		PRINTFORML
+		PRINTFORML
+		PRINTFORMW %듀얼리스트%는 %조교대상名前%의 덱에 가르친「E.R.ANSOM 웜」을 없애는 것을 대상으로 해서 %조교대상名前%을 위협했다.
+		PRINTFORML
+		IF 対面者 == "자신"
+			PRINTL
+			PRINTFORML 적용하는 효과를 선택해 주세요.
+			PRINTL
+			PRINTFORML [0] - ●덱의 맨위와 패에 랜덤으로「MC」통상 마법 카드를 1장씩 생성한다.
+			SETCOLOR C_GRAY
+			PRINTFORML (1) - ●듀얼에 지면 데이트 약속을 하는 일로, 덱으로 부터「ERANSOM 웜」1장을 패에 넣는다（%조교대상名前%가 요구하지 않았다）
+			RESETCOLOR
+			PRINTFORML
+			BINPUT
+		ELSEIF 対面者 == "상대"
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				;캐릭터ありだと可能な限り賭けデュエル進行に固定
+				IF 賭け内容 == 0
+					RESULT = 1
+				ELSEIF 賭け内容 <= 3 &&  賭け内容 > 0
+					RESULT = 賭け内容
+				ELSE
+					RESULT = 0
+				ENDIF
+			ELSE
+				;名無し모브だとMC生成に固定
+				RESULT = 0
+			ENDIF
+		ENDIF
+
+		IF RESULT ==0
+			PRINTL
+			PRINTFORML 위협에 굽힌 %조교대상名前%는 부끄러운 행동을 하도록, 한층 더 위협 당했다......
+			PRINTL
+			;手動덱トップ비밀병기
+			IF 듀얼리스트 == "자신"
+				ARRAYSHIFT 상대_덱, 1 , -1
+			ELSEIF 듀얼리스트 == "상대"
+				ARRAYSHIFT 자신_덱, 1 , -1
+			ENDIF
+			選択カード_ID = 79840 + RAND:9
+			SETVAR @"%対面者%_덱:0", 選択カード_ID
+			CALLFORM CARDNAME_{選択カード_ID}, "名前"
+			PRINTFORMW %対面者%의 덱 탑에 %RESULTS%가 더해졌다!
+
+			選択カード_ID = 79840 + RAND:9
+			CALL CARD_GENERATE_HAND(対面者,選択カード_ID)
+		ELSEIF RESULT == 1
+			PRINTL
+			PRINTFORM 위협에 굽힌 %조교대상名前%는 듀얼에 지면
+			IF 賭け内容 == 1
+				PRINTFORM 카드 팩을 건네주는 대신에
+			ENDIF
+			PRINTFORML 데이트 약속을 했다......
+			PRINTW
+			賭け内容 = 2
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件ID = 179716
+			CALL CARD_ADD_ADV(対面者,ゾーン,場所)
+		ELSEIF RESULT == 2
+			PRINTL
+			PRINTFORML 위협에 굽힌 %조교대상名前%는 듀얼에 지면 데이트 하는 대신에 팬티를 건네줄 약속을 했다......
+			PRINTW
+			賭け内容 = 3
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件ID = 179716
+			CALL CARD_ADD_ADV(対面者,ゾーン,場所)
+		ELSEIF RESULT == 3
+			PRINTL
+			PRINTFORML 위협에 굽힌 %조교대상名前%는 듀얼에 지면 팬티를 건네주는 대신에 %NAME:MASTER%의 방에 갈 약속을 했다......
+			PRINTW
+			賭け内容 = 4
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件ID = 179716
+			CALL CARD_ADD_ADV(対面者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") > 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99715)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"魔자신",場所,"破耐")
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"魔자신",場所,"対耐")
+ELSEIF 종류 == ターン終了時強制
+	PRINTL
+	PRINTL
+	PRINTFORML %対面者%가 보통의 요구를 물은 일로, 해킹을 한 번 해제 해주었다.
+	PRINTL
+	CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件ID = 179716
+	효과条件複数 = 任意の数
+	CALL CARD_ADD_ADV(対面者,ゾーン,場所)
+ENDIF

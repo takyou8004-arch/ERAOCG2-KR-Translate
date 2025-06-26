@@ -1,0 +1,102 @@
+﻿@CARDNAME_72200,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 언데드 월드
+	CASE "略称"
+RESULTS = 언월
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_72200(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72200(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「언데드 세계」가 된다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①：필드의 몬스터는 모두 언데드족이 된다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：상대는 몬스터를 어드밴스 소환할 수 없다.
+PRINTL 
+
+@CARDCAN_72200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72200)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72200)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "アンデット世界")
+	CALL SET_PLAYER_INFO(듀얼리스트,"ADV불가",3,1)
+ELSEIF 종류 == 攻守変動
+
+	CALL FULLRESET
+	CALL STATCHANGE_OTHER(듀얼리스트,"필드",場所,"種",언데드족,72200)
+	CALL FULLRESET
+	;효과元カードID = 72200
+	CALL STATCHANGE_OTHER(듀얼리스트,"상대필드",場所,"種",언데드족,72200)
+
+ENDIF

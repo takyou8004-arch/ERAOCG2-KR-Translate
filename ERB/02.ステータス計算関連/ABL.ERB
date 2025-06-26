@@ -1,0 +1,135 @@
+﻿@SHOW_JUEL
+
+@SHOW_ABLUP_SELECT
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC ABL種
+#DIM DYNAMIC JUEL種
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC JUEL不足
+#DIM DYNAMIC 경험不足
+
+;オーとレベル상승はここ
+FOR 캐릭터_ID,0,CHARANUM
+	FOR カウンタ,0,30
+		SELECTCASE カウンタ
+			;多くの要素が必要な能力から上げてゆく
+			;자위중독
+			CASE 0
+				ABL種= 30
+			;정액중독
+			CASE 1
+				ABL種= 31
+			;레즈중독
+			CASE 2
+				ABL種= 32
+			;게이중독
+			CASE 3
+				ABL種= 33
+			;봉사정신
+			CASE 4
+				ABL種= 13
+			;레즈끼
+			CASE 5
+				ABL種= 17
+			;호모끼
+			CASE 6
+				ABL種= 18
+			;마조끼
+			CASE 7
+				ABL種= 15
+			;새드끼
+			CASE 8
+				ABL種= 16
+			;노출증
+			CASE 9
+				ABL種= 14
+			;친밀
+			CASE 10
+				ABL種= 9
+			;순종
+			CASE 11
+				ABL種= 10
+			;욕망
+			CASE 12
+				ABL種= 11
+			;기교
+			CASE 13
+				ABL種= 12
+			;Ｃ감각
+			CASE 14
+				ABL種= 0
+			;Ｖ감각
+			CASE 15
+				ABL種= 1
+			;Ａ감각
+			CASE 16
+				ABL種= 2
+			;Ｂ감각
+			CASE 17
+				ABL種= 3
+			;Ｍ감각
+			CASE 18
+				ABL種= 4
+			CASEELSE
+				CONTINUE
+		ENDSELECT
+		FOR LOCAL,0,4
+			JUEL不足 = 0
+			경험不足 = 0
+			SIF JUEL_DEMAND(ABL種,LOCAL,0,캐릭터_ID) == -2
+				BREAK
+			SIF JUEL_DEMAND(ABL種,LOCAL,0,캐릭터_ID) < 0
+				CONTINUE
+			;必要な宝珠を探す
+			FOR JUEL種,0,100
+				IF JUEL_DEMAND(ABL種,LOCAL,JUEL種,캐릭터_ID) > 0
+					IF JUEL:캐릭터_ID:JUEL種 < JUEL_DEMAND(ABL種,LOCAL,JUEL種,캐릭터_ID)
+						JUEL不足 ++
+						BREAK
+					ENDIF
+				ENDIF
+			NEXT
+			SIF JUEL不足
+				CONTINUE
+			;必要な경험を探す
+			FOR JUEL種,0,100
+				IF EXP_DEMAND(ABL種,LOCAL,JUEL種,캐릭터_ID) > 0
+					IF  EXP:캐릭터_ID:JUEL種 < EXP_DEMAND(ABL種,LOCAL,JUEL種,캐릭터_ID)
+						경험不足 ++
+						BREAK
+					ENDIF
+				ENDIF
+			NEXT
+			SIF 경험不足
+				CONTINUE
+			FOR JUEL種,0,40
+				JUEL:캐릭터_ID:JUEL種 -= JUEL_DEMAND(ABL種,LOCAL,JUEL種,캐릭터_ID)
+			NEXT
+			ABL:캐릭터_ID:ABL種 += 1
+			PRINTFORML %ABLNAME:ABL種%LVUP ( %CALLNAME:캐릭터_ID%)
+			BREAK
+		NEXT
+	NEXT
+NEXT
+PRINT [100] - 확인
+
+@USERABLUP
+IF RESULT == 100
+	CALL JUJUN_UP_CHECK
+	CALL YOKUBO_UP_CHECK
+	BEGIN TURNEND
+	RETURN 1
+ENDIF
+RETURN 0
+
+;ABLの上限
+@MAXABL(ARG)
+;연모はMAXLV99
+IF ABL:ARG >= 99
+	PRINTW 이미 MAX입니다
+	RETURN 1
+ELSEIF ABL:ARG >= 5 && !TALENT:연모
+	PRINTW 이미 MAX입니다
+	RETURN 1
+ENDIF
+RETURN 0

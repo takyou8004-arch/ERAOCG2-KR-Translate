@@ -1,0 +1,130 @@
+﻿@CARDNAME_78201,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 무진기관 아르기로 시스템
+	CASE "略称"
+RESULTS = 무진기관
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_78201(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_78201(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 어느 한쪽밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①: 덱에서 "세리온즈" 카드 1장을 묘지로 보낸다.
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ②: 이 카드가 묘지에 존재할 경우, 자신 묘지의 "세리온즈" 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드와 이 카드 중, 1장을 패에 넣고, 다른 1장을 덱의 맨 아래로 되돌린다.
+
+@CARDCAN_78201(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,78201)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,78201)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲덱 = 1
+	효과条件カテゴリ = 세리온즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,78201)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 세리온즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_78201(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,78201,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 세리온즈
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,78201,1)
+	IF RESULT == 0
+		SIF 듀얼리스트 == "자신"
+PRINTL 무진기관 아르기로 시스템을 덱으로 되돌리겠습니까?
+		CALL YN_CHOICE(듀얼리스트)
+
+		IF RESULT == 0
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,2)
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 세리온즈
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ELSEIF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 세리온즈
+			효과条件行先플래그 = 덱行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,손패行き)
+		ENDIF
+	ENDIF
+ENDIF
+

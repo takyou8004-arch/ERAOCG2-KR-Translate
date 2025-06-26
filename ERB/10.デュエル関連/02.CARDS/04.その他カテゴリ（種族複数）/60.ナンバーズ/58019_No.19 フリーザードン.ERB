@@ -1,0 +1,129 @@
+﻿@CARDNAME_58019,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = No.19 프리저돈
+	CASE "略称"
+RESULTS = #19 자돈
+	CASE "カテゴリ"
+RESULTS:0 = 넘버즈
+ENDSELECT
+
+
+@CARD_58019(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 2500
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_58019(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 5
+;추가효과用
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,58019) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_58019(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 5 몬스터 x 2
+PRINTL 이 카드명의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 이 카드의 엑시즈 소재를 1개 제거하고,
+PRINTL 자신 필드의 「No.19 프리저돈」 이외의 엑시즈 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 엑시즈 소재를 2개 늘린다.
+PRINTL 
+
+@CARDCAN_58019(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58019)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,58019)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	효과条件固名前 = No.19 프리저돈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_58019(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58019,1,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件固名前 = No.19 프리저돈
+		효과条件종류 = 엑시즈
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"Ｘ",2)
+		ENDIF
+	ENDIF
+ENDIF

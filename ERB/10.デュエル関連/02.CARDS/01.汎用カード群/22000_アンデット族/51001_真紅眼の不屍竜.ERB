@@ -1,0 +1,161 @@
+﻿@CARDNAME_51001,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 붉은 눈의 언데드 네크로 드래곤
+	CASE "略称"
+RESULTS = 붉은 눈의 불사룡
+	CASE "カテゴリ"
+RESULTS:0 = 붉은 눈의
+ENDSELECT
+
+
+@CARD_51001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_51001(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1체 이상
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 공격력 / 수비력은, 서로의 필드 / 묘지의 언데드족 몬스터의 수× 200 올린다.
+CALLFORM CARD_ABLE(1,攻撃後誘発)
+PRINTL ②: 이 카드 이외의 언데드족 몬스터가 전투로 파괴되었을 때에 발동할 수 있다.
+PRINTL 자신 또는 상대의 묘지의 언데드족 몬스터 1장을 골라 자신 필드에 특수 소환한다.
+PRINTL 필드가 「언데드 월드」인 경우, 언데드족 이외도 선택할 수 있다.
+PRINTL 
+
+@CARDSUMMON_51001(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 7
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,51001) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_51001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51001)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃後誘発
+	SIF 발동済_1(듀얼리스트,51001)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과範囲묘지 = 1
+	SIF GETVARS(@"%듀얼리스트%_フィールド名") != "アンデット世界" && GETVARS(@"%対面者%_フィールド名") != "アンデット世界"
+		효과条件종족 = 언데드족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	SIF 直前戦闘破壊ID(듀얼리스트) == 0 && 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	IF GETVARS(@"%듀얼리스트%_フィールド名") != "アンデット世界" && GETVARS(@"%対面者%_フィールド名") != "アンデット世界"
+		TRYCALLFORM CARD_{直前戦闘破壊ID(듀얼리스트)}, "종족"
+		SIF RESULT != 언데드족
+			条件달성 ++
+		TRYCALLFORM CARD_{直前戦闘破壊ID(듀얼리스트,1)}, "종족"
+		SIF RESULT != 언데드족
+			条件달성 ++
+		SIF 条件달성 == 0
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51001,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		SIF GETVARS(@"%듀얼리스트%_フィールド名") != "アンデット世界" && GETVARS(@"%対面者%_フィールド名") != "アンデット世界"
+			효과条件종족 = 언데드족
+		효과추가종류 = (언데드족 + 100)
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대묘지 = 1
+	효과条件종족 = 언데드족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 200
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正,攻撃力修正)
+ENDIF
+

@@ -1,0 +1,149 @@
+﻿@CARDNAME_25513,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 무신기 - 츠무가리
+	CASE "略称"
+RESULTS = 무신기 츠무가리
+	CASE "カテゴリ"
+RESULTS:0 = 무신기
+ENDSELECT
+
+
+@CARD_25513(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1000
+ENDSELECT
+
+RETURN 0
+@CARD_EXPLANATION_25513(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 이 카드가 패에 존재할 경우, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드를 묘지로 보내고, 덱에서 '무신 - 히루메' 1장을 공격 표시로 특수 소환한다.
+PRINTL 이 효과의 발동 후, 자신은 '무신' 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(2,攻撃時誘発)
+PRINTL ②: 자신의 '무신' 몬스터가 상대 몬스터와 전투를 실행할 경우,
+PRINTL 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 그 전투를 실행하는 자신 몬스터의 공격력은 데미지 스텝 종료시까지,
+PRINTL 전투를 실행하는 상대 몬스터의 공격력만큼 올린다.
+PRINTL 자신 몬스터 존에 '무신기-아마테라스'가 존재하지 않을 경우, 이 턴 상대가 받는 전투 데미지는 절반이 된다.
+
+@CARDCAN_25513(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25513)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,25513)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+효과条件名前 = 무신－히루메
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF 발동済_2(듀얼리스트,25513)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF RESULTS != "무신"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25513(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 対戦カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25513,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,효과묘지行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+효과条件名前 = 무신－히루메
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"攻撃표시")
+		CALL CARD_EX_RESTRICTION(듀얼리스트,"무신")
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25513,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;参考：クリスタルウイング
+		戦闘カード = 戦闘場所(듀얼리스트)
+		対戦カード = 戦闘場所(듀얼리스트,1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘カード,"一時",GETVAR(@"%対面者%_MZ_攻:対戦カード"))
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+효과条件名前 = 무신기-아마테라스
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT != 1
+			CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ半化",1,1)
+		ENDIF
+	ENDIF
+ENDIF
+

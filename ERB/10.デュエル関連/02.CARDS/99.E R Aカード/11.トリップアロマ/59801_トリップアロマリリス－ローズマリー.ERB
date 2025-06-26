@@ -1,0 +1,242 @@
+﻿@CARDNAME_59801,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 트립아로마릴리스-로즈마리-
+	CASE "略称"
+		RESULTS = TAL-로즈마리-
+	CASE "カテゴリ"
+		RESULTS:0 = 트립아로마
+		RESULTS:1 = 아로마
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59801(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 900
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 1396
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_59801(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 「트립아로마」튜너＋튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의  ①의 효과는각각 1턴에 1번 밖에 사용 할 수 없다.
+CALL CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 싱크로 소환 했을 경우에 발동할 수 있다.
+PRINTL 덱에서「트립아로마」마법 / 함정 카드 1장을 손으로 가져온다.
+PRINTL 그 후, 상대 플레이어에 미약 카운터를 1개 둔다.
+CALL CARD_ABLE(2,효과後誘発)
+PRINTL ②：상대 몬스터가 일반 소환 / 특수 소환 했을 경우에 발동한다.
+PRINTL 그 몬스터에 미약 카운터를 1개 두고, 발정시킨다.
+CALL CARD_ABLE(3,攻守変動)
+PRINTL ③：자신 필드에「아로마" 몬스터는,
+PRINTL 상대 필드에 존재하는 미약 카운터가 놓인 몬스터 1장당 공격력이 200 올라가고, 전투로 파괴되지 않는다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDSUMMON_59801(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 5
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件カテゴリ = 트립아로마
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,59801) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_59801(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59801)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,59801)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 트립아로마
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般",1)
+	SIF RESULT != 1
+		RETURN 0
+	효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+	SIF GETVAR(@"%対面者%_MZ_モ耐:효과先") > 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発 || 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59801(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59801,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 트립아로마
+		효과条件종류 = 마함全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML
+			SETCOLOR C_PINK 
+			PRINTFORML %NAME:조교대상%은 로즈마리가 피우는 미향에 의해 발정했다!
+			RESETCOLOR
+			CALL EROTIC_MOVE("媚毒汚染",조교대상,NO_TO_CHARANUM(1396),500)
+		ENDIF
+	CALL SET_PLAYER_INFO(듀얼리스트,"薬Ｃ",1,1,1)
+
+	ENDIF
+ELSEIF 종류 == 효과後強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59801)
+	IF RESULT == 0
+		選択カード = FINAL_SUMMON_TARGET(듀얼리스트,1)
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",選択カード,1)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML 
+			SETCOLOR C_PINK 
+			PRINTFORML %NAME:조교대상%은 로즈마리가 피우는 미향에 의해 발정했다!
+			RESETCOLOR
+			CALL EROTIC_MOVE("媚毒汚染",조교대상,NO_TO_CHARANUM(1396),500)
+		ENDIF
+		CALL STATCHANGE_EFFECT(対面者,"자신",選択カード,"発情",2)
+		CALL SET_FIELD_INFO(対面者,"필드",選択カード,"薬Ｃ",1)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件薬Ｃ所持 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 0
+		RETURN 0
+	攻撃力修正 = RESULT * 200
+	CALL FULLRESET
+	효과条件カテゴリ = 아로마
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻撃力修正)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐")
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL FULLRESET
+	IF RESULT == 0
+		IF 戦闘場所(듀얼리스트,1) != 5
+			CALL CARD_EROTICS(戦闘カードID(듀얼리스트,1))
+			IF RESULT != 0
+				조교대상 = RESULT
+			ENDIF
+		ELSE
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != 0
+				조교대상 = RESULT
+			ENDIF
+		ENDIF
+		IF 조교대상 > 0
+			PRINTFORML
+			SETCOLOR C_PINK 
+			PRINTFORML %CALLNAME:조교대상%은 로즈마리에게 전신을 포박되어 희롱당하고 있다!
+			RESETCOLOR
+			CALL EROTIC_MOVE("묘상捕縛",조교대상,NO_TO_CHARANUM(1396),100)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	IF RESULT != -1
+		조교대상 = RESULT
+		PRINTFORML
+		SETCOLOR C_PINK 
+		PRINTFORML %CALLNAME:조교대상%은 로즈마리에게 전신을 포박되어 희롱당하고 있다!
+		RESETCOLOR
+		CALL EROTIC_MOVE("묘상捕縛",조교대상,NO_TO_CHARANUM(1396),100)
+	ENDIF
+ENDIF
+
+
+

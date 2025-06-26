@@ -1,0 +1,432 @@
+﻿@IRAI_EVENT_212(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (뒷CP)안티룰 듀얼(몇번이든 수주가능)
+	CASE "이벤트種"
+		IF 依頼_完了횟수:212 == 0
+			RETURN 이벤트_通常
+		ELSE
+			RETURN 이벤트_施設
+		ENDIF
+	CASE "依頼先"
+		RETURN 場所_裏通り
+	CASE "詳細"
+		PRINTL 裏通りでは카드를 賭けたアンティルールのデュエルが日夜行われている
+		PRINTL 参加してみようか？
+		PRINTL 			
+		SETCOLOR C_RED
+			PRINTL （注意！負けると덱の카드가 失われます！）
+		RESETCOLOR
+		PRINTL （テスト中の依頼です。一度遊んでみて感触の感想などをいただけると幸いです。）
+		PRINTL
+		PRINTL 報酬：상대덱のカード
+	CASE "条件"
+		SIF 依頼_全完了횟수() < 3
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+
+
+;参考 COMFS480 決闘_Variable , 0207_裏のサバイバルデュエル
+@IRAI_ACT_212(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 상대덱
+#DIM DYNAMIC 조교대상
+
+PRINTFORMW 裏通りの一角にあるデュエル場にやってきた。
+PRINTFORMW
+
+REPEAT 2
+	PRINT ────
+	SELECTCASE RAND:10
+		CASE 0
+			PRINTL  ざわ…     ざわ…
+		CASE 1	
+			PRINTL  オオオオオオオオ
+		CASE 2
+			PRINTL  ワー！     ワー！
+		CASE 3
+			PRINTL 「嫌だ……負けたくないィィ！」
+		CASE 4
+			PRINTL 「半端な気持ちで入ってくるなよ！アンティの世界によ！」
+		CASE 5
+			PRINTL 「それはどうかな！」
+		CASE 6
+			PRINTL 「完璧な손패だ！」
+		CASE 7
+			PRINTL 「オレに負けた罰だ！」
+		CASE 8
+			PRINTL 「キキィィィィィ！」
+		CASE 9
+			PRINTL 「イイイイイイイヤッ！！」
+	ENDSELECT
+REND
+
+PRINTL
+PRINTFORMW アンティルールの闇デュエルで盛り上がっているみたいだ…
+PRINTFORMW
+	SETCOLOR C_YELLOW
+PRINTFORML 「勝者は敗者の덱에서 好きな카드를 １장得られる」
+	RESETCOLOR
+PRINTFORML というのがここでのルールのようだ。
+PRINTL
+PRINTFORML さて、どうしようか
+SETCOLOR C_RED
+PRINTFORML 《注意！》負けて카드를 失うと카드와 の関係が崩壊します
+RESETCOLOR
+PRINTL [0] - デュエル상대を探す
+PRINTL [1] - やめておく
+BINPUT
+IF RESULT == 1
+	PRINTFORML 
+	PRINTFORMW やめておこう…
+	RETURN 1
+ENDIF
+
+PRINTFORMW リスクはあるがリターンも大きい。
+PRINTFORMW 運が良ければ精霊のついた카드를 手に入れられるかもしれない。
+PRINTFORMW 대상상대を探そう。 
+PRINTFORMW …………
+PRINTFORML …………
+PRINTFORMW 대상상대가 見つかった！
+PRINTFORMW お互いにアンティのルールを確認したうえでデュエルが始まる…
+PRINTFORMW 負ける気はないとはいえ、使用する덱はよく考えて選ぶべきだろう
+
+
+;確率でレート戦덱
+IF RAND:6 == 0
+	CALL CHOOSE_DECK_ONLINE_RATEMATCH
+ELSE
+	CALL CHOOSE_DECK_RANDOM
+ENDIF
+
+依頼_進行보존:212 = RESULT
+
+$MYDECK_INPUT
+CALL SELECTDECK
+IF RESULT == -1
+		PRINTL デュエルを放棄しますか？
+		PRINTL [0] - はい
+		PRINTL [1] - いいえ
+		BINPUT
+		IF RESULT == 1
+			GOTO MYDECK_INPUT
+		ENDIF
+	RETURN 1
+ELSE
+	依頼_進行보존:1212 = RESULT
+	連戦덱 = RESULT
+ENDIF
+;PRINTFORMW 선택한 덱{依頼_進行보존:1212}
+TARGET = 0
+CALL DUEL_SYSTEM(1,212,1)
+IF RESULT == 1
+	PRINTFORMW 勝った！
+	PRINTFORMW アンティルール에 의해 상대の덱에서 카드를 １장奪うことができる…
+	PRINTL
+	CALL ANTE_RULE(1,依頼_進行보존:212)
+	IF RESULT > 0
+		TARGET = RESULT
+		PRINTL
+		PRINTL
+		PRINTFORMW 奪ったカードにはカードの精霊の%NAME:TARGET%が宿っている。
+		PRINTFORML さっそくこの戦利品で楽しんでいこうか？
+		PRINTL
+		PRINTL [0] - ホテルに連れ込む
+		PRINTL [1] - やめておく
+		BINPUT
+		IF RESULT == 0
+			PRINTL
+			PRINTFORMW せっかく手に入れたのだ。このまま勝利の美酒を味わわせてもらおう。
+			PRINTL
+			CUSTOMDRAWLINE —
+			PRINTL
+			CFLAG:MASTER:현재위치 = 場所_ラブホ
+			CFLAG:TARGET:현재위치 = 場所_ラブホ
+			TIME += 30
+			PRINTFORMW %CALLNAME:MASTER%는ラブホテルの部屋に着くと、手に入れた%CALLNAME:TARGET%を実体化した。
+			PRINTFORM %CALLNAME:TARGET%는
+			IF TALENT:TARGET:배짱 == 1 || TALENT:TARGET:태도 == 1|| TALENT:TARGET:반응 == 1 || TALENT:TARGET:즉시타락 >= 1
+				PRINTFORM 悔しそうに%CALLNAME:MASTER%をにらみつけるが、
+			ELSE
+				PRINTFORM 怯えきった様子で震えているが、
+			ENDIF
+			PRINTFORMW デュエルの敗者が勝者に逆らうことはできない…
+			PRINTFORMW %CALLNAME:TARGET%が元の持ち主とどういう関係だったかは知らないが、
+			PRINTFORMW 誰がいまの主であるかをそのカラダで理解させるべく、%CALLNAME:MASTER%는 %CALLNAME:TARGET%をベッドに押し倒した……
+			PRINTL
+			SIF CFLAG:TARGET:패배함 <= 3
+				CFLAG:TARGET:패배함 = 3
+			SETBIT CFLAG:TARGET:기정사실, 0
+			人祓いモード = 0
+			TCVAR:TARGET:말하는대로 = 1
+			BASE:MASTER:발기 = 800
+			;本人がデュエルして負けたわけではないが、덱에 入っていてデュエルで負けたので決闘패배ということでいいでしょ
+			TCVAR:TARGET:듀얼패배섹스 = 1
+			EXP:TARGET:패배조교경험 += 1
+			CALL RESET_TARINCON
+			依頼조교대상 = TARGET
+			CALL EVENT_TRAIN
+			CUSTOMDRAWLINE —
+			PRINTL
+			PRINTFORMW %CALLNAME:TARGET%のカラダをたっぷりと堪能した…
+			IF TCVAR:TARGET:질내사정횟수 >= 1
+				PRINTFORMW %TEXTR("好き勝手に/勝者の性処理道具として使われ/%CALLNAME:MASTER%の")%精液を%TEXTR("注ぎ込まれた/コキ捨てられた/中出しされた")%%CALLNAME:TARGET%는あられもない姿を晒している
+				PRINTL
+				PRINTFORMW ……そうだ！
+				;ハメ撮りと情後どちらかあれば画像표시
+				CALLFORM IMAGE_PRODUCTION(TARGET,8888)
+				IF RESULT != 1
+					CALLFORM IMAGE_PRODUCTION(TARGET,9999)
+				ENDIF
+				PRINTFORMW ────%TEXTR("パシャリ、と。/ハイチーズっと。/いぇーい元マスター君見てるゥ？")%
+				PRINTFORMW 記念にスマホで写真を撮っておいた。
+				PRINTL
+				PRINTFORMW %CALLNAME:TARGET%の弱みを握った！
+				CFLAG:TARGET:약점장악 = 1
+			ENDIF
+			
+			CALL EVILTY_POINT(50)
+		ELSEIF RESULT == 1
+			PRINTFORMW 今はやめておこう…
+			PRINTFORMW そもそも%CALLNAME:TARGET%는、今や%CALLNAME:MASTER%のものだ。
+			PRINTFORMW 焦らずともいつでも好き로할 수 있다。
+			PRINTFORMW %CALLNAME:MASTER%는카드가 手に入って気分よくデュエル場を後にした…
+			TIME += 30
+			CALL EVILTY_POINT(10)
+		ENDIF
+	ELSE
+		PRINTFORMW %CALLNAME:MASTER%는카드가 手に入って気分よくデュエル場を後にした…
+		TIME += 30
+		CALL EVILTY_POINT(10)
+	ENDIF
+	依頼_進行보존:212 = 0
+	依頼_進行보존:1212 = 0
+	RETURN 2
+	
+ELSE
+	PRINTFORMW 負けてしまった…
+	PRINTFORMW アンティルール에 의해 상대에게 덱の카드를 渡さなければいけない…
+	PRINTL
+	CALL ANTE_RULE(0,依頼_進行보존:1212)
+	PRINTL
+	PRINTFORMW %CALLNAME:MASTER%는決闘に負け、카드를 失って意気消沈してデュエル場を後にした…
+	CALL RECOVER_PERMIL(MASTER,-500,"体力")
+	CALL RECOVER_PERMIL(MASTER,-500,"気力")
+	TIME += 30
+	依頼_進行보존:212 = 0
+	依頼_進行보존:1212 = 0
+	RETURN 3
+ENDIF
+
+
+
+
+@IRAI_DECK_212(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+IF 듀얼리스트 == "상대"
+	RETURN 依頼_進行보존:212
+ELSEIF 듀얼리스트 == "자신"
+	RETURN 依頼_進行보존:1212
+ENDIF
+RETURN 0
+
+
+@ANTE_RULE(勝利플래그,使用덱)
+#DIM DYNAMIC 勝利플래그 ;0負け 1勝ち
+#DIM DYNAMIC 使用덱
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 候補カード_ID
+#DIM DYNAMIC 候補カード_優先度
+#DIM DYNAMIC 優先度
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+;アンティルールのカード이동処理 精霊つきならRESULT = 캐릭터_IDを返す
+
+IF 勝利플래그 == 1
+	IF 使用덱 >= 1000
+		CALLFORM DUELDECK_{使用덱}("상대")
+	ELSE
+		CALLFORM MYDECK("상대",使用덱)
+	ENDIF
+	CALL FULLRESET
+	효과範囲상대덱 = 1
+	효과範囲상대EX덱 = 1
+	CALL CARD_CHOOSE_ADV("")
+	IF RESULT != 9999
+		選択カード_ID = RESULT:99 
+		CALL CARD_EROTICS(選択カード_ID)
+		;毎回精霊ついてても特別感ないので確率
+		IF RESULT != -1 && RAND:2
+			캐릭터_ID = RESULT
+			PRINTFORML
+			SETCOLOR C_YELLOW
+			PRINTFORMW このカードからは《%NAME:캐릭터_ID%》の魂を感じる……。
+			RESETCOLOR
+			IF CFLAG:캐릭터_ID:소유함 != 1
+				ITEM:選択カード_ID += 1
+				CALL CARD_GET_CHARA(캐릭터_ID,1)
+				RETURN 캐릭터_ID
+			ELSE
+			;所持済みなら、別個体のほうが奪った感あるので増殖機能で増やす
+				PRINTL
+				PRINTFORMW 이 카드의 精霊は既に持っているが、%CALLNAME:MASTER%のものとは別個体なのか、
+				PRINTFORML はたまた異なる世界の人物なのか、ともかく%CALLNAME:MASTER%のことは知らないようだ。
+				CALL CARD_GET_SINGLE(選択カード_ID,1)
+				CALL CLONING_CHARA_ANTE(캐릭터_ID)
+				RETURN RESULT
+			ENDIF
+		ELSE
+			CALL CARD_GET_SINGLE(選択カード_ID,1)
+			RETURN 0
+		ENDIF
+	ENDIF
+
+ELSEIF 勝利플래그 == 0
+	IF 使用덱 >= 1000
+		CALLFORM DUELDECK_{使用덱}("")
+	ELSE
+		CALLFORM MYDECK("",使用덱)
+	ENDIF
+	;ランダムで10枚見て、一番レアっぽいのを選ぶ
+	FOR カウンタ, 0, 10
+		優先度 = 0
+		IF RAND:3 == 0
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"_EX덱:カウンタ") == -1
+					BREAK
+			NEXT
+			候補カード_ID = GETVAR(@"_EX덱:(RAND:カウンタ)")
+		ELSE
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"_덱:カウンタ") == -1
+					BREAK
+			NEXT
+			候補カード_ID = GETVAR(@"_덱:(RAND:カウンタ)")
+		ENDIF
+		TRYCALLFORM CARD_{候補カード_ID}, "성별"	
+		SIF MATCH(RESULT, 牝性)
+			優先度 += 2
+		TRYCALLFORM CARD_{候補カード_ID}, "レア度"	
+		IF MATCH(RESULT, ULR)
+			優先度 += 2	
+		ELSEIF MATCH(RESULT, SPR)
+			優先度 += 1
+		ENDIF
+		IF 優先度 > 候補カード_優先度
+			選択カード_ID = 候補カード_ID
+			候補カード_優先度 = 優先度
+		ENDIF
+	NEXT
+
+	SIF 選択カード_ID <= 0
+		選択カード_ID = GETVAR(@"_덱:0")
+	
+	IF ITEM:選択カード_ID > 0
+		ITEM:選択カード_ID -= 1
+		TRYCALLFORM CARDNAME_{選択カード_ID}, "名前"
+		SETCOLOR C_RED
+		PRINTFORMW 《%RESULTS%》を失った……
+		RESETCOLOR
+	ENDIF
+	CALL CARD_EROTICS(選択カード_ID)
+	IF RESULT != -1
+	캐릭터_ID = RESULT
+		IF CFLAG:캐릭터_ID:소유함 == 1
+			CFLAG:캐릭터_ID:소유함 = 0
+			ITEM:(NO:캐릭터_ID) -= 1
+			PRINTFORMW 失ったカードの중에서、軽率にを賭けて失った事への失望と軽蔑の視線を向けられてる気がする。
+			MARK:캐릭터_ID:굴복각인 = 0
+			MARK:캐릭터_ID:반발각인 = 3
+			TALENT:캐릭터_ID:중고 = 1
+			TALENT:캐릭터_ID:애처 = 0
+			TALENT:캐릭터_ID:연모 = 0
+			TALENT:캐릭터_ID:성별기호 = 3
+			TALENT:캐릭터_ID:중고 = 1
+			ABL:캐릭터_ID:친밀 = 0
+			ABL:캐릭터_ID:순종 = 0
+			CFLAG:캐릭터_ID:호감도 = 0
+			CFLAG:캐릭터_ID:기정사실 = -1
+			CFLAG:캐릭터_ID:시작위치 = 100
+			CFLAG:캐릭터_ID:현재위치 = 100
+			RETURN 캐릭터_ID
+			;一般듀얼리스트は精霊実体化できなさそうだし凌辱は一旦なし
+		ENDIF
+	ENDIF
+		RETURN 0
+ENDIF
+
+@CLONING_CHARA_ANTE(選択캐릭터)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 설정캐릭터_ID
+#DIM DYNAMIC 選択캐릭터
+#DIM DYNAMIC 캐릭터価値
+#DIM DYNAMIC カード_ID
+#DIM DYNAMIC カードから複製
+#DIM DYNAMIC ID_存在
+설정캐릭터_ID = CHARANUM
+
+;PRINTFORML 選択캐릭터: {選択캐릭터}
+
+ADDCHARA NO:選択캐릭터
+
+NO:설정캐릭터_ID = 9200 + クローン数
+
+BASE:설정캐릭터_ID:사정 = 0
+BASE:설정캐릭터_ID:발기 = 0
+BASE:설정캐릭터_ID:무드 = 0
+BASE:설정캐릭터_ID:이성 = MAXBASE:설정캐릭터_ID:이성
+BASE:설정캐릭터_ID:분노 = 0
+BASE:설정캐릭터_ID:만족 = 1000
+BASE:설정캐릭터_ID:절정 = 0
+BASE:설정캐릭터_ID:쾌감 = 0
+
+CFLAG:설정캐릭터_ID:발기도 = 0
+CFLAG:설정캐릭터_ID:동행 = 0
+;性交플래그
+TEQUIP:설정캐릭터_ID:Ｖ섹스 = -1
+TEQUIP:설정캐릭터_ID:Ａ섹스 = -1
+TCVAR:설정캐릭터_ID:V삽입관리플래그 = -1
+TCVAR:설정캐릭터_ID:A삽입관리플래그 = -1
+;中出し표시用플래그
+TCVAR:설정캐릭터_ID:질내사정대상 = -1
+TCVAR:설정캐릭터_ID:애널사정대상 = -1
+CALL SET_BODYSIZE(설정캐릭터_ID,0,1)
+; CALL SHOP_BUST_RESET(설정캐릭터_ID)
+; CALL SHOP_BUTT_RESET(설정캐릭터_ID)
+CALL CLOTHES_SETTING(설정캐릭터_ID)
+
+
+
+;PRINTFORML 作成した캐릭터の설정を선택해주세요
+;PRINTFORML 
+;PRINTFORML [1] - カードの精霊
+;PRINTFORML [2] - 別世界の住民
+;PRINTFORML [3] - そっくりさん
+;PRINTFORML [4] - クローン
+;PRINTFORML 
+;PRINTFORML [10] - 特に설정を決めない
+;BINPUT
+
+;一旦5をアンティで奪った精霊ということにしておく
+TALENT:설정캐릭터_ID:複製 = 5
+;PRINTFORMW 캐릭터番号:{설정캐릭터_ID}『%NAME:설정캐릭터_ID%』を手に入れました
+;CFLAG:설정캐릭터_ID:현재위치 = CFLAG:MASTER:시작위치
+CFLAG:설정캐릭터_ID:소유함 = 1
+;元の캐릭터の画像を설정
+CFLAG:설정캐릭터_ID:グラ설정 = NO:選択캐릭터
+クローン数 += 1
+
+RETURN 설정캐릭터_ID

@@ -1,0 +1,218 @@
+﻿@CARDNAME_53608,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = RR－레볼루션 팔콘
+	CASE "略称"
+RESULTS = RR 레볼 F
+	CASE "カテゴリ"
+RESULTS:0 = 레이드 랩터즈
+ENDSELECT
+
+
+@CARD_53608(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 3000
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_53608(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 6
+素材条件종족 = 비행야수족
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,53608) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_53608(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 비행야수족 레벨 6 몬스터 × 3
+PRINTL 이 카드는 패의 "RUM" 마법 카드 1장을 버리고, 랭크 5 이하의 "RR" X 몬스터 위에 겹쳐 X 소환할 수도 있다.
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 X 소환했을 경우, 상대 필드의 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터를 파괴하고, 그 공격력만큼의 데미지를 상대에게 준다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 이 카드의 X 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 이 턴, 이 카드는 상대 몬스터 전부에 1회씩 공격할 수 있으며, 특수 소환된 앞면 표시 몬스터와 전투를 실행할 경우,
+PRINTL 그 몬스터의 공격력 / 수비력을 0으로 한다.
+CALLFORM CARD_ABLE(0,破壊→묘지,戦闘→묘지)
+PRINTL ③: 이 카드가 전투 / 효과로 파괴되어 묘지로 보내졌을 경우 발동할 수 있다.
+PRINTL EX덱에서 랭크 5 이하의 "RR" X 몬스터 1장을 각성 상태로 특수 소환하고, 그 X 소재를 1개 늘린다.
+
+
+@CARDCAN_53608(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,53608)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,53608)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = RUM
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	효과条件カテゴリ = 레이드 랩터즈
+	CALLFORM 효과条件レベル_ADV(5, "以下")
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時 
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 엑시즈
+	효과条件カテゴリ = 레이드 랩터즈
+	CALLFORM 素材条件レベル_ADV(5, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF GETVAR(@"%対面者%_MZ_召種:%対面者%_戦闘カード") == 召種通常
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_53608(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力상승
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53608)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = RUM
+		효과条件종류 = 마함全般
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL RESETCONDITION_MAT
+			必要素材数 = 1
+			素材条件종류 = 엑시즈
+			素材条件カテゴリ = 레이드 랩터즈
+			CALLFORM 素材条件レベル_ADV(5, "以下")
+			重ねてＸ = 1
+			TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53608)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 1
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53608)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종류 = 엑시즈
+		효과条件カテゴリ = 레이드 랩터즈
+		CALLFORM 素材条件レベル_ADV(5, "以下")
+		효과추가종류:0 = 9
+		효과추가종류:1 = 40000
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53607,10,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦",1)
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"条達",1)
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL FULLRESET
+	효과추가종류 = 10
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘場所(듀얼리스트,1),"永攻DOWN",99999)
+ENDIF
+

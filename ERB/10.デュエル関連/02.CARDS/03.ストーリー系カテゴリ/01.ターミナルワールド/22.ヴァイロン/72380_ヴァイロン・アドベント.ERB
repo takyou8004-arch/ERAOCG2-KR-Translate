@@ -1,0 +1,135 @@
+﻿@CARDNAME_72380,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 바이론 강림
+	CASE "略称"
+RESULTS = 바이론 강림!
+	CASE "カテゴリ"
+RESULTS:0 = 바이론
+RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_72380(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72380(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「바이론 강림!」이 된다.
+PRINTL 이 카드명의 카드는 1턴에 1장만 발동할 수 있다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①: 이 카드의 발동 시의 효과 처리로서,
+PRINTL 덱에서 「바이론」 몬스터 1장을 패에 넣을 수 있다.
+CALLFORM CARD_ABLE(10,효과後誘発)
+PRINTL ②: 1턴에 1번, 자신 필드에 「바이론」 몬스터가 소환 / 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 그 몬스터와 카드명이 다른 「바이론」 몬스터 1장을 덱에서 고르고, 그 몬스터에 장착한다.
+
+@CARDCAN_72380(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72380)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 바이론
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72380)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72380(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과先
+#DIMS DYNAMIC 효과先名前
+#DIMS DYNAMIC 対面者
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72380,10)
+	IF RESULT == 0
+		효과先 = FINAL_SUMMON_TARGET(듀얼리스트)
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:효과先")},"名前"
+		효과先名前 = %RESULTS%
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 바이론
+		효과条件종류 = モン全般
+		효과条件固名前 = %효과先名前%
+		CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,효과先,,72380)
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72380,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종족 = 기계족
+		효과条件カテゴリ = 바이론
+		효과条件종류 = モン全般
+		효과条件任意 = 1
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "바이론강림！")
+ENDIF

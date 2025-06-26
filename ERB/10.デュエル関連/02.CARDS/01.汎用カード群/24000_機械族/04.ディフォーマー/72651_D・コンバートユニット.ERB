@@ -1,0 +1,120 @@
+﻿@CARDNAME_72651,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = D 컨버트 유닛
+	CASE "略称"
+RESULTS = D 컨버트
+	CASE "カテゴリ"
+RESULTS:0 = 디포머
+ENDSELECT
+
+
+@CARD_72651(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72651(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①：자신 필드의 기계족 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 표시 형식에 따라 이하의 효과를 적용한다.
+PRINTL ●공격 표시：대상이 된 몬스터와는 카드명이 다른 「디포머」 몬스터 1장을 덱에서 특수 소환한다.
+PRINTL 그 후, 대상이 된 몬스터를 덱으로 되돌린다.
+PRINTL ●수비 표시：대상이 된 몬스터를 공격 표시로 한다.
+PRINTL 그 후, 패/묘지에서 레벨 4 이하의 기계족 몬스터 1장을 특수 소환한다.
+
+@CARDCAN_72651(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72651)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,72651)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 기계족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_72651(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 上書き플래그
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72651,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;대상選択
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 기계족
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		;攻撃
+		IF GETVAR(@"%듀얼리스트%_MZ_表:選択カード") == 1
+			TRYCALLFORM CARDNAME_{RESULT:99},"名前"
+			選択カード名前 = %RESULTS%
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 디포머
+			효과条件종류 = モン全般
+			효과条件固名前 = %選択カード名前%
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			CALL CARD_DISPOSE(듀얼리스트,"필드",選択カード,덱行き)
+		;守備
+		ELSE ;GETVAR(@"%듀얼리스트%_MZ_表:選択カード") == 2
+			上書き플래그 = 1
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"表",1,上書き플래그)
+
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과条件종족 = 기계족
+			CALL 효과条件レベル_ADV(4, "以下")
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

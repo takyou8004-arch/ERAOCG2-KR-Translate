@@ -1,0 +1,198 @@
+﻿@CARDNAME_48001,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초차원전투기 레전드 빅토리 바이퍼
+	CASE "略称"
+RESULTS = L VICTORY VIPER
+	CASE "カテゴリ"
+RESULTS:0 = 시공전투기
+RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_48001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3600
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+	CASE "生産불가"
+		IF 依頼_完了횟수:518 == 0
+			RETURN 1
+		ELSE
+			RETURN 0
+		ENDIF
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_48001(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+RETURN 0
+
+@CARD_EXPLANATION_48001(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「초차원 홀 그라디우스」로부터 출현.
+PRINTL 이 카드는 필드에 존재하는 한, 「초시공전투기 빅 바이퍼」로서도 취급한다.
+PRINTL 「초차원전투기 레전드 빅토리 바이퍼」의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드의 출현시에 발동할 수 있다.
+PRINTL 자신의 묘지 / 제외 상태에서 카드 7장을 골라 패에 더한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 완전 내성을 가진다.
+CALLFORM CARD_ABLE(0,발동誘発)
+PRINTL ③: 상대의 어둠속성 몬스터 또는 기계족 몬스터의 효과가 발동했을 때에 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 파괴한다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ④: 이 카드가 필드에서 벗어났을 경우에 LP를 100 지불하고 발동할 수 있다.
+PRINTL 손패, 덱, 묘지, 제외 상태인 「초시공전투기 빅 바이퍼」 1장을 특수 소환한다.
+
+@CARDSUMMON_AA_48001
+
+PRINTW STAGE       　……　OVER 27！
+PRINTW MACHINEPOWER　……　TRANSCENDING！
+PRINTW ACCESS　      ……　COMPLETE！
+PRINTL
+PRINTW Are you ready？
+PRINTL
+PRINTW 《Gradius LEGEND VICTORY VIPER》！
+
+
+@CARDCAN_48001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,48001)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,48001)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件複数 = 93
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件속성 = 어둠속성
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT == 1
+		RETURN 1
+	CALL FULLRESET
+	효과条件종족 = 기계족
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT == 1
+		RETURN 1
+	RETURN 0
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+효과条件名前 = 초시공전투기 빅 바이퍼
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_48001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,48001,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件複数 = 93
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 발동誘発
+CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,48001,1)
+	IF RESULT == 0
+		PRINTFORMW バイパ-は상대を勢いよく殴りつけた！
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+		RETURN 1
+	ENDIF
+	RETURN 0
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+ELSEIF 종류 == 戦破壊→묘지
+	IF 듀얼리스트 == "자신"
+		PRINTW CONTINUE？
+	ENDIF
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,48001)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",100)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+효과条件名前 = 초시공전투기 빅 바이퍼
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

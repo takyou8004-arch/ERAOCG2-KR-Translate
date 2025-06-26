@@ -1,0 +1,136 @@
+﻿@CARDNAME_52502,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 화염성후－호우신
+	CASE "略称"
+RESULTS = 화염성 호우신
+	CASE "カテゴリ"
+RESULTS:0 = 화염성
+ENDSELECT
+
+
+@CARD_52502(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 2200
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_52502(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 화염속성 튜너 ＋ 튜너 이외의 몬스터 1체 이상
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①：이 카드가 싱크로 소환에 성공했을 때, 덱에서 화염속성 레벨 3 몬스터 1장을 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,EX소환時強制)
+PRINTL ②：이 카드가 싱크로 소환에 성공한 턴, 자신은 레벨 5 이상의 몬스터를 특수 소환할 수 없다.
+
+
+
+@CARDSUMMON_52502(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 6
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件속성 = 화염속성
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52502) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_52502(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52502)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件속성 = 화염속성
+	효과条件レベル = 3
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時強制
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52502(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 回復量
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52502)
+	IF RESULT == 0	
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件속성 = 화염속성
+		효과条件レベル = 3
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == EX소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52502)
+	IF RESULT == 0
+		CALL SET_PLAYER_INFO(듀얼리스트,"レベル５制限",1)
+	ENDIF
+ENDIF
+
+
+

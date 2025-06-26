@@ -1,0 +1,123 @@
+﻿@CARDNAME_73831,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = VS 컨티뉴
+	CASE "略称"
+RESULTS = VS 컨티뉴
+	CASE "カテゴリ"
+RESULTS:0 = 뱅키시 소울
+ENDSELECT
+
+
+@CARD_73831(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73831(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①: 500 LP를 지불하고, 자신 묘지의 "VS" 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 패로 가져오거나 수비 표시로 특수 소환한다.
+PRINTL
+PRINTL 
+
+
+@CARDCAN_73831(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73831)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,73831)
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 500
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 뱅키시 소울
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_73831(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 選択カード名前
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73831,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",500)
+
+		CALL CARD_SS_CHECK(듀얼리스트,0,"묘지")
+		IF RESULT != 1
+PRINTL 몬스터를 특수 소환하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+		ELSE
+			RESULT = いいえ
+			PRINTW フィールドがいっぱいなので손패に加えます
+		ENDIF
+
+		IF RESULT == はい
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 뱅키시 소울
+			효과条件종류 = モン全般
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+
+		ELSEIF RESULT == いいえ
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 뱅키시 소울
+			효과条件종류 = モン全般
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+

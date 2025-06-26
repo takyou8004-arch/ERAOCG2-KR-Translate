@@ -1,0 +1,152 @@
+﻿@CARDNAME_4031,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 용후황상 퀸 루피아
+	CASE "略称"
+RESULTS = 퀸 루피아
+	CASE "カテゴリ"
+RESULTS:0 = 파이어 버드
+RESULTS:1 = 아머드
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_4031(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RESULT:2 = 빛속성
+		RESULT:1 = 어둠속성
+		RETURN 화염속성
+	CASE "종족"
+		RESULT:1 = 드래곤족
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2350
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4031(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,攻撃時誘発)
+PRINTL ①: 이 카드의 공격 선언 시에, 자신 필드의 "파이어 버드" 몬스터 1장을 파괴하고 발동할 수 있다.
+PRINTL 덱에서 레벨 8 이하의 "파이어 버드" 몬스터 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ②: 이 카드가 필드를 벗어날 경우,
+PRINTL 대신 이 카드 이외의 자신 필드의 "파이어 버드" 몬스터 1장을 묘지로 보낼 수 있다.
+@CARDCAN_4031(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4031)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF 발동済_1(듀얼리스트,4031)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 파이어 버드
+	CALL 효과条件レベル_ADV(8, "以下")
+	효과条件소환可 = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件他所 = 1
+	효과条件カテゴリ = 파이어 버드
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4031(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4031,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 파이어 버드
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 파이어 버드
+			효과条件종류 = モン全般
+			CALL 효과条件レベル_ADV(8, "以下")
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4031)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件他所 = 1
+		효과条件カテゴリ = 파이어 버드
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+

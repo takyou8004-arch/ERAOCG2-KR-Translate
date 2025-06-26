@@ -1,0 +1,174 @@
+﻿@CARDNAME_53041,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = BF－마바람의 보레아스
+	CASE "略称"
+RESULTS = BF 보레아스
+	CASE "カテゴリ"
+RESULTS:0 = 블랙 페더
+ENDSELECT
+
+
+@CARD_53041(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1200
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_53041(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 6
+IF EX参照 == 0 || EX参照 == 1
+	素材条件속성 = 어둠속성
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,53041) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_53041(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 어둠 속성 튜너 + 튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 싱크로 소환했을 경우에 발동할 수 있다.
+PRINTL 덱에서 「BF」 몬스터 1장을 묘지로 보낸다. 이 카드의 레벨은, 그 몬스터의 레벨과 같아진다.
+CALLFORM CARD_ABLE(2,攻撃後誘発)
+PRINTL ②: 이 카드가 전투로 몬스터를 파괴하고 묘지로 보냈을 때,
+PRINTL 자신 필드 (앞면 표시) 묘지에서 「BF」 몬스터 1장을 제외하고 발동할 수 있다.
+PRINTL 그 파괴된 몬스터를 자신 필드에 수비 표시로 특수 소환한다.
+
+@CARDCAN_53041(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,53041)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,53041)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 블랙 페더
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,53041)
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0	
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	CALLFORM CARDNAME_{直前戦闘破壊ID(듀얼리스트,1)}("名前")
+효과条件名前 = %RESULTS%
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_53041(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53041,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 블랙 페더
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			TRYCALLFORM CARD_{RESULT:1}, "レベル"
+			CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"永星",RESULT,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53041,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		SIF モンスター数(듀얼리스트) < 5
+			효과範囲묘지 = 1
+		효과条件표시 = 10
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 블랙 페더
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲상대묘지 = 1
+			CALLFORM CARDNAME_{直前戦闘破壊ID(듀얼리스트,1)}("名前")
+효과条件名前 = %RESULTS%
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+

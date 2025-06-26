@@ -1,0 +1,159 @@
+﻿@CARDNAME_24835,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 패제 없는 침략 레드존F
+	CASE "略称"
+RESULTS = 레드존F
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:1 = 침략자
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_24835(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1200
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_24835(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("INVASION")
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①: 『침략』
+PRINTL 자신의 화염 속성 「커맨드」 몬스터가 공격할 경우 발동할 수 있다.
+PRINTL 자신의 패에 있는 이 카드를 그 위에 겹쳐도 좋다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 공격할 경우, 데미지 스텝 종료시까지 상대는 카드의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ③: 이 카드가 공격을 실행한 데미지 스텝 종료시에 발동할 수 있다.
+PRINTL 이 카드를 파괴하고, 묘지에서 「패제 없는 침략 레드존F」 이외의 화염 속성 「커맨드」 몬스터 1장을 특수 소환한다.
+CALL TEXT_DECORATION("INVASION")
+
+@CARDSUMMON_24835(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+RETURN 0
+
+
+@CARDCAN_24835(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24835)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF !MATCH(RESULTS, "커맨드")
+		RETURN 0
+	CALLFORM ATTACK_CARD(듀얼리스트,"속성")
+	SIF !MATCH(RESULT,화염속성)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 커맨드
+	효과条件속성 = 화염속성
+	효과条件固名前 = 패제 없는 침략 레드존F
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24835(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カードID
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24835)
+	IF RESULT == 0
+		CALL INVASION(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	SIF ターンプレイヤー == 듀얼리스트
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦阻")
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24835)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 커맨드
+		효과条件속성 = 화염속성
+		효과条件固名前 = 패제 없는 침략 레드존F
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

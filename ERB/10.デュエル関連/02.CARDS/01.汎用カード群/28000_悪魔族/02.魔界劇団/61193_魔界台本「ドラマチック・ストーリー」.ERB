@@ -1,0 +1,167 @@
+@CARDNAME_61193,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마계대본 「드라마틱 스토리」
+	CASE "略称"
+RESULTS = Dramatic Story
+	CASE "カテゴリ"
+RESULTS:0 = 마계대본
+ENDSELECT
+
+
+@CARD_61193(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61193(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 자신 필드의 「마계극단」 P몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터와는 카드명이 다른 「마계극단」 몬스터 1장을 덱에서 특수 소환한다.
+PRINTL 그 후, 대상 몬스터를 자신의 P존에 놓거나 파괴한다.
+CALLFORM CARD_ABLE(0,破壊→묘지)
+PRINTL ②: 자신의 EX덱에 「마계극단」 P몬스터가 존재하고,
+PRINTL 이 카드가 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 필드의 카드를 2장까지 고르고 주인의 패로 되돌린다.
+
+@CARDCAN_61193(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61193)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,61193)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 마계극단
+	효과条件分割 = 펜듈럼
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 破壊→묘지
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 마계극단
+	효과条件分割 = 펜듈럼
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	IF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+	ENDIF
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_61193(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61193,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 마계극단
+		효과条件分割 = 펜듈럼
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDNAME_{RESULT:99},"名前"
+			選択カード名前 = %RESULTS%
+
+			SETCOLOR C_YELLOW
+PRINTL 정강이에 상처를 가진 두 사람이 만나……
+			RESETCOLOR
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 마계극단
+			효과条件分割 = 펜듈럼
+			효과条件固名前 = %選択カード名前%
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				IF 마함数(듀얼리스트) < 5
+					SIF 듀얼리스트 == "자신"
+PRINTL 마법 & 함정 존에 세트합니까?
+					CALL YN_CHOICE(듀얼리스트)
+				ELSE
+					RESULT = いいえ
+				ENDIF
+
+				SETCOLOR C_YELLOW
+PRINTL 벗어날 수 없는 운명에 의해 찢겨져 간다……
+				RESETCOLOR
+				IF RESULT == はい
+					CALL FULLRESET
+					CALL CARD_DISPOSE(듀얼리스트,"필드",選択カード,마함行き)
+				ELSEIF RESULT == いいえ
+					CALL FULLRESET
+					;효과条件行先플래그 = 破壊行き
+					CALL CARD_DISPOSE(듀얼리스트,"필드",選択カード,破壊行き)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61193)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件複数 = 98
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場単体",場所,"손패")
+	ENDIF
+ENDIF
+

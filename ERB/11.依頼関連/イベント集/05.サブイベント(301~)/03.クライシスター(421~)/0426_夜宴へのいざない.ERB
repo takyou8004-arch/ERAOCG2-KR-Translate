@@ -1,0 +1,174 @@
+@IRAI_EVENT_426(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+;드래그마ーラパックの緊急実装的なやつです
+
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP-DMREX)음교로의 초대(번외)
+	CASE "이벤트種"
+		RETURN 이벤트_通常
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL 現在、教導の聖女エクレシア、教導の기사フルルドリス、赫の聖女カルテシア、導きの聖女クエム
+		PRINTL 以上の４장을 １セットで期間限定・高額買い取り中です！
+		PRINTL お持ちの方は裏通りのショップまで！
+		PRINTL 
+		PRINTL 報酬：高額買い取り＋新商品入荷
+		SETCOLOR C_RED
+		PRINTFORML 《注意！》売る카드와 の관계が붕괴し、売られた카드가 酷い目に遭うかも知れません！
+		RESETCOLOR
+	CASE "条件"
+		SIF 依頼_完了횟수:425 == 0
+			RETURN 0
+		SIF パック_解放:99 != 1
+			RETURN 0
+		;一時封鎖
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_426(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(1880);エクレシア
+이벤트主:1 = NO_TO_CHARANUM(1881);フルルドリス
+이벤트主:2 = NO_TO_CHARANUM(1882);カルテシア
+이벤트主:3 = NO_TO_CHARANUM(1883);クエム
+
+IF 依頼_달성상황 == 0
+	PRINTFORML 教導の聖女エクレシア、教導の기사フルルドリス、赫の聖女カルテシア、導きの聖女クエム
+	PRINTFORMW この４장의 高額買い取りの情報をネットで見つけた。
+	PRINTFORMW 期間限定で、買い取り価格はなんと500,000円らしい。
+	PRINTFORMW もし買い取り대상의 카드를 持っていて、使わないのなら、裏通りのショップで売るのもいいかも知れない……。
+	TIME += 10
+	依頼_場所 = 場所_裏通り
+	依頼_달성상황 ++
+
+ELSEIF 依頼_달성상황 == 1
+	IF CFLAG:(이벤트主:0):소유함 == 1 && CFLAG:(이벤트主:1):소유함 == 1 && CFLAG:(이벤트主:2):소유함 == 1 && CFLAG:(이벤트主:3):소유함 == 1
+		PRINTFORMW 買い取り대상의 카드를 揃えて裏通りのショップに来た。
+	ELSE
+		PRINTFORMW 「買い取りですか？少々お待ちくださーい」
+		PRINTFORMW …………
+		PRINTFORMW ………
+		PRINTFORMW 「申し訳ございません、お客様。買い取り대상의 카드가 揃ってないようです
+		PRINTFORMW 　카드가 揃ったらまたお越しくださーい」
+		PRINTFORMW 裏通りのショップに来たが、카드를 買い取手貰えなかった。
+		PRINTFORMW 本当に카드가 揃ってなかったか、それともショップが求める 카드는 少し특수な違いがあるようだ。
+		PRINTFORMW その違いって、もしかして……？
+		RETURN
+	ENDIF
+	PRINTFORMW 「買い取りですか？少々お待ちくださーい」
+	PRINTFORMW …………
+	PRINTFORMW ………
+	PRINTFORMW 「はい、確認しました！全部で500,000円で大丈夫ですか？」
+	PRINTFORML 
+	SETCOLOR C_RED
+	PRINTFORMW 《注意！》売る카드와 の관계が붕괴し、売られた카드가 酷い目に遭うかも知れませんが本当に売りますか？
+	RESETCOLOR
+	PRINTFORML 
+	PRINTL [0] - それでも売る
+	PRINTL [1] - やっぱやめとく
+	BINPUT
+	IF RESULT == 0
+		PRINTFORML 
+		PRINTFORMW 「ありがとうございまーす」
+		PRINTFORML 
+		SETCOLOR C_RED
+		PRINTFORMW 《教導の聖女エクレシア》、《教導の기사フルルドリス》、《赫の聖女カルテシア》、《導きの聖女クエム》を売りました。
+		RESETCOLOR
+		CFLAG:(이벤트主:0):소유함 = 0
+		ITEM:(NO:(이벤트主:0)) -= 1
+		CFLAG:(이벤트主:1):소유함 = 0
+		ITEM:(NO:(이벤트主:1)) -= 1
+		CFLAG:(이벤트主:2):소유함 = 0
+		ITEM:(NO:(이벤트主:2)) -= 1
+		CFLAG:(이벤트主:3):소유함 = 0
+		ITEM:(NO:(이벤트主:3)) -= 1
+		PRINTFORML 
+;		PRINTFORMW 所持金 + 500000円
+		CALL MONEY_GET(500000)
+		PRINTFORML 
+		PRINTFORMW 売りに出されたカードの중에서、ショックを受けて睨まれた気がする。
+
+		MARK:(이벤트主:0):반발각인 = 3
+		TALENT:(이벤트主:0):애처 = 0
+		TALENT:(이벤트主:0):연모 = 0
+		TALENT:(이벤트主:0):복종 =  0
+		TALENT:(이벤트主:0):중고 = 1
+		ABL:(이벤트主:0):친밀 = 0
+		ABL:(이벤트主:0):순종 = 0
+		CFLAG:(이벤트主:0):호감도 = 0
+
+		MARK:(이벤트主:1):반발각인 = 3
+		TALENT:(이벤트主:1):애처 = 0
+		TALENT:(이벤트主:1):연모 = 0
+		TALENT:(이벤트主:1):복종 =  0
+		TALENT:(이벤트主:1):중고 = 1
+		ABL:(이벤트主:1):친밀 = 0
+		ABL:(이벤트主:1):순종 = 0
+		CFLAG:(이벤트主:1):호감도 = 0
+
+		MARK:(이벤트主:2):반발각인 = 3
+		TALENT:(이벤트主:2):애처 = 0
+		TALENT:(이벤트主:2):연모 = 0
+		TALENT:(이벤트主:2):복종 =  0
+		TALENT:(이벤트主:2):중고 = 1
+		ABL:(이벤트主:2):친밀 = 0
+		ABL:(이벤트主:2):순종 = 0
+		CFLAG:(이벤트主:2):호감도 = 0
+
+		MARK:(이벤트主:3):반발각인 = 3
+		TALENT:(이벤트主:3):애처 = 0
+		TALENT:(이벤트主:3):연모 = 0
+		TALENT:(이벤트主:3):복종 =  0
+		TALENT:(이벤트主:3):중고 = 1
+		ABL:(이벤트主:3):친밀 = 0
+		ABL:(이벤트主:3):순종 = 0
+		CFLAG:(이벤트主:3):호감도 = 0
+
+		PRINTFORML 売られたカードの정령たちははあれから酷い目に……？
+		PRINTFORML 
+		PRINTL [0] - 遭う
+		PRINTL [1] - 遭わない
+		BINPUT
+		IF RESULT == 0
+			CALL CARD_LOST_AFTER(이벤트主:0)
+			CALL CARD_LOST_AFTER(이벤트主:1)
+			CALL CARD_LOST_AFTER(이벤트主:2)
+			CALL CARD_LOST_AFTER(이벤트主:3)
+		ELSE
+		PRINTFORML 
+		PRINTFORMW 売られたカードの정령たちはあれから色んな듀얼리스트とショップをたらい回しされてるようだ。
+		PRINTFORML 
+		ENDIF
+	ELSEIF RESULT == 1
+		PRINTFORML 
+		PRINTFORMW 「わかりましたーまたどうぞー」
+		RETURN
+	ENDIF
+	PRINTFORMW 카드를 売ったおかげで大分懐が温かくなった。
+	;드래그마ーラパックが未開放なら解放
+	IF パック_解放:97 != 1
+		PRINTFORMW 「あっ、それとそろそろ新商品が入荷されますので、よろしくお願いしまーす」
+		PRINTFORML 
+		CALL CARD_PACK_RELEASE(97)
+		PRINTFORML 
+		PRINTFORMW 裏通りのショップに新商品が入荷されたらしい。
+		PRINTFORMW 金もある事だし、興味があるなら覗いて見てもいいかも知れない。
+	ENDIF
+	PRINTFORMW このお金で何をするか、色々楽しみだ。
+	TIME += 10
+	RETURN 2
+ENDIF
+

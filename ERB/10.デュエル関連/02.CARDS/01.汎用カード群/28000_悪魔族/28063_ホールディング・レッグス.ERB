@@ -1,0 +1,125 @@
+﻿@CARDNAME_28063,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 홀딩 레그스
+	CASE "略称"
+RESULTS = 홀드 레그스
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_28063(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 600
+	CASE "추가日"
+		RETURN 250420
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28063(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ①: 이 카드의 공격 선언 시 발동할 수 있다.
+PRINTL 이 카드를 상대 플레이어에게 장착하고, 그 전투를 무효로 한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 장착된 플레이어는, 세트된 마법 / 함정 카드를 발동할 수 없다.
+
+@CARDCAN_28063(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28063)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 常在無効
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28063(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상 = -1
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28063)
+	IF RESULT == 0
+		CALL EVADE_ATTACK(듀얼리스트)
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상 = RESULT
+		ENDIF
+		IF 조교대상 >= 0
+			PRINTFORML %CALLNAME:조교대상%는하반신を固定され、その体を晒されてしまう。
+			CALL EROTIC_MOVE("拘束晒し",조교대상)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 常在無効
+	CALL FULLRESET
+	효과条件표시 = 裏側표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대마함",場所,"発無")
+
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	IF RESULT != -1
+		조교대상 = RESULT
+	ENDIF
+	IF 조교대상 >= 0
+		PRINTFORML %CALLNAME:조교대상%는拘束された하반신を心땅悪そうに揺らしている。
+		CALL EROTIC_MOVE("拘束晒し",조교대상,,20)
+	ENDIF
+ENDIF

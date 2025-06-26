@@ -1,0 +1,125 @@
+﻿@CARDNAME_72532,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 성난 폭풍의 루닉
+	CASE "略称"
+		RESULTS = 폭풍의 루닉
+	CASE "カテゴリ"
+		RESULTS:0 = 루닉
+ENDSELECT
+
+
+@CARD_72532(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72532(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  카드는 1턴에 1장밖에 발동할 수 없다。
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動 ,フリー誘発)
+PRINTL ①：이하의 효과에서 1개를 선택하고 발동할 수 있다。
+PRINTL 이 카드의 발동 후, 다음 자신 배틀 페이즈를 스킵한다。
+PRINTL ●상대 필드의 카드의 수까지 상대의 덱 위에서 카드를 제외한다.
+PRINTL ●엑스트라 덱에서 「루닉」 몬스터 1장을 특수 소환한다。（이 효과는 자신 필드에 융합, 싱크로, 엑시즈, 링크 몬스터가 존재하지 않을 경우에만 발동할 수 있다.）
+
+
+@CARDCAN_72532(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72532)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		IF GETVARS(@"%듀얼리스트%_フィールド名") != "루닉의 샘"
+			SIF ターンプレイヤー != 듀얼리스트
+				RETURN 0
+		ENDIF
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72532)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = EXモン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT != 1
+			RETURN 0
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72532(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72532,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = EXモン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT != 1 && モンスター数(듀얼리스트) < 5
+			CALL YN_CHOICE(듀얼리스트,"●엑스트라 덱에서 「루닉」 몬스터 1장을 특수 소환한다。","●상대 필드의 카드의 수까지 상대의 덱 위에서 카드를 제외한다。")		
+		ELSE
+			RESULT = いいえ
+		ENDIF
+		IF RESULT == はい
+			CALL FULLRESET
+			효과範囲EX덱 = 1
+			효과条件カテゴリ = 루닉
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ELSEIF RESULT == いいえ
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 0
+				CALL CARD_DECK_DISPOSE(対面者,"덱",RESULT,제외行き)
+		ENDIF
+		CALL SET_PLAYER_INFO(듀얼리스트,"バトルスキップ", 1)
+	ENDIF
+ENDIF

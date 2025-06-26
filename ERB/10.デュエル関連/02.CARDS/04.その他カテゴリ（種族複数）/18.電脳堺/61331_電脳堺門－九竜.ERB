@@ -1,0 +1,100 @@
+﻿@CARDNAME_61331,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 전뇌계문－구룡
+	CASE "略称"
+RESULTS = 구룡문
+	CASE "カテゴリ"
+RESULTS:0 = 전뇌계
+ENDSELECT
+
+
+@CARD_61331(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61331(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 덱에서 「전뇌계문」 지속 마법 / 함정 카드 1장을 자신의 마법 & 함정 존에 앞면 표시로 놓는다.
+;PRINTL その後、자신 필드의 「전뇌계門」카드의 数によって以下의 효과를 それぞれ適用할 수 있다。
+
+;PRINTL ●２장以上：このターン、자신 필드의 「전뇌계」몬스터의 攻撃力は２００오른다。
+;PRINTL ●３장以上：자신의 덱の上から카드를 ３장묘지へ送る。
+;PRINTL ●４장：EX덱에서 「전뇌계」몬스터를 ４体まで특수소환する（同名カードは１장まで）。
+
+
+@CARDCAN_61331(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61331)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,61331)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件カテゴリ = 전뇌계
+	효과条件종류:0 = 지속마법
+	효과条件종류:1 = 지속함정
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_61331(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61331,1)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件カテゴリ = 전뇌계
+		효과条件종류:0 = 지속마법
+		효과条件종류:1 = 지속함정
+		CALL CARD_SET_BASIC(듀얼리스트,"덱",ゾーン,場所,"表側표시")
+
+
+
+	ENDIF
+ENDIF

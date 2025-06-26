@@ -1,0 +1,665 @@
+﻿@CARDNAME_61004,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 레전드 오브 하트
+	CASE "略称"
+RESULTS = ＬofＨ
+	CASE "カテゴリ"
+RESULTS:0 = 전설의 용
+ENDSELECT
+
+
+@CARD_61004(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_61004(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 2000LP를 지불하고, 자신 필드의 몬스터 1장을 릴리스하고 발동할 수 있다.
+PRINTL 자신의 손패 묘지의 "전설의 용" 마법 카드 3종류를 제외하고,
+PRINTL 대응하는 "전설의 기사" 몬스터를 1장씩 생성한다.
+PRINTL 그 후, 상대 필드의 마법 / 함정 카드를 전부 제외한다
+PRINTL (이 효과로 제외된 카드는 효과를 발동할 수 없다).
+
+@CARDCAN_61004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61004)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,61004)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 2000
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件名前:0 = 티마이오스의 눈
+	효과条件名前:1 = 크리티우스의 이빨
+	효과条件名前:2 = 헤르모스의 발톱
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_61004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 素材モンスター
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61004,1)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",2000)
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件名前:0 = 티마이오스의 눈
+			효과条件名前:1 = 크리티우스의 이빨
+			효과条件名前:2 = 헤르모스의 발톱
+			효과条件固名前選択 = 1
+			효과条件複数 = 3
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_GENERATE(듀얼리스트,161001)
+				CALL FULLRESET
+				CALL CARD_GENERATE(듀얼리스트,161002)
+				CALL FULLRESET
+				CALL CARD_GENERATE(듀얼리스트,161003)
+				SETVAR @"%듀얼리스트%_EX덱:現EX山札数(듀얼리스트)", 561004
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함全体",場所,"完全제외")
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+@CARDNAME_161001,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 전설의 기사 티마이오스
+	CASE "略称"
+RESULTS = 티마이오스
+	CASE "カテゴリ"
+RESULTS:0 = 전설의 기사
+ENDSELECT
+
+
+@CARD_161001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+@CARD_EXPLANATION_161001(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "레전드 오브 하트"의 효과에 의해 생성된다. 다른 방법으로는 특수 소환할 수 없다.
+PRINTL 이 카드명의 ①② 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ①: 자신 상대 턴에, 자신의 묘지의 마법 카드 1장을 대상으로 하고 발동할 수 있다. 그 카드를 패에 넣는다.
+CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ②: 자신의 메인 페이즈 및 배틀 페이즈에 발동할 수 있다. 이 카드를 포함하는,
+PRINTL 자신의 손패 필드의 몬스터를 융합 소재로 하고, 융합 몬스터 1장을 융합 소환한다.
+
+@CARDCAN_161001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,161001)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,161001) && 발동済_2(듀얼리스트,161001)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	IF ターンプレイヤー == 듀얼리스트
+		SIF 발동済_2(듀얼리스트,161001)
+			RETURN 0
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲손패 = 1
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종류 = 융합
+		효과条件소환可 = 1
+		強制素材場所 = 지정場所(場所,ゾーン)
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_161001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,161001)
+	IF RESULT == 0
+		IF ターンプレイヤー == 듀얼리스트
+			IF 발동済_1(듀얼리스트,161001) == 0 && 발동済_2(듀얼리스트,161001) == 0
+				CALL YN_CHOICE(듀얼리스트,"①：묘지の마법カード１장을 손패に加える。","②：この카드를 含む손패 필드의 モンスターで융합소환する。")
+			ELSEIF 발동済_1(듀얼리스트,161001)
+				RESULT = 1
+			ELSE
+				RESULT = 0
+			ENDIF
+		ELSE
+			RESULT = 0
+		ENDIF
+	ENDIF
+	IF RESULT == 0
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,161001,1)
+		CALL FULLRESET
+		효과条件종류 = 마법全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ELSEIF RESULT == 1
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,161001,2)
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲손패 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件소환可 = 1
+		強制素材場所 = 지정場所(場所,ゾーン)
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL FUSSUMMON(듀얼리스트, 選択カード)
+		ENDIF
+	ENDIF
+ENDIF
+
+@CARDNAME_161002,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 전설의 기사 크리티우스
+	CASE "略称"
+RESULTS = 크리티우스
+	CASE "カテゴリ"
+RESULTS:0 = 전설의 기사
+RESULTS:1 = 크리티우스의 이빨
+ENDSELECT
+
+
+@CARD_161002(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+@CARD_EXPLANATION_161002(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "레전드 오브 하트"의 효과에 의해 생성된다. 다른 방법으로는 특수 소환할 수 없다.
+PRINTL 이 카드명의 ①② 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ①: 자신 상대 턴에, 자신의 묘지의 함정 카드 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 카드를 자신 필드에 세트한다. 이 카드는 세트한 턴에도 발동할 수 있다.
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ②: 자신의 메인 페이즈 및 배틀 페이즈에, 상대가 함정 카드를 발동했을 때에 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 제외한다.
+
+@CARDCAN_161002(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,161002)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,161002)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,161002)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 함정全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_161002(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,161002,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 함정全般
+		CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"使化裏側표시")
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,161002,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"제외")
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+
+@CARDNAME_161003,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 전설의 기사 헤르모스
+	CASE "略称"
+RESULTS = 헤르모스
+	CASE "カテゴリ"
+RESULTS:0 = 전설의 기사
+RESULTS:1 = 헤르모스의 발톱
+ENDSELECT
+
+
+@CARD_161003(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+@CARD_EXPLANATION_161003(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "레전드 오브 하트"의 효과에 의해 생성된다. 다른 방법으로는 특수 소환할 수 없다.
+PRINTL 이 카드명의 ①② 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ①: 자신 상대 턴에, 자신의 묘지의 몬스터 1장을 대상으로 하고 발동할 수 있다. 그 몬스터를 특수 소환한다.
+CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ②: 상대의 메인 페이즈 및 배틀 페이즈에, 덱의 몬스터를 3장까지 묘지로 보내고 발동할 수 있다.
+PRINTL 이 카드는 턴 종료시까지, 묘지로 보낸 수에 따라 전투 파괴 효과 파괴 효과 대상에 내성을 얻는다.
+
+@CARDCAN_161003(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,161003)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,161003) && 발동済_2(듀얼리스트,161003)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	IF ターンプレイヤー != 듀얼리스트
+		SIF 발동済_2(듀얼리스트,161003)
+			RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_161003(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,161003)
+	IF RESULT == 0
+		IF ターンプレイヤー != 듀얼리스트
+			IF 발동済_1(듀얼리스트,161001) == 0 && 발동済_2(듀얼리스트,161003) == 0
+				CALL YN_CHOICE(듀얼리스트,"①：묘지のモンスター１体を특수소환する。","②：ターン終了時まで耐性を得る。")
+			ELSEIF 발동済_1(듀얼리스트,161001)
+				RESULT = 1
+			ELSE
+				RESULT = 0
+			ENDIF
+		ELSE
+			RESULT = 0
+		ENDIF
+	ENDIF
+	IF RESULT == 0
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,161003,1)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = モン全般
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ELSEIF RESULT == 1
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,161003,2)
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件任意 = 1
+		효과条件複数 = 97
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		カウンタ = RESULT:1
+		SIF カウンタ >= 1
+			CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐",1)
+		SIF カウンタ >= 2
+			CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐",1)
+		SIF カウンタ >= 3
+			CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐",1)
+	ENDIF
+ENDIF
+
+
+
+@CARDNAME_561004,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 합신룡 티마이오스
+	CASE "略称"
+RESULTS = 합신룡
+	CASE "カテゴリ"
+RESULTS:0 = 전설의 기사
+ENDSELECT
+
+
+@CARD_561004(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+@CARD_EXPLANATION_561004(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "레전드 오브 하트"의 효과에 의해 EX덱에 생성된다.
+PRINTL 이 카드는 융합 소환으로밖에 특수 소환할 수 없다.
+PRINTL 이 카드명의 ② 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과,攻守変動)
+PRINTL ①: 이 카드는 대상 내성 완전 내성을 가지고,
+PRINTL 공격력 수비력은 이 카드 이외의 필드의 몬스터의 공격력을 합계한 수치가 된다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②: 이 카드가 필드를 벗어났을 경우에 발동할 수 있다.
+PRINTL 자신의 제외 상태의 "전설의 용" 마법 카드 3종류를 패에 넣는다.
+
+@CARDSUMMON_561004(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+
+IF EX参照 == 0 || EX参照 == 1
+素材条件名前 = 전설의 기사 티마이오스
+ELSEIF EX参照 >= 10
+素材条件名前 = 전설의 기사 크리티아스
+ELSEIF EX参照 >= 11
+素材条件名前 = 전설의 기사 헤르모스
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,561004) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_561004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,561004)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF 발동済_1(듀얼리스트,561004)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件名前:0 = 티마이오스의 눈
+	효과条件名前:1 = 크리티우스의 이빨
+	효과条件名前:2 = 헤르모스의 발톱
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_561004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+ELSEIF 종류 == 攻守変動
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT:3
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正,攻撃力修正)
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,561004,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前:0 = 티마이오스의 눈
+		효과条件名前:1 = 크리티우스의 이빨
+		효과条件名前:2 = 헤르모스의 발톱
+		효과条件固名前選択 = 1
+		효과条件複数 = 3
+		CALL CARD_ADD_BASIC(듀얼리스트,"제외",ゾーン,場所)
+	ENDIF
+ENDIF

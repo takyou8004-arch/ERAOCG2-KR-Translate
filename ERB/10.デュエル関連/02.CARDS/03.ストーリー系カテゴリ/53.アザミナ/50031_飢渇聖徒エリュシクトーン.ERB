@@ -1,0 +1,142 @@
+﻿@CARDNAME_50031,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 기갈 성도 《아자미나 솔》 에리식톤
+	CASE "略称"
+RESULTS = 에리식톤
+	CASE "カテゴリ"
+RESULTS:0 = 아자미나
+ENDSELECT
+
+
+@CARD_50031(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2700
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 0
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_50031(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 미확인족 몬스터 ＋ 악마족 몬스터
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 융합 소환했을 경우에 발동할 수 있다.
+PRINTL 상대 필드의 카드 1장을 묘지로 보낸다.
+CALLFORM CARD_ABLE(2,ターン開始時)
+PRINTL ②：자신, 상대의 스탠바이 페이즈에 발동할 수 있다.
+PRINTL 자신의 묘지의, 「아자미나」 카드 또는 「죄보」 카드 1장을 패에 넣는다.
+
+
+
+@CARDSUMMON_50031(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件종족 = 미확인족
+ELSEIF EX参照 >= 10
+	素材条件종족 = 악마족
+ENDIF
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,50031) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50031(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50031)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,50031)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF 발동済_2(듀얼리스트,50031)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ:0 = 아자미나
+	효과条件カテゴリ:1 = 죄보
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_50031(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50031,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"リリース")
+	ENDIF
+ELSEIF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50031,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ:0 = 아자미나
+		효과条件カテゴリ:1 = 죄보
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

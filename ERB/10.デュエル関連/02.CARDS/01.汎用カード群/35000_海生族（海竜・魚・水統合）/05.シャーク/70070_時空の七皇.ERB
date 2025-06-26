@@ -1,0 +1,128 @@
+﻿@CARDNAME_70070,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 세븐스 타키온
+	CASE "略称"
+RESULTS = 시공의 칠황
+	CASE "カテゴリ"
+RESULTS:0 = 세븐스
+ENDSELECT
+
+
+@CARD_70070(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "制限"
+		RETURN 制限
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_70070(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: EX덱의 「오버 핸드레드」 X 몬스터 1장을 상대에게 보여주고 발동할 수 있다.
+PRINTL 종족 또는 속성이 보여준 몬스터와 같고, 그 몬스터의 랭크와 같은 수치의 레벨을 가지는 몬스터 1장을 덱에서 패로 추가한다.
+PRINTL 그 후, 자신의 손패를 1장 고르고 덱의 가장 위로 되돌린다. 이 카드의 발동 후, 턴 종료시까지 자신은 X 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+
+@CARDCAN_70070(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,70070)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,70070)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 오버핸드 레드
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_70070(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 설정レベル
+#DIM DYNAMIC 설정종족
+#DIM DYNAMIC 설정속성
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70070,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과条件カテゴリ = 오버핸드 레드
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+
+			TRYCALLFORM CARD_{選択カード_ID}, "レベル"
+			설정レベル = RESULT
+
+			TRYCALLFORM CARD_{選択カード_ID}, "종족"
+			설정종족 = RESULT
+			TRYCALLFORM CARD_{選択カード_ID}, "속성"
+			설정속성 = RESULT
+
+			CALL FULLRESET
+			효과条件レベル = 설정レベル
+			효과条件スーパーレベル = 설정レベル
+			효과条件종족 = 설정종족
+			효과条件スーパー속성 = 설정속성
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+				選択カード = RESULT
+				IF 選択カード != 9999
+					CALL CARD_ADD_DECK_SPC(듀얼리스트,"손패",選択カード)
+				ENDIF
+				EX소환可能종류 = 엑시즈
+				CALL CARD_EX_RESTRICTION(듀얼리스트)
+
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,168 @@
+﻿@CARDNAME_79700,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 음화를 담은 미술관
+	CASE "略称"
+		RESULTS = 음화 미술관
+	CASE "カテゴリ"
+		RESULTS:0 = 음화
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79700(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79700(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 자신 필드는 “음화를 담은 미술관”이 된다.
+PRINTL “음화를 담은 미술관”은 1턴에 1번만 발동할 수 있다.
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：이 카드는 상대에게 800 LP를 지불하게 하고 발동할 수 있다.
+PRINTL 이 카드의 발동 시 효과 처리로, 덱의 맨 위에서 5장을 뒤집고,
+PRINTL 그 중 「음화」 카드를 2장까지 패에 넣을 수 있다.
+CALL CARD_ABLE(2,攻守変動,지속효과)
+PRINTL ②：자신의 필드에 있는 「음화」 몬스터의 공격력과 수비력은, 자신과 상대 묘지에 있는 암컷 카드의 종류 × 200만큼 오른다.
+CALL CARD_ABLE(10,효과後誘発)
+PRINTL ③：1턴에 1번, 자신의 “음화” 카드가 파괴될 경우 발동할 수 있다.
+PRINTL 덱에서 암컷 카드 1장을 묘지로 보내고, 묘지에서 몬스터로 특수 소환할 수 있는 “음화” 카드 1장을 패에 넣는다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79700(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79700)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79700)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"ライフ_%対面者%") <= 800
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 음화
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 음화
+	효과条件分割 = 효과モン
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79700(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79700,1)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(対面者,"減少","コスト",800)
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과条件カテゴリ = 음화
+		효과条件複数 = 98
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,5)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79700,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件성별 = 牝性
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件カテゴリ = 음화
+			효과条件分割 = 효과モン
+			CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲상대묘지 = 1
+	효과条件성별 = 牝性
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 200
+
+	CALL FULLRESET
+	효과条件カテゴリ = 음화
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻撃力修正)
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트,"음화를 담은 미술관")
+ENDIF

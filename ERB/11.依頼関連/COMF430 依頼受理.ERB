@@ -1,0 +1,531 @@
+;-------------------------------------------------
+;依頼を確認する
+;-------------------------------------------------
+@COM430
+;貯蔵を確認する
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 소환_ページ送り
+#DIM DYNAMIC リスト_표시
+#DIM DYNAMIC 캐릭터クター
+#DIM DYNAMIC カウンタ,2
+#DIM DYNAMIC リストスタート
+#DIM DYNAMIC ロー
+#DIM DYNAMIC 最大値カル１
+#DIM DYNAMIC 選択カード,10
+#DIM DYNAMIC 一時보존,10
+#DIM DYNAMIC 消去カード
+#DIM DYNAMIC 選択依頼
+#DIM DYNAMIC Continue数
+#DIM 現在モード
+#DIM DYNAMIC 표시モード
+#DIM DYNAMIC 依頼リスト最大値
+#DIM CONST 依頼リストサイズ = 15
+
+IF CFLAG:MASTER:감기플래그 >= 1
+	PRINTFORMW 지금은 뭔가를 할 기분이 아니다……
+	PRINTFORMW 무리하지 말고 쉬자……。
+	RETURN 0
+ENDIF
+
+
+표시モード = 1
+
+CALL UPDATE_CHARA
+
+$INPUT_FILTER
+CALL IRAI_SORT(現在モード,표시モード)
+依頼リスト最大値 = RESULT
+$INPUT_LOOP
+
+CUSTOMDRAWLINE ―
+PRINTL 　의뢰수령
+CUSTOMDRAWLINE ―
+
+IF 依頼_完了済 >= 最大依頼数
+	SETCOLOR C_YELLOW
+	PRINT ＊오늘분의 의뢰는 완료했습니다＊
+	RESETCOLOR
+ENDIF
+PRINTFORM 남은 수주 횟수：{依頼_完了済}/{最大依頼数}　
+PRINTFORM 스토리 의뢰:\@ 物語依頼_完了済 ? 【끝】 # 【아직】 \@
+PRINTL
+PRINT ┏━━━━━┓
+PRINT ┏━━━━━┓
+PRINT ┏━━━━━┓
+PRINT ┏━━━━━┓
+PRINT ┏━━━━━┓
+;PRINTFORM %"",14%
+PRINT ┏━━━━━┓
+PRINTL
+PRINT ┃
+PRINTBUTTON " 모든의뢰 ", 8001
+PRINT ┃
+
+PRINT ┃
+PRINTBUTTON "  신　규  ", 8000
+PRINT ┃
+PRINT ┃
+PRINTBUTTON " 튜토리얼 ", 8002
+PRINT ┃
+PRINT ┃
+PRINTBUTTON "  스토리  ", 8003
+PRINT ┃
+PRINT ┃
+PRINTBUTTON "  프　리  ", 8004
+PRINT ┃
+
+;PRINTFORM %"",14%
+PRINT ┃
+SIF 표시モード == 1
+	SETCOLOR C_GRAY
+SIF 표시モード == 0
+	SETCOLOR C_GREEN
+PRINTBUTTON " 모두표시 ", 8010
+RESETCOLOR
+PRINT ┃
+PRINTL
+IF 現在モード != 0
+	PRINT ┣━━━━━┻
+ELSE
+	PRINT ┃　　　　　┗
+ENDIF
+
+IF 現在モード != 1
+	PRINT ┻━━━━━┻
+ELSE
+	PRINT ┛　　　　　┗
+ENDIF
+
+IF 現在モード != 2
+	PRINT ┻━━━━━┻
+ELSE
+	PRINT ┛　　　　　┗
+ENDIF
+
+IF 現在モード != 3
+	PRINT ┻━━━━━┻
+ELSE
+	PRINT ┛　　　　　┗
+ENDIF
+
+IF 現在モード != 4
+	PRINT ┻━━━━━┻
+ELSE
+	PRINT ┛　　　　　┗
+ENDIF
+PRINT ┻━━━━━╋━┓
+PRINTL
+
+PRINT ┃
+PRINTFORM %"",80,LEFT%
+PRINT ┃　┃
+PRINTL
+;CUSTOMDRAWLINE ―
+FOR カウンタ,0 + リストスタート,依頼リストサイズ + リストスタート
+	PRINT ┃
+	VARSET RESULT
+	VARSET RESULTS
+	IF 依頼_リスト:カウンタ != 0
+		IF 依頼플래그:(依頼_リスト:カウンタ) == 2
+			SETCOLOR C_GRAY
+		ELSEIF 依頼_受領中 == (依頼_リスト:カウンタ)
+			SETCOLOR C_GREEN
+		ENDIF
+		CALLFORM IRAI_EVENT_{(依頼_リスト:カウンタ)}("名前")
+		PRINTFORM [{(カウンタ + 1),3}] - %RESULTS,63,LEFT%
+		IF 依頼플래그:(依頼_リスト:カウンタ) == 2
+			PRINT  (달성됨)
+		ELSEIF 依頼_受領中 == (依頼_リスト:カウンタ)
+			PRINT  (수주중)
+		ELSEIF 確認플래그:(依頼_リスト:カウンタ) == 0
+			SETCOLOR C_YELLOW
+			PRINT  ( NEW！)
+		ELSE
+			PRINTFORM %"",9,LEFT%
+		ENDIF
+		RESETCOLOR
+	ELSE
+		PRINTFORM %"",80,LEFT%
+	ENDIF
+	
+	PRINTPLAIN ┃
+	IF (カウンタ - リストスタート) == 2
+		PRINT －
+	ELSEIF (カウンタ - リストスタート) == 3
+		SIF リストスタート == 0
+			SETCOLOR C_GRAY
+		PRINTBUTTON "△", 8500
+		RESETCOLOR
+	ELSEIF (カウンタ - リストスタート) == 4
+		SIF リストスタート == 0
+			SETCOLOR C_GRAY
+		PRINTBUTTON "△", 8500
+		RESETCOLOR
+	ELSEIF (カウンタ - リストスタート) == 7
+		PRINT －
+
+	ELSEIF (カウンタ - リストスタート) == 10
+		SIF リストスタート >= 依頼リスト最大値 - 依頼リストサイズ
+			SETCOLOR C_GRAY
+		PRINTBUTTON "▽", 8501
+		RESETCOLOR
+	ELSEIF (カウンタ - リストスタート) == 11
+		SIF リストスタート >= 依頼リスト最大値 - 依頼リストサイズ
+			SETCOLOR C_GRAY
+		PRINTBUTTON "▽", 8501
+		RESETCOLOR
+	ELSEIF (カウンタ - リストスタート) == 12
+		PRINT －
+	ELSE
+		PRINT 　
+	ENDIF
+	PRINTPLAIN ┃
+	PRINTL
+NEXT
+PRINT ┃
+PRINTFORM %"",80,LEFT%
+PRINT ┃　┃
+PRINTL
+PRINT ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━┛
+PRINTL
+
+
+PRINTL
+CUSTOMDRAWLINE ―
+PRINTFORM [9999] - 돌아간다　　　　　　　　　　　　　　　　
+SIF デバッグシステム == 1
+	PRINTFORM [8888] - 의뢰의 달성 상황을 리셋한다
+PRINTL
+CUSTOMDRAWLINE ―
+BINPUT
+IF RESULT == 9999
+	RETURN 0
+ELSEIF RESULT == 8888
+	PRINTL 정말 모든 의뢰상황을 리셋하시겠습니까？
+	PRINTL [0] - 예
+	PRINTL [1] - 아니오
+	BINPUT
+	IF RESULT == 0
+		FOR カウンタ,0,999
+			確認플래그:カウンタ = 0
+			依頼플래그:カウンタ = 0
+			依頼_完了횟수:カウンタ = 0
+		NEXT
+	ENDIF
+	GOTO INPUT_FILTER
+ELSEIF RESULT == 8000
+	IF 現在モード == 1
+		現在モード = 0
+	ELSE
+		現在モード = 1
+	ENDIF
+	GOTO INPUT_FILTER
+ELSEIF RESULT == 8001
+	現在モード = 0
+	GOTO INPUT_FILTER
+
+ELSEIF RESULT == 8010
+	IF 표시モード == 1
+		표시モード = 0
+	ELSE
+		표시モード = 1
+	ENDIF
+	GOTO INPUT_FILTER
+
+
+ELSEIF RESULT == 8002
+	IF 現在モード == 2
+		現在モード = 0
+	ELSE
+		現在モード = 2
+	ENDIF
+	GOTO INPUT_FILTER
+
+ELSEIF RESULT == 8003
+	IF 現在モード == 3
+		現在モード = 0
+	ELSE
+		現在モード = 3
+	ENDIF
+	GOTO INPUT_FILTER
+
+ELSEIF RESULT == 8004
+	IF 現在モード == 4
+		現在モード = 0
+	ELSE
+		現在モード = 4
+	ENDIF
+	GOTO INPUT_FILTER
+
+ELSEIF RESULT == 8500
+	リストスタート -= 依頼リストサイズ
+	SIF リストスタート <= 0
+		リストスタート = 0
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 8501
+	IF リストスタート < 依頼リスト最大値 - 依頼リストサイズ
+		リストスタート += 依頼リストサイズ
+	ENDIF
+	GOTO INPUT_LOOP
+ENDIF
+
+選択依頼 = 依頼_リスト:(RESULT - 1)
+IF 依頼플래그:選択依頼 == 2
+	TRYCALLFORM IRAI_EVENT_{選択依頼}("回想可")
+	IF RESULT != 1 && デバッグシステム != 1
+		PRINTL 이 의뢰는 회상할수 없습니다。
+		GOTO INPUT_LOOP
+	ENDIF
+	PRINTL 이 의뢰는 이미 완료했습니다。
+	PRINTL 한번 더 받으시겠습니까？（보수는 얻을 수 없습니다）	
+	PRINTL 
+	PRINTL [0] - 예
+	PRINTL [1] - 아니오
+	BINPUT
+	IF RESULT == 0
+		依頼_見返し中 = 1
+		依頼_受領中 = 選択依頼
+		CALLFORM IRAI_ACT_{依頼_受領中}
+		依頼_見返し中 = 0
+		RETURN 1
+	ENDIF
+	GOTO INPUT_LOOP
+ENDIF
+
+TRYCALLFORM IRAI_EVENT_{選択依頼}("이벤트種")
+IF RESULT == 이벤트_物語 && 物語依頼_完了済 == 1 && デバッグシステム != 1
+	PRINTW 오늘분의 스토리 의뢰는 완료했습니다。
+	GOTO INPUT_LOOP
+ELSEIF 依頼_完了済 >= 最大依頼数 && デバッグシステム != 1
+	PRINTW 오늘은 더이상 추가 의뢰를 받을 수 없습니다。
+	GOTO INPUT_LOOP
+ENDIF
+
+確認플래그:選択依頼 = 1
+
+CUSTOMDRAWLINE ―
+CALLFORM IRAI_EVENT_{選択依頼}("名前")
+PRINTFORML 의뢰：%RESULTS%
+CUSTOMDRAWLINE ―
+CALLFORM IRAI_EVENT_{選択依頼}("詳細")
+
+CUSTOMDRAWLINE ―
+CALLFORM IRAI_EVENT_{選択依頼}("依頼先")
+IF RESULT >= 1 
+	PRINTFORML 지정장소:{RESULT}　%GETPLACENAME(RESULT)%
+ELSEIF RESULT == -1
+	PRINTFORML 지정장소:없음（바로시작）
+ENDIF
+CUSTOMDRAWLINE ―
+
+IF 依頼_受領中 == 選択依頼
+	PRINTL 의뢰를 파기하겠습니까。
+ELSE
+	PRINTL 이 의뢰를 수주하겠습니까？
+	SIF 依頼_受領中 >= 1
+		PRINTL 현재 받고있는 의뢰는 파기됩니다。
+ENDIF
+PRINTL [0] - 예
+PRINTL [1] - 아니오
+BINPUT
+
+IF RESULT == 0
+	IF 依頼_受領中 == 選択依頼
+		PRINTFORMW 의뢰에 실패했습니다……
+		依頼_完了済 += 1
+		CALL IRAI_RESET
+		RETURN 0
+	ENDIF
+	CALL IRAI_RESET
+	CALLFORM IRAI_EVENT_{選択依頼}("依頼先")
+	依頼_場所 = RESULT
+	CALLFORM IRAI_EVENT_{選択依頼}("대상캐릭터")
+	依頼_대상캐릭터 = RESULT
+	依頼_受領中 = 選択依頼
+	依頼플래그:選択依頼 = 1
+	VARSET RESULT
+	CALLFORM IRAI_EVENT_{選択依頼}("依頼先")
+	IF RESULT == 即時開始
+		CALL COM431()
+	ENDIF
+	SELECTCOM = 430
+	TFLAG:SELECTCOM보존 = SELECTCOM
+
+	RETURN 1
+ELSEIF RESULT == 1
+	GOTO INPUT_LOOP
+ENDIF
+
+
+
+;依頼受領
+@COM_ABLE430
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(430)
+	RETURN RESULT
+SIF CFLAG:MASTER:빙의중 == 1
+	RETURN 0
+;玄関
+SIF CFLAG:MASTER:현재위치 != 8
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1
+
+@IRAI_RESET
+
+CALL DOUKOU_RELEASE
+CALL IRAI_COND_RESET
+VARSET 依頼_달성상황
+VARSET 依頼_場所, -1
+VARSET 依頼_대상캐릭터,-1
+VARSET 依頼_受領中 
+VARSET 依頼_덱편집불가
+
+
+@IRAI_COND_RESET
+VARSET 投入要求枚数
+VARSET 投入禁止枚数
+
+@IRAI_RESET_DAILY
+#DIM DYNAMIC カウンタ
+
+VARSET 依頼_달성상황
+VARSET 依頼_場所, -1
+VARSET 依頼_대상캐릭터,-1
+VARSET 依頼_受領中
+VARSET 依頼_덱편집불가
+
+VARSET 依頼_完了済
+VARSET 物語依頼_完了済
+
+FOR カウンタ,1,999
+	IF 依頼플래그:カウンタ == 1
+		依頼플래그:カウンタ = 0
+	ELSEIF 依頼플래그:カウンタ == 2
+		CALLFORM IRAI_EVENT_{カウンタ}("이벤트種")
+		SIF RESULT == 이벤트_ＲＥ || RESULT == 이벤트_施設
+			依頼플래그:カウンタ = 0
+	ENDIF
+NEXT
+
+@IRAI_SORT(現在モード,표시モード)
+#DIM DYNAMIC 依頼_ID_C
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 現在モード
+#DIM DYNAMIC 표시モード
+
+VARSET 依頼_リスト
+FOR 依頼_ID_C,0,1000
+	VARSET RESULT
+	VARSET RESULTS
+	CALL IRAI_FILTER(依頼_ID_C,現在モード,표시モード)
+	IF RESULT == 1
+		依頼_リスト:カウンタB = 依頼_ID_C
+		カウンタB ++
+	ENDIF
+NEXT
+
+RETURN カウンタB
+
+
+@IRAI_FILTER(依頼_ID_C,現在モード,표시モード)
+#DIM DYNAMIC 依頼_ID_C
+#DIM DYNAMIC 現在モード
+#DIM DYNAMIC 표시モード
+
+VARSET RESULTS
+TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("名前")
+SIF RESULTS == ""
+	RETURN 0
+
+TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("条件")
+IF デバッグシステム == 0
+	SIF RESULT != 1
+		RETURN 0
+;デバッグシステムが１で있는 경우、条件관계なく通す。
+;でも그것이 시설 이벤트である場合は条件を달성してる必要がある
+ELSEIF デバッグシステム == 1
+	IF RESULT != 1
+		TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("이벤트種")
+		SIF RESULT == 이벤트_施設
+			RETURN 0
+	ENDIF
+ENDIF
+
+IF 표시モード == 1
+	SIF 依頼플래그:依頼_ID_C == 2
+		RETURN 0
+ENDIF
+
+IF 現在モード != 5
+	TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("이벤트種")
+	SIF RESULT == 이벤트_施設
+		RETURN 0
+ENDIF
+
+IF 現在モード == 1
+	SIF 確認플래그:依頼_ID_C != 0
+		RETURN 0
+ELSEIF 現在モード == 2
+	TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("이벤트種")
+	SIF RESULT != 튜토리얼
+		RETURN 0
+
+ELSEIF 現在モード == 3
+	TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("이벤트種")
+	SIF RESULT != 이벤트_物語
+		RETURN 0
+
+ELSEIF 現在モード == 5
+	TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("이벤트種")
+	SIF RESULT != 이벤트_施設
+		RETURN 0
+	;Anonym추가
+	TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("依頼先")
+	SIF CFLAG:MASTER:현재위치 != RESULT
+		RETURN 0
+
+ELSEIF 現在モード == 4
+	TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("이벤트種")
+	SIF RESULT == 이벤트_物語
+		RETURN 0
+
+ENDIF
+RETURN 1
+
+
+@IRAI_CHECK
+
+CUSTOMDRAWLINE ―
+CALLFORM IRAI_EVENT_{依頼_受領中}("名前")
+PRINTFORML 의뢰：%RESULTS%
+CUSTOMDRAWLINE ―
+CALLFORM IRAI_EVENT_{依頼_受領中}("詳細")
+
+CUSTOMDRAWLINE ―
+PRINTFORML 지정장소:
+FOR LOCAL,0,10
+	SIF 依頼_場所:LOCAL >= 1
+		PRINTFORML %GETPLACENAME(依頼_場所:LOCAL),15,LEFT%　（{依頼_場所:LOCAL}）
+NEXT
+CUSTOMDRAWLINE ―
+
+PRINTL [1] - 확인완료
+BINPUT
+
+
+
+@依頼_全完了횟수
+#FUNCTION
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 달성횟수
+
+FOR カウンタ,1,999
+	달성횟수 += 依頼_完了횟수:カウンタ
+NEXT
+
+RETURNF 달성횟수

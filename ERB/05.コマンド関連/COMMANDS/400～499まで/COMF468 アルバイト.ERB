@@ -1,0 +1,87 @@
+﻿;-------------------------------------------------
+;아르바이트
+;-------------------------------------------------
+@COM468
+CALL RECOVER_PERMIL(MASTER,-200,"체력")
+CALL RECOVER_PERMIL(MASTER,-400,"기력")
+
+
+SELECTCASE CFLAG:MASTER:현재위치
+CASE 場所_편의점,場所_DS편의점,場所_MZ편의점
+	PRINTDATA
+		DATAFORM 어서오세요ー！！
+		DATAFORM 점장에게 카드팩의 증가를 부탁했습니다만 적당히 대답했다。
+		DATAFORM 기억할게 너무 많다……。
+	ENDDATA
+CASE 場所_スーパー
+	PRINTDATA
+		DATAFORM 진열진열……앗 죄송합니다 지금 말걸지 말아주세요！
+		DATAFORM 슬슬 시간이 됐을까……지금이다！반액 씰！
+		DATAFORM 푸딩이 싸다、알바 끝나고 남아있다면 살까？
+	ENDDATA
+CASE 場所_カドショ
+	PRINTDATA
+		DATAFORM 창고정리……무한으로 가능할것 같다。
+		DATAFORM 앗 듀얼 초심자다！　둘러싸라 둘러싸！
+		DATAFORM 자신이 설정한 가격이 시장가격과 똑 들어맞았다！
+	ENDDATA
+CASE 場所_식사通り
+	PRINTDATA
+		DATAFORM 배달어플로 가볍게 의뢰를 받았더니 큰일이 되었다……。
+		DATAFORM 요리를 배달하고 있었더니 이쪽도 배가고 파졌다。나중에 시킬까？
+	ENDDATA
+ENDSELECT
+PRINTFORML
+
+IF TARGET > 0 && !CFLAG:수면
+	CALL SOURCE_CALC_환락(TARGET, MASTER, 300)
+	CALL SOURCE_CALC_정복(TARGET, MASTER, 100)
+	EXP:MASTER:학습경험 ++
+ENDIF
+TIME += 240
+バイト済み = 1
+仕事_出席 = 2
+CALL EVILTY_POINT(-5)
+
+RETURN 1
+
+@CAN_COM468(ARG)
+#DIM DYNAMIC 時間外
+
+SELECTCASE CFLAG:MASTER:현재위치
+CASE 場所_편의점,場所_DS편의점,場所_MZ편의점
+	RETURN 1
+CASE 場所_スーパー
+	SIF !GROUPMATCH(TIME_ZONE(),T_昼時間,T_夕時間)
+		RETURN 0
+	RETURN 1
+CASE 場所_カドショ
+	SIF !GROUPMATCH(TIME_ZONE(),T_昼時間,T_夕時間)
+		RETURN 0
+	RETURN 1
+CASE 場所_식사通り
+	SIF !GROUPMATCH(TIME_ZONE(),T_昼時間,T_夕時間)
+		RETURN 0
+	RETURN 1
+ENDSELECT
+
+RETURN 0
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;일
+@COM_ABLE468
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(468)
+	RETURN RESULT
+SIF 仕事_出席 != 0
+	RETURN 0
+SIF !WORKPLACE(CFLAG:MASTER:현재위치)
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

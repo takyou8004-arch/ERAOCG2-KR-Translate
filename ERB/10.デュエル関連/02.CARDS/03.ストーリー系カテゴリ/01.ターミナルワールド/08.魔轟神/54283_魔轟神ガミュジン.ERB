@@ -1,0 +1,166 @@
+﻿@CARDNAME_54283,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마굉신 가뮤진
+	CASE "略称"
+RESULTS = 마굉신 가뮤진
+	CASE "カテゴリ"
+RESULTS:0 = 마굉신
+ENDSELECT
+
+
+@CARD_54283(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_54283(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "마굉신" 튜너 ＋ 튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의 ①③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 S 소환했을 경우에 발동할 수 있다.
+PRINTL 패 / 덱에서 "마굉신" 몬스터 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 몬스터 존에 존재하는 한, 자신 필드의 다른 "마굉신" S 몬스터를 상대는 효과의 대상으로 할 수 없다.
+CALLFORM CARD_ABLE(3,필드→묘지 ,덱→묘지 ,破壊→묘지 ,戦闘→묘지)
+PRINTL ③: 이 카드가 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 자신은 자신 필드의 "마굉신" S 몬스터의 수만큼 드로우한다.
+PRINTL 그 후, 자신의 손패를 1장 고르고 버린다.
+
+
+@CARDSUMMON_54283(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 4
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件カテゴリ = 마굉신	
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,54283) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_54283(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54283)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,54283)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 마굉신
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_3(듀얼리스트,54283)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 싱크로
+	효과条件カテゴリ = 마굉신
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54283(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ドロー枚数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54283,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과条件カテゴリ = 마굉신
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件종류 = 싱크로
+	효과条件カテゴリ = 마굉신
+	효과条件他所 = 1
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+ELSEIF 종류 == 필드→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54283,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 싱크로
+		효과条件カテゴリ = 마굉신
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		CALL CARDDRAW_BASIC(듀얼리스트,RESULT)
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+

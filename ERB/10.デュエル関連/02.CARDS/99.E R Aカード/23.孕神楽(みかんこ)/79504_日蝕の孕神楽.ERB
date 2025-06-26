@@ -1,0 +1,230 @@
+﻿@CARDNAME_79504,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		;読みは「にっしょくのようかぐら」
+		RESULTS = 일식의 잉카구라
+	CASE "略称"
+		RESULTS = 일식의 잉카구라
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+		RESULTS:2 = 미캉코
+		RESULTS:1 = 의식마법
+ENDSELECT
+
+@CARD_79504(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79504(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드를 룰상 "미캉코" 카드로 취급한다.
+PRINTL 「오오히메의 미캉코」의 의식 소환에 필요.
+PRINTL 이 카드명의  카드는 1턴에 1장 밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：레벨의 합계가 6이상이 되도록, 자신의 패 / 필드의 "미캉코" 몬스터를 릴리스하고,
+PRINTL 제외 상태의 "오오히메의 미캉코" 1장을 의식 소환한다.
+PRINTL 이 효과로 의식 소환한 "오오히메의 미캉코"의 이름은, "음타의 미캉코 오오히메"로서 취급한다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 덱 / 묘지로 부터 "미캉코 봉인의 음신전" 1장을 패에 넣는다.
+CALL TEXT_DECORATION("ROGUE")
+
+;「御巫」カテゴリにすることで、패의 オオヒメ本人からこの의식마법サーチしてくるのは
+;絵面的に자신から堕とされにいっているような感じになってとてもイイとする説があります
+;①だけじゃ流石に弱すぎると思ったので雑に②をつけてみた。淫社殿は御巫カテゴリに属さないけど、これを経由することでサーチが可能に。
+;オオヒメで孕신楽サーチして그대로 捨て→묘지효과で淫社殿サーチ→발동の流れで、
+;あたかもオオヒメ本人があなたの社を建立したような流れになるのは割とイイとする説もあります。
+;御巫 카드의 サーチ手段がオオヒメ頼りすぎるので、多少上方修正の余땅がある。これだとたいして変わらない気もするけど。
+
+
+@CARDCAN_79504(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79504)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79504)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲손패 = 1
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件종류 = 의식
+	효과条件名前 = 오오히메의 미캉코
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,79504)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件名前 = 미캉코 봉인의 음신전
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_79504(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 설정場所
+#DIM DYNAMIC レイプ횟수
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC フィールドに御巫がいる場合
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79504,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)		
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 미캉코
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			フィールドに御巫がいる場合 = 1
+
+		CALL RESETAREA_MAT
+		素材範囲손패 = 1
+		素材範囲필드 = 1
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件종류 = 의식
+		효과条件名前 = 오오히메의 미캉코
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		選択カード_ID = RESULT:99
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = RESULT
+			CALL RESETAREA_MAT
+			TRYCALLFORM CARDSUMMON_{選択カード_ID}(듀얼리스트,選択カード)
+			素材範囲필드 = 1
+			素材範囲손패 = 1
+			TRYCALLFORM RITSUMMON(듀얼리스트, 選択カード,"제외")
+			설정場所 = カード소환先
+			CALL CARD_EROTICS(選択カード_ID)
+			조교대상 = RESULT
+
+			IF 듀얼리스트 == "자신" && 조교대상 != -1
+				PRINTFORMW %CALLNAME:MASTER%는 미캉코들에게 말해 오오히메를 필드로 데려오게 했다
+				PRINTFORML %CALLNAME:MASTER%의 손으로 동굴 안에에 봉쇄되어 있던 오오히메는, 여태까지 자신을 신앙하던 미캉코들을 %CALLNAME:MASTER%에게 빼앗긴 것으로 완전히 약해져버려서,
+				PRINTFORMW 한 때의 태양의 빛과 같은 밝은 미소는 완전히 흐려져 있었고, %CALLNAME:MASTER%를 보자 오오히메는 겁에 질린 모습으로 몸을 움츠릴 뿐이다.
+				PRINTFORML 이 모습이라면, 이전에 찬란하게 빛났던 이 일륜의 화신도, %CALLNAME:MASTER%의 것으로 만들 수 있을 것이다.
+				PRINTFORMW %CALLNAME:MASTER%는 미캉코들에게 명해, 오오히메에게...... 한 때의 그녀들의 주인에게, 『의식』을 베푸겠다고 높이 선언했다......!
+				FOR カウンタ,0,4
+					CALL EROTIC_MOVE("全身凌辱",조교대상,MASTER,500)
+					IF フィールドに御巫がいる場合
+					;レイプ共犯者の御巫ちゃんからのコメント
+						SELECTCASE RAND:13
+							CASE 0
+								PRINTFORML 「아아, 오오히메님……♥ %TEXTR("기분 좋아보여/이렇게 격하게/목까지 조여주시고/발로 해주셔서")%……좋겠다……」
+							CASE 1
+								PRINTFORML 「킥킥……오오히메님이라도, 이렇게 %TEXTR("울어/난동부려/저항해")%도♥ 이제 우리에게 이길 수 없어요♥」
+							CASE 2
+								PRINTFORML 「자, 오오히메님♥ 함께 맹세합시다?『 %CALLNAME:MASTER%님께 전~부 바치게 해주세요』라고♥」
+							CASE 3
+								PRINTFORML 「어머, 오오히메님♥ 기분 좋은 느낌이지요?♥ 참지 않아도 괜찮아요♥」
+							CASE 4
+							;邪悪な祝詞？
+								PRINTFORML 「자, 오오히메님♥ 『%TEXTR("범해주셔서 감사합니다/자비로움에 감사드립니다/여자로서 사용해주시는 너그러운 마음에 감사드립니다/저의 삶을 당신에게 바칠 수 있어서 감사합니다/몸도 마음도 모두 바치게 해주세요/시종으로서 섬기게 해주세요/여자로서 사용해주셔서 감사합니다")%』♥ ……라고, 말하는거에요！♥」
+							CASE 5
+								PRINTFORML 「아하핫♥ 자, 여기 봐주세요♥ 오오히메님의%TEXTR("가슴/구슬빛의 몸")%에, 새빨간 잇자국이 이렇게 선명하게 새겨져있는 것을요♥ 좋았던 것이군요♥」
+							CASE 6
+								PRINTFORML 「어떠신가요? 오오히메님의%TEXTR("보지/몸매/『사용감』")%는 잘 즐기고 계시나요?」
+							CASE 7
+								PRINTFORML 「진짜~, 오오히메님도 참, 이렇게 고집부리시다니...... 자♥ 가버리는거에욧♥ 젖꼭지%TEXTR("꼬집어서/찌그러져/물려서")% 가버리는거에요!♥♥」
+							CASE 8
+								PRINTFORML 「어라~?♥ 오오히메님♥ 기분 좋아보이시네요 행복하시죠?♥ 후후♥ 여자아이가 이것을 당해낼 수 없다고요?♥」
+							CASE 9
+								PRINTFORML 「앗♥  지금 이곳 반응 좋으시네요? 킥킥......오오히메님, 여기가 약하시군요? 오오히메님 귀여워~♥ 」
+							CASE 10
+								PRINTFORML 「읏아……응, 읏♥ ……에헤♥ 저도 %TEXTR("키스/자비")%를 받을 수 있는건가요......?♥」
+								PRINTFORML 「에헤헤♥ %CALLNAME:MASTER%님 뿐이에요……♥ 오오히메님을 %TEXTR("레이프/오나홀로 사용")%하면서도 여자아이에게~ 이런 러브러브츄를 해주시다니...…♥♥」
+							CASE 11
+								PRINTFORML 「안돼요 오오히메님! %TEXTR("자지님/엉덩이 구멍/다리")%는, 좀 더%TEXTR("마음을/애정을/감사를")%담아 빨지 않으면 안된다고요!」
+								PRINTFORML 「시범을 보여줄테니, 한번에 기억해주세요?.....츗♥츄츗……♥♥ 츄르릅～～～……♥♥♥」
+							CASE 12
+								PRINTFORML 「오오히메님, 이제 인정하시는게 어떠신가요？ 오오히메님을, 『암컷』으로서 취급해줄 분은, 이분 밖에 없다는 것을요？」
+								PRINTFORML 「이분에게%TEXTR("보지로 받기/강간 당하기/범해지기/임신 당하기/기분좋게 사용 받기/즐거움을 주기")% 위해서, 여자의 몸으로 태어났으니, 그러니 오오히메님『좋아』라는 말을 해보시는거에요♥」
+						ENDSELECT
+					ENDIF
+				NEXT
+			ENDIF
+
+
+
+			CALL CARD_SET_CATEGORY(듀얼리스트,"필드",설정場所,"미캉코")
+			CALL CARD_SET_RENAME(듀얼리스트,"필드",설정場所,"음타의 미캉코 오오히메")
+			IF 듀얼리스트 == "자신" && 조교대상 != -1
+				;『의식』の最終段階。ついに屈して、今までレイプだった処理が合意のものを参照するようになる
+				CALL EROTIC_MOVE("憑依騎乗位",조교대상,MASTER,500)
+				PRINTFORMW 「후후♥ 이제야 겨우 솔직해지셨네요, 오오히메님♥」
+				PRINTFORML …………거듭되는『의식』으로 한 때 훌륭했던 신격이 깍아내려지며, 굴복과 쾌락을 몸과 마음에 새겨진 오오히메는, %CALLNAME:MASTER%를 숭배하는 한사람의%TEXTR("암컷/여자")%로 떨어지고 말았다......
+				PRINTFORMW 『의식』은 지금 여기에 성취해, 오오히메는 %CALLNAME:MASTER%를 시중드는『음타의 미캉코』로서 재탄생했다!
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79504,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件名前 = 미캉코 봉인의 음신전
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

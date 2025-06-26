@@ -1,0 +1,201 @@
+@CARDNAME_62015,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 천후예보
+	CASE "略称"
+		RESULTS = 천후예보
+	CASE "カテゴリ"
+		RESULTS:0 = 천후
+ENDSELECT
+
+
+@CARD_62015(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62015(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「천후예보」가 된다.
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①：이 카드의 발동시의 처리로서,
+PRINTL 덱에서 "천후"지속마법 지속함정카드 1장을 자신의 마법&함정존에 둘 수 있다.
+;(2)は링크に内蔵
+;PRINTL ②：자신이 「천후」L몬스터를 링크소환する경우、
+;PRINTL 자신의 마법＆함정존의 「천후」마법 / 함정 카드를 링크素材로할 수 있다。
+CALL CARD_ABLE(2,마함起動)
+PRINTL ②：자신 메인 페이즈에 발동할 수 있다。
+PRINTL 패에서 레벨３의「천후」 몬스터 １장을 소환한다。
+
+
+@CARDCAN_62015(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,62015)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_2(듀얼리스트,62015)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 천후
+	효과条件종류 = モン全般
+	효과条件レベル = 3
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,62015)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_62015(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 천후アリ,5
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62015,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 천후
+		효과条件レベル = 3
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",1)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62015,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		IF 마함数(듀얼리스트) < 5
+			천후アリ:0 = 0
+			천후アリ:1 = 0
+			천후アリ:2 = 0
+			천후アリ:3 = 0
+			천후アリ:4 = 0
+
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件名前 = 눈의 천후모양
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				천후アリ:0 = 1
+			ENDIF
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件名前 = 비의 천후모양
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				천후アリ:1 = 1
+			ENDIF
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件名前 = 흐린 천후모양
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				천후アリ:2 = 1
+			ENDIF
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件名前 = 무지개 천후모양
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				천후アリ:3 = 1
+			ENDIF
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件名前 = 번개의 천후모양
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				천후アリ:4 = 1
+			ENDIF
+
+			CALL FULLRESET
+			SIF 천후アリ:0 > 0
+				효과条件固名前:0 = 눈의 천후모양
+			SIF 천후アリ:1 > 0
+				효과条件固名前:1 = 비의 천후모양
+			SIF 천후アリ:2 > 0
+				효과条件固名前:2 = 흐린 천후모양
+			SIF 천후アリ:3 > 0
+				효과条件固名前:3 = 무지개 천후모양
+			SIF 천후アリ:4 > 0
+				효과条件固名前:4 = 번개의 천후모양
+			효과条件カテゴリ = 천후
+			효과条件종류:0 = 지속마법
+			효과条件종류:1 = 지속함정
+			효과条件任意 = 1
+			CALL CARD_SET_BASIC(듀얼리스트,"덱",ゾーン,場所,"表側표시")
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "천후예보")
+ENDIF

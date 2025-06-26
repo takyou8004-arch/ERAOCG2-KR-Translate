@@ -1,0 +1,110 @@
+﻿@CARDNAME_79606,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 절정의 카운트다운
+	CASE "略称"
+RESULTS = 절정카운트다운
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_79606(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79606(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①: 2000 라이프 포인트를 지불한다.
+PRINTL 발동 턴부터 20턴 후, 상대의 라이프 포인트는 0이 된다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79606(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79606)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 時限紋章起動
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+
+
+@CARDEFFECT_79606(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79606)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		IF !紋章済(듀얼리스트,79606)
+			CALL CARD_ENG_EMBLEM(듀얼리스트,-1,20,4)
+			CALL CARD_RESERV(듀얼리스트,79606,時限紋章予約)
+		ELSE
+			PRINTFORMW 상대 플레이어는 이미 저주받고있다。
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 時限紋章起動
+	PRINTFORMW 나머지：{GETVAR(@"%듀얼리스트%_時紋_汎数:場所")}턴……
+	CALL CARD_ENG_EMBLEM(듀얼리스트,場所,-1,4)
+	IF GETVAR(@"%듀얼리스트%_時紋_汎数:場所") <= 0
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML %CALLNAME:조교대상%의 하복부에 갑자기 핑크색 문장이 떠올라……
+			PRINTFORML 연속적으로 불함리한 쾌감에 뎦쳐졌다！
+			FOR カウンタ,0,10
+				CALL EROTIC_MOVE("全身애무",조교대상,-1,10000)
+			NEXT
+			CALL SET_PLAYER_INFO(듀얼리스트,"듀얼패배플래그",1,1)
+			CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",9999999,1)
+		ENDIF
+	ENDIF
+ENDIF

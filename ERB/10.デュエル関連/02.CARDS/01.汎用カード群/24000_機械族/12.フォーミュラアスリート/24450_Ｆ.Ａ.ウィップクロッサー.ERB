@@ -1,0 +1,137 @@
+﻿@CARDNAME_24450,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = F.A. 윕 크로서
+	CASE "略称"
+RESULTS = 윕 크로서
+	CASE "カテゴリ"
+RESULTS:0 = 포뮬러 애슬리트
+ENDSELECT
+
+
+@CARD_24450(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24450(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 공격력은 이 카드의 레벨 × 300 올라간다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②: "F.A." 마법 / 함정 카드의 효과가 발동했을 경우에 발동할 수 있다.
+PRINTL 이 카드의 레벨을 1 올린다.
+CALLFORM CARD_ABLE(0,발동強制誘発)
+PRINTL ③: 이 카드의 레벨보다도 레벨/랭크가 낮은 몬스터의 효과를 상대가 발동했을 때,
+PRINTL 상대는 300 LP 잃는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ④: 이 카드의 레벨이 7 이상일 경우,
+PRINTL 자신 필드의 "F.A." 몬스터는 함정 내성을 얻는다.
+
+@CARDCAN_24450(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24450)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 포뮬러 애슬리트
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 링크以外
+	CALLFORM 효과条件レベル_ADV(GETVAR(@"%듀얼리스트%_MZ_星:場所"),"以下")
+	CALL CARD_CHECK_START_DATA_2(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_星:場所") < 7
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24450(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24450)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星",1)
+	ENDIF
+
+ELSEIF 종류 == 발동強制誘発
+	CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",300,1)
+
+ELSEIF 종류 == 攻守変動
+	攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_星:場所") * 300
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 포뮬러 애슬리트
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"함정耐")
+ENDIF

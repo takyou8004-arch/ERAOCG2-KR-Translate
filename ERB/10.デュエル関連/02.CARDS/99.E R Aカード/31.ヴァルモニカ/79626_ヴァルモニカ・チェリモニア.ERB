@@ -1,0 +1,321 @@
+﻿@CARDNAME_79626,参照先
+;ココで지정卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 바르모니카 체리모니아
+	CASE "略称"
+		RESULTS = Cerimonia
+	CASE "カテゴリ"
+		RESULTS:0 = 바르모니카
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79626(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79626(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  카드는 1턴에 1번 밖에 사용할 수 없다.
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：향명 카운터를 놓을 수 있는 자신의 마법 & 함정 존의 카드 1장에 향명 카운터를 1개 놓는다.
+PRINTL 그 후, 이하의 효과들 중 1개를 선택하여 적용한다.
+PRINTL ●자신은 500LP를 회복한다.
+PRINTL 그 후, 자신 필드의「바르모니카" 몬스터 1장을 선택하여,
+PRINTL 자신 필드의 향명 카운터의 수X200 만큼 공격력을 올린다.
+PRINTL ●자신은 500LP 데미지를 받는다.
+PRINTL 그 후, 자신의 덱 위로부터 카드를 3장 묘지에 보낼 수 있다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79626(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79626)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79626)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前:0 = 안젤로 바르모니카
+	효과条件名前:1 = 데모네 바르모니카
+	효과条件名前:2 = 서큐베 바르모니카
+	효과条件名前:3 = 바르모니카의 음란신-Lussuria
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79626(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 설치場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;卡片发动確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79626,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CUSTOMDRAWLINE —
+		PRINTL 響鳴카운터を乗せる 카드를 選択
+		CUSTOMDRAWLINE —
+		CALL FULLRESET
+		효과条件名前:0 = 안젤로 바르모니카
+		효과条件名前:1 = 데모네 바르모니카
+		효과条件名前:2 = 서큐베 바르모니카
+		효과条件名前:3 = 바르모니카의 음란신-Lussuria
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"마함",ゾーン,場所,79626)
+		SIF RESULT == 9999
+			RETURN 0
+		설치場所 = RESULT
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",설치場所,"個Ｃ",1)
+		
+		IF 듀얼리스트 == "자신"
+			PRINTL
+			PRINTL 어떤 느낌의
+			PRINTL 　음을 선택해?
+			PRINTL
+			PRINTL （속닥속닥...!）
+			PRINTL （회복하면서 간식을 먹어, 몬스터를 강하게 합시다...!）[0]
+			PRINTL
+			PRINTL （소근소근...♪）
+			PRINTFORML （데미지는 신경쓰지 말고, %CALLNAME:NO_TO_CHARANUM(2140)%）를 먹어, 덱 위에서 카드를 3장 보내라...♪[1]
+			BINPUT
+			IF RESULT == 0
+				CALL CARDEFFECT_79626_1(듀얼리스트,종류,ゾーン,場所)
+			ELSEIF RESULT == 1
+				CALL CARDEFFECT_79626_2(듀얼리스트,종류,ゾーン,場所)
+			ENDIF
+		;对方が发动
+		ELSEIF 듀얼리스트 == "상대"
+			SELECTCASE RAND:2
+				CASE 0
+					PRINTFORML 選ばれた효과 
+					PRINTW ●５００回復し、「바르모니카」の공격력을 올린다。
+					CALL CARDEFFECT_79626_1(듀얼리스트,종류,ゾーン,場所)
+				CASE 1
+					PRINTFORML 選ばれた효과 
+					PRINTW ●５００데미지를 受け、덱 위에서 카드를 ３장묘지로 보낸다。
+					CALL CARDEFFECT_79626_2(듀얼리스트,종류,ゾーン,場所)
+			ENDSELECT
+		ENDIF
+	ENDIF
+ENDIF
+
+
+@CARDEFFECT_79626_1(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교강도
+#DIM DYNAMIC 调教对象
+#DIM DYNAMIC 설치場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;响鸣지시物数量统计
+CALL FULLRESET
+효과範囲마함 = 1
+효과条件カテゴリ = 바르모니카
+효과条件CNT = 1
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+조교강도 = RESULT:9
+
+;主要是调教天魔之声选姬
+调教对象 = NO_TO_CHARANUM(2140)
+
+;回复生命值通用
+CALL FULLRESET
+CALL LIFE_CHANGE(듀얼리스트,"増加","효과",500)
+
+;主要效果：异响鸣怪兽攻击力上升
+CALL FULLRESET
+효과条件カテゴリ = 바르모니카
+CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+설치場所 = RESULT
+IF 설치場所 != 9999
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",설치場所,"永攻",조교강도 * 200)
+ENDIF
+
+;天魔之声选姬在场上时
+CALL FULLRESET
+효과範囲필드 = 1
+효과条件名前:0 = 셀레트리체 바르모니카
+효과条件名前:1 = 바르모니카の신奏－ヴァ-ラル
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+IF RESULT == 1 && 듀얼리스트 == "자신"
+; && TALENT:调教对象:爱慕 >= 1
+	SETCOLOR C_PINK
+	PRINTFORML
+	IF EXP:调教对象:76 == 0
+		PRINTFORML %CALLNAME:调教对象%는 마법을 사용해 케이크를 꺼냈다.
+	ELSEIF EXP:调教对象:76 <= 20
+		PRINTFORML %CALLNAME:调教对象%가 천계의 문을 열자, 안젤로와 데모네가 케이크를 옮겨 왔다.
+		PRINTFORML 「저번에 실패하고나서 많이 연습했어요!」
+	ELSE 
+		PRINTFORML %CALLNAME:调教对象%가 천계의 문을 열자, 안젤로와 데모네가 케이크를 옮겨 왔다.
+		PRINTFORML 정교한 디자인의 케이크에는 여러가지 색의 과일들이 예쁘게 장식이 되어있어 보고있는 것 만으로도 배가 고 파졌다…
+		PRINTFORML 「후흥~、어제까지의 내가 아니야! 이번에는 자신작이라고!」
+	ENDIF
+	PRINTFORMW
+	PRINTFORML %CALLNAME:调教对象%는 포크로 한 조각을 건져올려, 당신에게 내밀었다.
+	PRINTFORML 「아-앙❤」
+	PRINTFORMW
+	PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:调教对象%로부터 향해져온 케이크를 먹었다.
+	IF EXP:调教对象:76 > 20
+		PRINTFORML 굉장히 맛있다! 한 입 더!
+		PRINTFORMW
+		PRINTFORML 「이게 저의 연습 결과에요!」
+	ELSE 
+		PRINTFORML 맛있어!
+	ENDIF
+	PRINTFORMW
+	PRINTFORML 「이번엔 내 차례야!」
+	PRINTFORML %CALLNAME:调教对象% 기대하는 눈빛으로 당신을 바라보고있다.
+	PRINTFORMW
+	PRINTFORML %CALLNAME:MASTER%는 위에있는 탄 딸기마다 포크로 건져내어, 입을 열고있는 %CALLNAME:调教对象%에게 내밀었다
+	PRINTFORML %CALLNAME:调教对象%는 행복한 얼굴로 케이크를 맛보고 있다.
+	PRINTFORMW
+	PRINTFORML 달콤한 공기 안에서, 두명은 휴식을 취했다.
+	PRINTFORMW
+	CALL RECOVER_PERMIL(MASTER,조교강도 * 100,"체력",1)
+	CALL RECOVER_PERMIL(MASTER,조교강도 * 100,"기력",1)
+	CALL RECOVER_PERMIL(调教对象,조교강도 * 100,"체력",1)
+	CALL RECOVER_PERMIL(调教对象,조교강도 * 100,"기력",1)
+	PRINTFORMW
+ENDIF
+
+RETURN
+
+
+@CARDEFFECT_79626_2(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교강도
+#DIM DYNAMIC 调教对象
+#DIM DYNAMIC 설치場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;响鸣지시物数量统计
+CALL FULLRESET
+효과範囲마함 = 1
+효과条件カテゴリ = 바르모니카
+효과条件CNT = 1
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+조교강도 = RESULT:9
+
+;调教对象通常是 天魔之声选姬
+调教对象 = NO_TO_CHARANUM(2140)
+
+;受到伤害通用
+CALL FULLRESET
+CALL LIFE_CHANGE(듀얼리스트,"減少","효과",500)
+
+
+;天魔之声选姬 在场上时舐乳
+CALL FULLRESET
+효과範囲필드 = 1
+효과条件名前:0 = 셀레트리체 바르모니카
+효과条件名前:1 = 바르모니카の신奏－ヴァ-ラル
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+
+IF RESULT == 1 && 듀얼리스트 == "자신"
+; && TALENT:2140:爱慕 >= 1
+	SETCOLOR C_PINK
+	PRINTFORML
+	PRINTFORML 「나……나를 먹겠다는 것은 무슨말이야!?」
+	PRINTFORML %CALLNAME:调教对象%는 놀라면서 그렇게 말했다.
+	PRINTFORMW
+	PRINTFORML 그러나, %CALLNAME:调教对象% 또한, 그 의미를 미미하게 깨닫고 있는 듯, 귀를 새빨갛게 하고 있다.
+	PRINTFORMW
+	PRINTFORMW %CALLNAME:MASTER%가 지시한다면, %CALLNAME:调教对象%는 입을 우물쭈물 하며, 단추를 1개씩 벗겨나갔다.
+	IF TALENT:调教对象:가슴사이즈 <= -2
+		PRINTFORML 그곳에는 무려, 웅대한 평원이 펼처져 있었다!
+	ELSEIF TALENT:调教对象:가슴사이즈 == -1
+		PRINTFORML 단추를 전부 풀었을 때、 %CALLNAME:调教对象%의 자그마한 유방이 적나라하게 보여졌다.
+	ELSEIF TALENT:调教对象:가슴사이즈 == 1
+		PRINTFORML 단추를 전부 풀었을 때、 %CALLNAME:调教对象%의 풍만한 유방이 모습을 들어냈다.
+	ELSEIF TALENT:调教对象:가슴사이즈 >= 2
+		PRINTFORML 단추를 전부 풀었을 때、 %CALLNAME:调教对象%의 너무나 거대한 유방이 옷 틈새로 흘러나왔다.
+	ELSE
+		PRINTFORML 단추를 전부 풀었을 때、 %CALLNAME:调教对象%의 아름다운 유방이 눈 앞에 다가왔다.
+	ENDIF
+	PRINTFORMW
+	PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:调教对象%의 가슴에 얼굴을 가까이 하고, 그 핑크색의 유륜을 혀로 간질인다.
+	PRINTFORML 얼마 지나자, 눈 앞의 유두가 부풀어 올라, 그 존재를 주장하기 시작했다.
+	PRINTFORMW
+	PRINTFORML %CALLNAME:调教对象%는 흥분에 참지못하고, %CALLNAME:MASTER% 혀에 닿도록, 자신의 신체를 흔들어 자신의 유두에 유도했다.
+	PRINTFORML %CALLNAME:MASTER%는 그 의도를 간파하고는, 유두 주위에서 둥그렇게 원을 그리기 시작했다.
+	PRINTFORMW
+	PRINTFORML 「조금 더……❤　빠, 빨아...주세요❤」
+	PRINTFORML %CALLNAME:调教对象%는 들뜬 목소리로 간원했다.
+	PRINTFORMW 
+	PRINTFORML %CALLNAME:MASTER%는 유두를 입에 넣고, 조금 강하게 빨아냈다.
+	PRINTFORMW 
+	PRINTFORML 「후앗❤」
+	PRINTFORML 가슴에 모여있던 신경들이 바람에 날아가 %CALLNAME:调教对象%는 편안한 숨을 내쉬었다.
+	PRINTFORMW 
+	PRINTFORML %CALLNAME:MASTER%가 발기한 유두를 이빨로 짓씹으면,
+	PRINTFORML 강렬한 쾌락에 %CALLNAME:调教对象%는 격력하게 반응해, 좀 더 조금 더 조르듯 %CALLNAME:MASTER%의 머리를 강하게 껴안았다.
+	PRINTFORMW 
+
+	CALL EROTIC_MOVE("舐乳",调教对象,MASTER,100 + 25 * 조교강도)
+	PRINTFORMW 
+ENDIF
+
+;主要效果：堆墓三张
+SIF 듀얼리스트 == "자신"
+	PRINTL 덱 위에서 카드를 묘지로 보내시겠습니까?
+CALL YN_CHOICE(듀얼리스트)
+IF RESULT == 0
+	CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",3)
+ENDIF
+
+RETURN

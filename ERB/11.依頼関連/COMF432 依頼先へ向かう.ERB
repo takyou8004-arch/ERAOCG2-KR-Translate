@@ -1,0 +1,79 @@
+﻿;-------------------------------------------------
+;의뢰처로 향한다
+;-------------------------------------------------
+@COM432
+#DIM DYNAMIC カウンタ
+
+FOR カウンタ,0,10
+	SETCOLOR C_AQUA
+	IF INRANGE(依頼_場所:カウンタ,1,500)
+		IF INRANGE(依頼_場所:カウンタ,1,20)
+			IF INRANGE(CFLAG:MASTER:현재위치,1,20)
+				PRINTFORML 의뢰처로 갑니다。
+				TIME += 3
+				CFLAG:MASTER:현재위치 = 依頼_場所:カウンタ
+			ELSE
+				PRINTFORML 의뢰처는「실내」인것 같습니다。집으로 돌아갑니다。
+				NEXTCOM = 460
+			ENDIF
+		ELSEIF INRANGE(依頼_場所:カウンタ,50,100)
+			IF INRANGE(CFLAG:MASTER:현재위치,50,100)
+				PRINTFORML 의뢰처로 갑니다。
+				TIME += 10
+				CFLAG:MASTER:현재위치 = 依頼_場所:カウンタ
+			ELSE
+				PRINTFORML 의뢰처는「동쪽역 주변」인것 같습니다。이동합니다。
+				TIME += 30
+				CFLAG:MASTER:현재위치 = 場所_東駅
+			ENDIF
+		ELSEIF INRANGE(依頼_場所:カウンタ,101,200)
+			IF INRANGE(CFLAG:MASTER:현재위치,101,200)
+				PRINTFORML 의뢰처로 갑니다。
+				TIME += 10
+				CFLAG:MASTER:현재위치 = 依頼_場所:カウンタ
+			ELSE
+				PRINTFORML 의뢰처는「남쪽역 주변」인것 같습니다。이동합니다。
+				TIME += 30
+				CFLAG:MASTER:현재위치 = 場所_南駅
+			ENDIF
+		ELSEIF INRANGE(依頼_場所:カウンタ,500,700)
+			IF INRANGE(CFLAG:MASTER:현재위치,1,20)
+				PRINTFORML 「中継땅点」へと向かいます。
+				TIME += 3
+				CFLAG:MASTER:현재위치 = 場所_中継땅点
+			ELSEIF INRANGE(CFLAG:MASTER:현재위치,50,200)
+				PRINTFORML 의뢰처는「이세계」인것 같습니다。집으로 돌아갑니다。
+				NEXTCOM = 460
+			ELSEIF INRANGE(依頼_場所:カウンタ,500,700)
+				PRINTFORML 의뢰처로 갑니다。
+				TIME += 10
+				CFLAG:MASTER:현재위치 = 依頼_場所:カウンタ
+			ENDIF
+		ENDIF
+		BREAK
+	ENDIF
+NEXT
+
+RESETCOLOR
+RETURN 1
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;의뢰처로 향한다
+@COM_ABLE432
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(432)
+	RETURN RESULT
+SIF MATCH(依頼_場所,CFLAG:MASTER:현재위치)
+	RETURN 0
+
+SIF INRANGE(依頼_場所,800,809)
+	RETURN 0
+SIF 依頼플래그:依頼_受領中 != 1
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

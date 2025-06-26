@@ -1,0 +1,569 @@
+﻿@CARDNAME_62240,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아라메시아의 의식
+	CASE "略称"
+RESULTS = 아라메시아 의식
+	CASE "カテゴリ"
+RESULTS:0 = 용사
+ENDSELECT
+
+
+@CARD_62240(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62240(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없으며,
+PRINTL 이 카드를 발동하는 턴, 자신은 특수 소환된 몬스터 이외의 필드의 몬스터의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①: 자신 필드에 "아라메시아의 용사"가 존재하지 않는 경우에 발동할 수 있다.
+PRINTL 자신 필드에 "아라메시아의 용사"가 강림한다.
+PRINTL 자신 필드에 "운명의 여로"가 존재하지 않는 경우,
+PRINTL 또한 덱에서 "운명의 여로" 1장을 골라 자신의 마법 & 함정 존에 앞면 표시로 놓을 수 있다.
+PRINTL 
+PRINT 「アラメシアの용사」
+SETCOLOR C_GRAY
+PRINTL <<아라메시아의 용사>>
+RESETCOLOR
+PRINTL 천사족 땅 레벨 4 공격력 2000 / 수비력 2000
+
+
+
+@CARDCAN_62240(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,62240)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,62240)
+		RETURN 0
+	;例外処理
+	CALL CARD_SS_CHECK(듀얼리스트,0,"")
+	SIF RESULT == 1
+		RETURN 0
+	SIF アラメシア顕現불가 == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件名前 = 아라메시아의 용사
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_62240(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62240,1)
+	IF RESULT == 0
+		CALL SET_PLAYER_INFO(듀얼리스트,"용사縛り",1)
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		IF 듀얼리스트 == "자신" && FLAG:게임모드 == 1
+PRINTL 특수 소환할 몬스터를 선택해 주세요.
+PRINTL [0] - 아라메시아의 용사
+PRINTL [1] - 빨간 모자의 용사
+			SIF 依頼_完了횟수:30 >= 1
+PRINTL [2] - 함정 파괴의 기사
+			SIF 依頼_完了횟수:44 >= 1
+PRINTL [3] - 음속의 섬도병희
+			SIF GETVAR(@"ライフ_%듀얼리스트%") <= 1000
+PRINTL [99] - a-vida SERVER ACCESS
+			BINPUT
+			IF RESULT == 0
+				CALL FULLRESET
+				CALL CARD_GENERATE(듀얼리스트,2240)
+			ELSEIF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_GENERATE(듀얼리스트,99999)
+			ELSEIF RESULT == 2
+				CALL FULLRESET
+				CALL CARD_GENERATE(듀얼리스트,2115)
+			ELSEIF RESULT == 3
+				CALL FULLRESET
+				CALL CARD_GENERATE(듀얼리스트,202000)
+			ELSEIF RESULT == 99
+				CALL FULLRESET
+				CALL CARD_GENERATE(듀얼리스트,111876)
+			ENDIF
+		ELSE
+
+			CALL FULLRESET
+			CALL CARD_GENERATE(듀얼리스트,2240)
+		ENDIF
+		CALL FULLRESET
+		효과範囲마함 = 1
+효과条件名前 = 운명의 여정
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT != 1 && 마함数(듀얼리스트) < 5
+			CALL FULLRESET
+효과条件名前 = 운명의 여정
+			효과条件任意 = 1
+			CALL CARD_SET_BASIC(듀얼리스트,"덱",ゾーン,場所,"表側표시")
+		ENDIF
+	ENDIF
+ENDIF
+
+;─────────────────────────────────────────────────────────────────────────
+
+@CARDNAME_2240,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아라메시아의 용사
+	CASE "略称"
+RESULTS = 용사님
+	CASE "カテゴリ"
+RESULTS:0 = 용사
+ENDSELECT
+
+
+@CARD_2240(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+@CARD_EXPLANATION_2240(종류)
+#DIM DYNAMIC 종류
+PRINTL 아라메시아의 의식에서부터 시작되는 용사의 이야기
+PRINTL 용사는 모험의 대지에서 무엇을 볼까?
+
+
+@CARDCAN_2240(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+RETURN 0
+;─────────────────────────────────────────────────────────────────────────
+
+@CARDNAME_99999,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = %NAME:MASTER%
+	CASE "略称"
+RESULTS = 빨간 모자의 용사
+	CASE "カテゴリ"
+RESULTS:0 = 용사
+ENDSELECT
+
+
+@CARD_99999(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000 + (BASE:MASTER:체력 / 4)
+	CASE "守備力"
+		RETURN 1000 + (BASE:MASTER:체력 / 4)
+	CASE "성별"
+		RETURN TALENT:MASTER:성별
+ENDSELECT
+
+
+@CARD_EXPLANATION_99999(종류)
+#DIM DYNAMIC 종류
+PRINTL 당신 자신이 만들어가는 이야기.
+
+
+@CARDCAN_99999(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+RETURN 0
+
+;─────────────────────────────────────────────────────────────────────────
+
+@CARDNAME_2115,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 함정 파괴의 기사
+	CASE "略称"
+RESULTS = 기사님
+	CASE "カテゴリ"
+RESULTS:0 = 용사
+ENDSELECT
+
+
+@CARD_2115(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+
+@CARD_EXPLANATION_2115(종류)
+#DIM DYNAMIC 종류
+PRINTL 아름다운 성에는 함정이 있을까? 공주의 장치는 언제나 완벽할까?
+PRINTL 초고속 공략이 시작된다~!
+PRINTL 
+PRINTL (이 카드는 함정 내성과 직접 공격을 가진다)
+
+@CARDCAN_2115(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1370)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+RETURN 0
+
+
+
+@CARDEFFECT_2115(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直攻")
+ENDIF
+
+;─────────────────────────────────────────────────────────────────────────
+@CARDNAME_202000,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 음속의 섬도병희
+	CASE "略称"
+RESULTS = 레이 쨩
+	CASE "カテゴリ"
+RESULTS:0 = 용사
+RESULTS:1 = 섬도희
+ENDSELECT
+
+
+@CARD_202000(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+
+@CARD_EXPLANATION_202000(종류)
+#DIM DYNAMIC 종류
+PRINTL 소중한 것을 지키기 위해, 그녀는 계속 싸운다.
+PRINTL 모두 함께 웃을 수 있는 그 날을 꿈꾸며.
+PRINTL 
+PRINTL (이 카드의 공격력은, 자신의 묘지의 마법 카드의 수× 100 상승한다)
+
+@CARDCAN_202000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,202000)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+RETURN 0
+
+@CARDEFFECT_202000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 마법全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 100
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+ENDIF
+
+;─────────────────────────────────────────────────────────────────────────
+@CARDNAME_111876,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 별빛의 용사
+	CASE "略称"
+RESULTS = 별빛의 용사
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:4 = 용사
+ENDSELECT
+
+
+@CARD_111876(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_111876(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 별빛의 용사, 높이 든 검에 빛을 모아 거대한 어둠을 물리치리라.
+PRINTL 
+
+
+
+@CARDCAN_111876(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,111876)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF GETVAR(@"%対面者%_MZ_召種:%対面者%_戦闘カード") == 召種通常
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_111876(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 対戦カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,111876)
+	IF RESULT == 0
+		戦闘カード = 戦闘場所(듀얼리스트)
+		対戦カード = 戦闘場所(듀얼리스트,1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘カード,"一時",GETVAR(@"%対面者%_MZ_攻:対戦カード"))
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,111876)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"덱")
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻誘")
+ENDIF
+;─────────────────────────────────────────────────────────────────────────
+
+
+
+

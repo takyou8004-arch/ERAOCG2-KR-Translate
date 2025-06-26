@@ -1,0 +1,174 @@
+﻿@CARDNAME_39653,参照先
+;ココ39653で지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 고블린 도둑 부대
+	CASE "略称"
+		RESULTS = 고블린 도둑부대
+	CASE "カテゴリ"
+		RESULTS:0 = 고블린
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39653(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39653(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①의 효과는 1턴에 1번밖에 사용할 수 없다.。
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：패의 이 카드를 공개하여 발동할 수 있다。
+PRINTL 이카드를 묘지로 보내고, 덱에서 "고블린 절도 부대」 이외의 "고블린」 카드를 1장 패에 넣는다。
+CALL CARD_ABLE(2,攻撃時誘発)
+PRINTL ②：이 카드가 암컷 몬스터와 전투를 실행 하는 경우에 발동할 수 있다。
+PRINTL 그 전투를 무효로 하고, 대상 암컷몬스터에 효과를 무효로 한다。
+CALL CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드는 공격 종료 시 수비표시가 되며 상대는 공격 선언 시 필드에 이 카드를 먼저 공격해야 한다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+
+@CARDCAN_39653(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39653)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARD_{戦闘カードID(듀얼리스트,1)}("성별")
+	SIF RESULT != 牝性
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_戦:場所") == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,39653)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 고블린
+	효과条件固名前 = 고블린 도둑 부대
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39653(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 無効カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力상승値
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC レイプ횟수
+
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39653)
+	IF RESULT == 0
+		無効カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",無効カード,"지속無効",39653)		
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",無効カード,1)
+		IF RESULT != -1
+			조교대상 = RESULT
+			IF GETVAR(@"%対面者%_MZ_服状:無効カード") == 0
+				PRINTFORMW 고블린 조련대상의 %CALLNAME:조교대상% 속옷을 도둑질 했습니다.……、
+				PRINTFORMW %CALLNAME:조교대상% 아래의 허전한 감각을 느끼며 당황 합니다。
+				PRINTFORMW 갓 벗은%CLOTHNAME(6,EQUIP:조교대상:6)% 자랑하는 고블린 수치스러워서 부끄러워진 얼굴로 노려봅니다。
+			ELSE
+				PRINTFORMW %CALLNAME:조교대상%의 속옷을 자랑하는 고블린 상대로 벗겨진 속옷을 되찾으려고 시도합니다……、
+				PRINTFORMW 고블린은 때리려는 공격을 모두 피하고, 노출된 엉덩이를 만지거나 하면서 놀려 됩니다。
+				PRINTFORMW %CALLNAME:조교대상%은 숨을 헐떡이며、죽일듯한 눈으로 고블린을 바라봅니다。
+			ENDIF
+			CALL EROTIC_MOVE("팬티晒し",조교대상,-1,100)
+		ENDIF
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",無効カード,"服状",1,1,1)
+		CALL EVADE_ATTACK(듀얼리스트)
+	ENDIF
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",2,1)
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"攻誘")
+ELSEIF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39653,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 고블린
+		효과条件固名前 = 고블린 도둑 부대
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF
+

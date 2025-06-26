@@ -1,0 +1,154 @@
+﻿@CARDNAME_79605,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 산란
+	CASE "略称"
+RESULTS = 산란
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79605(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79605(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：필드의 드래곤족 / 비행야수족 / 비늘야수족 / 곤충족 / 바다생물족의 암컷 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 　대상 몬스터보다 레벨이 낮고, 종족이 같은 몬스터 1장을 덱에서 패에 넣는다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79605(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79605)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件종족:0 = 드래곤족
+	효과条件종족:1 = 비행야수족
+	효과条件종족:2 = 비늘야수족
+	효과条件종족:3 = 곤충족
+	효과条件종족:4 = 바다생물족
+	효과条件성별 = 牝性
+	CALL 효과条件レベル_ADV(2, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족:0 = 드래곤족
+	효과条件종족:1 = 비행야수족
+	효과条件종족:2 = 비늘야수족
+	효과条件종족:3 = 곤충족
+	효과条件종족:4 = 바다생물족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79605(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択カード종족
+#DIM DYNAMIC 選択カードレベル
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC サーチカードID
+#DIM DYNAMIC サーチカードレベル
+#DIMS DYNAMIC サーチカード名
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79605)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과条件종족:0 = 드래곤족
+		효과条件종족:1 = 비행야수족
+		효과条件종족:2 = 비늘야수족
+		효과条件종족:3 = 곤충족
+		효과条件종족:4 = 바다생물족
+		효과条件성별 = 牝性
+		CALL 효과条件レベル_ADV(2, "以上")
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+
+			選択カード종족 = GETVAR(@"%대상者（CS）%_MZ_種:選択カード")
+			選択カードレベル = GETVAR(@"%대상者（CS）%_MZ_星:選択カード") 
+
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종족 = 選択カード종족
+			CALL 효과条件レベル_ADV(選択カードレベル -1 , "以下")
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				サーチカードID = RESULT:1
+
+				TRYCALLFORM CARDNAME_{サーチカードID},"名前"
+				サーチカード名 = %RESULTS%
+				TRYCALLFORM CARD_{サーチカードID},"レベル"
+				サーチカードレベル = RESULT
+
+				CALL CARD_EROTICS(選択カード_ID)
+				IF RESULT != -1
+					조교대상 = RESULT
+					PRINTFORML 
+					PRINTFORMW %NAME:조교대상%는 갓 낳은 %サーチカード名%의 알을 떨어트렸다!
+					PRINTFORML 
+					CALL EROTIC_MOVE("疑似출산",조교대상,-1,サーチカードレベル*100)
+					WAIT
+				ENDIF
+			ENDIF
+		ENDIF
+
+	ENDIF
+ENDIF

@@ -1,0 +1,174 @@
+﻿@CARDNAME_30203,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 수관의 갑제 베아그람
+	CASE "略称"
+RESULTS = 베아그람
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_30203(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 곤충족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 3400
+	CASE "守備力"
+		RETURN 2800
+	CASE "소환불가"
+		RETURN 1
+	CASE "특수制限"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_30203(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 일반 소환할 수 없다.
+PRINTL 자신은 「수관의 갑제 베아그람」을 1턴에 1번밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①: 자신의 패 / 묘지의 이 카드 이외의 곤충족 / 식물족 몬스터 3장을 게임에서 제외하고 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ②: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 자신의 일반 함정 카드의 발동에 대하여, 상대는 카드의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ③: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 곤충족 / 식물족 몬스터 이외의 필드의 앞면 표시 몬스터를 전부 파괴한다.
+
+
+@CARDCAN_30203(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,30203)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_SS_CHECK(듀얼리스트,30203,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件종족:0 = 곤충족
+	효과条件종족:1 = 식물족
+	효과条件複数 = 3
+	효과条件行先플래그 = 제외行き
+	효과条件他所 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲필드 = 1
+	효과条件除去種 = 묘지
+	효과条件표시 = 10
+	FOR カウンタ,0,20
+		SIF カウンタ == 곤충족 || カウンタ == 식물족
+			CONTINUE
+		효과条件종족:カウンタ = カウンタ + 1
+	NEXT
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_30203(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 破壊カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,30203)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件종족:0 = 곤충족
+		효과条件종족:1 = 식물족
+		효과条件複数 = 3
+		효과条件行先플래그 = 제외行き
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, ゾーン, 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,30203,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 10
+		FOR カウンタ,0,20
+			SIF カウンタ == 곤충족 || カウンタ == 식물족
+				CONTINUE
+			효과条件종족:カウンタ = カウンタ + 1
+		NEXT
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"通함정阻害",3)
+ENDIF
+
+
+

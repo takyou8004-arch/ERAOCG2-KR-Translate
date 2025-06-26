@@ -1,0 +1,132 @@
+﻿@CARDNAME_42313,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 기라유성의 프리야쥬
+	CASE "略称"
+RESULTS = 기라 프리야쥬
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_42313(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250502
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_42313(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+素材条件名前 = 류세이의 프리아쥬
+ELSEIF EX参照 >= 10
+	素材条件종류 = 通常モン
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,42313) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_42313(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 「유성의 프리야쥬」＋일반 몬스터
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 자신은 1700 LP 회복하고, 상대 필드의 모든 몬스터의 공격력을 1700 내린다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 상대 모든 몬스터에게 공격할 수 있다.
+
+
+@CARDCAN_42313(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,42313)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,42313)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_42313(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC ドロー枚数
+#DIM DYNAMIC 攻撃力상승値
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42313,1)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",1700)
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"永攻",-1700)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦")
+ENDIF
+

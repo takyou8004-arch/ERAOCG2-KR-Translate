@@ -1,0 +1,166 @@
+﻿@CARDNAME_79583,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 기술카드「배신의 엑토플라즈머」
+	CASE "略称"
+		RESULTS = 엑토플라즈머
+	CASE "カテゴリ"
+		RESULTS:0 = 기술
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79583(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "추가日"
+		RETURN 250415
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79583(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ①②의 효과는 １턴에 １번、어느쪽이든 １개밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신 필드에 마법사족 몬스터가 존재하는 경우에、
+PRINTL 필드의 앞면 표시 마법사족 / 어둠속성 몬스터 １장을 대상으로 하고 발동할 수 있다。
+PRINTL （자신 필드가 "P.M.G쇼 타임♪"인 한、이 효과는 상대 턴에 패에서 발동할 수 있다）
+PRINTL 그 몬스터를 파괴하고、그 몬스터의 공격력 만큼의 데미지를 각 플레이어에게 준다。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신 메인 페이즈에 묘지의 이 이 카드를 제외하고 발동할 수 있다。
+PRINTL 자신의 묘지 / 제외 상태인 "기술카드「배신의 엑토플라즈머」" 이외의
+PRINTL "기술"카드를 ５장 고르고 덱 / ＥＸ덱으로 되돌린다。그 후、자신은 １장 드로우한다。
+CALL TEXT_DECORATION("ROGUE")
+
+;原作漫画で印象的な、エクトプラズムを出して상대プレイヤーに直接攻撃する마법。
+;상대 필드에 黒마술사が居たら相殺されるどころか、逆に상대의 黒마술사を生け贄로할 수 있다효과에 なっている。
+;追撃で使うことが出来なくもないが、다른 마법함정と比べると除去に使いづらく、PMGは弾にするには惜しい強さ。
+;有利な상황で使って更に有利にする타입であるため、構築練ったら採用されなくなる性能のカード。
+;とはいえ、기술카드の종류를 増やす目的と묘지효과でのリソ-ス回復のために刺すのはあり。
+
+
+@CARDCAN_79583(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79583)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		IF GETVARS(@"%듀얼리스트%_フィールド名") !=  "P.M.G쇼 타임♪"
+			SIF ターンプレイヤー != 듀얼리스트
+				RETURN 0
+		ENDIF
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,79583)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79583)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 마법사족
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 마법사족
+	효과条件속성 = 어둠속성
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,79583)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79583)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 기술
+	효과条件他所 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79583(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79583,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		;リリースした 몬스터의 공격력の데미지를 お互いに与える
+		효과추가종류 = 10
+		효과条件종족 = 마법사족
+		효과条件속성 = 어둠속성
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79583,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 기술
+		효과条件固名前 = 기술카드「배신의 엑토플라즈머」
+		효과条件複数 = 5
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ENDIF
+

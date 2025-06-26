@@ -1,0 +1,127 @@
+﻿;-------------------------------------------------
+;팬티탈의
+;-------------------------------------------------
+@COM203
+;구상출력のため実際の탈의処理はEVENTCOMENDで
+
+
+RETURN 1
+
+
+@CAN_COM203(ARG)
+#DIM DYNAMIC 素質確認
+#DIM DYNAMIC 판정値
+#DIM DYNAMIC 汚れ値
+#DIM DYNAMIC 実行値
+SKIPDISP ARG
+PRINTL 하반신탈의
+;-------------------------------------------------
+;実行판정処理
+;-------------------------------------------------
+
+;すべての命令に共通の要素を考慮
+;(순종が高いと命令に従いやすいなど)
+CALL COM_ORDER
+素質確認 = RESULT:1
+판정値 += RESULT
+;ABL:노출증
+IF ABL:노출증
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:노출증 * 10
+	PRINT 노출증
+	PRINTV 'LV,ABL:노출증,'(,ABL:노출증 * 10,')
+	素質確認 = 1
+ENDIF
+IF MARK:쾌락각인
+	SIF 素質確認
+		PRINT  + 
+	판정値 += MARK:쾌락각인 * 1
+	PRINT 쾌락각인
+	PRINTV 'LV,MARK:쾌락각인,'(,MARK:쾌락각인 * 1,')
+	素質確認 = 1
+ENDIF
+;PALAM:욕정
+IF GETPALAMLV(PALAM:욕정,10)
+	SIF 素質確認
+		PRINT  + 
+	판정値 += GETPALAMLV(PALAM:욕정,10) * 5
+	PRINT 욕정
+	PRINTV 'LV,GETPALAMLV(PALAM:욕정,10),'(,GETPALAMLV(PALAM:욕정,10) * 5,')
+	素質確認 = 1
+ENDIF
+;부끄럼쟁이
+IF TALENT:수치심 > 0
+	PRINT  - 
+	판정値 -= 1
+	PRINT 부끄럼쟁이
+	PRINTV '(,1,')
+	素質確認 = 1
+ENDIF
+;남성혐오（연모、친애で無効）
+IF TALENT:성별기호 & 1 && !(TALENT:MASTER:성별 & 1) && (!TALENT:연모 || MASTER != MASTER) && TALENT:MASTER:낭자애 == 0
+	PRINT  - 
+	판정値 -= 5
+	PRINT 남성혐오
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+;연모
+IF TALENT:연모
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 5
+	PRINT 연모
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+;친애
+IF TALENT:연모 > 1
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 5
+	PRINT 친애
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+
+;合計を표시(14以上で実行)
+PRINT  = 
+PRINTV 판정値
+
+実行値 = 40
+SIF 판정値 < 実行値
+	PRINT  < 
+SIF 판정値 == 実行値
+	PRINT  = 
+SIF 판정値 > 実行値
+	PRINT  > 
+PRINT 実行値
+PRINTV 実行値
+
+WAIT
+SKIPDISP 0
+;実行できない
+SIF 판정値 < 実行値
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE203
+;상반신속옷탈의
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(203)
+	RETURN RESULT
+;既に着ていない
+SIF !EQUIP:하반신속옷１ && !EQUIP:하반신속옷２
+	RETURN 0
+;착의
+SIF EQUIP:바지 || EQUIP:하반신겉옷 || EQUIP:바디슈트 || EQUIP:레오타드
+	RETURN 0
+SIF !EQUIP:0
+	RETURN 0
+RETURN 1

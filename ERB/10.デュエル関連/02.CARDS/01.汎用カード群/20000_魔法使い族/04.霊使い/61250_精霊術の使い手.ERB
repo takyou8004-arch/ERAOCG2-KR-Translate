@@ -1,0 +1,131 @@
+﻿@CARDNAME_61250,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 정령술의 사용자
+	CASE "略称"
+RESULTS = 정령술의 사용자
+	CASE "カテゴリ"
+RESULTS:0 = 령사
+ENDSELECT
+
+
+@CARD_61250(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61250(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,마함起動,フリー誘発)
+PRINTL ①: 패를 1장 버리고 발동할 수 있다.
+PRINTL 덱에서 "령사" 카드 2장을 고르고,
+PRINTL 그 중 1장을 패에 넣고, 나머지 1장을 자신 필드에 세트한다.
+PRINTL 그것이 몬스터일 경우, 공격 표시로 특수 소환할 수도 있다.
+PRINTL 이 효과는 특수 소환 제한의 영향을 받지 않는다.
+
+@CARDCAN_61250(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61250)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0		
+		SIF 손패数(듀얼리스트) == 1
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF 손패数(듀얼리스트) == 0
+			RETURN 0
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,61250)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 령사
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_61250(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 選択カード
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61250,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)		
+		IF RESULT == 1
+			;상대分のカード의 발동処理
+			CUSTOMDRAWLINE —
+PRINTL 패에 넣을 카드
+			CUSTOMDRAWLINE —
+			CALL FULLRESET
+			효과条件カテゴリ = 령사
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+			CUSTOMDRAWLINE —
+PRINTL 세트할 카드
+			CUSTOMDRAWLINE —
+			CALL FULLRESET
+			효과条件カテゴリ = 령사
+			CALL CARD_CHOOSE_BASIC(듀얼리스트, "덱",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALLFORM CARD_{GETVAR(@"%듀얼리스트%_덱:{選択カード}")}("종류")
+				IF RESULT >= 20
+					CALL CARD_DISPOSE(듀얼리스트,"덱",選択カード,4,1)
+				ELSE 
+PRINTL 공격 표시로 특수 소환하시겠습니까?
+					CALL YN_CHOICE(듀얼리스트)
+					IF RESULT == 0
+						CALL FULLRESET
+						CALL CARD_SP_SUMMON(듀얼리스트, "덱", 選択カード,"攻撃표시")
+					ELSE
+						CALL FULLRESET
+						CALL CARD_SP_SUMMON(듀얼리스트, "덱", 選択カード,"裏側표시")
+					ENDIF
+				ENDIF
+			ENDIF
+			CALL SHUFFLE(듀얼리스트)
+		ENDIF
+	ENDIF
+ENDIF

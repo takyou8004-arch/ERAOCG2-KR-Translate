@@ -1,0 +1,174 @@
+﻿@CARDNAME_2080,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = Evil★Twin's 트러블 루나
+	CASE "略称"
+		RESULTS = E★T's 루나
+	CASE "カテゴリ"
+		RESULTS:0 = Evil★Twin
+		RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_2080(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1100
+	CASE "守備力"
+		RETURN 1100
+	CASE "성별"
+		RETURN 牝性
+
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2080(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「Evil★Twin" 몬스터를 포함한 2장
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.。
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 링크 소환으로 소환했을 경우에 발동할 수 있다。
+PRINTL 덱에서 "시크릿 패스프레이즈」 1장 선택해, 자신 필드에 세트한다。
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：이 카드를 묘지로 보내고 발동할 수 있다。
+PRINTL 자신 묘지에서 "키스킬」  「리일라」 링크 몬스터 각각 1장씩 선택해,
+PRINTL 효과를 무효로 하고 수비 표시로 특수 소환한다。
+
+
+@CARDSUMMON_2080(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = Evil★Twin
+ELSE
+	PRINT
+ENDIF
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,2080) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_2080(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2080)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,2080)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件名前 = 시크릿 패스프레이즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,2080)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 리일라
+	효과条件종류 = 링크
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 키스킬
+	효과条件종류 = 링크
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2080(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2080,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前 = 시크릿 패스프레이즈
+		CALL CARD_SET_BASIC(듀얼리스트,"덱",ゾーン,場所,"裏側표시")
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2080,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 키스킬
+		효과条件종류 = 링크
+		효과추가종류 = 効追無効
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 리일라
+		효과条件종류 = 링크
+		효과추가종류 = 効追無効
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+ENDIF
+
+

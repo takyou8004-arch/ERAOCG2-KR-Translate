@@ -1,0 +1,143 @@
+﻿@CARDNAME_73560,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 시덴성 발자크
+	CASE "略称"
+RESULTS = 발자크
+	CASE "カテゴリ"
+RESULTS:0 = 사무라이
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_73560(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73560(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「시덴성 발자크」가 된다.
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 덱에서 「시덴성 발자크」 이외의 「사무라이」 카드 1장을 묘지로 보낸다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신 필드에 「크로스 기어」 카드가 2종류 이상 존재하는 한,
+PRINTL 자신의 「사무라이」 몬스터가 상대에게 주는 전투 데미지는 두 배가 된다.
+
+@CARDCAN_73560(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과使用불가,3
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73560)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,73560)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 사무라이
+	효과条件固名前 = 시덴성 발자크
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	IF !MATCH(RESULTS,"사무라이")
+		RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_73560(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+
+
+IF 종류 == 攻撃時強制誘発
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件표시 = 表側표시
+	효과条件カテゴリ = 크로스기어
+	효과条件固名前起動 = 1
+	효과条件CNT = 1		
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT >= 2
+		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ倍化",3,1)
+	ENDIF
+ELSEIF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73560,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 사무라이
+		효과条件固名前 = 시덴성 발자크
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73560)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "시덴城 バルザ-ク")
+ENDIF

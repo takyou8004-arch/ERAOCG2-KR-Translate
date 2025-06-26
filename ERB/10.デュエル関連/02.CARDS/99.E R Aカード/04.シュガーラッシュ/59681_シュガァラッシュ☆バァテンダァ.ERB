@@ -1,0 +1,182 @@
+﻿@CARDNAME_59681,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 슈가러쉬☆바아텐더
+	CASE "略称"
+		RESULTS = 바아텐더
+	CASE "カテゴリ"
+		RESULTS:0 = 슈가러쉬
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59681(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_59681(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 레벨４몬스터×２
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①：자신의 몬스터 존에  「해피프렌드」가 존재할 경우、이 카드는 공격회피와 대상내성을 가지며、
+PRINTL 자신의 마법＆함정 존에 "트립 트리트 트럭！」이 존재하지 않을 경우、이 카드는 소재불가를 갖는다。
+CALL CARD_ABLE(0,효과後誘発)
+PRINTL ②：「슈가러쉬」 마법 / 함정 카드가 발동했을 경우에 발동할 수 있다。
+PRINTL 서로 ５００ＬＰ회복하여、이 카드의 Ｘ소재를 １늘린다。
+CALL CARD_ABLE(0,필드起動,フリー誘発)
+PRINTL ③：자신 / 상대턴에 이 카드의 Ｘ소재를 ２개 제거하고 발동할 수 있다。
+PRINTL 상대 필드의 몬스터 １장을 고르고 효과를 무효화하고、공격불가로 한다。
+PRINTL 그 후、「해피프렌드」１장을 특수 소환할 수 있다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDSUMMON_59681(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+;추가효과用
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,59681) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_59681(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59681)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 슈가러쉬
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동",2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,59681)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59681(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 回復量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = 해피프렌드
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"対耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"攻避")
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 트립 트리트 트럭！
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"不材")
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59681)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(対面者,"増加","효과",500)
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",500)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59681,1,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 4
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",選択カード,"지속無効")
+
+		IF モンスター数(듀얼리스트) <= 4
+			PRINTL 해피프렌드를 특수소환하시겠습니까？
+			CALL YN_CHOICE(듀얼리스트)
+		ELSE
+			RESULT = いいえ
+		ENDIF
+		IF RESULT == はい
+			CALL FULLRESET
+			CALL CARD_GENERATE(듀얼리스트,179680)
+		ENDIF
+
+	ENDIF
+ENDIF

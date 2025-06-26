@@ -1,0 +1,185 @@
+﻿@CARDNAME_57031,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 라이트 드래곤 @이그니스터-
+	CASE "略称"
+RESULTS = 라이트 드래곤 @
+	CASE "カテゴリ"
+RESULTS:0 = @이그니스터-
+ENDSELECT
+
+
+@CARD_57031(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 1500
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_57031(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,57031) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_57031(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 몬스터 2마리
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①: 이 카드의 엑시즈 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 자신 필드의 「@이그니스터-」 몬스터의 수까지, 상대 필드의 앞면 표시 몬스터 카드를 파괴한다.
+CALL CARD_ABLE(2,ライフ変強制誘発)
+PRINTL ②: 이 카드 이외의 자신의 사이버스족 몬스터가 상대에게 전투 데미지를 주었을 때에 발동할 수 있다.
+PRINTL 자신의 묘지에서 링크 몬스터 1장을 선택하여 특수 소환한다.
+CALL CARD_ABLE(0,身代효과)
+PRINTL ③: 자신 필드의 몬스터가 효과로 파괴될 경우,
+PRINTL 대신에 이 카드의 엑시즈 소재를 1개 제거할 수 있다.
+
+@CARDCAN_57031(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57031)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,57031)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 10
+	효과条件종류 = モン全般
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ライフ変強制誘発
+	SIF 발동済_2(듀얼리스트,57031)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ダメージ受者 == 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 場所
+		RETURN 0
+	TRYCALLFORM CARD_{戦闘カードID(듀얼리스트)}("종족")
+	SIF !MATCH(RESULT,사이버스족)
+		RETURN 0
+	SIF !GROUPMATCH(ダメージ종류,"直接戦闘","戦闘")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 링크
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	TRYCALLFORM CARD_{破壊대상ID}("종류")
+	SIF RESULT > モン全般
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_57031(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57031,1,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = ＠이그니스터
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		カウンタ = RESULT
+		CALL FULLRESET
+		효과条件표시 = 10
+		효과条件종류 = モン全般
+		효과条件複数 = 100 - カウンタ
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"손패")
+	ENDIF
+ELSEIF 종류 == ライフ変強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57031,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 링크
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57031,0,X消費1)
+	IF RESULT == 0
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+

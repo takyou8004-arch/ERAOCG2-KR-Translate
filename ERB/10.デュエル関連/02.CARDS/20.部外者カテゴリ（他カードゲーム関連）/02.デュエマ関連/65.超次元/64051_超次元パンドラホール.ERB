@@ -1,0 +1,103 @@
+﻿@CARDNAME_64051,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초차원 판도라 홀
+	CASE "略称"
+RESULTS = 초차원 P 홀
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_64051(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_64051(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장만 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①: 자신의 EX덱에서 레벨 또는 코스트 5 이하의 초차원 카드 1장을 고르고,
+PRINTL 자신 필드에 특수 소환하거나, 자신의 마법 & 함정 존에 앞면 표시로 세트한다.
+PRINTL 
+PRINTL 
+PRINTL 
+
+@CARDCAN_64051(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,64051)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,64051)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5 && 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 초차원
+	CALL 효과条件レベル_ADV(5, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_64051(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,64051,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = 초차원
+		CALL 효과条件レベル_ADV(5, "以下")
+		CALL DIMSUMMON(듀얼리스트,ゾーン,場所,(2 + 4 + 8))
+
+;		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)	
+;		選択カード = RESULT
+;		IF 選択カード != 9999
+;			CALL DIMSUMMON(듀얼리스트,ゾーン,場所,選択カード,5,(2 + 4 + 8))
+;		ENDIF
+	ENDIF
+ENDIF

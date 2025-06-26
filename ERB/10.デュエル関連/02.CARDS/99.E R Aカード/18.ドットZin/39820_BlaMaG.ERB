@@ -1,0 +1,240 @@
+﻿@CARDNAME_39820,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 블랙매직걸.zin
+	CASE "略称"
+		RESULTS = BlaMaG.zin
+	CASE "カテゴリ"
+		RESULTS:0 = 닷진
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39820(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1700
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39820(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：패에서 카드를 1장 버리고, 상대 필드의 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 카드는 “E.R.A” 카드가 되어, 그 카드의 컨트롤을 얻는다.
+PRINTL 그 후, 이 카드를 패에서 상대 필드로 공격 표시로 특수 소환하고,
+PRINTL 자신 묘지에서 “.zin” 카드를 1장 패에 넣을 수 있다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드는 표시 형식을 변경할 수 없고,
+PRINTL “E.R.A” 카드와 전투할 경우, 이 카드는 전투 내성을 얻는다.
+CALL CARD_ABLE(0,攻守変動)
+PRINTL ③：상대 필드의 “E.R.A” 몬스터의 공격력은 자신의 묘지 카드 수× 300만큼 증가한다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39820(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39820)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,39820)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39820,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL CAT_CHECK("E.R.A",듀얼리스트,戦闘場所(듀얼리스트,1),1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39820(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 竿役대상
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39820,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과추가カテ = E.R.A
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+
+			CALL CARD_EROTICS(他参照選択カードID)
+			IF RESULT != -1
+				竿役대상 = RESULT
+				PRINTFORMW %CALLNAME:竿役대상%는 갑작스레 몸 전체에 열이 올라, 생각이 분홍색으로 물들어간다.
+				PRINTFORMW 그대로 최면에 걸린 듯 %CALLNAME:竿役대상%는 %듀얼리스트%의 필드로 걸어가며, 곧 일어날 일에 심장이 뛰기 시작했다.
+			ENDIF
+			CALL FULLRESET
+			효과추가종류 = 695
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所, "攻撃표시",1)
+
+			CALL CARD_EROTICS(39820)
+			IF RESULT != -1
+				조교대상 = RESULT
+				PRINTFORMW %CALLNAME:조교대상%는 음란하고 육감적으로 그려진 몸을 노출당해 고통스러워했다.
+				PRINTFORMW 페로몬이 가득한 발정 냄새가 나는 땀을 흘리며 %CALLNAME:조교대상%의 생각은 육체에 이끌려 간다.
+				CALL EROTIC_MOVE("晒しもの",조교대상)
+			ENDIF
+
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 닷진
+			효과条件任意 = 1
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"表固")
+	IF 戦闘場所(듀얼리스트) == 場所 && 戦闘場所(듀얼리스트,1) != 5
+		CALL CAT_CHECK("E.R.A",듀얼리스트,戦闘場所(듀얼리스트,1),1)
+		SIF RESULT == 1
+			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"戦耐")
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 300
+
+	CALL FULLRESET
+	효과条件カテゴリ = E.R.A
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,攻撃力修正)	
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL DOT_ZIN_ACT(듀얼리스트,39820,戦闘カードID(듀얼리스트,1))
+ENDIF
+
+
+
+@DOT_ZIN_ACT(듀얼리스트,대상カードID,竿役カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 대상カードID
+#DIM DYNAMIC 竿役カードID
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 竿役대상
+#DIM DYNAMIC 対面성별
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_EROTICS(竿役カードID)
+竿役대상 = RESULT
+
+CALL CARD_EROTICS(대상カードID)
+IF RESULT != -1
+	조교대상 = RESULT
+	TRYCALLFORM CARD_{竿役カードID},"カテゴリ"
+	SELECTCASE RESULTS
+	CASE "촉수"
+		PRINTFORMW %CALLNAME:조교대상%는 그 풍만한 육체를 촉수로 듬뿍 만져지며 괴롭힘을 당했다.
+		PRINTFORMW 길고 굵고 강력한 촉수에 양쪽 구멍을 듬뿍 쑤셔졌다.
+		CALL EROTIC_MOVE("両穴凌辱",조교대상,,400)
+	CASE "슬라임"
+		PRINTFORMW %CALLNAME:조교대상%는 갑자기 슬라임의 몸에 삼켜져 구멍이란 구멍에 파고들기 시작했다.
+		PRINTFORMW 꾸물거리는 소리를 내는 살아있는 액체에 몸 전체를 빨리는 감각에 몸부림쳤다.
+		CALL EROTIC_MOVE("묘상捕縛",조교대상,,300)
+	CASE "고블린"
+		PRINTFORMW %CALLNAME:조교대상%는 고블린에게 유인되어 붙잡히며, 한 마리를 물리치자마자 두번째 고블린에게 공격을 받았다.
+		PRINTFORMW %CALLNAME:조교대상%는 제대로 저항도 못 한 채, 고블린에 의한 일방적인 집단 강간이 시작되었다.
+		CALL EROTIC_MOVE("全身凌辱",조교대상,,100)
+	CASEELSE
+		PRINTFORMW %CALLNAME:조교대상%는 참을 수 없어 자신의 몸을 위로하기 시작했다……
+		CALLFORM CARDNAME_{竿役カードID}("名前")
+		PRINTFORMW 《%RESULTS%》를 유혹하듯, 찌걱… 찌걱 소리를 내며 꿀구멍에서 소리를 내고, 부드러워 보이는 가슴을 스스로 위로했다.
+		対面성별 = GETVAR(@"%対面者%_MZ_性:戦闘場所(듀얼리스트,1)")
+		IF 対面성별 == 牝性
+			PRINTFORMW 誘うがまま %CALLNAME:조교대상%는 공격당해, 암컷만이 아는 “기분 좋은 곳”을 잔뜩 자극받았다.
+			CALL EROTIC_MOVE("全身애무",조교대상,竿役대상,500)
+		ELSEIF 対面성별 == 雄性
+			PRINTFORMW 誘うがまま %CALLNAME:조교대상%는 공격을 받고, 짐승이 된 수컷을 그 육체로 받아들이게 되었다.
+			CALL EROTIC_MOVE("前穴凌辱",조교대상,竿役대상,500)
+		ELSEIF 対面성별 == ふたなり
+			PRINTFORMW 誘うがまま %CALLNAME:조교대상%는 공격을 받고, 원래는 존재하지 않아야 할 수컷의 기관을 음부에 박혀버렸다.
+			CALL EROTIC_MOVE("前穴凌辱",조교대상,竿役대상,500)
+		ENDIF
+	ENDSELECT
+ENDIF

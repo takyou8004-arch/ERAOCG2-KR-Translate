@@ -1,0 +1,541 @@
+@IRAI_EVENT_485(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP-NGA5)네가스타의 취락에 놀러가자
+	CASE "이벤트種"
+		RETURN 이벤트_ＲＥ
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL 
+		PRINTL 바람の谷に、桃色の바람が吹く集落があるという。
+		PRINTL 専用のデュエルスペースを用意してくれているようだ。
+		PRINTL そこそこ인기があるらしい。
+		PRINTL 
+		SETCOLOR C_PINK
+		PRINTL 【미독의 바람】が吹いている…
+		PRINTL 女性듀얼리스트はデュエルに支障をきたすかもしれない…
+		RESETCOLOR
+		PRINTL 
+	CASE "条件"
+		SIF 依頼_完了횟수:484 == 0
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_485(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC 캐릭터_ID = -1
+#DIM DYNAMIC 元々の속성
+#DIM DYNAMIC パック구입数
+#DIM DYNAMIC 合計価格
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = -1
+元々の속성 = 0
+
+IF 依頼_달성상황 == 0
+	SETCOLOR C_PINK
+	PRINTFORML -네가스타ーの集落-
+	PRINTFORML 【미독의 바람】
+	PRINTFORML 穏やかな桃色の바람が吹いている…
+	PRINTFORML 
+	RESETCOLOR
+	
+	PRINTFORMW 到着して少し待つと、緑髪の女の子が対応してくれた…
+	PRINTFORMW 「お待たせしました！」
+	
+	;テスト中の카드를 一枚だけ渡す
+	IF ITEM:59560 == 0 || ITEM:99551 == 0
+		
+		PRINTFORML 
+		PRINTFORML 到着と同時に、카드가 手渡された…
+		SETCOLOR C_PINK
+		PRINTFORMW 「あ、今サービスでこちらの카드를 お渡ししています！」
+		PRINTFORMW 「宜しければお使いください…❤」
+		RESETCOLOR
+		
+		;항학의 묘상공주
+		SIF ITEM:59560 == 0
+			CALL CARD_GET_SINGLE(59560,,1)
+		
+		;확장하는 Ans
+		SIF ITEM:99551 == 0
+			CALL CARD_GET_SINGLE(99551,,1)
+		
+		PRINTFORMW ふむ…後で효과를 確認してみるか…
+		PRINTFORML 
+	ENDIF
+	
+	
+	$INPUT_LOOP1
+	CUSTOMDRAWLINE —
+	PRINTFORML 
+	SELECTCASE 元々の속성
+		CASE -10
+			SETCOLOR C_PINK
+			PRINTFORMW 「んんっ❤ 割引プランは適用されたままですので…よろしければご利用ください❤ 今日は何を致しましょうか❤」
+			RESETCOLOR
+		CASE -11
+			SETCOLOR C_PINK
+			PRINTFORMW 「んんっ❤ あぁんっ❤ …割引はもう適用されてますからぁ❤ 今日は何を致しましょうか❤」
+			RESETCOLOR
+		CASEELSE
+			PRINTFORMW 「今日は何を致しましょうか？」
+	ENDSELECT
+	PRINTFORML 
+	PRINTFORML [0] - 듀얼がしたい(手持ちのカード)
+	PRINTFORML [1] - 듀얼がしたい(듀얼리스트)
+	PRINTFORML 
+	IF 元々の속성 == -1 || 元々の속성 == -11
+		SETCOLOR C_GRAY
+		PRINTL - 대상상대에게 바람 속성의 ＤＮＡ移植手術を受けさせる
+		RESETCOLOR
+	ELSE
+		PRINTFORML [10] - 대상상대에게 바람 속성의 ＤＮＡ移植手術を受けさせる
+	ENDIF
+	
+	PRINTFORML 
+	PRINTFORML [20] - カードパックを구입する
+	PRINTFORML 
+	SETCOLOR C_GRAY
+	PRINTFORML  30  - 匿名少女の조교기록
+	RESETCOLOR
+	
+	PRINTFORML 
+	PRINTFORML [98] - 再戦する(CP-NGA4 이벤트戦)
+	PRINTFORML 
+	PRINTFORML [99] - 귀가한다
+	BINPUT
+	SELECTCASE RESULT
+		CASE 0
+			;듀얼がしたい(手持ちのカード)
+			CALL MONSTER_LIST(9)
+			IF RESULT > 0
+				캐릭터_ID = RESULT
+				CALL PRINT_STATE(캐릭터_ID)
+				PRINTFORMW 「《%NAME:캐릭터_ID%》でよろしいでしょうか？」
+				PRINTFORML [0] - はい
+				PRINTFORML [1] - いいえ
+				BINPUT
+				IF RESULT == 0 
+					SETCOLOR C_PINK
+					PRINTFORMW 「了解です…それではお楽しみくださいね❤」
+					RESETCOLOR
+					
+					IF (元々の속성 == -1 || 元々の속성 == -11) && TALENT:캐릭터_ID:속성 !=6
+						;元々の속성を保持
+						元々の속성 = TALENT:캐릭터_ID:속성
+						;바람속성に書き換え
+						TALENT:캐릭터_ID:속성 = 6 
+						PRINTFORML
+						PRINTFORML 怪しげな手術を受けた《%NAME:캐릭터_ID%》は바람속성になった！
+						PRINTFORMW
+					ENDIF
+					
+					TARGET = 캐릭터_ID
+					CALL CHOICE_DUEL_TYPE(486)
+					SETCOLOR C_PINK
+					PRINTFORMW 「お疲れさまでした！…お楽しみいただけたでしょうか❤」
+					RESETCOLOR
+				ELSE
+					GOTO INPUT_LOOP1
+				ENDIF
+			ELSE
+				PRINTFORMW こんな미독의 바람吹き荒れる場所で戦ってくれそうな 카드는 居ないな…
+				GOTO INPUT_LOOP1
+			ENDIF
+		CASE 1
+			;듀얼がしたい(듀얼리스트)
+			CALL MONSTER_LIST(10)
+			IF RESULT > 0
+				;使用場所 == 9 では캐릭터IDを返しているけど、10の場合は返していないっぽい。
+				;RESULTで캐릭터IDが返ってきていないようなので、SUMMON_SHORIで설정しているTFLAGから취득
+				캐릭터_ID = TFLAG:104
+				CALL PRINT_STATE(캐릭터_ID)
+				PRINTFORMW 「《%NAME:캐릭터_ID%》でよろしいでしょうか？」
+				PRINTFORML [0] - はい
+				PRINTFORML [1] - いいえ
+				BINPUT
+				IF RESULT == 0 
+					SETCOLOR C_PINK
+					PRINTFORMW 「了解です…それではお楽しみくださいね❤」
+					RESETCOLOR
+					
+					IF (元々の속성 == -1 || 元々の속성 == -11) && TALENT:캐릭터_ID:속성 !=6
+						;元々の속성を保持
+						元々の속성 = TALENT:캐릭터_ID:속성
+						;바람속성に書き換え
+						TALENT:캐릭터_ID:속성 = 6 
+						PRINTFORML
+						PRINTFORML 怪しげな手術を受けた《%NAME:캐릭터_ID%》は바람속성になった！
+						PRINTFORMW
+					ENDIF
+					
+					TARGET = 캐릭터_ID
+					CALL CHOICE_DUEL_TYPE(486)
+					SETCOLOR C_PINK
+					PRINTFORMW 「お疲れさまでした！…お楽しみいただけたでしょうか❤」
+					RESETCOLOR
+				ELSE
+					GOTO INPUT_LOOP1
+				ENDIF
+			ELSE
+				PRINTFORMW こんな미독의 바람吹き荒れる場所で戦ってくれそうな知り合いは居ないな…
+				GOTO INPUT_LOOP1
+			ENDIF
+		CASE 10
+		
+			WHILE 元々の속성 != -1	
+				CUSTOMDRAWLINE —
+				SETCOLOR C_PINK
+				IF 元々の속성 == 0
+					PRINTFORMW 「あっ、대상상대에게 ＤＮＡ移植手術（바람）を受けさせるんですね…❤」
+					PRINTFORML 「こちら、この集落にいる間の一時的な효과에 はなります。」
+					PRINTFORML 「…手術費用として250,000円頂いています。問題ないでしょうか？」
+					RESETCOLOR
+					PRINTFORML [0] - はい
+					PRINTFORM [1] - いいえ
+					
+					SETCOLOR C_GRAY
+					PRINT (割引プラン…？)
+					RESETCOLOR
+					BINPUT
+					IF RESULT == 0 
+						IF MONEY < 250000
+							PRINTFORMW 手持ちが足りないようだ…また今度にしよう…
+							GOTO INPUT_LOOP1
+						ENDIF
+						SETCOLOR C_PINK
+						PRINTFORMW 「ありがとうございます…❤ ご予約しておきますね…❤」
+						RESETCOLOR
+						CALL MONEY_GET(-250000)
+						元々の속성 = -1
+						GOTO INPUT_LOOP1
+					ELSE
+						PRINTFORMW 結構高いな…
+						PRINTFORMW そんなことを考えていると、受付の子がもじもじと擦り寄って来た……
+						SETCOLOR C_PINK
+						PRINTFORMW 「その、こちら、割引プランがありまして…❤」
+						RESETCOLOR
+						PRINTFORMW 尻をこちらに向け、その手には「암캐의 꼬리"が握られている……
+						PRINTFORMW …なるほど、そういうことか。
+						PRINTFORMW 意図を理解すると、乱暴に「암캐의 꼬리"を奪い取り、受付の子の尻穴に引っ掛けた…
+						SETCOLOR C_PINK
+						PRINTFORMW 「あっ…❤」
+						RESETCOLOR
+						PRINTFORMW …で？いくらになるんだ？
+						PRINTFORMW ワザと애태운다ように、穴をなぞりながら問いかける。
+						SETCOLOR C_PINK
+						PRINTFORMW 「そ…❤ それは、あっ…❤ にっ…二割ぃ引き…でっ…❤」
+						RESETCOLOR
+						PRINTFORMW …え？いくらだって？
+						PRINTFORMW 聞こえなかったふりをして、更に焦らしていく…
+						SETCOLOR C_PINK
+						PRINTFORMW 「ん…❤ その刺激ぃっ…ずるい…❤ よっ…四…割ぃっ…❤」
+						RESETCOLOR
+						PRINTFORMW 尻穴への刺激で思うように動けなくなった受付の子をガッシリと支え…いや、固定すると
+						PRINTFORMW ふぅっ…っと尻穴に息を吹きかける。刺激を期待していた穴はぷるぷると震えている…
+						SETCOLOR C_PINK
+						PRINTFORMW 「んひっ…❤ も、もう駄目…❤ ごっ…ごっ…わりぃっ…❤」
+						RESETCOLOR
+						PRINTFORMW これ以上やったら、喋れなくなってしまうだろう…
+						PRINTFORMW 遂に我慢の限界になったらしい穴に、손가락を御馳走する。
+						SETCOLOR C_PINK
+						PRINTFORMW 「あﾞっ…❤ 違うっ…❤ こ、これ❤ ゆっ…손가락ぃっ…❤」
+						PRINTFORMW 「んんﾞっ❤ んひっ…❤ 손가락にぃっ❤ ぬっぷっぬっぷっ…❤ されてるぅ…❤」
+						RESETCOLOR
+						PRINTFORMW ……손가락の刺激に喘ぐ受付の子にトドメを差すべく、くんっと손가락を折り曲げる。
+						SETCOLOR C_PINK
+						PRINTFORMW 「あﾞっひ…❤ うぅっ～～～～…❤ っ…❤」
+						RESETCOLOR
+						PRINTFORMW 力が抜けてしまったのか、一気にこちらに体重が掛かってくる
+						PRINTFORMW …もう少し楽しみたいところだが、ここまでにしておこう。
+						PRINTFORMW で、確か六割引き…だったよな？
+						SETCOLOR C_PINK
+						PRINTFORMW 「んぐっ…❤ っ…はい…❤ 」
+						RESETCOLOR
+						PRINTFORML 
+						PRINTFORMW 誠意ある交渉の結果、手術代は六割引きで100,000円になった！
+						元々の속성 = -10
+						SETCOLOR C_PINK
+						RESETCOLOR
+					ENDIF 
+				ELSE
+					PRINTFORMW 「わ…❤ 割引プランのご利用…❤ ありがとう…ございます…❤」
+					PRINTFORML 
+					PRINTFORMW 「んんっ❤ ＤＮＡ移植手術（바람）は手術費用として100,000円頂いています…❤」
+					PRINTFORMW 「こちら、この集落にいる間の一時的な효과에 はなりますが…問題ないでしょうか❤」
+					RESETCOLOR
+					PRINTFORML [0] - はい
+					PRINTFORML [1] - いいえ
+					BINPUT
+					IF RESULT == 0 
+						IF MONEY < 100000
+							PRINTFORMW 手持ちが足りないようだ…また今度にしよう…
+							GOTO INPUT_LOOP1
+						ENDIF
+						SETCOLOR C_PINK
+						PRINTFORMW 「ありがとうございます…❤ ご予約しておきますね…❤」
+						RESETCOLOR
+						CALL MONEY_GET(-10000)
+						元々の속성 = -11
+						GOTO INPUT_LOOP1
+					ELSE
+						GOTO INPUT_LOOP1
+					ENDIF
+				ENDIF
+			WEND
+			
+			
+		CASE 20
+			SETCOLOR C_PINK
+			PRINTFORMW 「少々お待ちくださいね…❤」
+			RESETCOLOR
+			
+			PRINTFORMW 受付の子が用意してくれたパックは一종류しかないようだ。
+			パック구입数 = -1
+			WHILE パック구입数 != 0
+				PRINTFORMW 緑髪の少女が表紙のパックだ…何パック구입しようか？
+				SETCOLOR C_GRAY
+				PRINTFORML この表紙…角度によって少女の服が薄っすら透けて見えるような…
+				RESETCOLOR
+
+				PRINTFORML 
+				SETCOLOR C_PINK
+				PRINTFORML 「1パック 2500円です。何パック用意しましょうか？」
+				RESETCOLOR
+				PRINTFORML 
+				PRINTFORML [1] - 　５パック（12,500円）
+				PRINTFORML [2] - １０パック（25,000円）
+				PRINTFORML [3] - ３０パック（75,000円）
+				PRINTFORML 
+				PRINTFORML [0] - 돌아간다
+				BINPUT
+				IF RESULT == 1
+					パック구입数 = 5
+				ELSEIF RESULT == 2
+					パック구입数 = 10
+				ELSEIF RESULT == 3
+					パック구입数 = 30
+				ELSE
+					パック구입数 = 0
+				ENDIF
+				IF MONEY < 2500 * パック구입数
+					PRINTFORMW 手持ちが足りないようだ…また今度にしよう…
+					GOTO INPUT_LOOP1
+				ENDIF
+				
+				IF パック구입数 != 0
+					CALL CARD_PACK_SHORI(パック구입数,93)
+				ELSE
+					GOTO INPUT_LOOP1
+				ENDIF
+				合計価格 = 2500 * パック구입数
+				CALL MONEY_GET(-合計価格)	
+				SETCOLOR C_PINK
+				PRINTFORMW 「ありがとうございます…❤ もう少し見て行かれますか？」
+				RESETCOLOR
+				PRINTFORML 
+				PRINTFORML …さて、どうしようか
+				PRINTFORML 
+			
+			WEND
+		CASE 30
+$INPUT_LOOP2
+			PRINTFORML 
+			PRINTFORML …誰かの조교の기록のようだ。
+			PRINTFORMW 日付によってラベリング되어있는 。何日目を確認しようか？
+			
+			PRINTFORML [1] - １日目
+			PRINTFORML [2] - ２日目
+			PRINTFORML [3] - ３日目
+			PRINTFORML [4] - ４日目
+			PRINTFORML [5] - ５日目
+			PRINTFORML [6] - ６日目
+			PRINTFORML [7] - 最終日
+			PRINTFORML 
+			PRINTFORML [0] - 돌아간다
+			BINPUT
+			
+$INPUT_LOOP3
+			IF RESULT == 0
+				GOTO INPUT_LOOP1
+			ELSEIF  RESULT == 8
+				GOTO INPUT_LOOP2
+			ELSEIF  RESULT == 1
+				PRINTFORMW ◆１日目：
+				PRINTFORML 
+				;メモ書き：夜遅いので慣らしな感じ
+				PRINTFORMW ベットの上に寝かされて、リラックスをするように、出来るだけ深息を吸い、ゆっくりと吐く。
+				PRINTFORMW 右目に不思議な장치が押し当てられると
+				PRINTFORMW 目の前が真っ白になって、ばちん、と身体が跳ねる。瞼を閉じていたのに目がチカチカする。
+				PRINTFORMW …跳ねた身体を上からギュッっと押さえつけられる。
+				PRINTFORMW まだ目がチカチカするのに、また目の前が真っ白になる。
+				PRINTFORMW 
+				PRINTFORMW 眼が熱い、その熱さに焼かれるように、また身体が跳ねる。
+				PRINTFORMW ソレを咎めるように、上から大きな体でのしかかれる。動けない…
+				PRINTFORMW 私の体ってこんなに小さかったんだ。
+				PRINTFORMW 
+				PRINTFORMW もう一度、もう一度、もう一度…
+				PRINTFORMW その度に私の身体をギュッと上から大きな身体で押しつぶす。
+				PRINTFORMW 「力を抜け」って声が響く
+				PRINTFORMW 急激に身体から力が抜けていくのを感じる。瞼が開いているのか、閉じているのかもわからない。
+				PRINTFORMW 
+				PRINTFORMW そうしなさいって言われているみたい。
+				
+				PRINTFORML 
+				PRINTFORML 次の기록を読む？
+				PRINTFORML 
+				PRINTFORML [2] - ２日目へ
+				PRINTFORML 
+				PRINTFORML [8] - 日付の一覧へ돌아간다
+				PRINTFORML [0] - 돌아간다
+				BINPUT
+				GOTO INPUT_LOOP3
+			ELSEIF  RESULT == 2
+				PRINTFORMW ◆２日目：
+				PRINTFORML 
+				
+				PRINTFORML 
+				PRINTFORML 次の기록を読む？
+				PRINTFORML 
+				PRINTFORML [3] - ３日目へ
+				PRINTFORML 
+				PRINTFORML [8] - 日付の一覧へ돌아간다
+				PRINTFORML [0] - 돌아간다
+				BINPUT
+				GOTO INPUT_LOOP3
+			ELSEIF  RESULT == 3
+				PRINTFORMW ◆３日目：
+				PRINTFORML 
+				
+				PRINTFORML 
+				PRINTFORML 次の기록を読む？
+				PRINTFORML 
+				PRINTFORML [4] - ４日目へ
+				PRINTFORML 
+				PRINTFORML [8] - 日付の一覧へ돌아간다
+				PRINTFORML [0] - 돌아간다
+				BINPUT
+				GOTO INPUT_LOOP3
+			ELSEIF  RESULT == 4
+				PRINTFORMW ◆４日目：
+				PRINTFORML 
+				
+				PRINTFORML 
+				PRINTFORML 次の기록を読む？
+				PRINTFORML 
+				PRINTFORML [5] - ５日目へ
+				PRINTFORML 
+				PRINTFORML [8] - 日付の一覧へ돌아간다
+				PRINTFORML [0] - 돌아간다
+				BINPUT
+				GOTO INPUT_LOOP3
+			ELSEIF  RESULT == 5
+				PRINTFORMW ◆５日目：
+				PRINTFORML 
+				
+				PRINTFORML 
+				PRINTFORML 次の기록を読む？
+				PRINTFORML 
+				PRINTFORML [6] - ６日目へ
+				PRINTFORML 
+				PRINTFORML [8] - 日付の一覧へ돌아간다
+				PRINTFORML [0] - 돌아간다
+				BINPUT
+				GOTO INPUT_LOOP3
+			ELSEIF  RESULT == 6
+				PRINTFORMW ◆６日目：
+				PRINTFORML 
+				
+				PRINTFORML 
+				PRINTFORML 次の기록を読む？
+				PRINTFORML 
+				PRINTFORML [7] - 最終日へ
+				PRINTFORML 
+				PRINTFORML [8] - 日付の一覧へ돌아간다
+				PRINTFORML [0] - 돌아간다
+				BINPUT
+				GOTO INPUT_LOOP3
+			ELSEIF  RESULT == 7
+				PRINTFORMW ◆最終日：
+				PRINTFORML 
+				
+				PRINTFORML 
+				PRINTFORML [8] - 日付の一覧へ돌아간다
+				PRINTFORML 
+				PRINTFORML [0] - 돌아간다
+				BINPUT
+				GOTO INPUT_LOOP3
+			ENDIF
+			
+			GOTO INPUT_LOOP2
+		CASE 98
+		
+			SETCOLOR C_PINK
+			PRINTFORMW 「再戦ですね！…少々お待ちください❤」
+			RESETCOLOR
+			PRINTFORML [0] - 再戦する
+			PRINTFORML [1] - やっぱりやめる
+			BINPUT
+			IF RESULT == 0
+				SETCOLOR C_PINK
+				PRINTFORMW 「はい、準備できました！…それではお楽しみください❤」
+				RESETCOLOR
+				OPPOSER名 = ｳﾞｧｲﾛﾝ・スフィア
+				;상대가 先攻
+				CALL DUEL_SYSTEM(1,485,,1)
+				SETCOLOR C_PINK
+				PRINTFORMW 「良いなぁ…この時、混ぜて欲しかったなぁ…❤」
+				PRINTFORMW 「あっ…❤ お楽しみ頂けましたか？…また来てくださいね❤」
+				RESETCOLOR
+			ELSE
+				PRINTFORMW 受付の子は少し残念そうだ…
+				GOTO INPUT_LOOP1
+			ENDIF
+		CASE 99
+			SETCOLOR C_PINK
+			PRINTFORMW 「お疲れさまです！…また来てくださいね❤」
+			RESETCOLOR
+	ENDSELECT
+	
+	IF 캐릭터_ID != -1 && !(元々の속성 == -1 || 元々の속성 == -11) && 元々の속성 != TALENT:캐릭터_ID:속성
+		TALENT:캐릭터_ID:속성 = 元々の속성
+		PRINTFORMW 手術で変化していた《%NAME:캐릭터_ID%》の속성は元に戻ったようだ…
+	ENDIF
+	
+	TIME += 60
+	RETURN 2
+ENDIF
+
+
+@IRAI_DUEL_INTRO_486
+
+SETCOLOR C_PINK
+PRINTFORML
+PRINTFORMW 媚毒を含んだ바람が吹き荒れている…！
+PRINTFORML
+RESETCOLOR
+
+SETVAR @"자신_魔_所有:2", 1
+SETVAR @"자신_魔_表:2", 1
+SETVAR @"자신_마함:2",99550
+SETVAR @"자신_魔_破耐:2",2
+SETVAR @"자신_魔_対耐:2",2
+
+@IRAI_DECK_486(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+RETURN 0
+
+

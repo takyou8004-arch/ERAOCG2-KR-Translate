@@ -1,0 +1,91 @@
+﻿@CARDNAME_23580,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 삼련성의 트리온
+	CASE "略称"
+RESULTS = 트라이★트라이
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_23580(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 100
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23580(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,필드→묘지)
+PRINTL ①: 일반 소환된 몬스터가 자신 필드에 존재하고, 이 카드가 릴리스된 경우 발동할 수 있다. 이 턴의 엔드 페이즈에 묘지의 이 카드를 특수 소환한다.
+PRINTL この카드가 リリースされた場合に발동할 수 있다。
+PRINTL このターンの엔드 페이즈에 묘지のこの카드를 특수소환する。
+
+@CARDCAN_23580(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23580)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드→묘지
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件召種 = 召種通常
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23580(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 필드→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23580)
+	IF RESULT == 0
+		CALL CARD_RESERV(듀얼리스트,23580)
+	ENDIF
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과条件名前 = 삼련성의 트리온
+	CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン, 場所)
+ENDIF
+

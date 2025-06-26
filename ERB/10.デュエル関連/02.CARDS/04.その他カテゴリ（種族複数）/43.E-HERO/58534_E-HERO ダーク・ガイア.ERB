@@ -1,0 +1,150 @@
+﻿@CARDNAME_58534,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = E-HERO 다크 가이아
+	CASE "略称"
+RESULTS = 다크 가이아
+	CASE "カテゴリ"
+RESULTS:0 = HERO
+RESULTS:1 = E-HERO
+RESULTS:2 = 다크 퓨전
+ENDSELECT
+
+
+@CARD_58534(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "특수불가"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_58534(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 「E-HERO」 몬스터 + 땅속성 원소정령족 몬스터
+PRINTL 이 카드는 「다크 퓨전」 카드의 효과로만 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 원래 공격력은, 이 카드의 융합 소재로 사용한 몬스터의 원래 공격력을 합한 수치가 된다.
+CALLFORM CARD_ABLE(2,攻撃時誘発)
+PRINTL ②: 이 카드의 공격 선언 시에 발동할 수 있다.
+PRINTL 상대 필드의 수비 표시 몬스터를 모두 앞면 공격 표시로 하고,
+PRINTL 상대 필드의 모든 몬스터의 효과를 무효로 한다.
+
+
+
+
+@CARDSUMMON_58534(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件素材攻撃力起動 = 1
+
+SIF 효과条件어둠융합 == 0
+	RETURN 0
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = E-HERO
+ELSEIF EX参照 >= 10
+	素材条件속성 = 땅속성
+	素材条件종족 = 원소정령족
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,58534)
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_58534(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58534)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 守備全般
+	효과条件除去種 = 표시변경
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_58534(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ修正
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == 攻守変動
+	攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+;	PRINTFORMW 攻撃力修正 = {攻撃力修正}
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58534,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 7
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"표시변경")
+	ENDIF
+ENDIF
+

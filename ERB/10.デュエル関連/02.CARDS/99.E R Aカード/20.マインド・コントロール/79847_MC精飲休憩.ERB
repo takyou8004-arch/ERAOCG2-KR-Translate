@@ -1,0 +1,152 @@
+@CARDNAME_79847,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마인드컨트롤－정음보급
+	CASE "略称"
+		RESULTS = MC 정음보급
+	CASE "カテゴリ"
+		RESULTS:0 = MC
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79847(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79847(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL ①：정액으로 수분을 보급한다.
+PRINTL 
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79847(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79847)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79847(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 절정횟수
+#DIM DYNAMIC 조교者
+#DIMS DYNAMIC 조교者名
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79847)
+	IF RESULT == 0
+
+		CALL 対面者판정(듀얼리스트)
+		対面者 = %RESULTS%
+		CALL CARD_EROTICS(상대プレイヤー,対面者)
+		IF 듀얼리스트 == "자신"
+			조교者 = OPPOSER
+			IF OPPOSER == -1
+				조교者名 = 対戦상대
+			ELSE
+				조교者名 = %CALLNAME:조교者%
+			ENDIF
+		ELSE
+			조교者 = MASTER
+			조교者名 = %CALLNAME:MASTER%
+		ENDIF
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML 
+			SETCOLOR C_PINK 
+			IF  TALENT:조교대상:성별 != 2
+				PRINTFORMW %NAME:조교대상%는 컨트롤러에 조종되는 대로, MC 카드를 사용해 버린다......
+				PRINTFORMW 어디선가 나타난 백탁한 액체가 들어간 패트병을 손에 들고, 카드 효과애 따라, %NAME:조교대상%는 그 백탁한 액체를 마신다.
+				CALL EROTIC_MOVE("催眠정음",조교대상,MASTER,300)
+				절정횟수 += RESULT:1
+				IF ABL:(조교대상):정액중독 == 3
+					PRINTFORMW ……백탁한 액체를 다 마신 %NAME:조교대상%는 밤꽃 냄새가 나는 %TEXTR("한숨을 흘리/입가를 손으로 닦으")%면서 듀얼을 재개할 수 있도록 %CALLNAME:MASTER%를 바라본다.
+					SIF 절정횟수 != 0
+						PRINTFORMW 그러나 성감대를 만지작 거리는 일 없이 절정한 일에 대해 %CALLNAME:MASTER%로 부터 지적당해 %NAME:조교대상%는 난처함에 외면한다.
+				ELSEIF ABL:(조교대상):정액중독 == 4
+					PRINTFORMW ……%NAME:조교대상%는 백탁한 액체를 다 마시고, 밤꽃 냄새나는 한숨을 1번 한 후, 아쉬운 듯이 듀얼을 재개 할 수 있도록 %CALLNAME:MASTER%을 바라본다.
+					SIF 절정횟수 != 0 
+						PRINTFORMW 그러나 정액을 흘린 것만으로 지면에 웅덩이를 만든 것에 대해 %CALLNAME:MASTER%에게  지적당해  %NAME:조교대상%는 붉게 얼굴을 물들이며 외면했다.
+				ELSEIF ABL:(조교대상):정액중독 >= 5
+					PRINTFORMW ……%NAME:조교대상%는 정액을 바라보며 거꾸로 패트병을 들어서, 조금 남은 정액을 훌쩍거려 마시라고 하고 있다……
+					IF 절정횟수 == 0
+						PRINTFORMW 그런데도 어떻게든 회복했는지, %NAME:조교대상%는 쾌락에 물들여진 얼굴을 비추면서도 듀얼을 재개할 수 있도록 %CALLNAME:MASTER%을 바라본다.
+					ELSE
+						PRINTFORMW 이윽고 인내하여 버틸 수 없게 되었는지, %NAME:조교대상%는 %CALLNAME:MASTER%의 발밑에 %TEXTR("무릎 꿇어/달라 붙어")% 멋대로 지퍼를 내리고, 튀어나온 %CALLNAME:MASTER%의 페니스에 달라 붙어서 놓지 않았다!
+						REPEAT 절정횟수
+							CALL EROTIC_MOVE("催眠自発フェラ",조교대상,MASTER,300)
+						REND
+						PRINTFORMW %CALLNAME:MASTER%로 부터 정액을 쥐어짜낸 %NAME:조교대상%는 황홀한 표정을 짓고있다……
+					ENDIF 
+
+				ELSE
+					PRINTFORMW ……%NAME:조교대상%는 혐오감이 느껴지는 백탁한 액체를 조금씩 마셔되며, 어떻게든 다 마시며, 듀얼을 재개할 수 있도록 %CALLNAME:MASTER%을 바라본다.
+					SIF 절정횟수 != 0
+						PRINTFORMW 이런, 그 발밑의 웅덩이는 어떻게 만든거야? 라고 %CALLNAME:MASTER%로 부터 지적당해, %NAME:조교대상%는 붉게 얼굴을 물들이며 난처함에 외면한다.
+				ENDIF
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件名前 = 마인드컨트롤－정음보급
+				효과条件CNT = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF RESULT >= 3
+					PRINTFORMW 
+					PRINTFORMW 거듭되는 정음에 의해,  %NAME:조교대상%의 미각에 변화가 나타나기 시작하고 있다.
+					PRINTFORMW %NAME:조교대상%의『정액중독』이 1 올랐다!		
+					ABL:조교대상:정액중독 += 1
+					IF 절정횟수 != 0
+						PRINTFORMW 
+						PRINTFORMW 더욱 정음에 의한 절정에 이른 일로, %NAME:조교대상%의 입은 쾌락을 느끼는 기관으로 변모하고 있다......
+						PRINTFORMW %NAME:조교대상%의『Ｍ감각』이 1 올랐다!		
+						ABL:조교대상:Ｍ감각 += 1
+					ENDIF
+				ENDIF
+			ENDIF
+			RESETCOLOR
+		ENDIF	
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

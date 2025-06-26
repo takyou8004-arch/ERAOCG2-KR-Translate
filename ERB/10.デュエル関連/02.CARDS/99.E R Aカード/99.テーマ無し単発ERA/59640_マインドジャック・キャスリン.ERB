@@ -1,0 +1,293 @@
+﻿@CARDNAME_59640,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마인드잭 캐스린
+	CASE "略称"
+RESULTS = ＭＪ 캐스린
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59640(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 2600
+	CASE "성별"
+		RETURN 牝性
+	CASE "生産불가"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250510
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_59640(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 튜너＋튜너 이외의 몬스터 １장 이상
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ①：자신 상대 메인페이즈에 상대 필드의 암컷 몬스터 １장을 대상으로 발동할 수 있다。
+PRINTL 이 카드의 효과를 무효로 하고、 그 몬스터와 이 카드의 컨트롤과 이름을 바꾸어「잭중」이 된다。
+PRINTL 그 후、그 몬스터의 원래 공격력만큼 자신은 LP를 회복한다。
+CALLFORM CARD_ABLE(2,묘지起動,フリー誘発)
+PRINTL ②：이 카드가 묘지에 존재하는 경우、
+PRINTL 자신 필드의、「잭중」인「마인드잭 캐스린」１장을 대상으로 발동할 수 있다。
+PRINTL LP를 800포인트 지불하고、이 카드를 묘지에서 특수 소환한다。
+PRINTL 그 후、대상의 몬스터의 효과를 무효로 하고 공수를 0으로 만들어 컨트롤을 상대에게 넘긴다。
+PRINTL 이 효과는 상대 턴에도 발동할 수 있다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_59640(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 6
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,59640) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_59640(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59640)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || (ゾーン == "필드" && 종류 == フリー誘発)
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,59640)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5 && モンスター数(対面者) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動 || (ゾーン == "묘지" && 종류 == フリー誘発)
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,59640)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,59640,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+효과条件名前 = 마인드 잭 캐스린
+	효과範囲필드 = 1
+	효과条件カテゴリ = 잭중
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59640(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 상대選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 조교助手
+#DIM DYNAMIC 절정횟수
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || (ゾーン == "필드" && 종류 == フリー誘発)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59640,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件성별 = 牝性
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所,59640)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
+			選択カード名前 = %RESULTS%
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",選択カード_ID,上書きモード)
+			CALL SET_FIELD_INFO(対面者,"필드",選択カード,"変化元ID",59640,上書きモード)
+			CALL SET_FIELD_INFO(対面者,"필드",選択カード,"接可",2,1)
+			CALL CARD_SET_CATEGORY(対面者,"필드",選択カード,"잭중")
+			SETVAR @"%듀얼리스트%_MZ_無効:場所", 2
+			IF モンスター数(듀얼리스트) >= 5
+				CALL FULLRESET
+				CALL CARD_GET_CONTROL(対面者,場所)
+				CALL FULLRESET
+				CALL CARD_GET_CONTROL(듀얼리스트,選択カード)
+			ELSEIF モンスター数(対面者) >= 5
+				CALL FULLRESET
+				CALL CARD_GET_CONTROL(듀얼리스트,選択カード)
+				CALL FULLRESET
+				CALL CARD_GET_CONTROL(対面者,場所)
+			ELSE
+				CALL FULLRESET
+				CALL CARD_GET_CONTROL(듀얼리스트,選択カード)
+				CALL FULLRESET
+				CALL CARD_GET_CONTROL(対面者,場所)
+			ENDIF
+			조교助手 = NO_TO_CHARANUM(1655)
+			CALL CARD_EROTICS(選択カード_ID)
+			IF RESULT != -1
+				조교대상 = RESULT
+				SETCOLOR C_PINK
+				PRINTFORMW %CALLNAME:조교助手%는 봉을 꺼내 %CALLNAME:조교대상%에게 사이코파워를 내뿜었다！
+				PRINTFORML 두사람은 동시에 실이 끊어진것처럼 붕괴되며、이윽고 다시 움직이기 시작했다。
+				PRINTL
+				PRINTFORMW 일어난 %CALLNAME:조교대상%는 천천히  %CALLNAME:MASTER%쪽으로 향해간다…
+				PRINTFORML 그 모습은 틀림없이 적대하고있을 터였을 %CALLNAME:조교대상%의 것이었지만、 %CALLNAME:MASTER%%TEXTR("에게 향한 눈동자는 사모의 색을 띄우고 있었다。/의 앞에서 볼을 상기시킨、한쌍을 앞에 둔 암컷 그 자체이다。")%
+				PRINTFORM %CALLNAME:조교대상%의 몸에 깃든 %CALLNAME:조교助手%는 그
+				IF TALENT:조교대상:체형 < 0
+					PRINTFORM 작은몸으로
+				ELSEIF TALENT:조교대상:체형 > 0
+					PRINTFORM 큰몸으로
+				ENDIF
+				IF BUST_SIZE(조교대상) < 0
+					PRINTFORM 슬렌더한
+				ELSEIF BUST_SIZE(조교대상) == 0
+					PRINTFORM 균형잡힌
+				ELSEIF BUST_SIZE(조교대상) < 3
+					PRINTFORM 풍만한
+				ELSEIF BUST_SIZE(조교대상) >= 3
+					PRINTFORM 바보같이 큰 젖을 내건
+				ENDIF
+				SIF TALENT:조교대상:연령 == -2
+					PRINTFORM 로리의
+				PRINTFORML 『 %CALLNAME:조교대상%』%TEXTR("의 사용감을 、좋아하는 주인님에게 맛보여주는듯 하다…/의 몸을 멋대로 사용해、주인에게 봉사를 시작했다…")%
+				PRINTL
+				;キャスリンは他人の身体でも動ける。プロやからな────
+				PRINTFORMW %CALLNAME:조교助手%의 몸에 들어간 %CALLNAME:조교대상%은、눈 앞에서 일어나고있는 충격과、익숙치 않은 다른사람의 육체에 의해 움직이는것이 불가능해졌다…
+				IF TALENT:조교대상:처녀 == 1
+					PRINTFORMW 깃든것이 아직 남자를 모르는 육체였다는것을 본능적으로 이해한 %CALLNAME:조교助手%는、기쁨에 전율하며「처음」을 사랑하는 %CALLNAME:MASTER%에게 바쳤다…
+				ENDIF
+				RESETCOLOR
+				;肉体は조교대상のだから勝手に경험
+				CALL EROTIC_MOVE("憑依騎乗位",조교대상,MASTER,500)
+				절정횟수 = RESULT:1
+				;사정系以外はキャスリン側にも경험
+				CALL EROTIC_MOVE("쾌락싱크로騎乗位",조교助手,MASTER,500)
+				SETCOLOR C_PINK
+				PRINTL
+				;このへんに素質分岐
+				IF TALENT:조교대상:즉시타락 > 0 && 절정횟수 > 3
+					PRINTFORMW %CALLNAME:조교대상%의 보지는 너무나도 약해 %CALLNAME:조교助手%의 의사조차 관계없이 계속 가버렸다…
+				ENDIF
+				RESETCOLOR
+				PRINTFORMW 『 %CALLNAME:조교대상%』의 봉사에 의해 라이프포인트가 회복！
+			ENDIF
+			TRYCALLFORM CARD_{選択カード_ID}, "攻撃力"
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",RESULT)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 묘지起動  || (ゾーン == "묘지" && 종류 == フリー誘発)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59640,2)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件名前 = 마인드 잭 캐스린
+		효과条件カテゴリ = 잭중
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所,59640)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+			CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",800)
+			CALL FULLRESET
+			효과範囲묘지 = 1
+효과条件名前 = 마인드 잭 캐스린
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+			조교助手 = NO_TO_CHARANUM(1655)
+			CALL CARD_EROTICS(選択カード_ID)
+			IF RESULT != -1
+				조교대상 = RESULT
+				SETCOLOR C_PINK
+				SELECTCASE RAND:3
+					CASE 0 
+						PRINTFORM %CALLNAME:조교대상%의 모습으로 듬뿍 %CALLNAME:MASTER%과 즐겼다
+					CASE 1
+						PRINTFORM %CALLNAME:조교대상%의 암컷구멍에서 %CALLNAME:MASTER%의 자지를 뽑아냈다
+					CASE 2
+						PRINTFORM 『 %CALLNAME:조교대상%이 %CALLNAME:MASTER%에게 봉사섹스하는 사진』을 제대로 찍었다
+				ENDSELECT
+				PRINTFORMW %CALLNAME:조교助手%는、만족했다는것처럼 사이코파워를 사용하여、정신을 원래 육체로 되돌렸다。
+				RESETCOLOR
+				CALL EROTIC_MOVE("全身凌辱",조교대상,MASTER,500)
+				SETCOLOR C_PINK
+				PRINTL
+				PRINTFORMW %TEXTR("쾌락의 여운이 아직 남아있는 몸/멋대로 사용되어 정액이 버려진 몸")%에 되돌려진 %CALLNAME:조교대상%은、떨면서도 다시 서서 대항하기로 한다。
+				PRINTFORML 하지만、육체에 새겨진 %CALLNAME:MASTER%%TEXTR("와의 사랑이있는 꽁냥러브섹스의 기억/라는 강렬한 수컷의 존재감")%때문인지、
+				PRINTFORML %CALLNAME:MASTER%의 모습을 보면 하복부가 욱신거려 %TEXTR("가고싶어/위로하고싶어")%지게 되어버렸다…
+				PRINTL
+				RESETCOLOR
+			ENDIF
+
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永攻",-99999)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永守",-99999)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"変化元ID",-1,上書きモード)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"接可",0,1)
+			CALL CARD_SET_CATEGORY(듀얼리스트,"필드",選択カード,"")
+			SETVAR @"%듀얼리스트%_MZ_無効:選択カード", 2
+			CALL FULLRESET
+			CALL CARD_GET_CONTROL(対面者,選択カード)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

@@ -1,0 +1,283 @@
+﻿@CARDNAME_5511,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 홍마관의 메이드 사쿠야
+	CASE "略称"
+RESULTS = 이자요이 사쿠야
+	CASE "カテゴリ"
+RESULTS:0 = 홍마관
+		RESULTS:4 = 동방 Project
+ENDSELECT
+
+
+@CARD_5511(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+	CASE "生成カード"
+		RETURN 205511
+	CASE "추가日"
+		RETURN 250612
+ENDSELECT
+
+
+RETURN 0
+
+@CARD_EXPLANATION_5511(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 이 카드가 패에 존재하고, 필드에 수비 표시 몬스터가 존재할 경우에 발동할 수 있다.
+PRINTL 필드의 수비 표시 몬스터를 1장 파괴한다. 그 후, 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(10,효과後誘発)
+PRINTL ②: 이 카드가 필드에 존재하는 한 1번, 필드의 카드가 파괴되었을 경우에 발동할 수 있다.
+PRINTL 덱 밖에서 「환세 더 월드」 1장, 또는 이 카드명 이외의 「홍마관」 카드를 1장 덱에서 패에 더한다.
+
+
+@CARDCAN_5511(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,5511)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,5511)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,5511,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件표시 = 守備全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般",2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_5511(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,5511,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 守備全般
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"묘지")
+
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, ゾーン, 場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,5511,11)
+	IF RESULT == 0
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+효과条件カテゴリ = 홍마관
+효과条件固名前 = 홍마관의 메이드 사쿠야
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+
+			CALL YN_CHOICE(듀얼리스트,"●덱에서 このカード名 이외의 「紅魔館」카드를 １장을 손패に加える。","●덱外から「幻世　ザ・ワールド」１장을 손패に加える。")
+			IF RESULT == はい
+				CALL FULLRESET
+				효과範囲덱 = 1
+효과条件カテゴリ = 홍마관
+효과条件固名前 = 홍마관의 메이드 사쿠야
+				CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+			ELSE
+				CALL CARD_GENERATE_HAND(듀얼리스트,205511)
+			ENDIF
+		ELSE
+			CALL CARD_GENERATE_HAND(듀얼리스트,205511)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+
+@CARDNAME_205511,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 환세 더 월드
+	CASE "略称"
+RESULTS = 환세 더 월드
+	CASE "カテゴリ"
+RESULTS:0 = 스펠 카드
+ENDSELECT
+
+
+@CARD_205511(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_205511(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(10,마함起動 ,손패起動)
+PRINTL ①: 자신 필드의 몬스터 1장은 소멸한다.
+PRINTL 이 턴의 엔드 페이즈에 상대 필드의 카드 1장을 파괴한다.
+PRINTL 자신 필드의 「홍마관의 메이드 사쿠야」가 파괴되었을 경우,
+PRINTL 자신의 묘지에서 「홍마관의 메이드 사쿠야」를 특수 소환하고, 이 카드는 「라스트 워드」가 된다.
+CALL TEXT_DECORATION("LASTWORD")
+PRINTL ●상대는 이 턴 몬스터를 3장까지밖에 특수 소환할 수 없다.
+
+@CARDCAN_205511(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,205511)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,205511)
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 短紋章起動
+	SIF GETVAR(@"%対面者%_특수소환횟수") < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_205511(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,205511,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+효과条件名前 = 홍마관의 메이드 사쿠야
+		CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+효과条件名前 = 홍마관의 메이드 사쿠야
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+			CALLFORM CHARA_CUTIN("Last Word","デフレーションワールド",,,,,1)
+			CALL CARD_RESERV(듀얼리스트,205511,短紋章予約)
+		ELSE
+			CALLFORM CHARA_CUTIN("Spell Card","「幻世」ザ・ワールド",,,,,1)
+		ENDIF
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件行先플래그 = 제외行き
+		효과条件추가플래그 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		CALL CARD_RESERV(듀얼리스트,205511)
+	ENDIF
+ELSEIF 종류 == 短紋章起動
+	CALL SET_PLAYER_INFO(듀얼리스트,"SS阻害状態",3,1)
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+ENDIF
+
+

@@ -1,0 +1,96 @@
+﻿@CARDNAME_20010,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 차원 어트랙터
+	CASE "略称"
+RESULTS = 어트랙터
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_20010(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 2200
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20010(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,손패起動,フリー誘発)
+PRINTL ①: 자신 또는 상대 턴에, 자신의 묘지에 카드가 존재하지 않는 경우,
+PRINTL 이 카드를 패에서 묘지로 보내고 발동할 수 있다.
+PRINTL 턴 종료시까지, 필드에서 묘지로 보내지는 카드는 묘지로는 가지 않고 제외된다.
+
+
+@CARDCAN_20010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20010)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,20010)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_20010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20010)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL SET_PLAYER_INFO(듀얼리스트,"땅제외置換",1,2)
+	ENDIF
+ENDIF

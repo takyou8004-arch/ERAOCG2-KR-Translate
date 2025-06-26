@@ -1,0 +1,286 @@
+﻿@CARDNAME_4801,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 원소의 이츠파파로틀
+	CASE "略称"
+RESULTS = 이츠파파로틀
+	CASE "カテゴリ"
+RESULTS:0 = 일바의 신
+RESULTS:1 = 마력 카운터
+RESULTS:2 = 엘로나
+ENDSELECT
+
+
+@CARD_4801(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 융합
+	CASE "속성"
+		RESULT:3 = 빛속성
+		RESULT:2 = 물속성
+		RESULT:1 = 화염속성
+		RETURN 신속성
+	CASE "종족"
+		RETURN 환신야수족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수불가"
+		RETURN 1
+	CASE "C불가"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_4801(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件종족 = 원소정령족
+	素材条件속성 = 화염속성
+ELSEIF EX参照 == 10
+	素材条件종족 = 원소정령족
+	素材条件속성 = 물속성
+ELSEIF EX参照 == 11
+	素材条件종족 = 원소정령족
+	素材条件속성 = 빛속성
+ELSE
+	素材条件종족 = 마법사족
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,4801) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_4801(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 화염, 물, 빛 속성의 원소령 몬스터 1체씩 + 마법사족 몬스터 2체
+PRINTL
+PRINTL 이 카드의 효과 발동에 대해 상대는 효과를 발동할 수 없다.
+PRINTL 이 카드는 융합 소환으로만 특수 소환할 수 있다.
+CALL CARD_ABLE(0,EX소환時強制,특수소환時強制)
+PRINTL ①: 이 카드가 특수 소환되었을 경우 발동한다.
+PRINTL 서로의 필드, 묘지, 제외 상태의 마법 카드 수만큼, 이 카드에 마력 카운터를 놓는다.
+CALL CARD_ABLE(0,발동強制誘発,ターン開始時強制)
+PRINTL ②: 마법 카드가 발동했을 경우 또는 스탠바이 페이즈에, 이 카드에 마력 카운터를 2개 놓는다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ③: 필드의 이 카드는 상대의 마법 카드의 효과를 받지 않는다.
+CALL CARD_ABLE(0,필드起動,フリー誘発)
+PRINTL ④: 자신 / 상대 턴에 이 카드의 마력 카운터를 3개 제거하고 발동할 수 있다.
+PRINTL 이하의 효과 중에서 1개를 선택하여 적용한다.
+PRINTL ● 상대 필드의 몬스터 1장을 파괴하고, 그 공격력만큼의 데미지를 준다.
+PRINTL ● 상대 필드의 마법 / 함정 카드 1장을 제외한다. 그 후, 상대의 패를 1장 선택하여 덱으로 되돌릴 수 있다.
+PRINTL ● 상대의 묘지의 카드 1장을 덱으로 되돌리고, 다음 상대의 드로우 페이즈를 스킵한다.
+
+@CARDCAN_4801(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성,3
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4801)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時強制 || 종류 == 특수소환時強制
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_START_DATA_2(듀얼리스트,2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_魔Ｃ:場所") < 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件달성:0 ++
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件달성:1 ++
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件달성:2 ++
+	SIF 条件달성:0 == 0 && 条件달성:1 == 0 && 条件달성:2 == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4801(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성,3
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時強制 || 종류 == 특수소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4801)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과範囲상대묘지 = 1
+		효과範囲상대제외 = 1
+		효과条件종류 = 마법全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 0
+			RETURN 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"魔Ｃ",RESULT)
+		SETCOLOR C_RED
+		PRINTW 元素のイツパロトルは周囲の魔力を吸収した！
+		RESETCOLOR
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+
+ELSEIF 종류 == 발동強制誘発 || 종류 == ターン開始時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"魔Ｃ",2)
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4801)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성:0 ++
+		CALL FULLRESET
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성:1 ++
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성:2 ++
+		
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"魔Ｃ",-3)
+		IF 듀얼리스트 == "자신"
+PRINTL 효과를 선택해 주세요
+			PRINTL
+			SIF 条件달성:0 != 0
+PRINTL [0] - ● 상대 필드의 몬스터 1장을 파괴하고, 그 공격력만큼의 데미지를 준다.
+			SIF 条件달성:1 != 0
+PRINTL [1] - ● 상대 필드의 마법 / 함정 카드 1장을 제외한다. 그 후, 상대의 패를 1장 덱으로 되돌릴 수 있다.
+			SIF 条件달성:2 != 0
+PRINTL [2] - ● 상대의 묘지의 카드 1장을 덱으로 되돌리고, 다음 상대의 드로우 페이즈를 스킵한다.
+			BINPUT
+		ELSE
+			IF 条件달성:0 != 0
+				RESULT = 0
+			ELSEIF 条件달성:1 != 0
+				RESULT = 1
+			ELSEIF 条件달성:2 != 0
+				RESULT = 2
+			ENDIF
+		ENDIF
+		IF RESULT == 0
+			SETCOLOR C_RED
+			PRINTW 「汝に原初の화염を。」
+			RESETCOLOR
+			CALL FULLRESET
+			효과추가종류 = 1
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+		ELSEIF RESULT == 1
+			SETCOLOR C_RED
+			PRINTW 「汝に身を焦がす露を。」
+			RESETCOLOR
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,"제외")
+			IF RESULT == 1
+				SIF 손패数(対面者) < 1
+					RETURN 0
+				SIF 듀얼리스트 == "자신"
+PRINTL 상대의 패를 덱으로 되돌리겠습니까?
+				CALL YN_CHOICE(듀얼리스트)
+				SIF RESULT == 1
+					RETURN 0
+				CALL FULLRESET
+				효과範囲상대손패 = 1
+				효과条件行先플래그 = 덱行き
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ELSEIF RESULT == 2
+			SETCOLOR C_RED
+			PRINTW 「汝に蝕みの雷を。」
+			RESETCOLOR
+			CALL FULLRESET
+			효과範囲상대묘지 = 1
+			효과条件行先플래그 = 덱行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			SIF RESULT == 1
+				CALL SET_PLAYER_INFO(듀얼리스트,"ドロースキップ",1,1)
+		ENDIF
+	ENDIF
+ENDIF

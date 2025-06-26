@@ -1,0 +1,289 @@
+@CARDNAME_99792,参照先
+;ココで지정 카드의 名前、略称を返す予定
+;;; 카드의 名称やカテゴリの지정をする部分;;;
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 오엽하는 빙의령
+	CASE "略称"
+		RESULTS = P 커럽트
+	CASE "カテゴリ"
+		RESULTS:0 = 포제션
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99792(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99792(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①③의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：상대 필드의 암컷 몬스터 １장을 대상으로 발동할 수 있다。
+PRINTL 이 카드를 장착카드로서 그 몬스터에게 장착하고、그 카드의 컨트롤을 얻는다。
+PRINTL 필드가 "빙의령의 사냥터"일 경우、이 카드는 패에서도 발동할 수 있다。
+CALL CARD_ABLE(2,攻守変動)
+PRINTL ②：장착몬스터는 이 카드에게 놓여진 오염카운터의 수×５００ 올린다。
+PRINTL 또한、이 카드의 오염카운터가 ２개 이하인 경우、장착몬스터는 공격선언 할 수 없고、효과는 무효화된다。
+CALL CARD_ABLE(3,ターン終了時強制)
+PRINTL ③：자신 / 상대 엔드 페이즈에 발동한다。
+PRINTL 이 카드에 오염카운터를 １개 놓는다（최대３개 까자）。
+	SETCOLOR C_YELLOW
+PRINTL
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊！！주의！！＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL 이 카드는 버그로 인해, 때때로 몬스터의 주인이 바뀌는 경우가 있습니다.
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊！！주의！！＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL
+	RESETCOLOR
+CALL TEXT_DECORATION("ROGUE")
+
+;;; 카드의 효과발동条件を지정する部分;;;
+
+@CARDCAN_99792(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 装備先
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+;セット되어있는 경우에 발동할 수 있다효과、패에서 도 발동 가능
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF GETVARS(@"%듀얼리스트%_フィールド名") != "빙의령의 사냥터"
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 2
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	;①を발동済みなら침묵
+	SIF 발동済_1(듀얼리스트,99792)
+		RETURN 0
+	;憑依先がないなら침묵
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性 
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "마함"
+		RETURN 0
+;	SIF ターンプレイヤー != 듀얼리스트
+;		RETURN 0
+    SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+    SIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") == 3
+		RETURN 0
+	RETURN 1
+;隠された효과、공격 선언시에 セクハラする
+ELSEIF 종류 == 攻撃時強制誘発 
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 装備先
+		RETURN 0
+
+	IF 戦闘場所(듀얼리스트,1) != 5
+		TRYCALLFORM CARD_{戦闘カードID(듀얼리스트,1)}("성별")
+		SIF RESULT != 牝性
+			RETURN 0
+	ELSEIF 듀얼리스트 == "자신"
+		SIF OPPOSER == -1
+			RETURN 0
+		SIF TALENT:OPPOSER:성별 == 2
+			RETURN 0
+	ELSEIF 듀얼리스트 == "상대"
+		SIF TALENT:MASTER:성별 == 2
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+;지속효과諸々
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+    SIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") == 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+;;;효과의 処理をする部分;;;
+
+@CARDEFFECT_99792(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC セット先
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 実行役대상
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+
+;발동時의 효과
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99792,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		IF 종류 == 손패起動
+			セット先 = カード설치先
+		ELSE
+			セット先 = 場所
+		ENDIF
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과条件성별 = 牝性 
+		효과추가종류 = 30 + セット先
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		選択カード_ID = 他参照選択カードID
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",セット先,"装",コントロール先,1)
+		CALL CARD_EROTICS(選択カード_ID)
+		IF RESULT != -1
+			PRINTFORML %CALLNAME:RESULT%의 몸에 고스트가 빙의한다！
+			PRINTFORMW 잠시 후、 %CALLNAME:RESULT%가 얼굴을 드니、굉장히 흥분한 표정을 띄웠다。
+			PRINTFORMW %CALLNAME:RESULT% 난폭하게 옷을 벗고난 후、눈을 뒤집고 쾌락을 탐하기 시작했다……
+			PRINTFORMW ……너무나도 열중해서、이쪽의 지시도 듣지 않는것 같다。
+		ENDIF	
+	ENDIF
+ELSEIF 종류 == ターン終了時強制
+    CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",1)
+    IF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") == 1
+	    CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",装備先)
+	    IF RESULT != -1
+		    조교대상 = RESULT
+            PRINTFORML 1개째의 "오염카운터」가 올라갔습니다。
+		    PRINTFORML %CALLNAME:조교대상%는 흥분한채로 격하게 자위를 시작했다。
+			FOR カウンタ,0,2
+				PRINTFORML %CALLNAME:조교대상%는 쾌락에 얼굴을 비틀면서 자위에 빠져있다、아직 계속할것같다……
+            	CALL EROTIC_MOVE("자위",조교대상)
+			NEXT
+            PRINTFORMW ……………………
+		    PRINTFORMW 격하게 절정을 맞이한 %CALLNAME:조교대상%는 만족한 표정을 띄우고、확인하는듯이 자신의 이름을 반복해서 내뱉었다……
+        ENDIF
+    ELSEIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") == 2
+    	CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",装備先)
+        IF RESULT != -1
+	        조교대상 = RESULT
+	        実行役대상 = MASTER
+            PRINTFORML 2개째의 "오염카운터」가 올라갔습니다。
+		    PRINTFORML %CALLNAME:조교대상%는 호색한 미소를 띄우고 %CALLNAME:実行役대상%의 바지의 자크를 물고、기세좋게 여니、흘러나온 %CALLNAME:実行役대상%의 강직함을 물었다。
+			FOR カウンタ,0,3
+				PRINTFORML %CALLNAME:조교대상%는 달콤한 꿀을 핥는듯이 %CALLNAME:実行役대상%의 고간을 문다
+				PRINTFORML ……하트가 뜬것같은 눈동자를 보니、아직 끝내지는 않을것같다。
+            	CALL EROTIC_MOVE("憑依フェラ",조교대상,実行役대상,200)
+			NEXT
+            PRINTFORMW ……………………
+		    PRINTFORMW 입안에 사정을 받은 %CALLNAME:조교대상%는 만족한 표정을 띄우고、기억해낸것처럼 자신의 기억을 확인하기 시작했다……
+        ENDIF
+    ELSEIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") == 3
+	    CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",装備先)
+        IF RESULT != -1
+        	選択カード = GETVAR(@"%듀얼리스트%_필드:装備先")
+	        조교대상 = RESULT
+	        実行役대상 = MASTER
+            PRINTFORML 3개째의 "오염카운터」가 올라갔습니다。
+		    PRINTFORML %CALLNAME:조교대상%는 호색한 미소를 띄우고 %CALLNAME:実行役대상%를 밀어 넘어뜨려、깔고 기승위의 자세로 허리를 흔들기 시작했다。
+			FOR カウンタ,0,4
+				PRINTFORML %CALLNAME:조교대상%는 %CALLNAME:実行役대상%의 허리 위에서 착취하는듯이 허리를 흔들고있다
+				PRINTFORML %CALLNAME:조교대상%의 질내는 극상의 명기다……지금도 가버릴것같지만、 %CALLNAME:조교대상%의 쾌락에 비틀어진 얼굴을 보는것만으로 아직 힘낼수 있을 것 같다。
+        	    CALL EROTIC_MOVE("憑依騎乗位",조교대상,実行役대상,300)
+			NEXT
+            PRINTFORMW ……………………
+		    PRINTFORMW 질내에 사정을 받은 %CALLNAME:조교대상%는 만족한 표정을 띄우고、다시금 %CALLNAME:実行役대상%을 향하여、말하기 시작했다。
+            PRINTFORMW 자신의 이름은 %CALLNAME:조교대상%、"오염하는 빙의령"이며、 %CALLNAME:実行役대상%의 충실한 하인이라고。
+            PRINTFORMW ……아무래도 %CALLNAME:조교대상%는 영혼을 완전히 고스트에게 오염당해、 %CALLNAME:実行役대상%의 하인 그자체가 되어버린것같다。
+            PRINTFORMW %CALLNAME:조교대상%는「자신의 의지로」、자신의 소유권을 %CALLNAME:実行役대상%의 것으로 바꿔썼다。
+            CALL CARD_GET_SINGLE(選択カード,1)
+        ENDIF
+	ENDIF
+
+;攻撃宣言時のセクハラ
+;参考：비밀벌、双成신の祝福
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL CARD_EROTICS_FIELD(装備者,"필드",装備先)
+	実行役대상 = RESULT
+
+	IF 戦闘場所(듀얼리스트,1) != 5
+		CALL CARD_EROTICS(戦闘カードID(듀얼리스트,1))
+		IF RESULT != -1
+			조교대상 = RESULT
+		ENDIF
+	ELSE
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상 = RESULT
+		ENDIF
+	ENDIF
+	IF 조교대상 >= 0		
+		PRINTFORML %CALLNAME:実行役대상%는 공격선언을 받고 %CALLNAME:조교대상%을 덮친다！
+		PRINTFORMW 고스트에게 오염되어、남성적인 의식도 얻은 %CALLNAME:実行役대상%의 애무는 평범한것보다 월등히 과격하고 정확하다。
+		PRINTFORMW %CALLNAME:実行役대상%의 손끝에 헤롱헤롱해져버린 %CALLNAME:조교대상%는 달콤한 교성을 울리것밖에 할수 없는 것 같다……
+		CALL EROTIC_MOVE("全身레즈애무",조교대상,実行役대상,300)
+	ENDIF
+;지속효과諸々
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"無効")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"戦無")
+ELSEIF 종류 == 攻守変動
+	攻撃力修正 = 500 * GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所")
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,攻撃力修正)
+ENDIF

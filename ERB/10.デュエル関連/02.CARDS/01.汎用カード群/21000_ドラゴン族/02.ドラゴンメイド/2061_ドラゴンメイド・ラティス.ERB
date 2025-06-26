@@ -1,0 +1,262 @@
+﻿@CARDNAME_2061,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 드래곤메이드 라티스
+	CASE "略称"
+		RESULTS = 라티스
+	CASE "カテゴリ"
+		RESULTS:0 = 드래곤메이드
+ENDSELECT
+
+
+@CARD_2061(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2061(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 같은 속성으로 레벨이 다른 「드래곤메이드" 몬스터 x 2
+CALLFORM CARD_ABLE(0,EX덱起動)
+PRINTL 자신의 필드 및 묘지에서 1장씩 상기 카드를 제외한 경우에만 EX덱에서 특수 소환할 수 있다.
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번 밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：이 카드가 특소 소환 했을 경우 발동할 수 있다.
+PRINTL 덱에서 4 레벨 이하의「드래곤메이드" 몬스터 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(2,ターン開始時)
+PRINTL ②：자신 / 상대의 스탠바이 페이즈에 발동할 수 있다.
+PRINTL 자신의 필드 / 제외 상태의 몬스터를 융합 소재로서 덱으로 되돌리고,
+PRINTL 드래곤족 융합 몬스터 1장을 융합 소환한다.
+
+
+
+@CARDSUMMON_2061(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+
+@CARDCAN_2061(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 条件속성
+#DIM DYNAMIC 条件レベル
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2061)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	CALL CARD_EX_CHECK(듀얼리스트,2061)
+	SIF RESULT == 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		選択カード_ID = GETVAR(@"%듀얼리스트%_필드:カウンタ")
+		TRYCALLFORM CARDNAME_{選択カード_ID},"カテゴリ"
+		SIF !MATCH(RESULTS,"드래곤메이드")
+			CONTINUE
+		TRYCALLFORM CARD_{選択カード_ID},"종류"
+		SIF GROUPMATCH(RESULT,엑시즈,링크)
+			CONTINUE
+		条件속성 = GETVAR(@"%듀얼리스트%_MZ_属:カウンタ")
+		条件レベル = GETVAR(@"%듀얼리스트%_MZ_星:カウンタ")
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = レベル持ち
+		효과条件속성 = 条件속성
+		효과条件カテゴリ = 드래곤메이드
+		CALL 효과条件レベル_ADV(条件レベル,"以外")
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성++
+	NEXT
+	SIF 条件달성 == 0
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,2061)
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 드래곤메이드
+	CALL 효과条件レベル_ADV(4,"以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF 발동済_2(듀얼리스트,2061)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲제외 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	효과条件종족 = 드래곤족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_2061(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 条件속성
+#DIM DYNAMIC 条件レベル
+#DIMS DYNAMIC 条件달성カード名,5
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2061)
+	IF RESULT == 0
+
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+				CONTINUE
+			選択カード_ID = GETVAR(@"%듀얼리스트%_필드:カウンタ")
+			TRYCALLFORM CARDNAME_{選択カード_ID},"カテゴリ"
+			SIF !MATCH(RESULTS,"드래곤메이드")
+				CONTINUE
+			TRYCALLFORM CARD_{選択カード_ID},"종류"
+			SIF GROUPMATCH(RESULT,엑시즈,링크)
+				CONTINUE
+			条件속성 = GETVAR(@"%듀얼리스트%_MZ_属:カウンタ")
+			条件レベル = GETVAR(@"%듀얼리스트%_MZ_星:カウンタ")
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件종류 = レベル持ち
+			효과条件속성 = 条件속성
+			효과条件カテゴリ = 드래곤메이드
+			CALL 효과条件レベル_ADV(条件レベル,"以外")
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
+				条件달성カード名:カウンタ = %RESULTS%
+			ENDIF
+		NEXT
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 드래곤메이드
+		효과条件종류 = レベル持ち
+		IF 条件달성カード名:0 != ""
+			효과条件名前:0 = %条件달성カード名:0%
+		ELSE
+			효과条件名前:0 = ""
+		ENDIF
+		효과条件名前:1 = %条件달성カード名:1%
+		효과条件名前:2 = %条件달성カード名:2%
+		효과条件名前:3 = %条件달성カード名:3%
+		효과条件名前:4 = %条件달성カード名:4%
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード == 1
+			選択カード_ID = RESULT:1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 드래곤메이드
+			효과条件종류 = レベル持ち
+			TRYCALLFORM CARD_{選択カード_ID},"속성"
+			효과条件속성 = RESULT
+			TRYCALLFORM CARD_{選択カード_ID},"レベル"
+			CALL 효과条件レベル_ADV(RESULT,"以外")
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL CARD_EX_SUMMON(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+
+	ENDIF
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2061,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 드래곤메이드
+		CALL 효과条件レベル_ADV(4,"以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2061,2)
+	IF RESULT == 0
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲제외 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件종족 = 드래곤족	
+		효과条件소환可 = 2
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL FUSSUMMON(듀얼리스트,選択カード,덱行き)
+		ENDIF
+	ENDIF
+ENDIF
+

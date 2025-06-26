@@ -1,0 +1,119 @@
+﻿@CARDNAME_25031,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 보옥수 자수정 캣
+	CASE "略称"
+RESULTS = A 캣
+	CASE "カテゴリ"
+RESULTS:0 = 보옥수
+ENDSELECT
+
+
+@CARD_25031(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 400
+	CASE "추가日"
+		RETURN 250401
+ENDSELECT
+
+@CARD_EXPLANATION_25031(종류)
+#DIM DYNAMIC 종류
+
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존 마법 & 함정 존에 존재하는 한,
+PRINTL 자신의 "보옥수" 몬스터는 직접 공격할 수 있다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ②: 이 카드가 몬스터 존에서 파괴되었을 경우,
+PRINTL 묘지로 보내지 않고 자신의 마법 & 함정 존에 앞면 표시로 놓을 수 있다.
+
+
+@CARDCAN_25031(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25031)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF !GROUPMATCH(ゾーン,"필드","마함")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_25031(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 효과先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 보옥수
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"直攻")
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25031)
+	IF RESULT == 0
+		IF 破壊종류 == "戦闘"
+			CALL CARD_FIN_ID_SET(듀얼리스트,25031,"戦闘破壊")
+		ELSE
+			CALL CARD_FIN_ID_SET(듀얼리스트,25031,"효과破壊")
+		ENDIF
+		CALL CARD_DISPOSE(듀얼리스트,"필드",場所,마함行き)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

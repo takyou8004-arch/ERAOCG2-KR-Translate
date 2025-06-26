@@ -1,0 +1,113 @@
+﻿;-------------------------------------------------
+;외출/데이트
+;-------------------------------------------------
+@COM460
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 選択行先
+
+CUSTOMDRAWLINE ―
+PRINTL 　외출한다
+CUSTOMDRAWLINE ―
+
+IF CFLAG:MASTER:감기플래그 >= 1
+	CALL RECOVER_PERMIL(MASTER,-100,"체력")
+	CALL RECOVER_PERMIL(MASTER,-100,"기력")
+	PRINTFORMW 밖으로 나가고 싶었지만 생각만 해도 머리가 아팠다……。
+	PRINTFORMW 무리하지 말고 쉬자……。
+	RETURN 0
+ENDIF
+
+
+PRINTFORML 목적지를 선택하세요：
+PRINTL 
+PRINTL [1] - 외출하기
+PRINTL 
+PRINTL [2] - 24시간 편의점 가기
+PRINTL [3] - 듀얼리스트의 집을 방문하기
+PRINTL 
+PRINTL [0] - 뒤로
+BINPUT
+IF RESULT == 3
+
+	CALL RECOVER_PERMIL(MASTER,-10,"체력")
+	CALL RECOVER_PERMIL(MASTER,-10,"기력")
+	CALL MONSTER_LIST(12)
+	RETURN 1
+ELSEIF RESULT == 2
+	CFLAG:MASTER:현재위치 = 場所_편의점
+	FOR 캐릭터_ID,1,CHARANUM
+		SIF !CFLAG:캐릭터_ID:동행
+			CONTINUE
+		CFLAG:캐릭터_ID:현재위치 = 場所_편의점
+		CFLAG:캐릭터_ID:데이트중 = 1
+	NEXT
+	PRINTFORML 「어서 오세요～！」
+	TIME += 3
+	RETURN 1
+ELSEIF RESULT == 1
+	CALL COM600
+	IF RESULT == 1
+		FOR 캐릭터_ID,1,CHARANUM
+			SIF !CFLAG:캐릭터_ID:동행
+				CONTINUE
+			IF CFLAG:캐릭터_ID:호감도 >= 1200
+				連出_ターゲット = 캐릭터_ID
+				CFLAG:캐릭터_ID:데이트중 = 1
+				;服の설정、現代っぽい服以外だと、
+				CALL FASHION_MODERN(캐릭터_ID)
+				IF RESULT == 0
+					CALL FASHION_SENSE(캐릭터_ID)
+					IF RESULT == 1
+						PRINTFORML %CALLNAME:캐릭터_ID%는 외출복으로 갈아입었다。
+						CALL CLOTHES_SETTING(캐릭터_ID,RAND:7 + 400)
+					ENDIF
+				ENDIF
+				CFLAG:캐릭터_ID:현재위치 = CFLAG:MASTER:현재위치
+				CFLAG:MASTER:데이트중 = 1
+			ELSE
+				PRINTFORML %CALLNAME:캐릭터_ID%에게 데이트 신청을 거절당했다……。
+				PRINTFORMW 아직 그런 사이는 아닌 것 같다……。
+				CFLAG:캐릭터_ID:동행 = 0
+			ENDIF
+		NEXT
+		IF TARGET <= 0
+			PRINTFORML %CALLNAME:MASTER%는 외출했다。
+		ELSEIF CFLAG:TARGET:동행
+			PRINTFORML %CALLNAME:MASTER%는 %CALLNAME:連出_ターゲット%\@ GET_TARGETNUM() > 1 ? 達 # \@와 함께 데이트를 하러 갔다。
+		ELSEIF !CFLAG:TARGET:동행
+			PRINTFORML %CALLNAME:MASTER%는 %CALLNAME:TARGET%의 배웅을 받으며 외출하기로 했다。
+		ENDIF
+		PRINTL
+		PRINTL
+		PRINTL
+		PRINTFORML 덜컹덜컹…
+		PRINTFORML 　　　　　　　　　　　　　　　　　　　　　덜컹덜컹…
+		PRINTW
+		CALL RECOVER_PERMIL(MASTER,-100,"체력")
+		CALL RECOVER_PERMIL(MASTER,-100,"기력")
+		TIME += 30
+		ABS PLACEPARAMATOR(50) - PLACEPARAMATOR(CFLAG:MASTER:현재위치)
+		TIME += RESULT
+	ENDIF
+
+	RETURN 1
+ELSEIF RESULT == 0
+	RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;외출する
+@COM_ABLE460
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(460)
+	RETURN RESULT
+SIF CFLAG:MASTER:현재위치 >= 19
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

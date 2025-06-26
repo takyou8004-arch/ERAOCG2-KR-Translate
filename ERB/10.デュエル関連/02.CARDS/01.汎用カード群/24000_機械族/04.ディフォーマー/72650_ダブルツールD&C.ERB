@@ -1,0 +1,183 @@
+﻿@CARDNAME_72650,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 더블 툴 D&C
+	CASE "略称"
+RESULTS = W 툴 D&C
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_72650(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 装備마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72650(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드의 기계족 몬스터에게만 장착 가능.
+PRINTL ①: 턴에 따라, 이하의 효과를 각각 적용한다.
+CALLFORM CARD_ABLE(0,攻撃時強制誘発 ,攻守変動)
+PRINTL ●자신 턴: 장착 몬스터의 공격력은 1000 올라가고, 전투를 실행하는 상대 몬스터의 효과를 무효로 한다.
+CALLFORM CARD_ABLE(0,攻撃後強制誘発 ,지속효과)
+PRINTL ●상대 턴: 상대는 장착 몬스터밖에 공격할 수 없으며, 전투를 실행한 상대 몬스터를 파괴한다.
+
+@CARDCAN_72650(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72650)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 기계족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF ターンプレイヤー == 듀얼리스트
+	IF 종류 == 攻撃時強制誘発
+		SIF ゾーン != "마함"
+			RETURN 0
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		SIF 装備先 == 5
+			RETURN 0
+		SIF 戦闘場所(듀얼리스트,1) == 5
+			RETURN 0
+		SIF GETVAR(@"%装備者%_戦闘カード") != 装備先
+			RETURN 0
+		RETURN 1
+		
+	ELSEIF 종류 == 攻守変動
+		SIF ゾーン != "마함"
+			RETURN 0
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		RETURN 1
+	ENDIF
+
+ELSEIF ターンプレイヤー != 듀얼리스트
+	IF 종류 == 攻撃後強制誘発
+		SIF ゾーン != "마함"
+			RETURN 0
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+			RETURN 0
+		SIF ターンプレイヤー == 듀얼리스트
+			RETURN 0
+		SIF GETVAR(@"%装備者%_戦闘カード") != 装備先
+			RETURN 0
+		SIF GETVAR(@"%装備者%_필드:装備先") == -1
+			RETURN 0
+		RETURN 1
+	ELSEIF 종류 == 지속효과
+		SIF ゾーン != "마함"
+			RETURN 0
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+			RETURN 0
+		SIF ターンプレイヤー == 듀얼리스트
+			RETURN 0
+		RETURN 1
+	ENDIF
+ENDIF
+
+@CARDEFFECT_72650(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 戦闘カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72650)
+	IF RESULT == 0
+		;패에서 발동後、마법トラップ 존에 カード이동
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 기계족
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+
+ELSEIF ターンプレイヤー == 듀얼리스트
+	CALL FULLRESET
+	IF 종류 == 攻撃時強制誘発
+PRINTL 「더블 툴 D&C」의 효과가 적용된다.
+		PRINTW 상대モンスター의 효과が無効化されました。
+		戦闘カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘カード,"無効")
+
+	ELSEIF 종류 == 攻守変動
+		CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,1000)
+	ENDIF
+
+ELSEIF ターンプレイヤー != 듀얼리스트
+	CALL FULLRESET
+	IF 종류 == 攻撃後強制誘発
+		PRINTW 「ダブルツ-ルD&C」의 효과が발동しました。
+		戦闘カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘カード,"묘지")
+
+	ELSEIF 종류 == 지속효과
+		CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"攻誘")
+	ENDIF
+ENDIF
+

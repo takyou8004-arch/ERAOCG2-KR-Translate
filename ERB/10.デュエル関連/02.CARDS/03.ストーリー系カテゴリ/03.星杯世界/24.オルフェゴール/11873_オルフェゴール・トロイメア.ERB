@@ -1,0 +1,163 @@
+﻿@CARDNAME_11873,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 오르페골 트로이메어
+	CASE "略称"
+RESULTS = 오르프트로이메어
+	CASE "カテゴリ"
+RESULTS:0 = 오르페골
+RESULTS:1 = 트로이메어
+
+ENDSELECT
+
+
+@CARD_11873(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_11873(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 링크 몬스터와의 전투로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(1,묘지起動 ,フリー誘発)
+PRINTL ②: 묘지의 이 카드를 제외하고, 필드의 앞면 표시 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 덱에서 이 카드명 이외의 기계족 어둠 속성 몬스터 1장을 묘지로 보낸다.
+PRINTL 대상의 몬스터의 공격력은 턴 종료시까지, 묘지로 보낸 몬스터의 레벨 × 100 올린다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 어둠 속성 몬스터밖에 특수 소환할 수 없다.
+
+@CARDSUMMON_AA_11873
+
+
+@CARDCAN_11873(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,11873)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 묘지起動 || 종류 == フリー誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+
+	SIF 발동済_1(듀얼리스트,11873)
+		RETURN 0
+	IF GETVARS(@"%듀얼리스트%_フィールド名") != "오르페골 바벨"
+		SIF 종류 == フリー誘発
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ENDIF
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件固名前 = 오르페골 트로이메어
+	효과条件종족 = 기계족
+	효과条件속성 = 어둠속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARD_{戦闘カードID(듀얼리스트,1)}, "종류"
+	SIF RESULT != 링크
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_11873(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードレベル
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 묘지起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,11873,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件固名前 = 오르페골 트로이메어
+		효과条件종족 = 기계족
+		효과条件속성 = 어둠속성
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		IF RESULT == 1
+			TRYCALLFORM CARD_{RESULT:1},"レベル"
+			選択カードレベル = RESULT
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲상대필드 = 1
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)	
+			選択カード = RESULT
+			IF 選択カード != 9999	
+				CALL CARD_SELECT(듀얼리스트,選択カード)
+				CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"一攻",選択カードレベル * 100)
+			ENDIF
+		ENDIF
+		SS소환可能속성:0 = 어둠속성
+		CALL CARD_SS_RESTRICTION(듀얼리스트)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+ENDIF

@@ -1,0 +1,166 @@
+﻿@CARDNAME_72840,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마굉신계의 층
+	CASE "略称"
+RESULTS = 마굉신계의 층
+	CASE "カテゴリ"
+RESULTS:0 = 마굉신
+ENDSELECT
+
+
+@CARD_72840(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72840(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 자신 필드는 '마굉신계의 층'이 된다.
+PRINTL 이 카드 명의 카드는 1턴에 1장밖에 발동할 수 없으며, 이 카드 명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(2,마함起動,손패起動)
+PRINTL ①: 이 카드의 발동 시 처리로서, 덱에서 '마굉신' 몬스터 1장을 묘지로 보낼 수 있다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ②: 자신 묘지의 '마굉신' 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 손패를 2장 선택하여 버리고, 대상 몬스터를 패에 더한다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ③: 자신 손패가 상대보다 적을 경우, 자신 '마굉신' 몬스터의 공격력은 손패 매수의 차이 × 200 올린다.
+PRINTL 
+
+@CARDCAN_72840(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72840)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,72840)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 마굉신
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	SIF 손패数(듀얼리스트) <= 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_2(듀얼리스트,72840)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	SIF 손패数(対面者) < 손패数(듀얼리스트)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72840(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃修正
+#DIM DYNAMIC 손패数チェック
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72840,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件複数 = 2
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT ==1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 마굉신
+			효과条件종류 = モン全般
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72840,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과条件カテゴリ = 마굉신
+		효과条件종류 = モン全般
+		효과条件任意 = 1
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	손패数チェック = 손패数(対面者) - 손패数(듀얼리스트)
+	攻撃修正 = 손패数チェック * 200
+	SIF 攻撃修正 < 0
+		攻撃修正 = 0
+	CALL FULLRESET
+	효과条件カテゴリ = 마굉신
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻撃修正)
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "암흑계の階")
+ENDIF

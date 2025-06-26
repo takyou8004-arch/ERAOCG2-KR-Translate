@@ -1,0 +1,299 @@
+@CARDNAME_44800,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = I・HERO キネティックパワー解放 百合子
+	CASE "略称"
+		RESULTS = KP解放百合子
+	CASE "カテゴリ"
+		RESULTS:0 = HERO
+		RESULTS:1 = I・HERO
+		RESULTS:2 = THE IDOLM@STER
+		; RESULTS:4 = MILLION LIVE!
+		; RESULTS:5 = 七尾百合子
+		RESULTS:4 = 七尾百合子
+ENDSELECT
+
+@CARD_44800(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_44800(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「I・HERO マイティセーラー 百合子」＋「HERO」モンスター
+PRINTL この 카드는 융합소환でしか특수 소환할 수 없다。
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ①：자신 / 상대ターンに발동할 수 있다。
+PRINTL 제외 상태인 「I・HERO」モンスター２장を덱으로 되돌리고、
+PRINTL 자신의 フィールド・묘지から、「I・HERO」융합몬스터 카드 によって決められた융합素材몬스터를 제외하고、
+PRINTL その융합몬스터 １体をＥＸ덱에서 융합  소환한다。
+PRINTL 그 때、１体目の융합素材は필드의 このカードでなければならない。
+CALL CARD_ABLE(2,제외時)
+PRINTL ②：この카드가 제외된 場合に、자신 필드에 "I・HERO」융합モンスターが存在するなら발동할 수 있다。
+PRINTL 「I・HERO キネティック・パワー」トークンカード １장을 제외状態で生成する。
+
+@CARDSUMMON_44800(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件名前 = I・HERO マイティセーラー 百合子
+ELSEIF EX参照 >= 10
+	素材条件カテゴリ = HERO
+ENDIF
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,44800) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_44800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,44800)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,44800)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件カテゴリ = I・HERO
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	CALL RESETAREA_MAT
+	; 素材範囲손패 = 1
+	素材範囲필드 = 1
+	素材範囲묘지 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = I・HERO
+	효과条件종류 = 융합
+	효과条件소환可 = 1
+	強制素材場所 = 지정場所(場所,ゾーン)
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 제외時
+	SIF 발동済_2(듀얼리스트,44800)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = I・HERO
+	효과条件종류 = 융합
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_44800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,44800,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件カテゴリ = I・HERO
+		효과条件종류 = モン全般
+		효과条件複数 = 2
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL RESETAREA_MAT
+			素材範囲묘지 = 1
+			素材範囲필드 = 1
+			; 素材範囲손패 = 1
+			CALL FULLRESET
+			효과条件カテゴリ = I・HERO
+			효과条件종류 = 융합
+			효과条件소환可 = 1
+			強制素材場所 = 지정場所(場所,ゾーン)
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+				CALL FUSSUMMON(듀얼리스트,選択カード,제외行き)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,44800,2)
+	IF RESULT == 0
+		SETVAR @"%듀얼리스트%_덱:{現제외数(듀얼리스트)}",144800
+		CALLFORM CARDNAME_144800("名前")
+		PRINTFORMW %듀얼리스트%の「%RESULTS%」が제외状態で生成された！
+	ENDIF
+ENDIF
+
+@CARDNAME_144800,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = I・HERO キネティック・パワー
+	CASE "略称"
+		RESULTS = KPトークン
+	CASE "カテゴリ"
+		RESULTS:0 = HERO
+		RESULTS:1 = I・HERO
+		RESULTS:2 = THE IDOLM@STER
+		RESULTS:3 = MILLION LIVE!
+ENDSELECT
+
+@CARD_144800(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 無性
+	CASE "소환불가"
+		RETURN 1
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_144800(종류)
+#DIM DYNAMIC 종류
+
+PRINTL この 카드는 소환 / 특수 소환할 수 없다。
+PRINTL 이 카드명의 ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,효과後誘発)
+PRINTL ①：자신 필드에 "I・HERO」モンスターが소환 / 특수 소환된 場合に발동할 수 있다。
+PRINTL 패의 この카드를 消滅させて、덱에서 「I・HERO」カード １장을 패에 加える。
+
+@CARDCAN_144800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,144800)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,144800)
+		RETURN 0
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = I・HERO
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = I・HERO
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_144800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,144800,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = I・HERO
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

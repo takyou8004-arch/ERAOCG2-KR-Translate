@@ -1,0 +1,130 @@
+﻿@CARDNAME_24503,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 머시너즈 메탈크런치
+	CASE "略称"
+RESULTS = 메탈크런치
+	CASE "カテゴリ"
+RESULTS:0 = 머시너즈
+ENDSELECT
+
+
+@CARD_24503(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24503(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,효과소환)
+PRINTL ①: 자신 필드에 몬스터가 존재하지 않을 경우,
+PRINTL 이 카드는 공격력 1800으로서 릴리스 없이 소환할 수 있다.
+CALLFORM CARD_ABLE(2,소환時,특수소환時)
+PRINTL ②: 이 카드가 소환 / 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 덱에서 기계족 땅 속성 몬스터 3장을 고르고,
+PRINTL 그 중에서 무작위로 1장을 자신의 패에 넣고, 남은 몬스터는 덱으로 되돌린다.
+
+@CARDCAN_24503(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24503)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 효과소환
+	SIF モンスター数(듀얼리스트) == 0
+		RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,24503)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件속성 = 땅속성
+	효과条件종족 = 기계족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24503(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード,3
+IF 종류 == 효과소환
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",現필드(듀얼리스트),"条達",2,1)
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24503,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件속성 = 땅속성
+		효과条件종족 = 기계족	
+		효과条件複数 = 3
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "덱",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード:0 = RESULT:0
+			選択カード:1 = RESULT:1
+			選択カード:2 = RESULT:2
+			IF 選択カード != 9999
+				CALL CARD_ADD(듀얼리스트, "덱", "손패", 選択カード:(RAND:3))
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,-1000)
+ENDIF

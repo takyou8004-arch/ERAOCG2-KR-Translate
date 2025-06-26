@@ -1,0 +1,99 @@
+﻿;-------------------------------------------------
+;애널舐め
+;애무계커맨드、レベル1
+;-------------------------------------------------
+@COM4
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+;ボディタッチで발기UP
+IF BASE:MASTER:발기 <= 1000
+	TCVAR:MASTER:사정쾌락강도 = 500
+	TCVAR:MASTER:사정대상캐릭터_1 = TARGET
+	TCVAR:MASTER:사정부위플래그 = 8
+ENDIF
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 5
+DOWNBASE:기력 += 50
+
+LOCAL = 50
+;조교者のTALENT:혀사용자をみる
+SIF TALENT:MASTER:혀사용자
+	TIMES LOCAL , 1.50
+;조교者のTALENT:고양이혀をみる
+SIF TALENT:MASTER:고양이혀
+	TIMES LOCAL , 0.75
+CALL SOURCE_CALC_쾌Ａ(TARGET, MASTER, LOCAL)
+CALL SOURCE_CALC_액체(TARGET, MASTER, 50)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 180)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 150)
+
+
+IF TALENT:TARGET:스위트바디
+	CALL RECOVER_PERMIL(MASTER,50,"체력",1)
+	CALL RECOVER_PERMIL(MASTER,100,"기력",1)
+ENDIF
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;奴隷のＡ⇔조교者の口の汚れが이동
+STAIN:4 |= STAIN:MASTER:0
+STAIN:MASTER:0 |= STAIN:4
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 3
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 3
+ENDIF
+
+;조교者が고양이혀持ちの場合は、조교者に가학쾌락경험を추가
+SIF TALENT:MASTER:고양이혀
+	EXP:MASTER:가학쾌락경험 += 1
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+
+@COM_ABLE4
+;애널舐め実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(4)
+	RETURN RESULT
+;性器が汚れている
+SIF STAIN:4 >= 2 && (STAIN:3 != 16 && STAIN:3 != 17) && TALENT:MASTER:악취내성 < 2
+	RETURN 0
+
+;고양이혀の조교者の場合は기교Lv2以上必要
+SIF TALENT:MASTER:고양이혀 && ABL:MASTER:기교 < 2
+	RETURN 0
+
+;하반신착의
+SIF TEQUIP:0 & 4 || TEQUIP:0 & 2
+	RETURN 0
+;애널바이브사용중は불가
+SIF TEQUIP:14
+	RETURN 0
+;애널비즈사용중は불가
+SIF TEQUIP:15
+	RETURN 0
+;普通の관장사용중は불가
+SIF TEQUIP:21
+	RETURN 0
+;バルーン사용중は불가
+SIF TEQUIP:22
+	RETURN 0
+;電極사용중は불가
+SIF TEQUIP:23
+	RETURN 0
+RETURN 1

@@ -1,0 +1,162 @@
+﻿@CARDNAME_25550,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 제알 웨폰－페가수스 트윈 세이버
+	CASE "略称"
+RESULTS = ZW－천마천쌍검
+	CASE "カテゴリ"
+RESULTS:0 = 제알 웨폰
+RESULTS:1 = 제알
+ENDSELECT
+
+
+@CARD_25550(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 2100
+	CASE "分割"
+		RETURN 유니온
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_25550(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 자신 LP가 상대보다 2000 이상 적을 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ②: 자신 필드의 「유토피아」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 자신 필드의 이 카드를 공격력 1000 올리는 장착 마법 카드로 취급하여 그 몬스터에 장착한다.
+CALLFORM CARD_ABLE(10,발동誘発)
+PRINTL ③: 1턴에 1번, 이 카드가 장착되어 있고, 상대가 몬스터의 효과를 발동했을 경우에 발동할 수 있다.
+PRINTL 그 효과를 무효로 한다.
+
+@CARDCAN_25550(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25550)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,25550,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") + 2000 > GETVAR(@"ライフ_%対面者%") 
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 유토피아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発 
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25550(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25550)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25550)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 유토피아
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,選択カード,"필드",場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,1000)
+
+ELSEIF 종류 == 발동誘発 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25550,10)
+	IF RESULT == 0
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+

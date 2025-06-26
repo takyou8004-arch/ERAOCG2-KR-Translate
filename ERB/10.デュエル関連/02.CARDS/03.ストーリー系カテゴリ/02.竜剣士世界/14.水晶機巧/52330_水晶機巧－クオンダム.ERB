@@ -1,0 +1,156 @@
+﻿@CARDNAME_52330,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 크리스트론-쿠온담
+	CASE "略称"
+RESULTS = CS-쿠온담
+	CASE "カテゴリ"
+RESULTS:0 = 크리스트론
+ENDSELECT
+
+
+@CARD_52330(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 2000
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52330(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 4
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52330) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52330(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1장 이상
+CALLFORM CARD_ABLE(0,필드起動,フリー誘発)
+PRINTL ①: 상대의 메인 페이즈 및 배틀 페이즈에 발동할 수 있다.
+PRINTL 이 카드를 포함하는 자신 필드의 몬스터를 싱크로 소재로 싱크로 소환한다.
+CALLFORM CARD_ABLE(0,戦闘→묘지,破壊→묘지)
+PRINTL ②: 이 카드가 전투 / 효과로 파괴되었을 경우,
+PRINTL 싱크로 몬스터 이외의 자신 묘지의 「크리스트론」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 특수 소환한다.
+
+
+@CARDCAN_52330(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52330)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF バトルフェイズ != 1 && メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 싱크로
+	強制素材場所 = 지정場所(場所,ゾーン)
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 크리스트론
+	효과条件종류 = 싱크로以外
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52330(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52330)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 싱크로
+		強制素材場所 = 지정場所(場所,ゾーン)
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL SYNSUMMON(듀얼리스트, 選択カード)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52330)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 크리스트론
+		효과条件종류 = 싱크로以外
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,場所)
+	ENDIF
+ENDIF

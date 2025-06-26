@@ -1,0 +1,153 @@
+﻿@CARDNAME_72595,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 대성검박물관
+	CASE "略称"
+RESULTS = 대성검박물관
+	CASE "カテゴリ"
+RESULTS:0 = 성검
+RESULTS:1 = 샤를
+ENDSELECT
+
+
+@CARD_72595(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72595(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「대성검박물관」이 된다.
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 자신 필드의 전사족 화염 속성 몬스터의 공격력은 500 올린다.
+CALLFORM CARD_ABLE(2,마함起動)
+PRINTL ②: 1200 LP를 지불하고 발동할 수 있다. 덱에서 이 카드명 이외의 「성검」 카드 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(10,마함起動)
+PRINTL ③: 이 카드가 ②의 효과를 적용한 턴에 1번, 자신의 마법 & 함정 존의 「성기사」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 특수 소환한다. 자신 필드에 「염성기사제－샤를」이 존재하지 않는 경우,
+PRINTL 턴 종료시까지 자신은 전사족 몬스터밖에 특수 소환할 수 없다.
+
+
+@CARDCAN_72595(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72595)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_2(듀얼리스트,72595) && 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	IF 발동済_2(듀얼리스트,72595)
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件カテゴリ = 성기사
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		SIF GETVAR(@"ライフ_%듀얼리스트%") <= 1200
+			RETURN 0
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 성검
+		효과条件固名前 = 대성검박물관
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72595(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72595)
+	IF RESULT == 0
+		IF 발동済_2(듀얼리스트,72595) == 0
+			CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72595,2)
+			CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1200)
+			CALL FULLRESET
+			효과条件カテゴリ = 성검
+			효과条件固名前 = 대성검박물관
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ELSE
+			CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72595,10)
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件カテゴリ = 성기사
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+효과条件名前 = 염성 기사 사제 - 샤를
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT != 1
+				SS소환可能종족 = 전사족
+				CALL CARD_SS_RESTRICTION(듀얼리스트)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72595)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "大성검博物館")
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件종족 = 전사족
+	효과条件속성 = 화염속성
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,500)
+ENDIF

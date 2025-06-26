@@ -1,0 +1,116 @@
+﻿@CARDNAME_38161,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = S－Force 그래비티-노
+	CASE "略称"
+RESULTS = SF 그래비티-노
+	CASE "カテゴリ"
+RESULTS:0 = S－Force
+ENDSELECT
+
+
+@CARD_38161(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1400
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_38161(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①：상대가 몬스터의 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 그 몬스터는 필드에서 벗어났을 경우에 제외된다.
+
+CALLFORM CARD_ABLE(2,특수소환時,소환時)
+PRINTL ②：이 카드가 소환 / 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 덱에서 「S－Force 그래비티-노」 이외의 「S－Force」 카드 1장을 패에 넣는다.
+
+
+@CARDCAN_38161(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38161)
+SIF RESULT == 1
+	RETURN 0
+
+IF  종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환",1)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,38161)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = S－Force
+	효과条件固名前 = S－Force 그래비티-노
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_38161(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 효과先
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38161)
+	IF RESULT == 0
+		효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",효과先,"除処",1,1,1)
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38161,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = S－Force
+		효과条件固名前 = S－Force 그래비티-노
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF
+

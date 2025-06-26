@@ -1,0 +1,203 @@
+﻿@CARDNAME_52071,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 크샤트리라 어라이즈하트
+	CASE "略称"
+RESULTS = 어라이즈하트
+	CASE "カテゴリ"
+RESULTS:0 = 크샤트리라
+ENDSELECT
+
+
+@CARD_52071(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+
+
+@CARD_EXPLANATION_52071(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 7 몬스터 × 3
+PRINTL 「크샤트리라 아라이즈하트」는, 「크샤트리라 샹그리라」가 효과를 발동한 턴에 1번,
+PRINTL 자신의 「크샤트리라 라이즈하트」 위에 겹쳐서 엑시즈 소환할 수도 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 묘지로 보내지는 카드는 묘지로는 가지 않고 제외된다.
+CALLFORM CARD_ABLE(0,효과後強制誘発)
+PRINTL ②: 카드가 제외될 때마다 발동할 수 있다.
+PRINTL 이 카드의 엑시즈 소재를 1개 늘린다.
+CALLFORM CARD_ABLE(0,필드起動,フリー誘発)
+PRINTL ③: 자신 / 상대의 턴에 1번, 이 카드의 엑시즈 소재를 3개 제거하고 발동할 수 있다.
+PRINTL 상대 필드의 카드 1장을 제외한다.
+
+
+
+@CARDSUMMON_52071(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 7
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,52071) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_52071(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 使用済み
+#DIM DYNAMIC 효과使用불가,3
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52071)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	IF 발동済_1(듀얼리스트,56500) == 0
+		IF 발동済_2(듀얼리스트,56500) == 0
+			RETURN 0
+		ENDIF
+	ENDIF
+	SIF 발동済_1(듀얼리스트,52071)
+		RETURN 0
+
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,52071)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = 크샤트리라 어라이즈하트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	;SIF ターンプレイヤー != 듀얼리스트
+	;	RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") >= 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") >= 3
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과除送",2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") >= 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") < 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_52071(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52071,1)
+	IF RESULT == 0
+		CALL RESETCONDITION_MAT
+		必要素材数 = 1
+		素材条件名前 = 크샤트리라 어라이즈하트
+		重ねてＸ = 1
+		TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"제외置換",3,2)
+ELSEIF 종류 == 효과後強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52071)
+	IF RESULT == 0
+		PRINTFORML 크샤트리라 어라이즈하트のX素材が増えた。
+		CALL FULLRESET
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52071,10,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"제외")
+	ENDIF
+ENDIF
+
+

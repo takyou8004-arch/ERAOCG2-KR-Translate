@@ -1,0 +1,382 @@
+﻿@SOURCE_CHECK
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC EXP名
+#DIM DYNAMIC ソース値
+#DIM DYNAMIC UP確認
+#DIM DYNAMIC 改行確認
+#DIM DYNAMIC カウンタ
+
+
+SELECTCOM = TFLAG:SELECTCOM보존
+;조교SELECTCOMの시간경과
+CALL TRACHECK_TIME
+
+;-------------------------------------------------
+;身体접촉の계속、解除
+;-------------------------------------------------
+CALL TOUCH_SUCCESSION(TARGET)
+
+;카운터
+FOR カウンタ,1,CHARANUM
+	SIF TARGET:カウンタ <= 0
+		CONTINUE
+	캐릭터_ID = TARGET:カウンタ
+	CALL EVENT_COUNTER(캐릭터_ID,カウンタ)
+	IF TCVAR:캐릭터_ID:CT행동 == 61 && TALENT:캐릭터_ID:처녀 == 1
+		PRINTFORML %CALLNAME:캐릭터_ID%는 흥분해서, 처녀를 바치려고 하고 있다……。
+		CALL YN_CHOICE_STR("멈춘다","멈추지 않는다")
+		IF RESULT == 0
+			IF BASE:TARGET:만족 < 0
+				PRINTFORMW 필사적으로 타이르기는 했지만、 %CALLNAME:캐릭터_ID%는 단번에 자리에 앉았고、
+				PRINTFORMW 채워지는 쾌감에 흠뻑 빠져들다……。
+			ELSE
+				PRINTFORMW %CALLNAME:캐릭터_ID%는 일단 냉정함을 되찾고, 어떻게든 침착하게 대처했다……。
+				CFLAG:캐릭터_ID:현재냉정 = 1
+				CALL EVENT_COUNTER(캐릭터_ID,カウンタ)
+			ENDIF
+		ENDIF
+	ENDIF
+	CALL EVENT_COUNTER_POSE(캐릭터_ID,カウンタ)
+	CALL EVENT_COUNTER_SOURCE(캐릭터_ID)
+NEXT
+CALL EVENT_COUNTER_COMBINATION
+
+FOR 캐릭터_ID,0,CHARANUM
+	;성교플래그の설정
+	IF TEQUIP:캐릭터_ID:질 == 1
+		TEQUIP:캐릭터_ID:Ｖ섹스 = MASTER
+	ELSE
+		TEQUIP:캐릭터_ID:Ｖ섹스 = -1
+	ENDIF
+	IF TEQUIP:캐릭터_ID:애널 == 1
+		TEQUIP:캐릭터_ID:Ａ섹스 = MASTER
+	ELSE
+		TEQUIP:캐릭터_ID:Ａ섹스 = -1
+	ENDIF
+	
+	;역 레이프
+	SIF TEQUIP:캐릭터_ID:페니스 == 6
+		TEQUIP:MASTER:Ｖ섹스 = 캐릭터_ID
+	;逆애널
+	SIF TEQUIP:캐릭터_ID:페니스 == 7
+		TEQUIP:MASTER:Ａ섹스 = 캐릭터_ID
+	;체위リセット
+	SIF TEQUIP:캐릭터_ID:Ｖ섹스 < 0 && TEQUIP:캐릭터_ID:51 < 0
+		TEQUIP:캐릭터_ID:체위 = 0
+	;ついでに발기도の보존
+	CFLAG:캐릭터_ID:발기도 = BASE:캐릭터_ID:발기
+NEXT
+;-------------------------------------------------
+;@COMの呼び出し
+;-------------------------------------------------
+VARSET RESULT
+IF CALL_COMスキップ == 0 
+	CALL CALL_COM(TARGET)
+	SIF !RESULT
+		GOTO SKIP
+ENDIF
+
+FOR 캐릭터_ID,0,CHARANUM
+
+
+	;装着系は後で考える
+	;-------------------------------------------------
+	;중독充足のチェック
+	;-------------------------------------------------
+	;-------------------------------------------------
+	;바이브など付けっぱなし아이템のチェック
+	;-------------------------------------------------
+	CALL EQUIP_CHECK(캐릭터_ID)
+	;-------------------------------------------------
+	;경험加算
+	;-------------------------------------------------
+	CALL SOURCE_EXP(캐릭터_ID)
+NEXT
+
+;동정喪失
+IF !TALENT:MASTER:동정 && HAS_PENIS(MASTER)
+	SELECTCASE SELECTCOM
+		CASE 60,61,62,63,65,66,67,68,69,70
+			PRINTW MASTER동정상실
+			CFLAG:MASTER:동정버린상대 = TARGET
+	ENDSELECT
+ENDIF
+
+IF !TALENT:TARGET:동정 && HAS_PENIS(TARGET)
+	SELECTCASE SELECTCOM
+		CASE 64,92,93,94,71
+			PRINTFORMW 동정상실( %CALLNAME:TARGET%)
+			CFLAG:TARGET:동정버린상대 = MASTER
+	ENDSELECT
+ENDIF
+
+FOR 캐릭터_ID,0,CHARANUM
+	TCVAR:캐릭터_ID:150 = 0
+	;装着系は後で考える
+	;-------------------------------------------------
+	;절정処理
+	;-------------------------------------------------
+	CALL ORGASM_ADD(캐릭터_ID)
+	;-------------------------------------------------
+	;조교대상의 분유チェック
+	;-------------------------------------------------
+	CALL TARGET_MILK_CHECK(캐릭터_ID)
+	;-------------------------------------------------
+	;중독充足チェック
+	;-------------------------------------------------
+	;-------------------------------------------------
+	;체력・기력の減少
+	;-------------------------------------------------
+	CALL SOURCE_DOWNBASE(캐릭터_ID)
+	;-------------------------------------------------
+	;고통쾌락경험、봉사쾌락경험のチェック
+	;-------------------------------------------------
+	CALL EXP_GOT_CHECK(캐릭터_ID)
+NEXT
+
+;사정周りの플래그설정
+CALL SAMEN_SHOOT_FLAGSETTING
+
+
+SIF CALL_COMスキップ == 2
+	GOTO FULLSKIP
+$SKIP
+;-------------------------------------------------
+;조교구상
+;-------------------------------------------------
+CUSTOMDRAWLINE —
+CALL KOJO_MESSAGE_SEND("COMMAND")
+IF TARGET
+	CUSTOMDRAWLINE —
+	FOR LOCAL,1,CHARANUM
+		SIF TCVAR:(TARGET:LOCAL):30 > 1
+			CONTINUE
+	NEXT
+ENDIF
+
+;1216 = 2300
+;832 = 1500
+;15:23
+;1024 = 2000
+;500  764
+
+CALL IMAGE_PRODUCTION(TARGET)
+
+
+$FULLSKIP
+;-------------------------------------------------
+;EXP취득표시
+;-------------------------------------------------
+改行確認 = 0
+UP確認 = 0
+FOR 캐릭터_ID,0,CHARANUM
+	FOR EXP名,0,100
+		SIF TCVAR:캐릭터_ID:표시컷
+			CONTINUE
+		IF EXP_UP(EXP名,캐릭터_ID)
+			改行確認 ++
+			UP確認 ++
+			SIF 改行確認 == 1
+				PRINTL
+			LOCALS = %EXPNAME:EXP名%
+			PRINTFORM %LOCALS,15,LEFT%
+			LOCALS = +{EXP_UP(EXP名,캐릭터_ID)}
+			PRINTFORML %LOCALS,4,LEFT%( %CALLNAME:캐릭터_ID%)
+		ENDIF
+	NEXT
+	改行確認 = 0
+NEXT
+SIF UP確認
+	WAIT
+;-------------------------------------------------
+;ABLUP
+;-------------------------------------------------
+FOR 캐릭터_ID,0,CHARANUM
+	SIF TCVAR:캐릭터_ID:표시컷
+		CONTINUE
+	CALL SOURCE_ABLUP(캐릭터_ID)
+NEXT
+
+
+FOR 캐릭터_ID,1,CHARANUM
+	;-------------------------------------------------
+	;奴隷の절정時の구상
+	;-------------------------------------------------
+	CALL MESSAGE_PALAMCNG_B2(캐릭터_ID)
+	CALL KOJO_MESSAGE_PALAMCNG_B(캐릭터_ID)
+	;-------------------------------------------------
+	;분유メッセージ
+	;-------------------------------------------------
+	SIF NOWEX:캐릭터_ID:분유
+		CALL TARGET_MILK_MESSAGE(캐릭터_ID)
+NEXT
+;-------------------------------------------------
+;조교者の사정時の구상
+;-------------------------------------------------
+IF NOWEX:MASTER:사정
+	SIF TCVAR:MASTER:12 == 1
+		PRINT 질내
+	SIF NOWEX:MASTER:사정 > 1
+		PRINT 대량
+	PRINTFORML 사정
+ENDIF
+IF NOWEX:TARGET:사정
+	SIF TCVAR:TARGET:12 == 1
+		PRINT 질내
+	SIF NOWEX:TARGET:사정 > 1
+		PRINT 대량
+	PRINTFORML 사정( %CALLNAME:TARGET%)
+ENDIF
+CALL KOJO_MESSAGE_PALAMCNG_A	
+;-------------------------------------------------
+;조교後の구상
+;-------------------------------------------------
+CALL KOJO_MESSAGE_PALAMCNG_C
+
+
+;-------------------------------------------------
+;각인취득のチェック
+;-------------------------------------------------
+CALL MARK_GOT_CHECK(TARGET)
+;-------------------------------------------------
+;각인취득による구상
+;-------------------------------------------------
+CALL KOJO_MESSAGE_MARKCNG(TARGET)
+;-------------------------------------------------
+;순종상승による[저항]の消滅チェック
+;-------------------------------------------------
+CALL JUJUN_UP_CHECK(TARGET)
+;-------------------------------------------------
+;조교ソースの표시
+;-------------------------------------------------
+CALL SHOW_SOURCE(TARGET)
+
+;PRINTFORML PALAMCNG_C：Cデス
+
+;-------------------------------------------------
+;数値変動の표시
+;-------------------------------------------------
+IF CALL_COMスキップ != 2
+	SIF SELECTCOM == PREVCOM && TFLAG:50 == TFLAG:151 && (SELECTCOM < 350 || SELECTCOM >= 500)
+		PRINTL ＜동일명령어연속실행＞
+
+	;기력０
+	SIF BASE:1 <= 0
+		PRINTL ★기력０★
+	LOCAL:1 = 0
+	FOR 캐릭터_ID,0,CHARANUM
+		IF DOWNBASE:캐릭터_ID:체력
+			PRINTFORM 체력-{DOWNBASE:캐릭터_ID:체력} 
+			LOCAL:1 ++
+		ENDIF
+		IF DOWNBASE:캐릭터_ID:기력
+			PRINTFORM 기력-{DOWNBASE:캐릭터_ID:기력} 
+			LOCAL:1 ++
+		ENDIF
+		SIF LOCAL:1
+			PRINTFORML ( %CALLNAME:캐릭터_ID%)
+		LOCAL:1 = 0
+	NEXT
+	PRINTL 
+	;-------------------------------------------------
+	;호감도상승
+	;-------------------------------------------------
+	CALL FAVOR_CALC(TARGET)
+ENDIF
+;-------------------------------------------------
+;パラメータの상승＆표시（DOWNもここで）
+;-------------------------------------------------
+VARSET LOCAL
+;PRINTL 파라미터의 상승
+FOR 캐릭터_ID,0,CHARANUM
+	SIF CALL_COMスキップ == 2 && 캐릭터_ID == MASTER && TARGET != 0
+		CONTINUE
+	SIF TCVAR:캐릭터_ID:표시컷
+		CONTINUE
+	UP確認 = 0
+	FOR ソース値,0,100
+		;コマンド入力前のCUPを추가
+		CUP:캐릭터_ID:ソース値 += TCVAR:캐릭터_ID:(500 + ソース値)
+		SIF PALAMNAME:ソース値 == ""
+			CONTINUE
+		SIF CUP:캐릭터_ID:ソース値 - CDOWN:캐릭터_ID:ソース値 == 0
+			CONTINUE
+		IF !UP確認
+			PRINTL
+			PRINTFORML %CALLNAME:캐릭터_ID%
+		ENDIF
+		UP確認 ++
+		PRINTFORML %PALAMNAME:ソース値,8,LEFT% {PALAM:캐릭터_ID:ソース値,10,LEFT} + {CUP:캐릭터_ID:ソース値,10,LEFT} =   {PALAM:캐릭터_ID:ソース値 + CUP:캐릭터_ID:ソース値,10,LEFT}
+		PALAM:캐릭터_ID:ソース値 += CUP:캐릭터_ID:ソース値 - CDOWN:캐릭터_ID:ソース値
+		CUP:캐릭터_ID:ソース値 = 0
+		CDOWN:캐릭터_ID:ソース値 = 0
+	NEXT
+NEXT
+FOR ソース値, 0, 100
+	CVARSET TCVAR, 500 + ソース値, 0
+NEXT
+;-------------------------------------------------
+;조교ソースの표시（DOWNもここで）
+;-------------------------------------------------
+
+
+
+
+@SHOW_SOURCE(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+
+SIF TCVAR:표시컷
+	RETURN 0
+;PRINTL 　
+SIF SOURCE:캐릭터_ID:쾌Ｃ > 0
+	PRINTFORM 쾌C({SOURCE:캐릭터_ID:쾌Ｃ})
+SIF SOURCE:캐릭터_ID:쾌Ｖ > 0
+	PRINTFORM 쾌Ｖ({SOURCE:캐릭터_ID:쾌Ｖ})
+SIF SOURCE:캐릭터_ID:쾌Ａ > 0
+	PRINTFORM 쾌Ａ({SOURCE:캐릭터_ID:쾌Ａ})
+SIF SOURCE:캐릭터_ID:쾌Ｂ > 0
+	PRINTFORM 쾌Ｂ({SOURCE:캐릭터_ID:쾌Ｂ})
+SIF SOURCE:캐릭터_ID:쾌Ｍ > 0
+	PRINTFORM 쾌Ｍ({SOURCE:캐릭터_ID:쾌Ｍ})
+SIF SOURCE:캐릭터_ID:쾌Ｍ > 0
+	PRINTFORM 쾌Ｅ({SOURCE:캐릭터_ID:쾌Ｅ})
+
+SIF SOURCE:캐릭터_ID:정애 > 0
+	PRINTFORM 애정({SOURCE:캐릭터_ID:정애})
+SIF SOURCE:캐릭터_ID:성행동 > 0
+	PRINTFORM 성행동({SOURCE:캐릭터_ID:성행동})
+SIF SOURCE:캐릭터_ID:달성 > 0
+	PRINTFORM 성취감({SOURCE:캐릭터_ID:달성})
+SIF SOURCE:캐릭터_ID:고통 > 0
+	PRINTFORM 통증({SOURCE:캐릭터_ID:고통})
+SIF SOURCE:캐릭터_ID:공포 > 0
+	PRINTFORM 공포({SOURCE:캐릭터_ID:공포})
+SIF SOURCE:캐릭터_ID:액체 > 0
+	PRINTFORM 액체({SOURCE:캐릭터_ID:액체})
+SIF SOURCE:캐릭터_ID:욕정 > 0
+	PRINTFORM 욕정({SOURCE:캐릭터_ID:욕정})
+SIF SOURCE:캐릭터_ID:공순 > 0
+	PRINTFORM 공순({SOURCE:캐릭터_ID:공순})
+SIF SOURCE:캐릭터_ID:노출 > 0
+	PRINTFORM 노출({SOURCE:캐릭터_ID:노출})
+SIF SOURCE:캐릭터_ID:굴종 > 0
+	PRINTFORM 굴복({SOURCE:캐릭터_ID:굴종})
+SIF SOURCE:캐릭터_ID:환락 > 0
+	PRINTFORM 환락({SOURCE:캐릭터_ID:환락})
+SIF SOURCE:캐릭터_ID:정복 > 0
+	PRINTFORM 정복({SOURCE:캐릭터_ID:정복})
+SIF SOURCE:캐릭터_ID:수동 > 0
+	PRINTFORM 수동({SOURCE:캐릭터_ID:수동})
+SIF SOURCE:캐릭터_ID:불결 > 0
+	PRINTFORM 불결({SOURCE:캐릭터_ID:불결})
+SIF SOURCE:캐릭터_ID:울굴 > 0
+	PRINTFORM 울적({SOURCE:캐릭터_ID:울굴})
+SIF SOURCE:캐릭터_ID:일탈 > 0
+	PRINTFORM 일탈({SOURCE:캐릭터_ID:일탈})
+SIF SOURCE:캐릭터_ID:반감 > 0
+	PRINTFORM 반발({SOURCE:캐릭터_ID:반감})
+PRINTL 　
+
+
+
+

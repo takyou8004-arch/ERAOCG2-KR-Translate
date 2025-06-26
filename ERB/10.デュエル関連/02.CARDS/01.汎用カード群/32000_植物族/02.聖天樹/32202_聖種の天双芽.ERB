@@ -1,0 +1,157 @@
+﻿@CARDNAME_32202,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 선바인 트윈
+	CASE "略称"
+RESULTS = 성종의 천쌍아
+	CASE "カテゴリ"
+RESULTS:0 = 생아발론
+RESULTS:1 = 선바인
+ENDSELECT
+
+
+
+
+@CARD_32202(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_32202(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①: 자신 필드에 "생아발론" L 몬스터가 존재하고, 이 카드가 소환 / 특수 소환되었을 경우,
+PRINTL 자신 묘지의 레벨 4 이하의 식물족 일반 몬스터 1장을 대상으로 하여 발동할 수 있다. 그 몬스터를 특수 소환한다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 묘지에서 이 카드를 제외하고 발동할 수 있다. 자신 필드의 L 몬스터 1장을 제외한다.
+PRINTL 그 후, 자신 묘지의 식물족 L 몬스터 1장을 고르고, 그 동명 몬스터가 2장 이상 존재할 경우 특수 소환한다.
+
+@CARDCAN_32202(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,32202)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,32202)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 생아발론
+	효과条件종류 = 링크
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 식물족
+	효과条件종류 = 通常モン
+	CALL 효과条件レベル_ADV(4, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,32202)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0	
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 링크
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_32202(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カード名
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,32202,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件속성 = 땅속성
+		효과条件종류 = 通常モン
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,32202,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과条件종류 = 링크
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件종족 = 식물족
+			효과条件종류 = 링크
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)	
+			IF RESULT != 9999
+				選択カード = RESULT - 200
+				選択カードID = RESULT:99
+				TRYCALLFORM CARDNAME_{選択カードID}, "名前"
+				選択カード名 = %RESULTS%
+
+				CALL FULLRESET
+				효과範囲묘지 = 1
+효과条件名前 = %選択カード名前%
+				효과条件CNT = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF RESULT >= 2
+					CALL FULLRESET
+					CALL CARD_SP_SUMMON(듀얼리스트, "묘지", 選択カード)
+				ENDIF
+			ENDIF
+
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,177 @@
+﻿@CARDNAME_4052,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = S급 우주 아담스키-
+	CASE "略称"
+RESULTS = 아담스키-
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:1 = S급 침략자
+RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_4052(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2700
+	CASE "守備力"
+		RETURN 1700
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_4052(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("INVASION")
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①：『S급 침략［우주］』
+PRINTL 자신의 물속성 몬스터가 공격할 경우에 발동할 수 있다.
+PRINTL 자신의 손패 필드에 있는 이 카드를 그 위에 겹쳐도 좋다.
+PRINTL (공격은 무효가 되고, 이 카드의 공격 횟수를 +1한다)
+;なんか重ねたモンスターは그대로 らしい
+PRINTL 필드에서 침략했을 경우, 묘지에서 물속성 몬스터 1장을 수비 표시로 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터의 효과는 이 턴 무효화된다.
+;シ-ルドを破壊できない
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드의 전투로 상대가 받는 데미지는 0이 된다.
+;블로커されない
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드는 직접 공격할 수 있고, 공격할 경우 상대는 데미지 스텝 종료 시까지 카드의 효과를 발동할 수 없다.
+;ブレイクの代わりに덱破壊
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ④：이 카드가 직접 공격했을 경우에 발동할 수 있다.
+PRINTL 상대의 덱 위에서 카드를 4장 묘지로 보낸다.
+PRINTL 이 효과로 묘지로 보내진 카드의 효과는 유발되지 않는다.
+CALL TEXT_DECORATION("INVASION")
+
+@CARDSUMMON_4052(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+RETURN 0
+
+
+@CARDCAN_4052(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4052)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패" && ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 場所
+		RETURN 0
+	CALLFORM ATTACK_CARD(듀얼리스트,"속성")
+	SIF !MATCH(RESULT,물속성)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	SIF GETVAR(@"%듀얼리스트%_MZ_戦:場所") != 0
+		RETURN 0
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",1)
+	RETURN 0
+
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) != 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4052(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カードID
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4052)
+	IF RESULT == 0
+		CALL INVASION(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+
+			CALL EVADE_ATTACK(듀얼리스트)
+			IF ゾーン == "필드" && モンスター数(듀얼리스트) < 5
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件속성 = 물속성
+				효과추가종류 = 効追一無
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4052)
+	IF RESULT == 0		
+		CALL CARD_DECK_DISPOSE(対面者,"덱",4,完全묘지行き)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直攻")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦阻")
+	IF 戦闘場所(듀얼리스트) == 場所
+		CALL SET_PLAYER_INFO(対面者,"ダメージ無効",3)
+	ENDIF
+ENDIF

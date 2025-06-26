@@ -1,0 +1,317 @@
+@IRAI_EVENT_491(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP-VV)밸리언츠・워?
+	CASE "이벤트種"
+		RETURN 이벤트_通常
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL ヴァリアンツ・ウォーで遊ぼう！
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+	CASE "条件"
+		;東雲を所有
+		SIF CFLAG:NO_TO_CHARANUM(2250):소유함 == 0
+			RETURN 0
+		;ERAパック解放済み
+		SIF パック_解放:99 == 0
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_491(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC 条件달성
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(2250)
+
+IF 依頼_달성상황 == 0
+	;ヴァリアンツ・ウォー（CS版）の所持が必要
+	IF ゲーム所持:3 == 1
+		PRINTFORML
+		PRINTFORMW 「里パキケアルクトス西園ウーサ。 %CALLNAME:MASTER%さんのターンですよ～？」
+		PRINTFORMW ………
+		PRINTFORML 【ヴァリアンツ・ウォー（CS版）】のデュエルディスク連動機能で
+		PRINTFORMW 東雲と何度も대상しているが全然勝てない…
+		PRINTFORMW 何だこのゲーム。先攻有利すぎるだろ。
+		PRINTFORML それに東雲の操る【森羅万象】側の駒が強すぎる。
+		PRINTFORMW こちらの【백식공국】のロボット兵は全部同じにしか見えないのに…
+		PRINTFORMW 東雲は得意げに勝ち誇っている。
+		PRINTFORMW …こっちも東雲の駒使いたい！
+		PRINTFORMW 将棋みたいに상대の駒を奪えたりしないだろうか…？
+		PRINTFORMW 
+		CFLAG:(이벤트主:0):현재위치 = CFLAG:MASTER:현재위치
+		TIME += 10
+		依頼_場所 = 場所_寝室
+		依頼_달성상황 ++
+	ELSE
+		PRINTFORMW 
+		PRINTFORMW 東雲がゲーム屋のカタログを見ている。
+		SETCOLOR C_YELLOW
+		PRINTL
+		PRINTFORML 【ヴァリアンツ・ウォー（CS版）】
+		PRINTFORMW 戦陣に臨む兵よ！その용기で필드を進め！！
+		PRINTL
+		RESETCOLOR
+		PRINTFORMW ボードゲーム바람シミュレーションゲームのようだ。
+		PRINTFORMW デュエルディスクとの連動機能もあるらしい。
+		PRINTFORMW …東雲がこちらを見ながらカタログの片隅を손가락差している
+		SETCOLOR C_YELLOW
+		PRINTL
+		PRINTFORML 특전 限定レア仕様！
+		PRINTFORML ＜＜바늘淵のヴァリアンツ－アルクトスⅩⅡ＞＞
+		PRINTFORMW 時を操りデュエルを支配せよ！！
+		PRINTL
+		RESETCOLOR
+		PRINTFORMW …！특전カード付いてる！
+		PRINTFORMW これはもう買うしかない。
+		PRINTFORMW 繁華街のゲーム屋で売っているようだ。
+		PRINTFORMW ゲーム屋の営業時間は10時～20時だったな…
+		TIME += 10
+		RETURN 3
+	ENDIF
+ELSEIF 依頼_달성상황 == 1
+	PRINTFORMW ん？
+	PRINTFORMW デュエルディスクに見知らぬヴァリアンツ카드가 登録되어있는 。
+	PRINTFORMW これを使えば…？
+	PRINTFORMW 
+
+	$DUEL_LOOP
+	TARGET = 이벤트主:0
+	CALL DUEL_SYSTEM(1,491,,1)
+	IF RESULT == 1
+		PRINTFORMW 勝った。
+	ELSE
+		PRINTFORMW 負けた……
+		PRINTFORML 
+		PRINTL [0] - リトライ
+		PRINTL [1] - 諦める
+		BINPUT
+		IF RESULT == 0
+			PRINTFORMW …………
+			GOTO DUEL_LOOP
+		ELSE
+			PRINTFORML ヴァリアンツの意味不明의 효과에 頭がどうにかなりそうだ。
+			PRINTFORML 意識が遠のいていく…
+			PRINTFORMW …………
+			PRINTFORMW ………
+			PRINTFORMW …
+			PRINTFORMW ……！？……夢だったようだ。
+			TIME += 60
+			RETURN 3
+		ENDIF
+	ENDIF
+	SIF ターン数 == 2
+		条件달성 = 1
+	PRINTFORMW とてもすっきりした。
+	PRINTFORMW またこの카드를 使って遊んであげよう。
+	SETCOLOR C_YELLOW
+	PRINTFORML 
+	CALL CARD_GET_SINGLE(79634)
+	ITEM:79634 += 2
+	PRINTFORML 
+	PRINTFORMW さらに、【ヴァリアンツ・ウォー（CS版）】の특전카드를 手に入れた。
+	PRINTFORML 
+	CALL CARD_GET_SINGLE(58632)
+	IF 条件달성 == 1
+		PRINTFORML 
+		PRINTFORMW ワンキル보너스！10000DPをゲットした！
+		PRINTFORML 
+		FLAG:듀얼포인트 += 10000
+	ENDIF
+	TIME += 60
+	RETURN 2
+ENDIF
+
+
+@IRAI_DUEL_INTRO_491
+#DIM DYNAMIC カード추가先
+PRINTFORML
+PRINTFORMW 東雲を起点に強力な盤面が築かれていく！
+PRINTFORML
+PRINTFORMW ※フィールド마법의 효과를 使って
+PRINTFORML   상대の牝性몬스터를 うまく利用しましょう
+PRINTFORMW   ワンターンキルで報酬추가！
+
+カード추가先 = 現山札数("자신")
+SETVAR @"자신_덱:0", 90100
+SETVAR @"자신_덱:1", 73820
+SETVAR @"자신_덱:2", 38210
+SETVAR @"자신_덱:3", 73821
+SETVAR @"자신_덱:4", 79634
+
+SETVAR @"상대_손패:1", 90201
+
+SETVAR @"상대_魔_所有:1", 1
+SETVAR @"상대_魔_表:1", 1
+SETVAR @"상대_魔_無効:1", 1
+SETVAR @"상대_마함:1",2250
+
+SETVAR @"상대_MZ_表:0", 1
+SETVAR @"상대_필드:0", 51650
+
+SETVAR @"상대_MZ_永攻:1", 2400
+SETVAR @"상대_MZ_表:1", 1
+SETVAR @"상대_필드:1", 1631
+
+SETVAR @"상대_MZ_表:2", 1
+SETVAR @"상대_필드:2", 38211
+
+SETVAR @"상대_MZ_表:3", 1
+SETVAR @"상대_필드:3", 58631
+
+SETVAR @"상대_MZ_表:4", 1
+SETVAR @"상대_필드:4", 38210
+
+
+@IRAI_DECK_491(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+SIF 듀얼리스트 == "자신"
+	RETURN 20485
+SIF 듀얼리스트 == "상대"
+	RETURN 20486
+RETURN 0
+
+
+;자신덱
+@DUELDECK_20485(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(1)", 38214
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 38215
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 38215
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 73821
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 79634
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+
+
+
+
+
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(1)", 58630
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 58630
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 58630
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 58632
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 58632
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 58632
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+
+;상대덱
+@DUELDECK_20486(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(1)", 73820
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 73820
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 73820
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 73820
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 73820
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 73820
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 73820
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 73820
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 73820
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 73820
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 73820
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", -1
+
+
+
+
+
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(1)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1

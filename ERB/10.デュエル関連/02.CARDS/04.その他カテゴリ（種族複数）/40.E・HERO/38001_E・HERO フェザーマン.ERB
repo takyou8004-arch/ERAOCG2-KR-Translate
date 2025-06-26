@@ -1,0 +1,99 @@
+﻿@CARDNAME_38001,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = E•HERO 페더맨
+	CASE "略称"
+RESULTS = 페더맨
+	CASE "カテゴリ"
+RESULTS:0 = HERO
+RESULTS:1 = E•HERO
+ENDSELECT
+
+
+@CARD_38001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_38001(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 바람을 조종하고 하늘을 나는 날개를 가진 E•HERO. 천공으로부터의 일격, 페더 브레이크로 악을 심판한다.
+
+@CARDSUMMON_AA_38001
+
+
+@CARDCAN_38001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38001)
+SIF RESULT == 1
+	RETURN 0
+	
+SIF LOCAL == 0
+	RETURN 0
+IF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_38001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+[SKIPSTART]
+IF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,覚醒발동,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+		PRINTFORML フェザ- ブレイク！！
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = E•HERO
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",RESULT,1)
+	ENDIF
+ENDIF
+[SKIPEND]

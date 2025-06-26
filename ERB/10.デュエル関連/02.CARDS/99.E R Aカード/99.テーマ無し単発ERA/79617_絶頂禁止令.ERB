@@ -1,0 +1,417 @@
+﻿@CARDNAME_79617,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 절정금지령
+	CASE "略称"
+RESULTS = 절정금지령
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79617(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "추가日"
+		RETURN 250601
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79617(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 상대의 공개된 정보, 또는 자신의 덱 리스트에서 성별을 가진 몬스터의 이름을 1개 선언한다
+PRINTL 또는, 상대 플레이어의 이름을 선언하고 이 카드를 발동할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 마법 & 함정 존에 존재하는 한,
+PRINTL 선언된 카드명을 원래 카드명으로 하는 서로의 카드에 이하를 적용한다
+PRINTL ● 필드에서 융합·싱크로·엑시즈·링크 소환의 소재로 할 수 없다
+PRINTL ● 효과는 무효화된다
+PRINTL ● 필드에 존재하는 한 발정한다
+PRINTL ● 절정할 수 없다
+CALLFORM CARD_ABLE(1,ターン終了時強制)
+PRINTL ②: 이 카드는 발동 후, 3턴째 자신 엔드 페이즈에 파괴된다.
+CALLFORM CARD_ABLE(10,마함起動)
+PRINTL ③: 자신 메인 페이즈에 발동할 수 있다. 이 카드를 파괴한다.
+SETCOLOR C_GRAY
+;破壊された場合だと、_魔_汎数が取得できないので
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ④: 이 카드가 파괴되었을 경우에 발동할 수 있다. 선언한 몬스터의 절정금지는 해제되어……?
+RESETCOLOR
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79617(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79617)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;npcは自爆使わない。
+	SIF 듀얼리스트 == "상대"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == リアクション효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 破壊대상ゾーン != "마함"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF 破壊종류 != "효과"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79617(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ2
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 宣言名前
+#DIM DYNAMIC 효과蓄積
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 설치先
+#DIM DYNAMIC 절정횟수
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79617)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79617)
+	IF RESULT == 0
+		SETCOLOR C_YELLOW
+		PRINTFORML 선언카드를 선택 [9999]돌아간다 로 상대플레이어를 선언합니다
+		RESETCOLOR
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과範囲덱 = 1
+		효과範囲EX덱 = 1
+		효과範囲제외 = 1
+
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과範囲상대묘지 = 1
+		효과範囲상대제외 = 1
+		효과条件성별 = 성별在
+		효과条件종류 = モン全般
+		효과条件任意 = 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 9999 && OPPOSER != -1
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				選択カード_ID = OPPOSER
+				조교대상 = RESULT
+				설치先 = 現마함(듀얼리스트)
+				CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+				CALL SET_FIELD_INFO(듀얼리스트,"마함",설치先,"汎数",選択カード_ID)
+				宣言名前 = 절정금지【%NAME:조교대상%】
+				CALL CARD_SET_RENAME(듀얼리스트,"마함",설치先,宣言名前)
+			ENDIF
+		ELSE
+			選択カード_ID = RESULT:99
+			설치先 = 現마함(듀얼리스트)
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+			CALL SET_FIELD_INFO(듀얼리스트,"마함",설치先,"汎数",選択カード_ID)
+			TRYCALLFORM CARDNAME_{選択カード_ID}("名前")
+			宣言名前 = 절정금지【%RESULTS%】
+			CALL CARD_SET_RENAME(듀얼리스트,"마함",설치先,宣言名前)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	選択カード_ID = GETVAR(@"%듀얼리스트%_魔_汎数:場所")
+	IF 選択カード_ID != -1
+		CALL CARD_EFFECT_PROHIB(듀얼리스트,選択カード_ID,2)
+		TRYCALLFORM CARDNAME_{選択カード_ID}("名前")
+		宣言名前 = %RESULTS%
+		CALL FULLRESET
+효과条件名前 = %宣言名前%
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"不材",0,79617)
+		CALL FULLRESET
+효과条件名前 = %宣言名前%
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"不材",0,79617)
+		CALL FULLRESET
+효과条件名前 = %宣言名前%
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"発情",0,79617)
+		CALL FULLRESET
+효과条件名前 = %宣言名前%
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"発情",0,79617)
+		CALL FULLRESET
+효과条件名前 = %宣言名前%
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"接可",0,79617)
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "名前"	
+			SIF !MATCH(RESULTS, 宣言名前)
+				CONTINUE
+			IF GETVAR(@"%듀얼리스트%_MZ_특수状態:カウンタ") <= 0
+				SETVAR @"%듀얼리스트%_MZ_특수状態:カウンタ", 79617
+				CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+				IF RESULT != -1
+					조교대상 = RESULT
+					TEQUIP:조교대상:절정금지 = 1
+					SETCOLOR C_PINK
+					PRINTFORMW %CALLNAME:조교대상%는 절정할수 없게 되어버렸다！
+					RESETCOLOR
+				ENDIF
+			ENDIF
+		NEXT
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_필드:{カウンタ}") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:{カウンタ}")}, "名前"	
+			SIF !MATCH(RESULTS, 宣言名前)
+				CONTINUE
+			IF GETVAR(@"%対面者%_MZ_특수状態:カウンタ") <= 0
+				SETVAR @"%対面者%_MZ_특수状態:カウンタ", 79617
+				CALL CARD_EROTICS_FIELD(対面者,"필드",カウンタ)
+				IF RESULT != -1
+					조교대상 = RESULT
+					TEQUIP:조교대상:절정금지 = 1
+					SETCOLOR C_PINK
+					PRINTFORMW %CALLNAME:조교대상%는 절정할수 없게 되어버렸다！
+					RESETCOLOR
+				ENDIF
+			ENDIF
+		NEXT
+		IF 選択カード_ID == OPPOSER
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+				IF TEQUIP:조교대상:절정금지 != 1
+					TEQUIP:조교대상:절정금지 = 1
+					SETCOLOR C_PINK
+					PRINTFORMW %CALLNAME:조교대상%는 절정할수 없게 되어버렸다！
+					RESETCOLOR
+					;プレイヤーの発情状態がない
+					;CALL SET_PLAYER_INFO(対面者,"発情",2,1)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == ターン終了時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",1)
+	IF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") >= 3
+		PRINTFORMW ３턴 경과했기 때문에 절정금지령은 파괴됩니다
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+	ENDIF
+
+ELSEIF 종류 == リアクション효과
+	選択カード_ID = GETVAR(@"%듀얼리스트%_魔_汎数:場所")
+	IF 選択カード_ID != -1
+		TRYCALLFORM CARDNAME_{選択カード_ID}("名前")
+		宣言名前 = %RESULTS%
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "名前"	
+			SIF !MATCH(RESULTS, 宣言名前)
+				CONTINUE
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+			IF RESULT != -1
+				조교대상 = RESULT
+				TEQUIP:조교대상:절정금지 = 1
+				SETCOLOR C_PINK
+				PRINTFORMW %CALLNAME:조교대상%는 발정해 뜨거워진 몸을 위로하지만、절정하지 못하고있다…
+				RESETCOLOR
+				CALL EROTIC_MOVE("催眠자위",조교대상,-1,300)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"조교",1)
+			ENDIF
+		NEXT
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:{カウンタ}")}, "名前"	
+			SIF !MATCH(RESULTS, 宣言名前)
+				CONTINUE
+			CALL CARD_EROTICS_FIELD(対面者,"필드",カウンタ)
+			IF RESULT != -1
+				조교대상 = RESULT
+				TEQUIP:조교대상:절정금지 = 1
+				SETCOLOR C_PINK
+				PRINTFORMW %CALLNAME:조교대상%는 발정해 뜨거워진 몸을 위로하지만、절정하지 못하고있다…
+				RESETCOLOR
+				CALL EROTIC_MOVE("催眠자위",조교대상,-1,300)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"조교",1)
+			ENDIF
+		NEXT
+		IF 選択カード_ID == OPPOSER
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+				TEQUIP:조교대상:절정금지 = 1
+				SETCOLOR C_PINK
+				PRINTFORMW %CALLNAME:조교대상%는 발정해 뜨거워진 몸을 위로하지만、절정하지 못하고있다…
+				RESETCOLOR
+				CALL EROTIC_MOVE("催眠자위",조교대상,-1,300)
+				;설정場所79617は無理だったので、17
+				CALL CARD_ENG_EMBLEM(듀얼리스트,17,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 身代효과
+	選択カード_ID = GETVAR(@"%듀얼리스트%_魔_汎数:場所")
+	IF 選択カード_ID != -1
+		TRYCALLFORM CARDNAME_{選択カード_ID}("名前")
+		宣言名前 = %RESULTS%
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "名前"	
+			SIF !MATCH(RESULTS, 宣言名前)
+				CONTINUE
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+			IF RESULT != -1
+				조교대상 = RESULT
+				효과蓄積 = GETVAR(@"%듀얼리스트%_MZ_조교:カウンタ")
+				IF 효과蓄積 > 10
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"発情",2)
+				ENDIF
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"특수状態",0,1)
+				TEQUIP:조교대상:절정금지 = 0
+				SETCOLOR C_PINK
+				PRINTFORMW 절정금지가 해제되어、%CALLNAME:조교대상%에게 지금까지 억눌려있던 쾌감이 한번에 흘러들어온다！
+				RESETCOLOR
+				FOR カウンタ2,-1,효과蓄積
+					SIF カウンタ2 > 10
+						PRINTFORML %CALLNAME:조교대상%는 끝나지 않는 쾌락을 맞고있다
+					CALL EROTIC_MOVE("全身愛撫",조교대상,-1,150)
+					절정횟수 += RESULT:1
+				NEXT
+				IF 절정횟수 > 0
+					SETCOLOR C_PINK
+					PRINTFORMW %CALLNAME:조교대상%는 {절정횟수}번 간것같다
+					PRINTFORMW %CALLNAME:조교대상%는 염원하던 절정의 여운에 잠겨있다…
+					RESETCOLOR
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"発情",0,1)
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"無効",1,1)
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"戦無",1,1)
+				ENDIF
+				절정횟수 = 0
+			ENDIF
+		NEXT
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_필드:{カウンタ}")}, "名前"	
+			SIF !MATCH(RESULTS, 宣言名前)
+				CONTINUE
+			CALL CARD_EROTICS_FIELD(対面者,"필드",カウンタ)
+			IF RESULT != -1
+				조교대상 = RESULT
+				효과蓄積 = GETVAR(@"%対面者%_MZ_조교:カウンタ")
+				IF 효과蓄積 > 10
+					CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"発情",2)
+				ENDIF
+				CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"특수状態",0,1)
+				TEQUIP:조교대상:절정금지 = 0
+				SETCOLOR C_PINK
+				PRINTFORMW 절정금지가 해제되어、%CALLNAME:조교대상%에게 지금까지 억눌려있던 쾌감이 한번에 흘러들어온다！
+				RESETCOLOR
+				FOR カウンタ2,-1,효과蓄積
+					SIF カウンタ2 > 10
+						PRINTFORML %CALLNAME:조교대상%는 끝나지 않는 쾌락을 맞고있다
+					CALL EROTIC_MOVE("全身愛撫",조교대상,-1,150)
+					절정횟수 += RESULT:1
+				NEXT
+				IF 절정횟수 > 0
+					SETCOLOR C_PINK
+					PRINTFORMW %CALLNAME:조교대상%는 {절정횟수}번 간것같다
+					PRINTFORMW %CALLNAME:조교대상%는 염원하던 절정의 여운에 잠겨있다…
+					RESETCOLOR
+					CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"発情",0,1)
+					CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"無効",1,1)
+					CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"戦無",1,1)
+				ENDIF
+				절정횟수 = 0
+			ENDIF
+		NEXT
+		IF 選択カード_ID == OPPOSER
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+				TEQUIP:조교대상:절정금지 = 1
+				효과蓄積 = GETVAR(@"%듀얼리스트%_永紋_汎数１:17")
+				SETVAR (@"%듀얼리스트%_永紋_汎数１:17") , 0
+				TEQUIP:조교대상:절정금지 = 0
+				SETCOLOR C_PINK
+				PRINTFORMW 절정금지가 해제되어、%CALLNAME:조교대상%에게 지금까지 억눌려있던 쾌감이 한번에 흘러들어온다！
+				RESETCOLOR
+				FOR カウンタ2,-1,효과蓄積
+					SIF カウンタ2 > 10
+						PRINTFORML %CALLNAME:조교대상%는 끝나지 않는 쾌락을 맞고있다
+					CALL EROTIC_MOVE("全身愛撫",조교대상,-1,150)
+					절정횟수 += RESULT:1
+				NEXT
+				IF 절정횟수 > 0
+					SETCOLOR C_PINK
+					PRINTFORMW %CALLNAME:조교대상%는 {절정횟수}번 간것같다
+					PRINTFORMW %CALLNAME:조교대상%는 염원하던 절정의 여운에 잠겨있다…
+					RESETCOLOR
+				ENDIF
+				절정횟수 = 0
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

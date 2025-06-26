@@ -1,0 +1,131 @@
+﻿;-------------------------------------------------
+;사과한다
+;日常계커맨드　レベル1
+;-------------------------------------------------
+@COM303
+SELECTCASE TFLAG:192
+	;通常
+	CASE 0
+		LOCAL = RAND:100
+		LOCAL:1 = ABL:MASTER:화술기능 * 2 + ABL:친밀
+		;大成功
+		IF LOCAL < LOCAL:1
+			TFLAG:SELECTCOM분기 = 1
+			;信頼
+			TFLAG:98 = 1
+		;成功
+		ELSEIF LOCAL < LOCAL:1 + 30
+			TFLAG:SELECTCOM분기 = 0
+		;失敗
+		ELSE
+			TFLAG:SELECTCOM분기 = -1
+		ENDIF
+	;強制成功or大成功
+	CASE 1
+		;大成功
+		IF RAND:100 < ABL:MASTER:화술기능 * 2 + ABL:친밀
+			TFLAG:SELECTCOM분기 = 1
+			;信頼
+			TFLAG:98 = 1
+		;成功
+		ELSE
+			TFLAG:SELECTCOM분기 = 0
+		ENDIF
+	;強制失敗
+	CASE -1
+		TFLAG:SELECTCOM분기 = -1
+	;コマンド終了
+	CASE -2
+		TFLAG:SELECTCOM분기 = -1
+		RETURN 0
+ENDSELECT
+
+DOWNBASE:MASTER:체력 += 50
+DOWNBASE:MASTER:기력 += 200
+
+IF TARGET > 0 && CFLAG:극대노 && !CFLAG:수면
+	;固定で획득するソース
+	SOURCE:정복 = 400
+	;ABL:순종チェック
+	IF ABL:순종 <= 1
+		SOURCE:정복 += 2000 - (ABL:순종 * 30)
+	ELSEIF ABL:순종 <= 3
+		SOURCE:정복 += 1000 - (ABL:순종 * 30)
+	ELSEIF ABL:순종 <= 5
+		SOURCE:정복 += 750 - (ABL:순종 * 40)
+	ELSEIF ABL:순종 <= 8
+		SOURCE:정복 += 500 - (ABL:순종 * 20)
+	ELSEIF ABL:순종 <= 11
+		SOURCE:정복 += 200 - (ABL:순종 * 20)
+	ELSE
+		SOURCE:정복 += 100 - (ABL:순종 * 10)
+	ENDIF
+	;ABL:친밀チェック
+	IF ABL:친밀 <= 1
+		SOURCE:정복 -= (ABL:친밀 * 60)
+	ELSEIF ABL:친밀 <= 3
+		SOURCE:정복 -= (ABL:친밀 * 60)
+	ELSEIF ABL:친밀 <= 5
+		SOURCE:정복 -= (ABL:친밀 * 60)
+	ELSEIF ABL:친밀 <= 8
+		SOURCE:정복 -= (ABL:친밀 * 50)
+	ELSEIF ABL:친밀 <= 11
+		SOURCE:정복 -= (ABL:친밀 * 40)
+	ELSE
+		SOURCE:정복 -= (ABL:친밀 * 30)
+	ENDIF
+	
+	SIF SOURCE:정복 < 0
+		SOURCE:정복 = 0
+ENDIF
+;PRINTFORML TFLAG:SELECTCOM분기：{TFLAG:SELECTCOM분기}
+;成功していたら분노状態解除
+IF TFLAG:SELECTCOM분기 == 0
+	CFLAG:극대노 = 0
+	CFLAG:기분나쁨 = 0
+	BASE:분노 /= 2
+	CALL ANGER_AWAY(TARGET)
+
+ELSEIF TFLAG:SELECTCOM분기 == 1
+	CFLAG:극대노 = 0
+	CFLAG:기분나쁨 = 0
+	BASE:분노 = 0
+	CALL ANGER_AWAY(TARGET)
+ELSE
+	;何も無し！残念っ！
+ENDIF
+SIF BASE:분노 < 0
+	BASE:분노 = 0
+;所要時間
+IF ABL:순종 <= 5
+	TIME += 90
+ELSEIF ABL:순종 <= 10
+	TIME += 60
+ELSE
+	TIME += 45
+ENDIF
+DOWNBASE:MASTER:체력 += 50
+DOWNBASE:MASTER:기력 += 100
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE303
+;사과한다実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(303)
+	RETURN RESULT
+;수면中
+SIF CFLAG:수면
+	RETURN 0
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+;분노中でない
+SIF MARK:TARGET:반발각인 != 0 || CFLAG:TARGET:극대노
+	RETURN 1
+RETURN 0
+

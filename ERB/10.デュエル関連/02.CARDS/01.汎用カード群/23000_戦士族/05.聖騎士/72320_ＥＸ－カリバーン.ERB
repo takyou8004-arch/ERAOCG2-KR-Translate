@@ -1,0 +1,149 @@
+﻿@CARDNAME_72320,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성검 ＥＸ－칼리번
+	CASE "略称"
+RESULTS = ＥＸ－칼리번
+	CASE "カテゴリ"
+RESULTS:0 = 성검
+ENDSELECT
+
+
+@CARD_72320(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 装備마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72320(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「성기사」 몬스터에게만 장착 가능.
+PRINTL 「성검 ＥＸ－칼리번」의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 장착 몬스터는 대상 내성을 얻는다.
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ②: 자신 / 상대 메인 페이즈에 묘지의 이 카드를 제외하고,
+PRINTL 자신 필드의 「성기사」 X 몬스터 1장을 대상으로 하여 발동할 수 있다. (체인 1에서만 발동 가능)
+PRINTL 그 자신의 몬스터와 카드명이 다른 「성기사」 X 몬스터 1장을,
+PRINTL 대상 몬스터 위에 겹쳐서 X 소환으로 취급하여 EX덱에서 특수 소환한다.
+PRINTL 
+
+
+@CARDCAN_72320(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72320)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 성기사
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,72320)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	효과条件カテゴリ = 성기사
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0	
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72320(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 필드選択カード
+#DIMS DYNAMIC 필드選択カード名
+#DIM DYNAMIC EX選択カード
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 攻撃力상승
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72320)
+	IF RESULT == 0
+		;패에서 발동後、마법トラップ 존에 カード이동
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 성기사
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+ELSEIF 종류 == 묘지起動
+CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72320,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = 엑시즈
+		효과条件カテゴリ = 성기사
+		
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		필드選択カード = RESULT
+		IF 필드選択カード != 9999
+			CALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{필드選択カード}")}("名前")
+			필드選択カード名 = %RESULTS%
+			CALL FULLRESET
+			효과条件종류 = 엑시즈
+			효과条件カテゴリ = 성기사
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			EX選択カード = RESULT
+			IF EX選択カード != 9999
+				CALL RESETCONDITION_MAT
+				代替素材数 = 1
+素材条件名前 = %필드選択カード名%
+				重ねてＸ = 1
+				CALL XYZSUMMON(듀얼리스트, EX選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"対耐")
+ENDIF
+

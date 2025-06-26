@@ -1,0 +1,296 @@
+@CARDNAME_91030,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 엑시즈 도시락
+	CASE "略称"
+		RESULTS = 엑시즈 도시락
+	CASE "カテゴリ"
+		RESULTS:0 = 엑시즈
+ENDSELECT
+
+
+@CARD_91030(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91030(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①：상대의 몬스터가 묘지로 보내진 경우、
+PRINTL 자신 필드의 Ｘ몬스터 １장을 대상으로 하고 발동할 수 있다。
+PRINTL 상대의 묘지에서 몬스터 １장을 고르고 제외하고、대상의 몬스터의 Ｘ소재를 １개 늘린다。
+PRINTL 그 후、食事フェイズに入る（デュエル中１번のみ）。
+CALLFORM CARD_ABLE(0,묘지起動 ,フリー誘発)
+PRINTL ②：묘지의 이 카드를 제외하고、ＥＸ덱에서 특수 소환된 필드의 몬스터 １장을 대상으로 하고 발동할 수 있다。
+PRINTL 그 몬스터의 표시 형식을 변경する。
+
+
+@CARDCAN_91030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91030)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"묘지送り全般+H",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	SIF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件召種 = 召種EX덱
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_91030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 味付け
+#DIM DYNAMIC 材料
+#DIM DYNAMIC 具の量
+#DIM DYNAMIC 回復量
+#DIM DYNAMIC お腹空き
+#DIM DYNAMIC 満腹感
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91030)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = 엑시즈
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL FULLRESET
+			효과範囲상대묘지 = 1
+			효과条件종류 = モン全般
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				選択カード_ID = RESULT:1
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"Ｘ",1)
+
+				IF 듀얼리스트 == "자신" && 발동済_D1(듀얼리스트,91030) == 0
+					PRINTL
+					PRINTW 食事フェイズに入ります
+					PRINTL
+					PRINTL
+					TRYCALLFORM CARD_{選択カード_ID},"속성"
+					味付け = RESULT
+					TRYCALLFORM CARD_{選択カード_ID},"종족"
+					材料 = RESULT
+					TRYCALLFORM CARD_{選択カード_ID},"攻撃力"
+					具の量 = RESULT
+					回復量 = 具の量 / 3
+
+					PRINTW 今日のお弁当は……
+					PRINTL
+					IF 具の量 <= 1
+						PRINTW 空っぽだった……
+						PRINTL
+						PRINTW 食事フェイズを終了します
+						RETURN 0
+					ENDIF
+					IF 味付け == 화염속성
+						PRINT 火を噴くほど辛い
+					ELSEIF 味付け == 물속성
+						PRINT キンキンに冷えた
+					ELSEIF 味付け == 땅속성
+						PRINT 塩気たっぷりの
+					ELSEIF 味付け == 바람속성
+						PRINT のど越しさわやかな
+					ELSEIF 味付け == 어둠속성
+						PRINT 箱いっぱいの海苔に包まれた
+					ELSEIF 味付け == 빛속성
+						PRINT 直視できないほどに輝く
+					ENDIF
+					IF 材料 == 마법사족
+						PRINTL ケミカル弁当だ！
+						PRINTW 変な色の食べ物がいっぱい入ってる！
+					ELSEIF 材料 == 드래곤족
+						PRINTL ドラゴン弁当だ！
+						PRINTW すごい！箱の半分を巨大な肉が占領している！
+					ELSEIF 材料 == 언데드족
+						PRINTL セメタリ-弁当だ！
+						PRINTW 毒沼ソ-スがすごい緑色だ……
+					ELSEIF 材料 == 전사족
+						PRINTL 労働者弁当だ！
+						PRINTW 肉やら野菜やらがぎっしり詰まってる！
+					ELSEIF 材料 == 기계족
+						PRINTL ロボット弁当だ！
+						PRINTW 色んな食べ物を組み合わせよう！
+					ELSEIF 材料 == 야수족
+						PRINTL 肉弁当だ！
+						PRINTW 肉、肉、キャベツ、肉！ここまで肉肉しいとすがすがしいぜ！
+					ELSEIF 材料 == 비행야수족
+						PRINTL からあげ弁当だ！
+						PRINTW これだよ、これ！
+					ELSEIF 材料 == 비늘야수족
+						PRINTL トカゲ弁当だ！
+						PRINTW 蛇の開きが入ってる……！
+					ELSEIF 材料 == 악마족
+						PRINTL お子様弁当だ！
+						PRINTW お菓子が９割！
+					ELSEIF 材料 == 천사족
+						PRINTL ホワイト弁当だ！
+						PRINTW すげえ！全部白い！
+					ELSEIF 材料 == 곤충족
+						PRINTL インセクト弁当だ！
+						PRINTW 虫がまるまる入ってるのは人を選ぶな……
+					ELSEIF 材料 == 원소정령족
+						PRINTL 三食弁当だ！
+						PRINTW お得感がすごい！
+					ELSEIF 材料 == 식물족
+						PRINTL 野菜弁当だ！
+						PRINTW 野菜以外は米しかない！
+					ELSEIF 材料 == 사이킥족
+						PRINTL 催眠弁当だ！
+						PRINTW なんか……すごく食べたくなってきた！
+					ELSEIF 材料 == 사이버스족
+						PRINTL 링크弁当だ！
+						PRINTW 링크先の食べ物と一緒に食べよう！
+					ELSEIF 材料 == 바다생물족
+						PRINTL 海鮮弁当だ！
+						PRINTW エビの主張が激しい！
+					ENDIF
+					PRINTL
+					PRINTL
+					PRINTBUTTON @"【いただきます！】",1
+					PRINTL
+					BINPUT
+					PRINTL
+					CALL RECOVER_PERMIL(MASTER,回復量,"체력",1)
+					CALL RECOVER_PERMIL(MASTER,回復量,"기력",1)
+					お腹空き = MAXBASE:MASTER:체력 - BASE:MASTER:체력
+					IF 回復量 * 3 > お腹空き
+						PRINTW ちょっと多いか……？
+						満腹感 ++
+					ELSE
+						PRINTW うまい！うまい！
+					ENDIF
+					PRINTL
+					CALL RECOVER_PERMIL(MASTER,回復量,"체력",1)
+					CALL RECOVER_PERMIL(MASTER,回復量,"기력",1)
+					お腹空き = MAXBASE:MASTER:체력 - BASE:MASTER:체력
+					IF 回復量 * 2 > お腹空き
+						IF 満腹感 == 1
+							PRINTW 少し辛くなってきた……
+						ELSE
+							PRINTW ちょっと多いか……？
+						ENDIF
+						満腹感 ++
+					ELSE
+						PRINTW 全然飽きない！まだまだイケるぜ！
+					ENDIF
+					CALL RECOVER_PERMIL(MASTER,回復量,"체력",1)
+					CALL RECOVER_PERMIL(MASTER,回復量,"기력",1)
+					お腹空き = MAXBASE:MASTER:체력 - BASE:MASTER:체력
+					IF 回復量 > お腹空き
+						IF 満腹感 == 2
+							PRINTW 苦しい……もう食べたく無い……
+							PRINTL ！？
+							PRINTW 食堂のおばちゃんがこっちを見ている！残せない！
+						ELSE
+							PRINTW うっ……食べ過ぎたかもしれない……苦しい……
+						ENDIF
+						満腹感 ++
+					ELSE
+						PRINTW ああ、もうおかずが無い……
+					ENDIF
+					PRINTW …………。
+					PRINTL
+					SETCOLOR C_YELLOW
+					PRINTW 完食！
+					RESETCOLOR
+					PRINTL
+					PRINTL
+					PRINTBUTTON @"【ごちそうさまでした！】",1
+					PRINTL
+					BINPUT
+					IF 満腹感 > 0
+						PRINTW 一応完食は出来たものの、少し疲れてしまった……
+						BASE:MASTER:체력 -= 500
+						BASE:MASTER:기력 -= 500
+					ELSE
+						PRINTW とても만족のいく味だった！
+					ENDIF
+					CALL CARD_EFFECT_USE(듀얼리스트,91030,20)
+					PRINTL
+					PRINTL
+					PRINTW 食事フェイズを終了します
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91030)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과추가종류 = 3
+		효과条件召種 = 召種EX덱
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"표시변경")
+	ENDIF
+ENDIF

@@ -1,0 +1,125 @@
+﻿@CARDNAME_29186,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 세이크리드 에스카
+	CASE "略称"
+RESULTS = 사 에스카
+	CASE "カテゴリ"
+RESULTS:0 = 세이크리드
+
+ENDSELECT
+
+
+@CARD_29186(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족 
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2100
+	CASE "守備力"
+		RETURN 1400
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_29186(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ② 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 특수소환했을 경우에 발동할 수 있다.
+PRINTL 덱에서 「세이크리드」 몬스터 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(1,X素材時효과)
+PRINTL ②: 이 카드가 「세이크리드」 몬스터의 엑시즈 소재로 사용되었을 경우에 발동할 수 있다.
+PRINTL 패에서 「세이크리드」 몬스터 1장을 소환한다(릴리스는 필요로 하지 않는다).
+
+
+@CARDCAN_29186(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29186)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 세이크리드
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == X素材時효과
+	SIF 발동済_1(듀얼리스트,29186)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 세이크리드
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 세이크리드
+	효과条件종류 = 엑시즈
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29186(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29186)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 세이크리드
+		효과条件종류 = モン全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == X素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29186,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 세이크리드
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",1)
+		ENDIF
+	ENDIF
+ENDIF

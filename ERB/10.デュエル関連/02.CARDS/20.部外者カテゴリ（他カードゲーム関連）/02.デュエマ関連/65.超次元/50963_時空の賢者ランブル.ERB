@@ -1,0 +1,272 @@
+﻿@CARDNAME_50963,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 시공의 현자 럼블
+	CASE "略称"
+RESULTS = 시공 럼블
+	CASE "カテゴリ"
+RESULTS:0 = 사이킥
+RESULTS:1 = 커맨드
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_50963(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 초차원
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 1600
+
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_50963(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①: 이 카드가 전투를 할 경우에 발동할 수 있다.
+PRINTL 전투 중인 몬스터를 전부 제외한다.
+CALLFORM CARD_ABLE(1,ターン開始時)
+PRINTL ②: 자신의 턴 개시 시에 발동할 수 있다.
+PRINTL 자신의 덱 위에서부터 3장 넘기고, 그 중 몬스터 카드 1장을 묘지로 보내고, 덱을 셔플한다.
+PRINTL 이 효과로 몬스터 카드를 묘지로 보냈을 경우,
+PRINTL 이 카드는 각성하여 「공포의 각성자 럼블 렉터-」가 된다.
+PRINTL 각성은 1턴에 1번만 할 수 있다.
+
+@CARDCAN_50963(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50963)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF 발동済_1(듀얼리스트,覚醒발동)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50963(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 破壊カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50963)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き)
+		破壊カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",破壊カード,"제외")
+	ENDIF
+ELSEIF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,覚醒발동,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所,3)
+		IF RESULT:1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+			CALL CARD_RECONSTRUCT(듀얼리스트,ゾーン,場所,150963)
+		ENDIF
+	ENDIF
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARDNAME_150963,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 공포의 각성자 럼블 렉터-
+	CASE "略称"
+RESULTS = 럼블 렉터-
+	CASE "カテゴリ"
+RESULTS:0 = 사이킥
+RESULTS:1 = 각성자
+RESULTS:2 = 커맨드
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_150963(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3400
+	CASE "守備力"
+		RETURN 2400
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_150963(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①: 이 카드가 전투를 할 경우에 발동할 수 있다.
+PRINTL 그 상대의 몬스터를 제외한다.
+CALLFORM CARD_ABLE(0,攻撃後強制誘発)
+PRINTL ②: 이 카드는 상대 몬스터를 파괴했을 경우, 이어서 공격할 수 있다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ③: 이 카드가 파괴될 경우, 대신 이 카드는 「시공의 현자 럼블」이 되고, 각성 상태를 잃는다.
+
+@CARDCAN_150963(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,150963)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+ELSEIF　종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF モンスター数(対面者) == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_150963(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 破壊カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,150963)
+	IF RESULT == 0
+	破壊カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",破壊カード,"제외")
+	ENDIF
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",1)
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,150963)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",0,1)
+		CALL CARD_RECONSTRUCT(듀얼리스트,ゾーン,場所,50963)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

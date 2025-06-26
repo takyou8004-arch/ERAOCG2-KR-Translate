@@ -1,0 +1,137 @@
+﻿@CARDNAME_23111,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 진여섯무사－에니시
+	CASE "略称"
+RESULTS = 진여섯무사에니시
+	CASE "カテゴリ"
+RESULTS:0 = 여섯무사
+ENDSELECT
+
+
+@CARD_23111(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 700
+	CASE "성별"
+		RETURN 雄性
+
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23111(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ①: 자신 / 상대 턴에 1번, 자신 필드에 「진여섯무사－에니시」 이외의 「여섯무사」 몬스터가 존재할 경우,
+PRINTL 묘지에서 「여섯무사」이라는 이름이 붙은 몬스터 2장을 게임에서 제외하여 발동할 수 있다.
+PRINTL 상대 필드의 카드 1장을 선택하여 패로 되돌린다.
+
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 자신 필드에 이 카드 이외의 「여섯무사」 몬스터가 2장 이상 존재할 경우,
+PRINTL 이 카드의 공격력 / 수비력은 500 상승한다.
+PRINTL 
+
+@CARDCAN_23111(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23111)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件固名前 = 진여섯무사－에니시
+	효과条件カテゴリ = 여섯무사
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 여섯무사
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 여섯무사
+	효과条件固名前 = 진여섯무사－에니시
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23111(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23111,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 여섯무사
+		효과条件종류 = モン全般
+		효과条件複数 = 2
+		효과条件行先플래그 = 2
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	攻撃力修正 = 500
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正,攻撃力修正)	
+ENDIF
+

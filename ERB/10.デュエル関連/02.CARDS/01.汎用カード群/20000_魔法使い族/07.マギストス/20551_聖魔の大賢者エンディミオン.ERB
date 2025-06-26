@@ -1,0 +1,132 @@
+﻿@CARDNAME_20551,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마기스토스 마스터 엔디미온
+	CASE "略称"
+RESULTS = 성마의 대현자
+	CASE "カテゴリ"
+RESULTS:0 = 마기스토스
+RESULTS:1 = 엔디미온
+ENDSELECT
+
+
+@CARD_20551(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1300
+	CASE "守備力"
+		RETURN 1700
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_20551(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환에 성공했을 경우,
+PRINTL 자신 필드의 「마기스토스」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL EX덱에서 「마기스토스」 몬스터 1장을 고르고, 장착 카드로서 대상의 몬스터에 장착한다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신 마법 & 함정 존의 앞면 표시의 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 파괴하고, 자신은 덱에서 1장 드로우한다.
+;PRINTL その後、패를 １장選んで덱の一番下으로 되돌린다。
+
+
+@CARDSUMMON_AA_20551
+
+
+@CARDCAN_20551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20551)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,20551)
+		RETURN 0
+	SIF 마함数(듀얼리스트) == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,20551)
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_20551(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20551,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 마기스토스
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択場所 = RESULT
+		IF 選択場所 != 9999
+			CALL FULLRESET
+			효과範囲EX덱 = 1
+			효과条件カテゴリ = 마기스토스
+			CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,選択場所,,20551)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20551,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"마함",ゾーン,場所,20551)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			CALL CARD_DISPOSE(듀얼리스트,"마함",選択カード,破壊行き)
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ENDIF

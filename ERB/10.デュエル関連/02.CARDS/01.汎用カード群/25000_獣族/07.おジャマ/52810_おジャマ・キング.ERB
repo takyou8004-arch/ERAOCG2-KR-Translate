@@ -1,0 +1,117 @@
+@CARDNAME_52810,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 오자마 킹
+	CASE "略称"
+RESULTS = 오자마 왕
+	CASE "カテゴリ"
+RESULTS:0 = 오자마
+ENDSELECT
+
+
+@CARD_52810(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 3000
+	CASE "추가日"
+		RETURN 250322
+ENDSELECT
+
+RETURN 0
+
+
+@CARD_EXPLANATION_52810(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「오자마 그린」＋「오자마 옐로」＋「오자마 블랙」
+CALLFORM CARD_ABLE(0,특수소환時強制,EX소환時強制)
+PRINTL ①: 이 카드가 필드에 앞면 표시로 존재하는 한,
+PRINTL 상대의 몬스터 존을 3곳까지 가능한 한 사용 불가능하게 한다.
+
+@CARDSUMMON_52810(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+
+IF EX参照 == 0 || EX参照 == 1
+素材条件名前 = 방해꾼 그린
+ELSEIF EX参照 >= 10
+素材条件名前 = 방해꾼 옐로
+ELSEIF EX参照 >= 11
+素材条件名前 = 방해꾼 블랙
+ENDIF
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,52810) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_52810(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52810)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 특수소환時強制 || 종류 == EX소환時強制
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52810(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 특수소환時強制 || 종류 == EX소환時強制
+	REPEAT 3
+		CALL FULLRESET
+		CALL RESRICT_FIELD(듀얼리스트,ゾーン,場所)
+		SIF モンスター数(対面者) >= 5
+			RETURN 0
+	REND
+ENDIF

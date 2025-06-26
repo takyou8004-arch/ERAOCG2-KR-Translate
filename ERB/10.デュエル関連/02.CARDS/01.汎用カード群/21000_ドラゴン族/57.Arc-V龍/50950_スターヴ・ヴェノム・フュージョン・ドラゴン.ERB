@@ -1,0 +1,167 @@
+﻿@CARDNAME_50950,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스타브 베놈 퓨전 드래곤
+	CASE "略称"
+RESULTS = SVF 드래곤
+	CASE "カテゴリ"
+RESULTS:0 = 퓨전 드래곤
+RESULTS:1 = 퓨전
+RESULTS:2 = 베놈
+ENDSELECT
+
+
+@CARD_50950(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50950(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 토큰 이외의 어둠 속성 몬스터 × 2
+PRINTL 
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 융합 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 상대 필드의 몬스터 1장을 고르고, 그 공격력만큼 이 카드의 공격력을 올린다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 상대 필드의 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드의 「필드 기동 효과」를 발동한다. (필드에 존재할 경우, 기동할 수 있는 효과)
+CALLFORM CARD_ABLE(0,破壊→묘지 ,戦闘→묘지)
+PRINTL ③: 이 카드가 파괴되었을 경우에 발동할 수 있다.
+PRINTL 상대 필드의 특수 소환된 몬스터를 전부 파괴한다.
+
+
+@CARDSUMMON_50950(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件종류 = トークン以外
+素材条件속성 = 어둠속성
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,50950) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_50950(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50950)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_50950(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50950)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALLFORM CARD_{GETVAR(@"%対面者%_필드:選択カード")}("攻撃力")
+			攻撃力修正 = RESULT
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",攻撃力修正)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50950,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALLFORM CARDEFFECT_{GETVAR(@"%対面者%_필드:選択カード")}(듀얼리스트,필드起動,"효과処理")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50950)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件召種 = 召種全특수
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+	ENDIF
+ENDIF
+
+
+
+

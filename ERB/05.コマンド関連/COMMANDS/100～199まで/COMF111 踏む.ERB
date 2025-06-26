@@ -1,0 +1,66 @@
+﻿;-------------------------------------------------
+;밟는다
+;SM계커맨드、レベル3
+;-------------------------------------------------
+@COM111
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 10
+DOWNBASE:기력 += 100
+CALL SOURCE_CALC_고통(TARGET, MASTER, 500)
+
+IF TCVAR:TARGET:도게자중
+	CALL SOURCE_CALC_고통(TARGET, MASTER, 500)
+	TFLAG:SELECTCOM분기 = 5
+;おなかつぶし
+ELSEIF TCVAR:질내사정플래그 
+	CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER, 200)
+	TFLAG:SELECTCOM분기 = 4
+;Ｃ踏み
+ELSEIF GETBIT(TCVAR:TARGET:전회절정부위, 1)
+	CALL SOURCE_CALC_쾌Ｃ(TARGET, MASTER, 200)
+	TFLAG:SELECTCOM분기 = 3
+;Ｂ踏み
+ELSEIF GETBIT(TCVAR:TARGET:전회절정부위, 4)
+	CALL SOURCE_CALC_쾌Ｂ(TARGET, MASTER, 200)
+	TFLAG:SELECTCOM분기 = 2
+;普通に밟는다
+ELSE
+	TFLAG:SELECTCOM분기 = 1
+ENDIF
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 2
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 2
+ENDIF
+
+SIF TALENT:TARGET:마조
+	EXP:TARGET:봉사쾌락경험 += 1
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE111
+;土下座実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(111)
+	RETURN RESULT
+
+SIF TCVAR:TARGET:도게자중
+	RETURN 1
+SIF TALENT:TARGET:마조
+	RETURN 1
+SIF ABL:TARGET:마조끼 <= 3
+	RETURN 0
+SIF TCVAR:TARGET:절정여운 == 0
+	RETURN 0
+RETURN 1

@@ -1,0 +1,126 @@
+@CARDNAME_25311,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 대익의 바포메트
+	CASE "略称"
+RESULTS = 대익 바포메트
+	CASE "カテゴリ"
+RESULTS:0 = 합성수융합
+RESULTS:1 = 바포메트
+ENDSELECT
+
+
+@CARD_25311(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 1800
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_25311(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時 ,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 야수족 레벨 4 몬스터 및 「합성수융합」을 각각 1장까지 덱에서 패에 넣는다.
+PRINTL 이 효과의 발동 후, 턴 종료 시까지 자신은 융합 몬스터밖에 엑스트라 덱에서 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(2,F素材時효과)
+PRINTL ②: 이 카드가 융합 소환의 소재가 되어 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 자신의 묘지의 미확인족 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_25311(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25311)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,25311)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 야수족
+    효과条件レベル = 4
+	효과条件スーパー名前 = キマイラ 융합
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == F素材時효과
+	SIF 발동済_2(듀얼리스트,25311)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 미확인족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25311(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25311,1)
+	IF RESULT == 0
+		CALL FULLRESET
+        효과条件종족 = 야수족
+        효과条件レベル = 4
+        CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		CALL FULLRESET
+효과条件名前 = 합성수융합
+        CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+		EX소환可能종류 = 융합
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+	ENDIF
+ELSEIF 종류 == F素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25311,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 미확인족
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+

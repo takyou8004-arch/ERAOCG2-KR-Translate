@@ -1,0 +1,154 @@
+﻿@CARDNAME_52092,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 페이버릿 챔프 빅토르
+	CASE "略称"
+RESULTS =  F 빅토르
+	CASE "カテゴリ"
+RESULTS:0 = 노바 그래플러
+RESULTS:1 = 빅토르
+RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_52092(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 0
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+
+@CARDSUMMON_52092(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+
+CALL RESETCONDITION_MAT
+必要素材数 = 1
+素材条件カテゴリ = ビクト-ル
+
+IF EX参照 == 1
+	CALL STRIDECAN(듀얼리스트,소환カード,52092) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52092(종류)
+#DIM DYNAMIC 종류
+
+PRINTL '초월' '빅토르' 몬스터
+PRINTL (자신의 패에서 몬스터 1장을 제외하고 발동할 수 있다.
+PRINTL 　EX덱의 이 카드를 자신의 필드의 지정된 몬스터 1체 위에 겹쳐서 '초월'한다.
+PRINTL  '초월'한 이 카드의 이름은 겹친 몬스터와 같은 이름으로 취급하며,
+PRINTL 　겹친 몬스터의 공격력 수비력만큼 이 카드의 공격력 수비력을 올린다.
+PRINTL  '초월'은 1턴에 1번만 할 수 없으며, 선공 1턴째에는 사용할 수 없다.)
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ①: 이 카드가 공격을 실행한 데미지 스텝 종료 시에 손패를 2장 버리고 발동할 수 있다.
+PRINTL 자신의 필드의 몬스터는 모든 공격 가능 횟수를 1회로 한다.
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ②: 자신의 '노바 그래플러' 몬스터가 공격 선언할 때마다,
+PRINTL 이 카드의 공격력은 턴 종료 시까지 500 포인트 올린다.
+
+
+
+@CARDCAN_52092(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52092)
+SIF RESULT == 1
+	RETURN 0
+
+IF 	종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	IF !MATCH(RESULTS,"노바 그래플러")
+		RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52092(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カード추가先
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 条件合致数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"不材")
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52092)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件複数 = 2
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦",1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",500)
+ENDIF

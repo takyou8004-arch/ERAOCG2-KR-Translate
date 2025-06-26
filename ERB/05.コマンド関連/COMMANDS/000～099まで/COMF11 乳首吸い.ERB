@@ -1,0 +1,169 @@
+﻿;-------------------------------------------------
+;유두빨기
+;애무계커맨드、レベル1
+;-------------------------------------------------
+@COM11
+;着脱の処理
+TEQUIP:유두빨기 = !TEQUIP:유두빨기
+
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+;行為者
+TCVAR:116 = MASTER
+;봉사쾌락
+TCVAR:MASTER:108 = 1
+
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+
+DOWNBASE:체력 += 5
+DOWNBASE:기력 += 50
+
+CALL SOURCE_CALC_노출(TARGET, MASTER, 50)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 80)
+CALL SOURCE_CALC_쾌Ｂ(TARGET, MASTER, 100)
+IF TALENT:TARGET:스위트바디
+	CALL RECOVER_PERMIL(MASTER,50,"체력",1)
+	CALL RECOVER_PERMIL(MASTER,100,"기력",1)
+ENDIF
+
+
+
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;奴隷のＢ⇔조교者の口の汚れが이동
+STAIN:5 |= STAIN:MASTER:0
+STAIN:MASTER:0 |= STAIN:5
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;同性愛　레즈なら戻り値1게이なら戻り値2
+
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 5
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 5
+ENDIF
+
+;조교者が고양이혀持ちの場合は、조교者に가학쾌락경험を추가
+SIF TALENT:MASTER:고양이혀
+	EXP:MASTER:가학쾌락경험 += 1
+EXP:MASTER:펠라경험 ++
+RETURN 1
+;-------------------------------------------------
+;装着계속の処理
+;-------------------------------------------------
+@EQUIP_COM11(ARG)
+PRINTL ＜유두 빠는중＞
+
+SELECTCASE SELECTCOM
+	CASE 0 TO 2,4,8,20,47 TO 49,60 TO 66,68,70,71,81 TO 85,91 TO 94,105,120 TO 126,140,410
+		PRINTL ＜유두빨기 해제＞
+		SIF TEQUIP:유두빨기
+			TEQUIP:유두빨기 = 0
+	CASEELSE
+;유두빨기中
+
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+	DOWNBASE:ARG:체력 += 5
+	DOWNBASE:ARG:기력 += 20
+	DOWNBASE:MASTER:체력 += 5
+	DOWNBASE:MASTER:기력 += 10
+
+
+	CALL SOURCE_CALC_쾌Ｂ(TARGET, -1,100)
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 25)
+	CALL SOURCE_CALC_고통(TARGET, MASTER, 50)
+
+	[SKIPSTART]
+	SOURCE:쾌Ｂ += (ABL:MASTER:혀 + 1) * 10
+	SOURCE:노출 = 20
+	SOURCE:불결 = 30
+	SOURCE:반감 = 50
+	SOURCE:정애 += ABL:MASTER:혀 * 5
+
+	SIF ABL:친밀 >= 5
+		SOURCE:정애 += (ABL:친밀 * 3)
+	[SKIPEND]
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;奴隷のＢ⇔조교者の口の汚れが이동
+STAIN:5 |= STAIN:MASTER:0
+STAIN:MASTER:0 |= STAIN:5
+;조교者が고양이혀持ちの場合は、조교者に가학쾌락경험を추가
+SIF TALENT:MASTER:고양이혀
+	EXP:MASTER:가학쾌락경험 += 1
+EXP:MASTER:펠라경험 ++
+;EXP:유두 ++
+ENDSELECT
+RETURN 1
+
+@MESSAGE_EQUIP_COM11
+
+IF TFLAG:50 == 19
+	;授乳プレイの時は표시しない
+ELSE
+	PRINT 혀와 입술로
+	IF EX:Ｂ절정 * 10000 + PALAM:쾌Ｂ + PALAM:욕정 >= 10000 && ABL:Ｂ감각 <= 5
+		PRINTFORM 젖 입술로의 기대에 떨리며
+	ENDIF
+	IF RAND:2
+		;욕정のPALAMLV4以上
+		IF PALAM:욕정 >= PALAMLV:4 && RAND:3
+			PRINT 의 탄탄한
+		ELSEIF EX:Ｂ절정 * 10000 + PALAM:쾌Ｂ + PALAM:욕정 >= 10000 && RAND:2
+			PRINT 의 젤리같은
+		ELSE
+			PRINT 의 부드러운
+		ENDIF
+		PRINT 감촉을 맛보면서、
+	ELSE
+		PRINT 를 집요하게 핥으면서、
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE11
+;유두빨기実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(11)
+	RETURN RESULT
+;상반신착의
+SIF (TEQUIP:1 & 2) && TEQUIP:3 == 0
+	RETURN 0
+;착유기사용중は불가
+SIF TEQUIP:17
+	RETURN 0
+;니플캡사용중は불가
+SIF TEQUIP:16
+	RETURN 0
+;유방전극装着中はダメ
+SIF TEQUIP:24
+	RETURN 0
+SIF TEQUIP:체위 == 5 || TEQUIP:체위 == 2 || TEQUIP:체위 == 3
+	RETURN 0
+;あなたの입사용중
+SIF MASTER_POSE(0,4) && MASTER_POSE(0,4) != TARGET
+	RETURN 0
+[SKIPSTART]
+IF IN_ROOM_NUMBER(CFLAG:MASTER:현재위치) > 2
+	LOCAL:1 = 0
+	FOR LOCAL,1,CHARANUM
+		SIF TEQUIP:LOCAL:유두빨기 && LOCAL != TARGET
+			LOCAL:1 ++
+	NEXT
+	SIF LOCAL:1
+	RETURN 0
+ENDIF
+[SKIPEND]
+RETURN 1

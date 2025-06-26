@@ -1,0 +1,243 @@
+﻿;-------------------------------------------------
+;데리고 나간다
+;日常계커맨드、レベル2
+;-------------------------------------------------
+@COM351
+#DIM DYNAMIC NUM_TARGET
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 連れ出し캐릭터数
+#DIM DYNAMIC 現在동행数
+
+IF 依頼_受領中 >= 1
+	SETCOLOR C_YELLOW
+	PRINTFORMW 의뢰수령중엔 데리고나가기、동행해제를 할 수 없습니다。
+	RESETCOLOR
+	RETURN 1
+ENDIF
+
+NUM_TARGET = GET_TARGETNUM()
+;데리고 나간다
+SIF !NUM_TARGET
+	RETURN -1
+FOR カウンタ, 1, NUM_TARGET + 1
+	IF COM_351_CONDITION(TARGET:カウンタ) >= 2
+		現在동행数 += 1
+	ENDIF
+NEXT
+IF NUM_TARGET == 1 || 現在동행数 == 1
+	IF COM_351_CONDITION(TARGET) < 1
+		RETURN -1
+	ELSEIF COM_351_CONDITION(TARGET) < 2
+		CUSTOMDRAWLINE —
+		PRINTFORMW %CALLNAME:(TARGET)%는 이미 동행중입니다。
+		RETURN -1
+	ENDIF
+
+	IF CFLAG:TARGET:동행
+		CFLAG:TARGET:동행 = 0
+		CFLAG:MASTER:동행 = 0
+		PRINTFORMW 동행해제합니다。
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%를 데리고 나갑니다
+		CALL COM_351_DOUKOUTIME
+	ENDIF
+	TIME += 1
+	RETURN 1
+ENDIF
+
+DO
+	CUSTOMDRAWLINE —
+	PRINTL 누구에게 권유하시겠습니까？
+	CUSTOMDRAWLINE —
+	FOR カウンタ, 1, NUM_TARGET + 1
+		SIF COM_351_CONDITION(TARGET:カウンタ) <= 2
+			CONTINUE
+		SIF CFLAG:(TARGET:カウンタ):동행준비 || CFLAG:(TARGET:カウンタ):동행
+			SETCOLOR C_AQUA
+		PRINTFORML [{カウンタ}] - %CALLNAME:(TARGET:カウンタ)%
+		RESETCOLOR
+	NEXT
+	CUSTOMDRAWLINE —
+	PRINT [98] - 모두 데리고 나간다　　　　　
+	PRINT [97] - 데리고 나간다
+	PRINTL 
+	PRINTL 
+	PRINTL [99] - 동행해제
+	CUSTOMDRAWLINE —
+	PRINTL [100] - 그만둔다
+
+	BINPUT
+	SELECTCASE RESULT
+	CASE 100
+		FOR カウンタ,1,CHARANUM
+			CFLAG:(TARGET:カウンタ):동행준비 = 0 
+		NEXT
+		RETURN -1
+	CASE 99
+		FOR カウンタ, 1, NUM_TARGET + 1
+			CFLAG:(TARGET:カウンタ):동행 = 0
+			CFLAG:(TARGET:カウンタ):동행준비 = 0
+			;相合い傘もなくなる
+		NEXT
+		PRINTFORMW 동행해제합니다
+;		CFLAG:MASTER:동행 = 0
+		RETURN 1
+	CASE 98
+		FOR カウンタ, 1, NUM_TARGET + 1
+			IF COM_351_CONDITION(TARGET:カウンタ) >= 3
+				CALL COM_351_DOUKOUTIME_2(カウンタ)
+				連れ出し캐릭터数 += 1
+			ENDIF
+		NEXT
+		PRINTFORMW {連れ出し캐릭터数}명을 같이 데리고 나갑니다
+;		CFLAG:MASTER:동행 = 60
+		TIME += 連れ出し캐릭터数
+		SIF CFLAG:TARGET:동행
+			RETURN 1
+	CASE 97
+		FOR カウンタ, 1, NUM_TARGET + 1
+			IF (COM_351_CONDITION(TARGET:カウンタ) >= 3) && (CFLAG:(TARGET:カウンタ):동행준비 || CFLAG:(TARGET:カウンタ):동행)
+				連れ出し캐릭터数 += 1
+			ENDIF
+		NEXT
+		SIF 連れ出し캐릭터数 == 0
+			CONTINUE
+		IF 連れ出し캐릭터数 == 1
+			TIME += 1
+			連れ出し캐릭터数 = 0
+			FOR カウンタ, 1, NUM_TARGET + 1
+				IF (COM_351_CONDITION(TARGET:カウンタ) >= 3) && (CFLAG:(TARGET:カウンタ):동행준비 || CFLAG:(TARGET:カウンタ):동행)
+					PRINTFORMW %CALLNAME:(TARGET:カウンタ)%를 데리고 나갑니다
+					CALL COM_351_DOUKOUTIME_2(カウンタ)
+					CFLAG:(TARGET:カウンタ):동행준비 = 0
+					;雨＋外＋傘or상대가 傘の時は相合い傘
+				ENDIF
+			NEXT
+		ELSE
+			PRINTFORMW {連れ出し캐릭터数}명을 같이 데리고 나갑니다
+			TIME += 連れ出し캐릭터数
+			連れ出し캐릭터数 = 0
+			FOR カウンタ, 1, NUM_TARGET + 1
+				IF (COM_351_CONDITION(TARGET:カウンタ) >= 3) && (CFLAG:(TARGET:カウンタ):동행준비 || CFLAG:(TARGET:カウンタ):동행)
+					CALL COM_351_DOUKOUTIME_2(カウンタ)
+					CFLAG:(TARGET:カウンタ):동행준비 = 0
+				ENDIF
+			NEXT
+		ENDIF
+;		CFLAG:MASTER:동행 = 60
+		SIF CFLAG:TARGET:동행
+			RETURN 1
+	CASEELSE
+		IF !INRANGE(RESULT, 1, NUM_TARGET)
+			CLEARLINE 1
+			CONTINUE
+		ELSEIF COM_351_CONDITION(TARGET:RESULT) < 1
+			CLEARLINE 1
+			CONTINUE
+		ELSEIF COM_351_CONDITION(TARGET:RESULT) < 2
+			PRINTFORMW %CALLNAME:(TARGET:RESULT)%는 이미 동행중입니다。
+			CLEARLINE 2
+			CONTINUE
+		ENDIF
+		CFLAG:(TARGET:RESULT):동행준비 ^= 1
+	ENDSELECT
+LOOP 1
+
+@EQUIP_COM351(ARG)
+;ソースは控えめに適当。애정入りすぎたので自重
+IF FLAG:70 == 1
+
+ELSE
+	SOURCE:환락 += ABL:친밀 * 5
+	SOURCE:정애 += ABL:친밀 * 5
+	SOURCE:반감 += 100 - MIN(ABL:친밀 * 10,100)
+	SIF ABL:친밀 > 9 && TIME_PROGRESS(TIME:1) > 10
+		EXP:ARG:애정경험 += RAND:2
+ENDIF
+RETURN 1
+
+
+
+;戻り値
+; 3 まとめて連れ出せる
+; 2 個別選択で連れ出せる
+; 1 連れ出せない（取り込み中メッセージ）
+; 0 連れ出せない
+@COM_351_CONDITION(CHARA)
+#FUNCTION
+#DIM CHARA
+SIF CHARA == MASTER
+	RETURNF 0
+SIF CFLAG:CHARA:태도 > 0 && CFLAG:CHARA:수면 == 0
+	RETURNF 3
+;現在동행中の캐릭터は許可(동행条件を満たさなくなった場合に手動で동행解除できるようにする)
+SIF CFLAG:CHARA:동행
+	RETURNF 2
+SIF CFLAG:CHARA:수면
+	RETURNF 0
+
+RETURNF 2
+
+
+@COM_351_DOUKOUTIME
+
+IF TALENT:TARGET:연모 == 2 
+	CFLAG:TARGET:동행 = 1400
+;	CFLAG:MASTER:동행 = 1400 
+ELSEIF TALENT:TARGET:연모 == 1 
+	CFLAG:TARGET:동행 = 300
+;	CFLAG:MASTER:동행 = 300
+ELSE
+	CFLAG:TARGET:동행 = 60
+;	CFLAG:MASTER:동행 = 60
+ENDIF
+
+@COM_351_DOUKOUTIME_2(LOCAL)
+
+IF TALENT:(TARGET:LOCAL):연모 == 2 
+	CFLAG:(TARGET:LOCAL):동행 = 1400
+;	CFLAG:MASTER:동행 = 1400 
+ELSEIF TALENT:(TARGET:LOCAL):연모 == 1 
+	CFLAG:(TARGET:LOCAL):동행 = 300
+;	SIF CFLAG:MASTER:동행 <= 300
+;		CFLAG:MASTER:동행 = 300 
+ELSE
+	CFLAG:(TARGET:LOCAL):동행 = 60
+;	SIF CFLAG:MASTER:동행 <= 60
+;		CFLAG:MASTER:동행 = 60 
+ENDIF
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;데리고 나간다
+@COM_ABLE351
+;데리고 나간다実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(351)
+	RETURN RESULT
+;기력0
+;SIF BASE:MASTER:기력 <= 0
+;	RETURN 0
+;【↑いつでも連れ出せるべきという考えで廃止】
+SIF CFLAG:MASTER:현재위치 >= 12
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+;TARGETの친밀감강도1
+FOR LOCAL,0,CHARANUM
+	;TARGET:1～をさがす
+	SIF !TARGET:LOCAL
+		CONTINUE
+	;수면中は제외
+	SIF CFLAG:(TARGET:LOCAL):수면
+		CONTINUE
+	;可能な캐릭터が居れば1を返す
+	SIF CFLAG:(TARGET:LOCAL):태도
+		RETURN 1
+NEXT
+RETURN 0
+

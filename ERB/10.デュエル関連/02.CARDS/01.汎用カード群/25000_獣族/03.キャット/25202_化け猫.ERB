@@ -1,0 +1,128 @@
+@CARDNAME_25202,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 괴묘
+	CASE "略称"
+RESULTS = 괴묘
+	CASE "カテゴリ"
+RESULTS:0 = 캣
+ENDSELECT
+
+
+@CARD_25202(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "소환불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_25202(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 소환할 수 없다.
+PRINTL 이 카드명의 ①② 효과는 각각 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 패의 이 카드를 묘지로 보내 발동할 수 있다.
+PRINTL 덱에서 「괴묘」 이외의 레벨 1의 「캣」 몬스터 1장을 선택하여 패에 추가한다.
+CALLFORM CARD_ABLE(2,특수소환時)
+PRINTL ②: 이 카드가 특수소환에 성공했을 경우 발동할 수 있다.
+PRINTL 상대 필드의 레벨 4 이하의 공격표시 몬스터를 모두 파괴한다.
+PRINTL (레벨은 랭크, 링크도 포함한다)
+
+
+@CARDCAN_25202(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25202)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,25202)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件レベル = 1
+	효과条件カテゴリ = 캣
+	효과条件固名前 = 괴묘
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,25202)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25202(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25202,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件レベル = 1
+		효과条件カテゴリ = 캣
+		효과条件固名前 = 괴묘
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25202,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 1
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+	ENDIF
+ENDIF
+
+

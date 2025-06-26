@@ -1,0 +1,179 @@
+﻿@CARDNAME_1831, 参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 엘섀도르 아프카로네
+	CASE "略称"
+		RESULTS = 아프카로네
+	CASE "カテゴリ"
+		RESULTS:0 = 섀도르
+		RESULTS:1 = 에리얼
+ENDSELECT
+
+
+@CARD_1831(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1831(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「섀도르" 몬스터×２
+PRINTL 이 카드는 융합 소환으로만 엑스트라 덱에서 특수 소환할 수 있다。
+PRINTL 이 카드명의  ①③의 효과는 각각 1턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1, EX소환時 , 특수소환時)
+PRINTL ①：이 카드가 특수 소환에 성공했을 경우, 상대 필드의 앞면 표시의 카드 1장을 대상으로 하여 발동할 수 있다。
+PRINTL 그 카드의 효과를 무효로 한다。
+CALLFORM CARD_ABLE(0, 지속효과)
+PRINTL ②：이 카드는 전투로 파괴되지 않는다。
+CALLFORM CARD_ABLE(2, 필드→묘지 , 손패→묘지 , 덱→묘지 , 破壊→묘지 , 戦闘→묘지)
+PRINTL ③：이 카드가 묘지로 보내졌을 경우에 발동할 수 있다。
+PRINTL 자신의 덱 / 묘지에서 "섀도르」 카드 1장을 선택해 패에 넣는다。
+PRINTL 그 후, 패를 1장 선택해 버린다。
+PRINTL 
+
+
+
+@CARDSUMMON_1831(듀얼리스트, 소환カード, EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 섀도르
+ELSEIF EX参照 >= 10
+	素材条件カテゴリ = 섀도르
+ENDIF
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트, 소환カード, 1831) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_1831(듀얼리스트, 종류, ゾーン, 場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 使用済み
+#DIM DYNAMIC 효과使用불가,3
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트, 종류, ゾーン, 場所, 1831)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_2(듀얼리스트, 1831)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 섀도르
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트, 1831)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트, 종류, ゾーン, 場所, 1831)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1831(듀얼리스트, 종류, ゾーン, 場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 条件달성,3
+#DIM DYNAMIC 選択肢표시
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 손패枚数＿前
+#DIM DYNAMIC 손패枚数＿後
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트, 종류, ゾーン, 場所, 1831, 2)
+	IF RESULT == 0
+		손패枚数＿前 = 손패数(듀얼리스트)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 섀도르
+		CALL CARD_ADD_ADV(듀얼리스트, ゾーン, 場所)
+		IF RESULT == 1
+			손패枚数＿後 = 손패数(듀얼리스트)
+			IF 손패枚数＿前 == 손패枚数＿後
+				;아프카로네「EX덱에 帰らせていただきます」
+			ELSE
+				CALL FULLRESET
+				CALL CARD_ADD_GY_BASIC(듀얼리스트, "손패", ゾーン, 場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트, 종류, ゾーン, 場所, 1831, 1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트, "全場単体", 場所, "지속無効")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트, "자신", 場所, "戦耐")
+ENDIF
+

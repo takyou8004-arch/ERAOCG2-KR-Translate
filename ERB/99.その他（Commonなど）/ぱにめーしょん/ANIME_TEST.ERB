@@ -1,0 +1,189 @@
+
+;ocgへの贈答用、文字アニメ
+@ANIME_TEST(표시文章:0,표시文章:1,표시文章:2,특수演出,ボス画像)
+#LOCALSIZE 1
+#DIM DYNAMIC LOCAL_LINE ;アニメーション표시の為に再描画の度にここまでは消すという行を보존する
+#DIM DYNAMIC 光らせ場所 ;アニメーション표시時に光って표시させる文字の위치（その前後は暗く표시、それ以外は표시しない）
+#DIM DYNAMIC 光らせ場所ベクトル ;アニメーション표시時に次に光らせる場所を右に動かすか左に動かすかのベクトル
+#DIM DYNAMIC NOW_LINE ;２行以上の표시時のフロー제어する。현재의 行。
+#DIM DYNAMIC アニメーション횟수 ;アニメーションが何回표시されたか。とりあえず今回は（２往復する都合）これで제어します。１往復なら、光らせたい場所が最後まで行ったときに抜けるようにすればOK。
+#DIMS DYNAMIC 표시文章 , 10 ;アニメで何を표시させるか
+#DIM DYNAMIC 표시文字数 ;표시させる文字列の文字数
+#DIMS DYNAMIC 装飾文字列上 ;最終的に표시される装飾。
+#DIMS DYNAMIC 装飾文字列下
+#DIMS DYNAMIC 装飾文字列左
+#DIMS DYNAMIC 装飾文字列右
+#DIM DYNAMIC 보존する色 ;ここに入って来るまでにSETされていたCOLORの보존先
+#DIM DYNAMIC 문자색설정
+#DIM DYNAMIC 특수演出
+#DIM DYNAMIC ボス画像
+#DIMS DYNAMIC ボス_HTML
+
+#DIM DYNAMIC 画像コード
+;ちらつき防止にREDRAWを0に
+;PRINTW　アニメ開始します
+ALIGNMENT CENTER
+
+문자색설정 = C_GOLD
+;ここに来るまでの色を保持しておく
+보존する色 = GETCOLOR()
+;最終的に표시したい文章をここでセット。普段はARGSとかで投げさせてます。
+;표시文章:0 = ቻﾝቻﾝቻﾝቻﾝቻﾝቻﾝቻﾝቻﾝቻﾝቻﾝ
+;표시文章:1 = ቺቻቺቻቺቻቺቻቺቻቺቻቺቻቺቻቺቻቺቻ
+;装飾文字列上 = ★☆★☆★☆★☆★☆★☆★
+;装飾文字列上 = %"―"*(표시文字数 + 4)%
+;装飾文字列下 = ☆★☆★☆★☆★☆★☆★☆
+;装飾文字列下 = %"―"*(표시文字数 + 4)%
+
+装飾文字列左 = ★
+装飾文字列右 = ☆
+
+
+
+;最初に光らせる場所は-2（最初は真っ暗）にする
+光らせ場所 = -2
+;最初は光らせ場所は+1ずつしていく（文字数+2まで着たら反転させること）
+光らせ場所ベクトル = 1
+;アニメーションさせる文字数を、入力した文字の長さから취득
+표시文字数 = STRLENSU(표시文章:0) 
+
+装飾文字列上 = %"―"*(표시文字数 + 10)%
+装飾文字列下 = %"―"*(표시文字数 + 10)%
+
+REPEAT 60
+	PRINTFORML 
+REND
+;ちょっと改行しておく
+PRINTFORML \n\n\n
+;현재의 行を再描画のチェックポイントとして보존
+LOCAL_LINE = LINECOUNT
+WHILE 1
+	;描画／再描画の為に今표시されてるアニメ部分を消去
+	CLEARLINE LINECOUNT - LOCAL_LINE
+	PRINTL
+	;1文字ずつ표시するか否か・표시する場合はどの色で표시するか　を판정して実行
+	;2行分やる
+	FOR NOW_LINE , 0 , 2
+		;文頭でインデントみたいなのを
+		;PRINTFORM %"　　　"%
+		FOR LOCAL , 0 , 표시文字数
+			IF 光らせ場所 == LOCAL
+				;もっとも光らせたい場所で있는 경우、真っ白な字
+				SETCOLOR 문자색설정
+				PRINTFORM %SUBSTRINGU(표시文章:NOW_LINE , LOCAL , 1)%
+			ELSEIF INRANGE(光らせ場所 - LOCAL , -1 , 1)
+				;光らせたい場所の前後1文字は薄暗く표시する
+				SETCOLOR 明度변경(60, 문자색설정)
+				PRINTFORM %SUBSTRINGU(표시文章:NOW_LINE , LOCAL , 1)%
+			ELSEIF INRANGE(光らせ場所 - LOCAL , -2 , 2)
+				;光らせたい場所の前後2文字はさらに薄暗く표시する
+				SETCOLOR 明度변경(30, 문자색설정)
+				PRINTFORM %SUBSTRINGU(표시文章:NOW_LINE , LOCAL , 1)%
+			ELSE
+				;それ以外は空白を描画するが、本来표시するはずだった場所が全角文字なら全角スペースを표시する
+				IF STRLENS(SUBSTRINGU(표시文章:NOW_LINE , LOCAL , 1)) == 2
+					PRINTFORM %"　"%
+				ELSE
+					PRINTFORM %" "%
+				ENDIF
+			ENDIF
+		NEXT
+		PRINTL
+	NEXT
+	REPEAT 20
+		PRINTL
+	REND
+
+	;入力待ちして画面を표시
+	;0.05秒単位で再描画
+	INPUTMOUSEKEY 80
+	;INPUTMOUSEKEYでRESULTが4だった場合は時間切れだという事をまず覚えておく
+	IF RESULT != 4
+	;時間切れでない=何か入力したら抜ける
+		BREAK
+	ELSEIF アニメーション횟수 >= (표시文字数+4) * 2 +1
+		;アニメが最後までいってたら抜ける
+		;今回は1往復分
+		BREAK
+	ENDIF
+	;何も入力せず、アニメも最後まで行ってないならアニメーション횟수を加算し、光らせたい場所を動かす
+	アニメーション횟수++
+	光らせ場所 += 光らせ場所ベクトル
+	;片道分が終わった＝一度真っ暗な표시になったら今度は戻っていきます
+	SIF 光らせ場所 > 표시文字数+2
+		光らせ場所ベクトル = -1
+	;ここがループの最後、頭に戻って再描画へ
+WEND
+;再描画の為に前の描画を消す
+CLEARLINE LINECOUNT - LOCAL_LINE
+
+IF 특수演出 == 1
+	SETCOLOR 明度변경(30, 문자색설정)
+	CALL FULLCUTIN(,19,"　　　 大사신 　　　","ゾーク","Dark Master - Zorc")
+ELSEIF 특수演出 == 2
+	SETCOLOR C_RED
+	CALL FULLCUTIN(,19,"","S.P.E.C.T.R.A.","")
+ENDIF
+
+CALL FLASH(3)
+CLEARLINE 10
+
+IF ボス画像 >= 1
+	GDISPOSE 1010
+	IF ボス画像 == 1
+		GCREATEFROMFILE 1010, @"BOSS/BOSS_ART_1.png"
+	ELSEIF ボス画像 == 2
+		GCREATEFROMFILE 1010, @"BOSS/BOSS_ART_2.png"
+	ELSEIF ボス画像 == 3
+		GCREATEFROMFILE 1010, @"BOSS/BOSS_ART_3.png"
+	ELSEIF ボス画像 == 4
+		GCREATEFROMFILE 1010, @"BOSS/BOSS_ART_4.png"
+	ELSEIF ボス画像 == 5
+		GCREATEFROMFILE 1010, @"BOSS/BOSS_ART_5.png"
+	ELSEIF ボス画像 == 9
+		GCREATEFROMFILE 1010, @"BOSS/BOSS_ART_9.png"
+	ELSEIF ボス画像 == 10
+		GCREATEFROMFILE 1010, @"BOSS/BOSS_ART_10.png"
+	ELSEIF ボス画像 == 11
+		GCREATEFROMFILE 1010, @"BOSS/BOSS_ART_11.png"
+	ENDIF
+	SPRITEDISPOSE @"BOSS_ART"
+	SPRITECREATE @"BOSS_ART", 1010
+	IF SPRITECREATED(@"BOSS_ART")
+		ボス_HTML = <img src='BOSS_ART' srcb='' height='5000' width='7000'>
+
+		GDISPOSE 1011
+		GCREATEFROMFILE 1011, "WAKU/WAKU_BOSS.png"
+		SPRITECREATE @"WAKU_BOSS", 1011
+		GDRAWSPRITE 1010, @"WAKU_BOSS"
+		HTML_PRINT ボス_HTML,1010
+	ENDIF
+	FOR LOCAL,0,25
+		PRINTL
+	NEXT
+ENDIF
+;アニメーション표시終了後、改めて全文を표시
+SETCOLOR 문자색설정
+PRINTFORML B O S S    D U E L
+PRINTFORML %装飾文字列上%
+PRINTFORML %표시文章:0%
+PRINTFORML %표시文章:1%
+PRINTFORML %표시文章:2%
+SETCOLOR 문자색설정
+PRINTFORML %装飾文字列下%
+PRINTFORML PREPARE FOR BATTLE
+REPEAT 17
+	PRINTL
+REND
+WAIT
+REPEAT 50
+	PRINTL
+REND
+SETCOLOR 보존する色
+;REDRAWを戻す
+ALIGNMENT LEFT
+REDRAW 1
+
+REPEAT 50
+	PRINTL
+REND

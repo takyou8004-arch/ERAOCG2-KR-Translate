@@ -1,0 +1,173 @@
+﻿@CARDNAME_52530,参照先
+;ココで지정카드의 名前、略称を返す予定
+;#FUNCTIONS
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 무신제－스사노오
+	CASE "略称"
+RESULTS = 무신제 스사노오
+	CASE "カテゴリ"
+RESULTS:0 = 무신
+ENDSELECT
+
+
+@CARD_52530(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1600
+	CASE "単一存在"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_52530(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+素材条件カテゴリ:0 = 무신
+素材条件カテゴリ:1 = 무신기
+지정素材名前 = 무신－ヤマト
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,52530) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_52530(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 "무신", "무신기" 몬스터 2장
+PRINTL ①: 「무신제－스사노오」는 자신 필드에 1장밖에 앞면 표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 전투로 상대 몬스터 전체에 1번씩 공격할 수 있다.
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ③: 「무신－야마토」를 소재로 하여 엑스 소환되어 있는 경우, 데미지 계산시에만 이 카드의 공격력은 500 상승한다.
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ④: 이 카드의 엑스 소재를 1개 떼어내고 발동할 수 있다.
+PRINTL 덱에서 「무신」 또는 「무신기」 몬스터 1장을 고르고, 패에 가하거나 묘지로 보낸다.
+
+@CARDCAN_52530(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52530)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ:0 = 무신
+	효과条件カテゴリ:1 = 무신기
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 
+
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52530(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 戦闘カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時強制誘発
+	戦闘カード = 戦闘場所(듀얼리스트)
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘カード,"一時",500)
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦")
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52530,0,X消費1)
+	IF RESULT == 0
+		SIF 듀얼리스트 == "자신"
+PRINTL 몬스터를 패에 가합니까?
+		CALL YN_CHOICE(듀얼리스트)
+
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = モン全般
+			효과条件カテゴリ:0 = 무신
+			효과条件カテゴリ:1 = 무신기
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+
+		ELSEIF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = モン全般
+			효과条件カテゴリ:0 = 무신
+			효과条件カテゴリ:1 = 무신기
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

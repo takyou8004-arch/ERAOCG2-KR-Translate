@@ -1,0 +1,175 @@
+﻿@CARDNAME_52004,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 갑옷 흑룡－사이버 다크 드래곤
+	CASE "略称"
+RESULTS = 갑옷 흑룡 CDD
+	CASE "カテゴリ"
+RESULTS:0 = 사이버
+RESULTS:1 = 사이버 다크
+ENDSELECT
+
+
+@CARD_52004(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_52004(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「사이버 다크」 몬스터 3장
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 자신의 묘지 / 덱 / 엑스트라 덱에서 기계족 또는 드래곤족 몬스터 1장을 선택하고, 그 공격력만큼 이 카드의 공격력을 올리는 장착 카드로서 이 카드에 장착한다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드의 공격력은, 자신의 묘지의 카드 수× 100 올린다.
+PRINTL ③: 이 카드가 파괴될 경우, 대신 장착한 그 몬스터를 파괴한다.
+
+
+
+@CARDSUMMON_52004(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件カテゴリ = 사이버 다크
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,52004) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_52004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52004)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件종족:0 = 기계족
+	효과条件종족:1 = 드래곤족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == リアクション효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		RETURN 0
+	SIF 종류 == リアクション효과 && オプション_主従 == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_52004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備数
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52004,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲덱 = 1
+		효과範囲EX덱 = 1
+		효과条件종족:0 = 기계족
+		효과条件종족:1 = 드래곤족
+		CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,場所,(1 + 4),52004)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	攻撃力修正 = 묘지数(듀얼리스트) * 100
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正,0)
+ELSEIF 종류 == リアクション효과
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_마함:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_魔_装:カウンタ") != 場所
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_魔_リ数:カウンタ") >= 10
+			CONTINUE
+			
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_마함:カウンタ")},"성별"
+		SIF RESULT != 牝性
+			CONTINUE
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"마함",カウンタ)
+
+		조교대상 = RESULT
+		IF RESULT != -1
+
+			PRINTFORML 
+			PRINTFORMW 囚われてしまった %CALLNAME:조교대상%는パ-ツ扱いされて力を吸い取られている。
+			CALL EROTIC_MOVE("拘束晒し",조교대상,-1,150)
+			CALL SET_FIELD_INFO(듀얼리스트,"마함",カウンタ,"リ数",1,0,1)
+		ENDIF
+	NEXT
+ENDIF
+

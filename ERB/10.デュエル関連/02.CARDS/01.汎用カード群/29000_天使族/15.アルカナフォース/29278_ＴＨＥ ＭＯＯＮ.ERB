@@ -1,0 +1,236 @@
+﻿@CARDNAME_29278,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 아르카나 포스 XVIII─더 문
+	CASE "略称"
+RESULTS = XVIII─월
+	CASE "カテゴリ"
+RESULTS:0 = 아르카나 포스
+ENDSELECT
+
+
+@CARD_29278(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2800
+	CASE "추가日"
+		RETURN 250520
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29278(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: "아르카나 포스" 카드가 자신 필드에 존재할 경우에 발동할 수 있다.
+PRINTL 자신 필드의 몬스터 1장을 릴리스하고, 이 카드를 패에서 특수 소환한다.
+PRINTL ②: 소환 / 특수 소환한 이 카드는 이 카드의 표시에 따라 이하의 효과를 얻는다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ● 정위치: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 　　　　　자신 필드에 "문 토큰" 1장을 특수 소환한다.
+PRINTL 　　　　　그 후, "아르카나 포스" 몬스터 1장의 소환을 실행할 수 있다.
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ● 역위치: 엔드 페이즈에 발동한다.
+PRINTL 　　　　　자신 필드의 몬스터 1장의 컨트롤을 상대에게 넘긴다.
+
+
+@CARDCAN_29278(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 選択カード名前
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29278)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,29278)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,29278,ゾーン,1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 아르카나 포스
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환時強制 || 종류 == 특수소환時強制
+	RETURN 1
+
+;正위치
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,129278,"")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+;逆위치
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") != 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_29278(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29278,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 소환時強制 || 종류 == 특수소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29278)
+	IF RESULT == 0
+		CALL ARCANA_SET(듀얼리스트,ゾーン,場所,29278)
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29278,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_GENERATE(듀얼리스트,129278)
+
+		CALL FULLRESET
+		효과条件カテゴリ = 아르카나 포스
+		SIF モンスター数(듀얼리스트) >= 5
+			CALLFORM 효과条件レベル_ADV(5,"以上")
+		효과条件任意 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT != 9999
+			追소환権 ++
+			CALL CARD_SUMMON_SHORI(듀얼리스트,RESULT,"攻撃표시",3)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29278)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드",場所,"強奪",,1)
+	ENDIF
+ENDIF
+
+;--------------------------------------------------------------------------------------------------
+
+@CARDNAME_129278,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 문 토큰
+	CASE "略称"
+RESULTS = 문 토큰
+	CASE "カテゴリ"
+RESULTS:0 = 아르카나 포스
+ENDSELECT
+
+@CARD_129278(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_129278(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "아르카나 포스 XVIII─더 문"의 효과로 특수 소환된다.
+PRINTL 
+PRINTL 
+PRINTL 
+
+
+@CARDCAN_129278(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+RETURN 0

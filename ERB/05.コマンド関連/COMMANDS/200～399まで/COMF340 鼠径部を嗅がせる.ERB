@@ -1,0 +1,106 @@
+﻿;-------------------------------------------------
+;사타구니를 맡게한다
+;애무계커맨드、レベル2
+;-------------------------------------------------
+@COM340
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+IF PALAM:TARGET:욕정 >= PALAMLV:5
+	TCVAR:MASTER:사정대상캐릭터_1 = TARGET
+	TCVAR:MASTER:사정부위플래그 = 4
+	TCVAR:MASTER:사정쾌락강도 = 1500
+ENDIF
+
+;봉사쾌락
+TFLAG:봉사쾌락플래그 = 1
+
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 10
+DOWNBASE:기력 += 100
+
+CALL SOURCE_CALC_노출(TARGET, MASTER, 30)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 120)
+SIF PALAM:TARGET:욕정 >= PALAMLV:3
+	CALL SOURCE_CALC_봉사(TARGET, MASTER, 300)
+;애널、파과血、촉수の汚れ
+IF (STAIN:MASTER:0 & 8) || (STAIN:MASTER:0 & 32) || (STAIN:MASTER:0 & 64)
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 1000)
+;愛液,정액汚れ
+ELSEIF STAIN:MASTER:0 & 1 || STAIN:MASTER:0 & 4
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 500)
+ELSE
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 250)
+ENDIF
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;사정に관계なく行われる処理はここから
+;奴隷の손가락⇔조교者のＰの汚れが이동
+STAIN:0 |= STAIN:MASTER:2
+IF ABL:TARGET:기교 <= 2
+	STAIN:MASTER:2 |= STAIN:0
+;청소用
+ELSEIF ABL:TARGET:기교 >= 3
+	STAIN:MASTER:2 = 2
+ENDIF
+
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+EXP:펠라경험 += 1
+
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 7
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 7
+ENDIF
+
+;애정경험
+SIF TALENT:연모
+	EXP:애정경험 += 1
+
+;奴隷が고양이혀持ちの場合は、조교者に가학쾌락경험を추가
+SIF TALENT:TARGET:고양이혀
+	EXP:MASTER:가학쾌락경험 += 1
+;정액汚れ
+SIF TCVAR:MASTER:112 == 1 || TCVAR:MASTER:112 == 2
+	EXP:정음경험 ++
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE340
+;사타구니를 맡게한다
+SIF !TFLAG:100
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+;친밀감강도1
+SIF TCVAR:MASTER:친밀감 < 2
+	RETURN 0
+;조교者がオトコか半人半妖か후타나리じゃないとダメ
+SIF !(TALENT:MASTER:성별 & 2)
+	RETURN 0
+;고양이혀の奴隷の場合は기교Lv2以上必要
+SIF TALENT:고양이혀 && ABL:기교 < 2
+	RETURN 0
+;볼개그사용중は불가
+SIF TEQUIP:볼개그
+	RETURN 0
+;エッチしている状態でかがせたい
+SIF CFLAG:우후후 == 1
+	RETURN 1
+;一括관리
+SIF GLOBAL_COMABLE(340)
+	RETURN RESULT
+RETURN 1

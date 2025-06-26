@@ -1,0 +1,160 @@
+﻿@CARDNAME_51451,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = "나나나" 가가가 걸
+	CASE "略称"
+RESULTS = "나나나" 걸
+	CASE "カテゴリ"
+RESULTS:0 = 가가가
+RESULTS:1 = 오노마토
+ENDSELECT
+
+
+@CARD_51451(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_51451(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 3
+
+;추가효과用
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51451) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_51451(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 3 몬스터 × 2
+PRINTL 이 카드명의 ① 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드의 엑시즈 소재를 2개 제거하고, 덱에서 '가가가' 카드 2장까지 패에 넣는다. (동명 카드는 1장까지)
+PRINTL 그 후, 패에서 '가가가' 몬스터 1장의 소환을 실행한다 (릴리스는 필요로 하지 않는다).
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 엑시즈 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 엑시즈 소재를 가지고 있지 않은 이 카드의 랭크는 4가 되고, 공격력은 1000 포인트 올린다.
+
+
+
+@CARDCAN_51451(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51451)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,51451)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 가가가
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") >= 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51451(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51451,1,X消費2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 가가가
+		효과条件固名前選択 = 1
+		효과条件複数 = 2
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+		CALL FULLRESET
+		효과条件カテゴリ = 가가가
+		효과条件종류 = モン全般
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "손패",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",1)
+		ENDIF
+		EX소환可能종류 = 엑시즈
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,1000)
+	CALL STATCHANGE_OTHER(듀얼리스트,"自身",場所,"星",1)
+ENDIF
+

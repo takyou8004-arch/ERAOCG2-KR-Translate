@@ -1,0 +1,157 @@
+﻿@CARDNAME_29062,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 라이트닝 기어－굉룡
+	CASE "略称"
+RESULTS = L기어－굉룡
+	CASE "カテゴリ"
+RESULTS:0 = 라이트닝 기어
+ENDSELECT
+
+
+@CARD_29062(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 1800
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_29062(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,효과소환)
+PRINTL 이 카드는 자신 필드의 몬스터 1장을 파괴하고 소환할 수 있다.
+PRINTL (이 방법으로의 소환은 소환권을 소비한다.)
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 자신 "라이트닝 기어" 몬스터는 관통 공격을 얻고,
+PRINTL 이 카드 이외의 "라이트닝 기어" 몬스터의 공격력은 500 올린다.
+CALLFORM CARD_ABLE(1,戦闘→묘지,破壊→묘지)
+PRINTL ②: 이 카드가 전투 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 묘지 / 제외 상태의 "라이트닝 기어" 마법 / 함정 카드 1장을 세트한다.
+PRINTL 이 효과로 세트한 카드는 세트한 턴에도 발동할 수 있다.
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ③: 자신 상대의 엔드 페이즈에 발동한다.
+PRINTL 이 카드를 파괴한다.
+
+@CARDCAN_29062(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+ 
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29062)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과소환
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	SIF 발동済_1(듀얼리스트,29062)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 라이트닝 기어
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_29062(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과소환
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件行先플래그 = 破壊行き
+	CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29062,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 라이트닝 기어
+		효과条件종류 = 마함全般
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"使化裏側표시")
+	ENDIF
+
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29062)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 라이트닝 기어
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"貫通")
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ = 라이트닝 기어
+	효과条件他所 = 1
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,500)
+ENDIF

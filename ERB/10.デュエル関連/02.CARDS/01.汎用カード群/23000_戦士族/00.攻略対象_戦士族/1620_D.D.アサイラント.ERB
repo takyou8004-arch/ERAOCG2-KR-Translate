@@ -1,0 +1,115 @@
+﻿@CARDNAME_1620,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = D.D. 어설런트
+	CASE "略称"
+RESULTS = 어설런트
+	CASE "カテゴリ"
+RESULTS:0 = 이차원
+ENDSELECT
+
+@CARD_1620(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1620(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①: 이 카드가 전투를 실행할 경우 발동할 수 있는, 전투 중인 몬스터를 모두 제외한다.
+CALLFORM CARD_ABLE(0,제외時)
+PRINTL ②: 이 카드가 제외되었을 경우 발동할 수 있다.
+PRINTL 이 턴의 엔드 페이즈 시에 이 카드를 특수 소환한다.
+
+@CARDCAN_1620(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1620)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	RETURN 1
+ELSEIF 종류 == 제외時
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1620(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1620)
+	IF RESULT == 0
+		選択カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"제외")
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き)
+	ENDIF
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과範囲제외 = 1
+효과条件名前 = D.D. 어설런트
+	CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+ELSEIF 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1620)
+	IF RESULT == 0
+		CALL CARD_RESERV(듀얼리스트,1620)
+	ENDIF
+
+ENDIF

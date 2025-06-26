@@ -1,0 +1,216 @@
+﻿@CARDNAME_31000,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+;TFのウリアちゃんは別カードにする
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신염황제 우리아
+	CASE "略称"
+RESULTS = 신염황제 우리아
+	CASE "カテゴリ"
+RESULTS:0 = 우리아
+RESULTS:1 = 환마
+RESULTS:2 = 삼환마
+ENDSELECT
+
+
+@CARD_31000(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+			RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "특수불가"
+		RETURN 1
+	CASE "소환불가"
+		RETURN 1
+
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_31000(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 일반 소환할 수 없다.
+;PRINTL ①：자신 필드의 表側표시(もしくは攻撃표시)の 함정 카드 ３장을 묘지へ送り、특수 소환할 수 있다。
+CALLFORM CARD_ABLE(0,마함起動 ,フリー誘発)
+PRINTL ①: 이 카드는 자신 필드의 함정 카드 3장을 묘지로 보내고, 패에서 특수 소환할 수 있다.
+PRINTL 이 방법으로의 특수 소환은 효과에 의한 제한을 받지 않는다.
+CALLFORM CARD_ABLE(0,묘지起動 ,지속효과)
+PRINTL ②: 자신 필드 / 묘지 / 제외 / 패 / 덱에, 다른 "신염황제 우리아"가 존재하지 않을 경우,
+PRINTL 이 카드는 완전 내성을 가지고, 패의 함정 카드 1장을 묘지로 보내는 것으로, 묘지에서 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ③: 이 카드의 공격력은, 자신 묘지의 함정 카드 수× 1000 올린다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ④: 1턴에 1번, 상대 필드의 마법 / 함정 카드 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 카드를 파괴한다. 이 효과에 대해 상대는 카드의 효과를 발동할 수 없다.
+PRINTL 
+
+@CARDCAN_31000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31000)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件종류 = 함정全般
+	;효과条件표시 = 表側표시
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,31000,"묘지",1)
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲묘지 = 1
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲제외 = 1
+효과条件名前 = 신염황제 우리아
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1 
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = 30
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1 
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31000(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31000)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		;효과条件표시 = 表側표시
+		효과条件종류 = 함정全般
+		효과条件複数 = 3
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31000)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종류 = 함정全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "묘지", 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31000,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 攻守変動 
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 함정全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 1000
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正,攻撃力修正)
+ELSEIF 종류 == 지속효과
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲묘지 = 1
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲제외 = 1
+효과条件名前 = 신염황제 우리아
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1 
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+	ENDIF
+ENDIF
+
+
+

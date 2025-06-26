@@ -1,0 +1,127 @@
+﻿@CARDNAME_72404,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 파워 본드
+	CASE "略称"
+RESULTS = 파워 본드
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_72404(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_72404(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①: 자신의 패 / 필드의 몬스터를 융합 소재로 하고, 기계족 융합 몬스터 1장을 융합 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터의 공격력은, 그 원래 공격력만큼 올린다.
+PRINTL 이 턴의 엔드 페이즈에 이 카드의 효과로 특수 소환한 몬스터가 필드에 존재할 경우,
+PRINTL 자신은 그 몬스터의 원래 공격력만큼의 데미지를 받는다.
+
+@CARDCAN_72404(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72404)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲손패 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	효과条件종족 = 기계족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72404(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 묘지送カード,10
+#DIM DYNAMIC 손패묘지送カード,10
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 攻撃力修正
+;융합소환
+VARSET 묘지送カード, 35
+VARSET 손패묘지送カード, 35
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72404)
+	IF RESULT == 0
+		;마법카드를 묘지送り
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲손패 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件종족 = 기계족
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード_ID = RESULT:99
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			효과추가종류:0 = 3
+			CALL FUSSUMMON(듀얼리스트,選択カード)
+			IF RESULT == 1
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"T1汎数",72404)
+				CALL CARD_RESERV(듀얼리스트,72404,エンド予約)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ターン終了時予約
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		IF GETVAR(@"%듀얼리스트%_MZ_T1汎数:カウンタ") == 72404
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:カウンタ")},"攻撃力"
+			攻撃力修正 = RESULT
+			PRINTFORML パワーボンド의 효과
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",攻撃力修正)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"T1汎数",0)
+		ENDIF
+	NEXT
+ENDIF

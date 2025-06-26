@@ -1,0 +1,53 @@
+﻿;고백한다
+@COM352
+LOCAL = MARK:굴복각인 * 3 + MARK:쾌락각인 * 3 + MIN(ABL:친밀 * 10, 50) + MIN(ABL:욕망 * 10,50) + GETPALAMLV(PALAM:욕정,5) * 5 + GETPALAMLV(PALAM:호의,5) * 5 + BASE:무드 / 50 + (1000 - BASE:이성) / 30
+
+IF  LOCAL > 100 + TALENT:일선넘지않음 * 20
+	TFLAG:SELECTCOM분기 = 1
+ELSE
+	TFLAG:SELECTCOM분기 = 0
+ENDIF
+IF TFLAG:SELECTCOM분기 == 1
+	SETCOLOR C_PINK
+	PRINTFORML %CALLNAME:TARGET%는 %CALLNAME:MASTER%의 각오에 마음이 울려서、연심을 자각하여、
+	PRINTFORMW %CALLNAME:TARGET%는【연모】을 얻었다
+	RESETCOLOR
+	IF TALENT:TARGET:연모 == 0
+		TALENT:TARGET:연모 = 1
+	ENDIF
+	SETBIT CFLAG:TARGET:기정사실 , 0
+	CALL SOURCE_CALC_환락(TARGET, MASTER, 2000)
+	CALL SOURCE_CALC_정복(TARGET, MASTER, 1500)
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;고백한다
+@COM_ABLE352
+;고백한다実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(352)
+	RETURN RESULT
+;二人きりでないとだめ
+SIF GET_TARGETNUM() != 1
+	RETURN 0
+;친밀감강도1
+SIF TCVAR:MASTER:친밀감 < 1
+	RETURN 0
+;すでに合意を得ている場合はだめ
+SIF GETBIT(CFLAG:1 , 0)
+	RETURN 0
+;수면中
+SIF CFLAG:수면
+	RETURN 0
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+SIF TALENT:TARGET:연모 >= 1
+	RETURN 0
+RETURN 1
+

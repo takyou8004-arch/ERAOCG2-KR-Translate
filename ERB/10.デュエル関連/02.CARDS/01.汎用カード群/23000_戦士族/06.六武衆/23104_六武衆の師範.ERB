@@ -1,0 +1,106 @@
+﻿@CARDNAME_23103,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 여섯무사의 사범
+	CASE "略称"
+RESULTS = 여섯무사의 사범
+	CASE "カテゴリ"
+RESULTS:0 = 여섯무사
+ENDSELECT
+
+
+@CARD_23103(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2100
+	CASE "守備力"
+		RETURN 800
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23103(종류)
+#DIM DYNAMIC 종류
+
+PRINTL ①：「여섯무사의 사범」은자신 필드에 1체밖에 앞면표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ②：자신 필드에 「여섯무사」 몬스터가 존재할 경우발동할 수 있다,
+PRINTL 이 카드는패에서 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,破壊→묘지)
+PRINTL ③：이 카드가효과로 파괴되었을 경우,자신의 묘지의 「여섯무사」 몬스터 1장을 대상으로 하여발동할 수 있다.
+PRINTL 그 몬스터를패에 넣는다.
+PRINTL 
+
+@CARDCAN_23103(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23103)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,23103,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 여섯무사
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23103(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23103)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+ELSEIF 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23103)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 여섯무사
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ENDIF

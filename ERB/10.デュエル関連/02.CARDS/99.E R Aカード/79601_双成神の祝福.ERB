@@ -1,0 +1,184 @@
+﻿@CARDNAME_79601,参照先
+;ココ79601で지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 쌍성신의 축복
+	CASE "略称"
+RESULTS = 쌍성신의 축복
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79601(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 装備마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79601(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(0,마함起動,손패起動)
+PRINTL 암컷 몬스터에게만 장착 가능.
+CALL CARD_ABLE(1,攻撃時誘発)
+PRINTL ①：장착 몬스터가, 암컷 몬스터와 전투를 실행할 경우, 또는 여성 플레이어에게 직접 공격할 경우,
+PRINTL 　장착 몬스터의 공격력이 1000 오르고, 그 공격은 관통한다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79601(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79601)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件성별 = 牝性 
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 装備先
+		RETURN 0
+
+	IF 戦闘場所(듀얼리스트,1) != 5
+		TRYCALLFORM CARD_{戦闘カードID(듀얼리스트,1)}("성별")
+		SIF RESULT != 牝性
+			RETURN 0
+	ELSEIF 듀얼리스트 == "자신"
+		SIF OPPOSER == -1
+			RETURN 0
+		SIF TALENT:OPPOSER:성별 == 2
+			RETURN 0
+	ELSEIF 듀얼리스트 == "상대"
+		SIF TALENT:MASTER:성별 == 2
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_79601(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 実行役대상
+#DIM DYNAMIC 戦闘カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79601)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		;효과範囲상대필드 = 1
+		효과条件성별 = 牝性 
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79601)
+	IF RESULT == 0
+		CALL CARD_EROTICS_FIELD(装備者,"필드",装備先)
+		実行役대상 = RESULT
+
+		戦闘カード = GETVAR(@"%装備者%_戦闘カード")
+		CALL SET_FIELD_INFO(装備者,"필드",戦闘カード,"一時",1000)
+		IF 戦闘場所(듀얼리스트,1) != 5
+			CALL CARD_EROTICS(戦闘カードID(듀얼리스트,1))
+			IF RESULT != -1
+				조교대상 = RESULT
+			ENDIF
+		ELSE
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+			ENDIF
+		ENDIF
+		IF 조교대상 >= 0
+			FOR カウンタ,0,10
+				CALL EROTIC_MOVE("前穴凌辱",조교대상,実行役대상,150)
+				SIF RESULT:2
+					BREAK
+			NEXT
+		ENDIF
+
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_OTHER(듀얼리스트,"装備",場所,"性",3)
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"貫通")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"接可",3)
+ENDIF

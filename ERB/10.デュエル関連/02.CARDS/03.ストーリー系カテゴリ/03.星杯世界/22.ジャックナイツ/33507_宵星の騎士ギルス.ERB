@@ -1,0 +1,189 @@
+﻿@CARDNAME_33507,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 잭나이츠 오르페골 길스
+	CASE "略称"
+RESULTS = 소성의 기사 길스
+	CASE "カテゴリ"
+RESULTS:0 = 잭나이츠
+RESULTS:1 = 오르페골
+ENDSELECT
+
+
+@CARD_33507(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_33507(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時 ,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 덱에서 「오르페골」 카드 또는 「성유물」 카드 1장을 묘지로 보낸다.
+PRINTL 또한 이 턴에, 이 카드를 튜너로서 취급한다.
+CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ②: 자신 필드에 다른 몬스터가 존재하지 않을 경우에 발동할 수 있다.
+PRINTL 서로의 필드에 「새로운 생명 －갈라테아－」를 1장씩 수비 표시로 특수 소환한다.
+PRINTL 
+
+@CARDCAN_33507(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,33507)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,33507)
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ:0 = 성유물
+	효과条件カテゴリ:1 = 오르페골
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_2(듀얼리스트,33507)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	IF GETVARS(@"%듀얼리스트%_フィールド名") != "오르페골 바벨"
+		SIF 종류 == フリー誘発
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ENDIF
+	SIF モンスター数(듀얼리스트) >= 2
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_33507(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33507,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ:0 = 성유물
+		효과条件カテゴリ:1 = 오르페골
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一Ｔ",1)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33507,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_GENERATE(듀얼리스트,133507,"守備표시")
+		CALL FULLRESET
+		CALL CARD_GENERATE(対面者,133507,"守備표시")
+	ENDIF
+ENDIF
+
+
+
+@CARDNAME_133507,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 새로운 생명 －갈라테아－
+	CASE "略称"
+RESULTS = 신생 갈라테아
+	CASE "カテゴリ"
+RESULTS:0 = 성유물
+RESULTS:1 = 잭나이츠
+RESULTS:2 = 오르페골
+ENDSELECT
+
+
+@CARD_133507(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+
+@CARDCAN_133507(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+RETURN 0

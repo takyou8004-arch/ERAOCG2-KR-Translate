@@ -1,0 +1,144 @@
+﻿@CARDNAME_21044,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 부스터 와이번
+	CASE "略称"
+RESULTS = 부스터 Wv
+	CASE "カテゴリ"
+RESULTS:0 = 하이테크 드래곤
+ENDSELECT
+
+
+@CARD_21044(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 300
+	CASE "守備力"
+		RETURN 300
+	CASE "성별"
+		RETURN 0
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_21044(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①: 자신 필드에 「벽아의 폭속룡」 또는 「진홍동의 격속룡」이 존재할 경우에 발동할 수 있다.
+PRINTL 자신의 패/묘지의 이 카드를 수비 표시로 특수 소환한다.
+CALLFORM CARD_ABLE(0,소환時,특수소환時)
+PRINTL ②: 이 카드가 소환 / 특수 소환했을 때, 자신 필드에 「벽아의 폭속룡」 또는 「진홍동의 격속룡」이 존재할 경우에 발동할 수 있다.
+PRINTL 상대에게 600 데미지를 준다.
+PRINTL 그 후, 자신의 필드의 드래곤족 몬스터를 소재로서 묘지로 보내고,
+PRINTL EX덱에서 「하이테크 드래곤」 융합 몬스터를 융합 소환할 수 있다.
+
+@CARDCAN_21044(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21044)
+SIF RESULT == 1
+	RETURN 0
+	
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,21044)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,21044,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前:0 = 블루투스 버스트 드래곤
+	효과条件名前:1 = 레드부트 버스트 드래곤
+	효과条件표시 = 10
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前:0 = 블루투스 버스트 드래곤
+	효과条件名前:1 = 레드부트 버스트 드래곤
+	효과条件표시 = 10
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+	
+
+@CARDEFFECT_21044(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21044,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21044)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",600,1)
+
+		CALL RESETAREA_MAT	
+		素材範囲필드 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件カテゴリ = 하이테크 드래곤
+		효과条件소환可 = 1	
+		효과条件任意 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL FUSSUMMON(듀얼리스트, 選択カード)
+		ENDIF
+	ENDIF
+ENDIF
+

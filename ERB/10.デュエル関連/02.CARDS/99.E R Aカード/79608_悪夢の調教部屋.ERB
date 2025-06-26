@@ -1,0 +1,126 @@
+﻿@CARDNAME_79608,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 악몽의 조교실
+	CASE "略称"
+RESULTS = 악몽의 조교실
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79608(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79608(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 카드는 1턴에 1번밖에 발동할 수 없다.
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：이 카드의 발동시 효과 처리로서,
+PRINTL 　덱에서 "E.R.A" 마법 카드 1장을 패에 넣을 수 있다.
+CALL CARD_ABLE(0,ライフ変強制誘発)
+PRINTL ②：이 카드가 마법 / 함정 존에 앞면 표시로 존재하는 한,
+PRINTL 　상대 플레이어는 받은 대미지와 같은 쾌락 대미지를 받는다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79608(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79608)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79608)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ライフ変強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ダメージ受者 == 듀얼리스트
+		RETURN 0
+	SIF ダメージ増減 != "減少"
+		RETURN 0
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	SIF RESULT == -1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79608(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC ダメージ量
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79608,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과条件カテゴリ = E.R.A
+		효과条件종류 = 마법全般
+		효과条件任意 = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == ライフ変強制誘発
+	ダメージ量 = GETVAR(@"%対面者%_変動値_保")
+	SIF ダメージ量 < 100
+		ダメージ量 = 100
+	SIF ダメージ量 > 2000
+		ダメージ量 = 1980 + (ダメージ量 / 100)
+	SIF ダメージ量 > 40000
+		ダメージ量 = 39600 + (ダメージ量 / 100)
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	IF RESULT != -1
+		조교대상 = RESULT
+		PRINTFORML
+		SETCOLOR C_PINK 
+		PRINTFORML %CALLNAME:조교대상%는 받은 대미지와 같은 쾌락 대미지를 받았다!
+		RESETCOLOR
+		CALL EROTIC_MOVE("조교部屋",조교대상,,ダメージ量)
+	ENDIF
+ENDIF
+

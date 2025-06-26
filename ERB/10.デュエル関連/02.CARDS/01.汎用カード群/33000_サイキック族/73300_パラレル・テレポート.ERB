@@ -1,0 +1,148 @@
+﻿@CARDNAME_73300,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 패러렐 텔레포트
+	CASE "略称"
+RESULTS = 패러텔레
+	CASE "カテゴリ"
+RESULTS:0 = 텔레포트
+ENDSELECT
+
+
+@CARD_73300(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "추가日"
+		RETURN 250430
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73300(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없으며,
+PRINTL 이 카드를 발동하는 턴, 자신은 사이킥족 몬스터밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①: 자신 필드의 레벨을 가진 사이킥족 몬스터 1장을 릴리스하고 발동할 수 있다.
+PRINTL 덱 / 엑스트라 덱에서 레벨 7 이하의 사이킥족 몬스터 1장을 특수 소환한다.
+PRINTL 릴리스한 몬스터와 이 효과로 특수 소환한 몬스터의 원래 레벨이 다를 경우,
+PRINTL 추가로 자신은 그 차이 x 1000 LP를 잃는다.
+
+
+@CARDCAN_73300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73300)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,73300)
+		RETURN 0
+	CALL FULLRESET
+	CALLFORM 효과条件종족_ADV(사이킥족,"以外")
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"SS이력")
+	SIF RESULT != 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 사이킥족
+	효과条件종류 = レベル持ち
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件종족 = 사이킥족
+	효과条件종류 = レベル持ち
+	CALLFORM 효과条件レベル_ADV(7,"以下")
+	효과条件소환可 = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73300(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC リリースレベル
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73300,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 사이킥족
+		효과条件종류 = レベル持ち
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			TRYCALLFORM CARD_{RESULT:1},"レベル"
+			リリースレベル = RESULT
+
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과範囲EX덱 = 1
+			효과条件종족 = 사이킥족
+			IF 듀얼리스트 == "자신"
+				CALL 효과条件レベル_ADV(7, "以下")
+			ELSE
+				효과条件レベル:0 = 0
+				FOR カウンタ,1,8
+					IF リリースレベル > カウンタ
+						SIF GETVAR(@"ライフ_%듀얼리스트%") < (リリースレベル - カウンタ) * 1000
+							CONTINUE
+					ELSEIF リリースレベル < カウンタ
+						SIF GETVAR(@"ライフ_%듀얼리스트%") < (カウンタ - リリースレベル) * 1000
+							CONTINUE
+					ENDIF
+					효과条件レベル:カウンタ = カウンタ
+				NEXT
+			ENDIF
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+			TRYCALLFORM CARD_{RESULT:1},"レベル"
+			IF リリースレベル > RESULT
+				CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",(リリースレベル - RESULT) * 1000)
+			ELSEIF リリースレベル < RESULT
+				CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",(RESULT - リリースレベル) * 1000)
+			ENDIF
+		ENDIF
+		EX소환可能종족 = 사이킥족
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+	ENDIF
+ENDIF

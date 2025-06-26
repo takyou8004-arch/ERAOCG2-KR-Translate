@@ -1,0 +1,117 @@
+﻿@CARDNAME_1601,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 백마도사 피켈
+	CASE "略称"
+RESULTS = 피켈
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1601(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1601(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 자신의 LP가 상대보다 많은 경우, 이 카드는 전투에서는 파괴되지 않는다.
+PRINTL ②: 이 카드가 소환에 성공했을 때, 수비 표시가 된다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ③: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다. 자신 필드 위의 몬스터의 수× 400 라이프 포인트를 회복한다.
+PRINTL 자신 필드上の몬스터의 数×４００ライフポイント回復する。
+PRINTL 
+PRINTL 
+
+
+
+@CARDCAN_1601(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1601)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時強制
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= GETVAR(@"ライフ_%対面者%") 
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1601(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1601,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",(RESULT * 400))
+	ENDIF
+ELSEIF 종류 == 소환時強制
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"表",2)
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+ENDIF
+

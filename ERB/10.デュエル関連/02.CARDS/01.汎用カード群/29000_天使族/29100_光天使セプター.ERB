@@ -1,0 +1,116 @@
+﻿@CARDNAME_29100,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 광천사 셉터
+	CASE "略称"
+RESULTS = 광천사 셉터
+	CASE "カテゴリ"
+RESULTS:0 = 홀리 라이트닝
+ENDSELECT
+
+
+@CARD_29100(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 400
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_29100(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환에 성공했을 때 발동할 수 있다.
+PRINTL 덱에서 「광천사 셉터」 이외의 「광천사」 몬스터 1장을 패에 넣는다.
+PRINTL 이 효과의 발동 후, 턴 종료 시까지 자신은 빛 속성 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,X素材時효과)
+PRINTL ②: 이 카드가 엑스 소환에 사용되었을 경우에 발동할 수 있다.
+PRINTL 상대 필드의 카드 1장을 파괴하고, 자신은 덱에서 1장 드로우한다.
+PRINTL 
+
+@CARDCAN_29100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29100)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件固名前 = 광천사 셉터
+	효과条件カテゴリ = 홀리 라이트닝
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == X素材時효과
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_29100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29100)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件固名前 = 광천사 셉터
+		효과条件カテゴリ = 홀리 라이트닝
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		EX소환可能속성 = 빛속성
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+	ENDIF
+ELSEIF 종류 == X素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29100)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ENDIF
+

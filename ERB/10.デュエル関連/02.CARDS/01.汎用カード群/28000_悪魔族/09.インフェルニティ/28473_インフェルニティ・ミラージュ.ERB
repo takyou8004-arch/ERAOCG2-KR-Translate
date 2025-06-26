@@ -1,0 +1,127 @@
+﻿@CARDNAME_28473,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 인페르니티 미라지
+	CASE "略称"
+RESULTS = 만족 미라지
+	CASE "カテゴリ"
+RESULTS:0 = 인페르니티
+ENDSELECT
+
+
+@CARD_28473(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28473(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ①: 자신의 손패가 0장일 경우, 필드의 이 카드를 릴리스하고 발동할 수 있다.
+PRINTL 자신의 묘지에서 이 카드명 이외의 "인페르니티" 몬스터 2장을 특수 소환한다.
+CALLFORM CARD_ABLE(2,제외時)
+PRINTL ②: 자신의 손패가 0장일 경우에, 이 카드가 제외되었을 경우에 발동할 수 있다.
+PRINTL 제외되어 있는 자신의 카드를 3장까지 고르고, 덱으로 되돌린다.
+
+@CARDCAN_28473(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28473)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 손패数(듀얼리스트) != 0
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 인페르니티
+	효과条件固名前 = 인페르니티 미라지
+	효과条件소환可 = 2
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 제외時
+	SIF 발동済_2(듀얼리스트,28473)
+		RETURN 0
+	SIF 손패数(듀얼리스트) != 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_28473(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 回復ライフ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28473)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 인페르니티
+		효과条件固名前 = 인페르니티 미라지
+		효과条件複数 = 2
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28473,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件複数 = 97
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

@@ -1,0 +1,141 @@
+@CARDNAME_92926,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 네크로밸리의 왕묘
+	CASE "略称"
+RESULTS = 네크로밸리 왕묘
+	CASE "カテゴリ"
+RESULTS:0 = 네크로밸리
+ENDSELECT
+
+
+@CARD_92926(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250409
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92926(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 어느 하나만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,발동誘発)
+PRINTL ①: 자신 필드에 「묘지기」 몬스터 및 「왕가의 잠자는 골짜기－네크로밸리」가 앞면 표시로 존재하고,
+PRINTL 상대의 마법 / 함정 / 몬스터 효과가 발동했을 때에 발동할 수 있다. 그 발동을 무효로 하고 파괴한다.
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ②: 이 카드가 묘지에 존재하고, 자신 필드에 「왕가의 잠자는 골짜기－네크로밸리」가 앞면 표시로 존재할 경우에 발동할 수 있다.
+PRINTL 자신의 묘지의 「네크로밸리의 왕묘」 1장을 자신 필드에 세트한다.
+PRINTL 이 효과로 세트한 카드는 필드에서 벗어났을 경우에 제외된다.
+
+;묘지기의 万能無効카운터함정。名称ターン１で발동条件が重めとはいえ、ノ-コストで打てる万能無効は破格。
+;신함정に頼るとフィニッシュ時に女審신者のラ-효과で支払うＬＰが足りなくなるので、こちらのほうがテ-マには合っている。
+;現代물準でつけている１回再利用의 효과は、네크로벨리が必要だが네크로벨리下では묘지효과は발동できない矛盾した設計。
+;起動させるには異能者や女審신者を盤面に出す必要があり、「묘지기」융합体の強さの３割ぐらいはこの万能無効함정が担っている。
+
+@CARDCAN_92926(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과条件플래그
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92926)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,92926)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	;条件確認
+	CALL FULLRESET
+	효과範囲마함 = 1
+효과条件名前 = 왕가의 골짜기-네크로밸리
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 묘지기
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,92926)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	;条件確認
+	CALL FULLRESET
+	효과範囲마함 = 1
+효과条件名前 = 왕가의 골짜기-네크로밸리
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_92926(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92926,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92926,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 네크로벨리의 왕묘
+		효과추가종류 = 500
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF
+

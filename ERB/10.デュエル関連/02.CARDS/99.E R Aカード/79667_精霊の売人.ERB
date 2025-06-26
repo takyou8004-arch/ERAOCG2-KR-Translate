@@ -1,0 +1,174 @@
+﻿@CARDNAME_79667,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스피릿 셀러
+	CASE "略称"
+RESULTS = 정령의 상인
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79667(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250426
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79667(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 발동할 수 없다.
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：자신의 패 / 묘지 / 마법 & 함정 존에서 암컷 몬스터 카드 1장을 고르고,
+PRINTL 효과를 무효로 하고 상대 필드에 특수 소환한다.
+PRINTL 그 후, 자신은 X장 드로우한다.
+PRINTL （X는 이 효과로 특수 소환한 몬스터의 쾌락 / 고통 / 굴복 각인의 합계에서 반발 각인의 값을 빼고 1/3로 나눈 수치. 소수점 이하는 버림）
+CALL CARD_ABLE(2,묘지起動)
+PRINTL ②：묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 자신의 덱 / 묘지에서 “스피릿 헌터” 1장을 세트한다.
+PRINTL 이 듀얼 중, 자신은 “스피릿 헌터”의 효과로 상대 덱의 몬스터 카드도 선택할 수 있다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79667(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79667)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79667)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대손패 = 1
+	효과範囲상대마함 = 1
+	효과範囲상대묘지 = 1
+	효과条件성별 = 牝性
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(対面者,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,79667)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+효과条件名前 = 스피릿 헌터
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79667(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択캐릭터
+#DIM DYNAMIC 효과変数
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79667,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과範囲마함 = 1
+		효과条件성별 = 牝性
+		효과추가종류 = 効追無効
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,,,1)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			CALL CARD_EROTICS(選択カード_ID,듀얼리스트)
+			選択캐릭터 = RESULT
+			효과変数 = (MARK:選択캐릭터:쾌락각인 + MARK:選択캐릭터:고통각인 + MARK:選択캐릭터:굴복각인 - MARK:選択캐릭터:반발각인) / 3
+			PRINTFORML %NAME:選択캐릭터%の조교具合は…
+			PRINTFORML （쾌락각인LV{MARK:選択캐릭터:쾌락각인} + 고통각인LV{MARK:選択캐릭터:고통각인} + 굴복각인LV{MARK:選択캐릭터:굴복각인} - 반발각인LV{MARK:選択캐릭터:반발각인}） / 3 = {효과変数}（端数切り捨て）
+			CALL CARDDRAW_BASIC(듀얼리스트,효과変数)
+			SETCOLOR C_RED
+			PRINTFORML %NAME:選択캐릭터%는 승리를 위해서라 할지라도 자신이 팔려간 것에 반감을 느꼈다……
+			RESETCOLOR
+			PRINTFORML
+			SETCOLOR C_RED
+			IF MARK:選択캐릭터:반발각인 < 3
+				MARK:選択캐릭터:반발각인 += 1
+				IF MARK:選択캐릭터:반발각인 == 1
+					PRINTFORML %NAME:選択캐릭터%는반발각인LV1を得た
+				ELSEIF  MARK:選択캐릭터:반발각인 == 2
+					PRINTFORML %NAME:選択캐릭터%는반발각인LV2を得た
+				ELSEIF  MARK:選択캐릭터:반발각인 == 3
+					PRINTFORML %NAME:選択캐릭터%는반발각인LV3を得た
+				ENDIF
+			ELSEIF MARK:選択캐릭터:반발각인 == 3
+				PRINTFORML %NAME:選択캐릭터%の반발각인は既にLV3だ
+			ENDIF
+			CALL EVENT_FAVUP(選択캐릭터,-100)
+			PRINTFORML
+			RESETCOLOR
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79667,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+효과条件名前 = 스피릿 헌터
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+		SIF RESULT == 1
+			CALL CARD_EFFECT_D1USE(듀얼리스트,79667)
+	ENDIF
+ENDIF

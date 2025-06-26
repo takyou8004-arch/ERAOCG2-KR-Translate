@@ -1,0 +1,86 @@
+﻿@CARDNAME_1700,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 크리보
+	CASE "略称"
+RESULTS = 크리보
+	CASE "カテゴリ"
+RESULTS:0 = 크리보
+ENDSELECT
+
+
+@CARD_1700(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 300
+	CASE "守備力"
+		RETURN 200
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1700(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ①: 상대 몬스터의 공격 선언시에, 이 카드를 패에서 버리고 발동할 수 있다.
+PRINTL 그 전투에서 자신에게 발생하는 전투 데미지를 0으로 한다.
+PRINTL 
+PRINTL 
+PRINTL 
+
+@CARDCAN_1700(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1700)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_ダメージ無効") != 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1700(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1700)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ無効",3)
+	ENDIF
+ENDIF
+

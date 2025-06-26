@@ -1,0 +1,79 @@
+﻿;-------------------------------------------------
+;삽입Ｇスポ責め
+;식스系파생コマンド
+;-------------------------------------------------
+@SCOM6
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+TCVAR:MASTER:사정대상캐릭터_1 = TARGET
+TCVAR:MASTER:사정부위플래그 = 1
+TCVAR:MASTER:사정쾌락강도 = 1800
+
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 60
+DOWNBASE:기력 += 120
+
+CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER, 500)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 100)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 180)
+
+;고통
+LOCAL = 500 * PAIN_CHECK_V(TARGET) / 1000
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+
+
+;애널、파과血、촉수の汚れ
+IF (STAIN:MASTER:0 & 8) || (STAIN:MASTER:0 & 32) || (STAIN:MASTER:0 & 64)
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 500)
+;정액汚れ
+ELSEIF STAIN:MASTER:0 & 4
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 250)
+ENDIF
+
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;사정に관계なく行われる処理はここから
+;질내に파과の血の汚れを付加
+SIF TALENT:처녀
+	STAIN:6 |= 64
+;奴隷の질내⇔조교者のＰの汚れが이동
+STAIN:6 |= STAIN:MASTER:2
+STAIN:MASTER:2 |= STAIN:6
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+EXP:Ｖ성교경험 ++
+CFLAG:TARGET:엉덩이성장 ++
+SIF EXP:TARGET:포르치오경험 >= 50
+	EXP:TARGET:포르치오경험 ++
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 4
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 4
+ENDIF
+
+;애정경험
+SIF ASSIPLAY == 0
+	EXP:애정경험 += TALENT:연모
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE906
+;삽입Ｇ스팟 자극
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(906)
+	RETURN RESULT
+;하반신착의
+SIF TEQUIP:0 & 4
+	RETURN 0
+RETURN 1

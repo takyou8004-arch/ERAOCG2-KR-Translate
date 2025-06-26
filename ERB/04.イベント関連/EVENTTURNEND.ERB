@@ -1,0 +1,851 @@
+﻿@EVENTTURNEND
+;ETE=EVENTTURNENDの略
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC ループバグ対策
+#DIM DYNAMIC ETE_체력回復値
+#DIM DYNAMIC ETE_정력値 
+#DIM DYNAMIC 즉시타락판정
+#DIM DYNAMIC 完堕ち数
+#DIM DYNAMIC 음란確認
+
+;初期化
+MASTER = 0
+;반발각인除去
+FOR 캐릭터_ID,1,CHARANUM
+	SIF MARK:캐릭터_ID:반발각인 == 0
+		CONTINUE
+	IF RAND:5 == 0
+		CALL ANGER_AWAY(캐릭터_ID)
+	ENDIF
+NEXT
+CFLAG:MASTER:애처도시락 = 0
+CFLAG:MASTER:내기플래그 = 0
+;依頼상황リセット
+CALL IRAI_RESET_DAILY
+RESETBGCOLOR
+;연모
+FOR 캐릭터_ID,1,CHARANUM
+	IF (CFLAG:캐릭터_ID:호감도 > 10000 && TALENT:캐릭터_ID:연모 >= 2) || TALENT:캐릭터_ID:굴복됨 >= 1
+		完堕ち数 += 1
+	ENDIF
+
+	IF CFLAG:캐릭터_ID:연모제한 >= 1
+		GOTO SKIP_REMBO
+	ENDIF
+
+	IF CFLAG:캐릭터_ID:호감도 < 2000 && TALENT:캐릭터_ID:굴복됨 == 0 && MARK:캐릭터_ID:굴복각인 >= 3 && MARK:캐릭터_ID:쾌락각인 >= 3
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 14)
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%는 %CALLNAME:MASTER%와 지내다 보니、그 몸은 완전히 쾌락에 굴복하고 말았다。
+		PRINTFORMW %CALLNAME:캐릭터_ID%는【굴복함】을 얻었다
+		RESETCOLOR
+		TALENT:캐릭터_ID:굴복됨 = 1
+		SETBIT CFLAG:캐릭터_ID:기정사실 , 0
+		PRINTL	
+		PRINTL	
+		PRINTL	
+		PRINTL	
+		IF CFLAG:캐릭터_ID:소유함 == 0
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 붉은 얼굴로 영혼인 카드를 건냈다。
+			CALL CARD_GET_CHARA(캐릭터_ID,1)
+		ENDIF
+		PRINTFORMW 굴복한 %CALLNAME:캐릭터_ID%를 방에 살게 해줍니까？
+		PRINTL 
+		PRINTL 
+		PRINTL [0] - 방에서 기른다
+		PRINTL [1] - 맡긴다
+		BINPUT
+		IF RESULT == 0
+			PRINTFORMW 당신은 고개를 끄덕이자 %CALLNAME:캐릭터_ID%는 불안했지만、하지만 욕정을 숨길 수 없는 미소를 보였다。
+			CFLAG:캐릭터_ID:시작위치 = CFLAG:MASTER:시작위치
+			CALL CHECK_SUMMON_CAN
+			IF RESULT == 0
+				CFLAG:캐릭터_ID:시작위치 = CFLAG:MASTER:시작위치
+				PRINTFORMW %CALLNAME:캐릭터_ID%와 동거하게 되었습니다。
+			ELSEIF RESULT == 1
+				PRINTFORMW 방에 소환할 수 있는 최대 인원이 초과되어 거주할 수 없습니다。
+				PRINTFORMW ＊"애인추가기능"로 잠자는 방을 바꿀 수 있습니다＊
+			ENDIF
+		ELSEIF RESULT == 1 
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 아쉬운 표정을 지었지만、기다리기로 했다。
+			PRINTFORMW ＊"애인추가기능"로 잠자는 방을 바꿀 수 있습니다＊
+		ENDIF  
+	ENDIF
+	IF CFLAG:캐릭터_ID:호감도 > 5000 && EXP:캐릭터_ID:봉사쾌락경험 >= 200 && TALENT:캐릭터_ID:연모 == 1
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%는 %CALLNAME:MASTER%와의 행위에서 진정한 유대감을 느끼는 것 같다…
+		PRINTFORMW %CALLNAME:캐릭터_ID%는【친애】를 얻었다
+		RESETCOLOR
+		TALENT:캐릭터_ID:연모 = 2
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 2)
+	ELSEIF CFLAG:캐릭터_ID:호감도 > 1500 && CFLAG:캐릭터_ID:소유함 == 0 && TALENT:캐릭터_ID:듀얼리스트 != 1
+		IF ITEM:(NO:캐릭터_ID) == 0
+			PRINTFORMW 아침 일찍、 %CALLNAME:캐릭터_ID%는 붉은 얼굴로 %CALLNAME:MASTER%를 방문하여、카드를 건네주었다。
+			CALL CARD_GET_CHARA(캐릭터_ID,1)
+			PRINTFORMW 시간이 날 때 불러달라는 부탁을 받았다。
+		ELSE
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 카드에서 뛰쳐나왔다。
+			PRINTFORMW 아무래도 카드에 영혼이 깃든 것 같아서、붉은 얼굴로 %CALLNAME:MASTER%에 인사하러 왔다。
+			CFLAG:캐릭터_ID:소유함 = 1
+		ENDIF
+
+	ELSEIF CFLAG:캐릭터_ID:호감도 > 2000 && ABL:캐릭터_ID:순종 >= 3 && !TALENT:캐릭터_ID:연모 && !TALENT:캐릭터_ID:굴복됨 && TALENT:캐릭터_ID:중고 == 0
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 1)
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%는 %CALLNAME:MASTER%와의 행위에서 기쁨을 느끼는 것 같다…
+		PRINTFORMW %CALLNAME:캐릭터_ID%는【연모】를 얻었다
+		RESETCOLOR
+		TALENT:캐릭터_ID:연모 = 1
+		SETBIT CFLAG:캐릭터_ID:기정사실 , 0
+
+		PRINTL	
+		PRINTL	
+		PRINTL	
+		PRINTL	
+		IF CFLAG:캐릭터_ID:소유함 == 1 || TALENT:캐릭터_ID:듀얼리스트 >= 1
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 %CALLNAME:MASTER%와 좀 더 함께하고 싶은 것 같다。
+		ELSEIF CFLAG:캐릭터_ID:소유함 == 0 
+			IF ITEM:(NO:캐릭터_ID) == 0
+				PRINTFORMW %CALLNAME:캐릭터_ID%는 붉은 얼굴로 %CALLNAME:MASTER%를 방문하여、카드를 건네주었다。
+				CALL CARD_GET_CHARA(캐릭터_ID,1)
+			ELSE
+				PRINTFORMW %CALLNAME:캐릭터_ID%은 카드에서 뛰어나왔다。
+				PRINTFORMW 아무래도 카드에 영혼이 깃든 것 같아서、붉은 얼굴로 %CALLNAME:MASTER%에 인사하러 왔다。
+				CFLAG:캐릭터_ID:소유함 = 1
+			ENDIF
+			PRINTFORMW 아무래도 %CALLNAME:캐릭터_ID%는 %CALLNAME:MASTER%와 함께 있고 싶어 하는 것 같다。
+		ENDIF
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 19, 0)
+		PRINTFORMW %CALLNAME:캐릭터_ID%를 방에 살게 해줍니까？
+		PRINTL 
+		PRINTL 
+		PRINTL [0] - 괜찮아
+		PRINTL [1] - 생각 좀 하게 해줘…
+		BINPUT
+		IF RESULT == 0
+			PRINTFORMW %CALLNAME:MASTER%가 고개를 끄덕이자 %CALLNAME:캐릭터_ID%는 행복하게 미소지었다。
+			CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 19, 1)
+			CALL CHECK_SUMMON_CAN
+			IF RESULT == 0
+				CFLAG:캐릭터_ID:시작위치 = CFLAG:MASTER:시작위치
+				PRINTFORMW %CALLNAME:캐릭터_ID%와 동거하게 되었습니다。
+			ELSEIF RESULT == 1
+				PRINTFORMW 방에 소환할 수 있는 최대 인원이 초과되어 거주할 수 없습니다。
+				PRINTFORMW ＊"애인추가기능"로 잠자는 방을 바꿀 수 있습니다＊
+			ENDIF
+		ELSEIF RESULT == 1 
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 아쉬운 표정을 지었지만、기다리기로 했다。
+			PRINTFORMW ＊"애인추가기능"로 잠자는 방을 바꿀 수 있습니다＊
+			CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 19, 2)
+		ENDIF  
+	ELSEIF CFLAG:캐릭터_ID:호감도 > 1000 &&  TALENT:캐릭터_ID:듀얼리스트 && CFLAG:캐릭터_ID:전화번호 == 0
+		PRINTFORMW 충분히 친해졌기에 %CALLNAME:캐릭터_ID%는 전화번호를 건네주었다。
+		CFLAG:캐릭터_ID:전화번호 = 1
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 3)
+	ENDIF
+
+	$SKIP_REMBO
+	;키스마취득
+	IF EXP:캐릭터_ID:키스경험 >= 200 && TALENT:캐릭터_ID:키스마 == 0
+		TALENT:캐릭터_ID:키스마 = 1
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 6)
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%의 입은、항상 외로움에 시달리게 되어、안절부절못하게 되었다。
+		PRINTFORMW %CALLNAME:캐릭터_ID%는[키스마]를 얻었다。
+		RESETCOLOR
+	ENDIF
+	;자위狂い취득
+	IF EXP:캐릭터_ID:자위경험 >= 200 && TALENT:캐릭터_ID:자위광 == 0
+		TALENT:캐릭터_ID:자위광 = 1
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 7)
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%는 반 시간에 언제라도 자위를 해 버릴 정도로、자위에 빠져 버렸다。
+		PRINTFORMW %CALLNAME:캐릭터_ID%는[자위광]을 얻었다。
+		RESETCOLOR
+	ENDIF
+
+	;포르치오性感취득
+	IF EXP:캐릭터_ID:포르치오경험 >= 500 && TALENT:캐릭터_ID:포르치오성감 == 0
+		TALENT:캐릭터_ID:포르치오성감 = 1
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 8)
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%의 몸은 아이를 낳는 기관조차도 쾌감을 느낄 수 있도록 재구성되어 버렸다。
+		PRINTFORMW %CALLNAME:캐릭터_ID%는[포르치오쾌감]를 얻었다。
+		RESETCOLOR
+	ENDIF
+
+	;허접클리취득
+	IF EXP:캐릭터_ID:Ｃ절정경험 >= 1000 && TALENT:캐릭터_ID:성별 == 1 && TALENT:캐릭터_ID:허접클리 == 0
+		TALENT:캐릭터_ID:허접클리 = 1
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 9)
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%의 클리토리스는 과도한 절정 경험으로 인해、바지와 문지르는 것만으로도 가볍게 절정하게 됐다.。
+		PRINTFORMW %CALLNAME:캐릭터_ID%는[허접클리]를 얻었다。
+		RESETCOLOR
+	ENDIF
+
+	;허접유두취득
+	IF EXP:캐릭터_ID:Ｂ절정경험 >= 1000 && TALENT:캐릭터_ID:성별 & 1 && TALENT:캐릭터_ID:허접유두 == 0
+		TALENT:캐릭터_ID:허접유두 = 1
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 10)
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%의 젖꼭지는 과도한 절정 경험으로 인해、브래지어와 스치는 것만으로도 가볍게 절정하게 됐다。
+		PRINTFORMW %CALLNAME:캐릭터_ID%는[허접젖꼭지]를 얻었다。
+		RESETCOLOR
+	ENDIF
+
+	VARSET 음란確認
+	SIF TALENT:캐릭터_ID:자위광 == 1
+		음란確認 ++
+	SIF TALENT:캐릭터_ID:음호 == 1
+		음란確認 ++
+	SIF TALENT:캐릭터_ID:엉덩이광 == 1
+		음란確認 ++
+	SIF TALENT:캐릭터_ID:음유 == 1
+		음란確認 ++
+	SIF TALENT:캐릭터_ID:키스마 == 1
+		음란確認 ++
+
+	IF TALENT:캐릭터_ID:음란 == 0 && 음란確認 >= 3
+		TALENT:캐릭터_ID:음란 = 1
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 12)
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%는 쾌락에 대해、의존적이라고도 할 수 있는 감각을 기억해 버렸다。
+		PRINTFORML 하루도 몸의 욱신거림이 가라앉지 않는 날이 없고、사시사철 음탕한 망상을 하게 됐다。
+		PRINTFORMW %CALLNAME:캐릭터_ID%는[음란]을 얻었다。
+		RESETCOLOR
+	ELSEIF TALENT:캐릭터_ID:음란 == 1 && 음란確認 >= 5
+		TALENT:캐릭터_ID:음란 = 2
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 13)
+		SETCOLOR C_PINK
+		PRINTFORML 完全に조교されつくした %CALLNAME:캐릭터_ID%는 쾌락에 대해、전적으로 의존하게 되었다。
+		PRINTFORML 몸 속에서는 항상 발정액이 새어나오고、구멍이라는 구멍은 쾌락을 추구하는 브레이크를 멈출 수 없게 됐다。
+		PRINTFORMW %CALLNAME:캐릭터_ID%는[쾌락광]을 얻었다。
+		RESETCOLOR
+	ENDIF
+
+
+
+
+
+	;즉시타락판정
+	VARSET 즉시타락판정
+	즉시타락판정 = EX:캐릭터_ID:Ｃ절정 + EX:캐릭터_ID:Ｖ절정 + EX:캐릭터_ID:Ａ절정 + EX:캐릭터_ID:Ｂ절정 + EX:캐릭터_ID:Ｍ절정
+	IF 즉시타락판정 >= 20 && TALENT:캐릭터_ID:즉시타락 == 0
+		TALENT:캐릭터_ID:즉시타락 = 1
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 20)
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%의 몸은 %CALLNAME:MASTER%에 의해 주어지는 쾌락에 타락하고 있다.。
+		PRINTFORMW %CALLNAME:캐릭터_ID%는[즉타락]을 얻었다。
+		RESETCOLOR
+	ELSEIF 즉시타락판정 >= 100 && TALENT:캐릭터_ID:즉시타락 == 1
+		TALENT:캐릭터_ID:즉시타락 = 2
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 21, 21)
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%의 몸은 %CALLNAME:MASTER%에 패배하는 것이 습관이 되어서、
+		PRINTFORML 그 쾌락에 깊이 빠져、깊이 의존하게 되어 버렸다。
+		PRINTFORMW %CALLNAME:캐릭터_ID%는[허접암컷]이 되고、그 사실에 황홀한 미소를 지었다。
+		RESETCOLOR
+	ENDIF
+	IF 즉시타락판정 >= 50 &&  TALENT:캐릭터_ID:절정익숙함 == 0
+		TALENT:캐릭터_ID:절정익숙함 = 1
+		SETCOLOR C_PINK
+		PRINTFORML %CALLNAME:캐릭터_ID%의 몸은 %CALLNAME:MASTER%에 의해 영향을 받는것에 익숙해져버려서、
+		PRINTFORML 조교로 인해 피곤한 일이 적어졌다。
+		PRINTFORMW 좀 더 기분이 좋아질 거라고 상상하고、 %CALLNAME:캐릭터_ID%는 수줍게 미소지었다。
+		RESETCOLOR
+	ENDIF
+	IF TALENT:캐릭터_ID:임신가능 >= 1 && オプション_自然임신 == 1 && TALENT:캐릭터_ID:임신 != 1
+		CALL PREG_RELEASE(캐릭터_ID)
+	ENDIF
+
+	;その他いろいろリセット処理
+	IF CFLAG:캐릭터_ID:기분나쁨
+		CFLAG:캐릭터_ID:기분나쁨 --
+		IF !CFLAG:캐릭터_ID:기분나쁨
+			SIF MARK:캐릭터_ID:반발각인
+				CFLAG:캐릭터_ID:기분나쁨 = -- MARK:캐릭터_ID:반발각인
+		ENDIF
+	ENDIF
+	IF CFLAG:캐릭터_ID:아르바이트
+		CALL GETMONEY_PTJ(캐릭터_ID)
+	ENDIF
+	CFLAG:캐릭터_ID:용돈줌 = 0
+
+	CFLAG:캐릭터_ID:알바중 = 0
+	CFLAG:캐릭터_ID:일했음 = 0
+	CFLAG:캐릭터_ID:방문했음 = 0
+	;데이트	
+	CFLAG:캐릭터_ID:데이트중 = 0
+	CFLAG:캐릭터_ID:데이트이벤트함 = 0
+	;賭け事
+	CFLAG:캐릭터_ID:내기플래그 = 0
+	;조르기허가
+	CFLAG:캐릭터_ID:조르기허가 = 0
+	;빙의중
+	CFLAG:캐릭터_ID:빙의중 = 0
+	;解放中
+	CFLAG:캐릭터_ID:함몰개방 = 0
+	;お목욕
+	CFLAG:캐릭터_ID:목욕 = 0
+	;挨拶플래그
+	CFLAG:캐릭터_ID:인사했음 = 0
+
+	IF CFLAG:캐릭터_ID:목욕 == 0
+		RESET_STAIN 캐릭터_ID
+		;アヌスを洗う
+		STAIN:캐릭터_ID:4 = 0
+	ENDIF
+	SIF CFLAG:캐릭터_ID:시작위치 == CFLAG:MASTER:시작위치
+		CFLAG:캐릭터_ID:축적 += 100
+
+	IF DAY:3 == 30
+		SIF CFLAG:캐릭터_ID:시작위치 != CFLAG:MASTER:시작위치
+			CONTINUE
+		IF CFLAG:캐릭터_ID:호감도 > 5000 && (TALENT:캐릭터_ID:종족 == 7 || TALENT:캐릭터_ID:종족 == 8 || TALENT:캐릭터_ID:종족 == 11 || TALENT:캐릭터_ID:종족 == 16)
+			PRINTFORML %CALLNAME:캐릭터_ID%는 수줍은 듯이 따뜻한 달걀을 내밀었다……。
+			PRINTFORML 갓 낳은 것 같지만 무정란인 것 같다……。
+			CALL ITEM_GET(410,1)
+		ENDIF
+		IF TALENT:캐릭터_ID:뿔이남 != 0
+			IF TALENT:캐릭터_ID:뿔이남 < -1
+				PRINTFORML %CALLNAME:캐릭터_ID%의 가공된 뿔이 조금씩 자랐다。
+			ELSEIF TALENT:캐릭터_ID:뿔이남 == 1
+				PRINTFORML %CALLNAME:캐릭터_ID%는 자신을 돋보이게 하기 위해 모서리를 깔끔하게 다듬었다。
+			ENDIF
+			TALENT:캐릭터_ID:뿔이남 += 1
+			SIF TALENT:캐릭터_ID:뿔이남 == 0
+				TALENT:캐릭터_ID:뿔이남 = 1
+		ENDIF
+	ENDIF
+NEXT
+
+
+;ホテル플래그
+VARSET 데이트_ホテル플래그
+VARSET パック_合計구입数
+VARSET 人祓いモード
+VARSET 追跡설정_ID
+CFLAG:MASTER:데이트중 = 0
+SIF 全力押倒モード == 1
+	全力押倒モード = 0
+SIF 徹底虐めモード == 1
+	徹底虐めモード = 0
+;캐릭터_IDの체력最大値상승
+CALL OPTION_HPUP
+;가슴AWS
+CALL OPTION_BUSTUP
+CALL OPTION_BUTTUP
+CALL OPTION_FATTER
+
+
+SIF TALENT:MASTER:성별 & 2
+	CFLAG:MASTER:축적 += 100
+SELECTCASE TALENT:MASTER:형태
+	CASE 1
+		CFLAG:MASTER:축적 -= 100
+	CASE 2
+		CFLAG:MASTER:축적 -= 50
+	CASE 3,4,0
+		CFLAG:MASTER:축적 += 0
+	CASE 5
+		CFLAG:MASTER:축적 += 50
+	CASE 6
+		CFLAG:MASTER:축적 += 100
+	CASE 7
+		CFLAG:MASTER:축적 += 200
+	CASE 8
+		CFLAG:MASTER:축적 += 400
+ENDSELECT
+
+
+;임신システム
+;임신後
+FOR 캐릭터_ID,0,CHARANUM
+	IF TALENT:캐릭터_ID:임신 == 1
+		PRINTFORMW 임신경과【{CFLAG:캐릭터_ID:임신경과}】
+		;임신したての素質UP！
+		IF CFLAG:캐릭터_ID:임신경과 == 0
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 임신으로 인해 몸에 여러 가지 변화가 찾아왔다。
+			IF TALENT:캐릭터_ID:회복속도 > -1
+				TALENT:캐릭터_ID:회복속도 = -1
+				PRINTFORMW 임신으로 인해 %CALLNAME:캐릭터_ID%의 회복속도가 떨어졌다。
+			ENDIF
+			TALENT:캐릭터_ID:모유체질 = 1
+			PRINTFORMW 임신으로 인해 %CALLNAME:캐릭터_ID%는 모유체질이 되었다。
+			TALENT:캐릭터_ID:가슴사이즈 += 1
+			PRINTFORMW 임신으로 인해 %CALLNAME:캐릭터_ID%의 바스트 사이즈가 상승했다。
+			CALL SET_BODYSIZE(캐릭터_ID,0b10,1)
+			; CALL SHOP_BUST_RESET(캐릭터_ID)
+		;その後の経過：10日までは普通
+		ELSEIF CFLAG:캐릭터_ID:임신경과 <= 9
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 아이는 뱃속에서 무럭무럭 자라고 있다。
+		;その後の経過：10日でお腹が目立ち始める
+		ELSEIF CFLAG:캐릭터_ID:임신경과 == 10
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 배모양이 눈에 띄기 시작했다
+			TALENT:캐릭터_ID:보테배 = 1
+				PRINTFORMW 임신으로 인해 %CALLNAME:캐릭터_ID%는 보테배가 되었다。
+		;その後の経過：24日でお腹が目立ち始める
+		ELSEIF CFLAG:캐릭터_ID:임신경과 >= 11 && CFLAG:캐릭터_ID:임신경과 <= 24
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 배는 팽팽하게、생명이 깃들어 있음이 뚜렷이 전해지다。
+		;その後の経過：이동
+		ELSEIF CFLAG:캐릭터_ID:임신경과 == 25
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 배가 충분히 자랐기 때문에 병원으로 몸을 옮겼다。
+			CFLAG:캐릭터_ID:시작위치 = 54
+		ELSEIF CFLAG:캐릭터_ID:임신경과 >= 25 && CFLAG:캐릭터_ID:임신경과 <= 30
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 병원에서 커진 배를 쓰다듬고 있다。
+		ELSEIF CFLAG:캐릭터_ID:임신경과 >= 30
+			PRINTFORMW 힘내라！힘내라！조금만 더！
+			PRINTFORMW 당신은 %CALLNAME:캐릭터_ID%의 손을 잡고 출산을 지켜봤다………
+			PRINTL
+			PRINTL
+			PRINTL
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 아이가 태어났다。
+			CFLAG:캐릭터_ID:ECE임신플래그 = 0
+			CFLAG:캐릭터_ID:임신경과 = 0
+			CFLAG:캐릭터_ID:시작위치 = CFLAG:MASTER:시작위치
+			SIF 캐릭터_ID == MASTER
+				CFLAG:캐릭터_ID:시작위치 = 場所_寝室
+			TALENT:캐릭터_ID:임신 = 0
+			TALENT:캐릭터_ID:보테배 = 0
+			EXP:캐릭터_ID:출산경험 += 1
+			IF TALENT:캐릭터_ID:회복속도 < 1
+				TALENT:캐릭터_ID:회복속도 = +1
+				PRINTFORMW 출산으로 인해 %CALLNAME:캐릭터_ID%의 회복 속도가 빨라졌다。
+			ENDIF
+			子供部屋解放 = 1
+			PRINTFORMW 퇴원한 %CALLNAME:캐릭터_ID%는 아이와 함께 집으로 돌아왔다。
+			CALL OMEDETA_BABY(캐릭터_ID)
+		ENDIF
+		SIF CFLAG:캐릭터_ID:임신경과 <= 30
+			CFLAG:캐릭터_ID:임신경과 ++
+	ENDIF
+NEXT
+
+
+FOR 캐릭터_ID,1,CHARANUM
+	;기력の回復
+	BASE:캐릭터_ID:기력 = MAXBASE:캐릭터_ID:기력
+	ETE_체력回復値 = MAXBASE:캐릭터_ID:체력 / 3
+	;回復早い、回復遅い
+	ETE_체력回復値 = ETE_체력回復値 * 3 / (3 - TALENT:캐릭터_ID:회복속도)
+	BASE:캐릭터_ID:체력 = MIN(MAXBASE:캐릭터_ID:체력, BASE:캐릭터_ID:체력 + ETE_체력回復値)
+	CFLAG:캐릭터_ID:쇠약 = 0
+NEXT
+
+FOR 캐릭터_ID,0,CHARANUM
+	SIF MAXBASE:캐릭터_ID:체력 <= 0
+		MAXBASE:캐릭터_ID:체력 = 1
+	ETE_정력値 = BASE:캐릭터_ID:정력 + MAXBASE:캐릭터_ID:정력 * BASE:캐릭터_ID:체력 / MAXBASE:캐릭터_ID:체력
+	BASE:캐릭터_ID:정력 = MIN(MAXBASE:캐릭터_ID:정력,ETE_정력値)
+	;ついでに성욕
+	CFLAG:캐릭터_ID:성욕 += ABL:캐릭터_ID:욕망 + 1
+NEXT
+FLAG:0 = 0
+
+
+
+CALL RANK_POINT
+SIF DAY:3 >= 2
+	オプション_OP_TIPS = 0
+BEGIN SHOP
+
+
+
+@RANK_POINT
+#DIM DYNAMIC 報酬_部屋番号
+#DIM DYNAMIC 報酬_仕事
+#DIM DYNAMIC 報酬_仕送り
+#DIM DYNAMIC 報酬_実報酬
+#DIM DYNAMIC 報酬_株
+#DIM DYNAMIC 報酬_バイト
+CUSTOMDRAWLINE ―
+VARSET LOCAL
+SIF 仕事_工数 > 7
+	EXP:MASTER:학습경험 ++
+;学習書持っていて학습경험が一定以上ならお給料の基礎値が増えるように。
+IF ITEM:기초자격학습서 == 1 && ITEM:응용자격학습서 == 1 && ITEM:고도자격학습서 == 1 && EXP:MASTER:학습경험 >= 400
+	報酬_仕事 = 仕事_工数 * 5000
+ELSEIF ITEM:기초자격학습서 == 1 && ITEM:응용자격학습서 == 1 && EXP:MASTER:학습경험 >= 300
+	報酬_仕事 = 仕事_工数 * 2400
+ELSEIF ITEM:기초자격학습서 == 1 && EXP:MASTER:학습경험 >= 100
+	報酬_仕事 = 仕事_工数 * 1800
+ELSE
+	報酬_仕事 = 仕事_工数 * 1200
+ENDIF
+
+IF TALENT:MASTER:연령 < 0 && DAY:3 == 10
+	報酬_仕送り = 100000
+	PRINTFORMW 오늘은 10일이다！
+	PRINTFORMW 부모님이 생활비 10만 엔을 송금해 주셨다.。
+ENDIF
+
+IF ITEM:카이바코퍼레이션주식 && DAY:3 == 29
+	報酬_株 = 100000 
+	PRINTFORMW 카이바 코퍼레이션의 배당금이 지급되었다！
+	PRINTFORMW 
+ENDIF
+SIF バイト済み == 1
+	報酬_バイト = 5000
+
+;－호감도だとお金が徴収されていたので
+SIF FLAG:누계호감도상승 < 0
+	FLAG:누계호감도상승 = 0
+SIF 報酬_仕事
+	PRINTFORML 업무 달성 {報酬_仕事}円
+SIF 報酬_仕送り
+	PRINTFORML 송금     {報酬_仕送り}円
+SIF 報酬_株
+	PRINTFORML 주식배당금   {報酬_株}円
+SIF 報酬_バイト
+	PRINTFORML 알바비　 {報酬_バイト}円
+PRINTFORML 수수께끼수입：
+PRINTFORML 호감도 상승 보너스 {FLAG:누계호감도상승 * 5}円
+PRINTFORML 듀얼 보너스 {FLAG:듀얼보너스 * 500}円
+
+報酬_実報酬 += (FLAG:누계호감도상승 * 5) + (FLAG:듀얼보너스 * 500) + 報酬_仕事 +報酬_仕送り + 報酬_株 + 報酬_バイト
+
+;とりあえず1日の플래그リセット
+FLAG:누계호감도상승 = 0
+FLAG:듀얼보너스 = 0
+バイト済み = 0
+仕事_工数 = 0
+仕事_出席 = 0
+FLAG:2008 = 0
+CALL MONEY_GET(報酬_実報酬)
+
+
+
+@OMEDETA_BABY(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 能力値
+#DIM DYNAMIC ガチャ結果
+#DIM DYNAMIC 구상OP
+#DIM DYNAMIC 子供_ID
+
+子供_ID = CHARANUM
+ADDCHARA 9999
+
+NO:子供_ID = 아이의数 + 9500
+
+;能力コピー
+;とりあえず確定で女の子
+TALENT:子供_ID:성별 = 1
+
+FOR 能力値,10,146
+	ガチャ結果 = RAND:2
+	SIF ガチャ結果 == 0
+		TALENT:子供_ID:能力値 = TALENT:캐릭터_ID:能力値
+	SIF ガチャ結果 == 1
+		TALENT:子供_ID:能力値 = TALENT:(CFLAG:캐릭터_ID:HIT아기씨):能力値
+	;子供で上書き
+	SIF 能力値 == 17
+		TALENT:子供_ID:연령 = -2
+	;嫁さんの服を引継ぐ
+	CFLAG:子供_ID:지금복장 = 캐릭터_ID
+NEXT
+;もし、あなたの種/体で임신した子ならば素質：친자획득
+SIF CFLAG:캐릭터_ID:HIT아기씨 == MASTER || 캐릭터_ID == MASTER
+	TALENT:子供_ID:친자 = 1
+
+CFLAG:子供_ID:부친종 = CFLAG:캐릭터_ID:HIT아기씨
+CFLAG:子供_ID:모친종 = 캐릭터_ID
+
+TALENT:子供_ID:생성자 = 1
+TALENT:子供_ID:키스미경험 = 1
+TALENT:子供_ID:처녀 = 1
+CFLAG:子供_ID:키스상실상대 = -1
+;호감도3000
+CFLAG:子供_ID:호감도 = 3000
+; CALL SHOP_BUST_RESET(子供_ID)
+; CALL SHOP_BUTT_RESET(子供_ID)
+CALL SET_BODYSIZE(子供_ID,0,1)
+CALL CLOTHES_SETTING(子供_ID)
+CALL NAME_CUSTOM(子供_ID)
+아이의数 += 1
+
+
+IF TALENT:캐릭터_ID:연모 == 2
+	구상OP = 1
+ELSEIF TALENT:캐릭터_ID:연모 == 1
+	구상OP = 2
+ELSE
+	구상OP = 3
+ENDIF
+
+CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 25, 구상OP)
+
+
+
+@OPTION_HPUP
+#DIM 캐릭터_ID
+#DIM DYNAMIC 체력BEFORE
+#DIM DYNAMIC 체력AFTER
+#DIM DYNAMIC 기력BEFORE
+#DIM DYNAMIC 기력AFTER
+
+IF オプション_체력기력상승 == 1
+	FOR 캐릭터_ID,0,CHARANUM
+		SIF CFLAG:캐릭터_ID:401 == 0
+			CONTINUE
+		체력BEFORE = MAXBASE:캐릭터_ID:체력
+		SIF MAXBASE:캐릭터_ID:체력 < 1000
+			MAXBASE:캐릭터_ID:체력 += (CFLAG:캐릭터_ID:401 * 5)
+
+		SIF MAXBASE:캐릭터_ID:체력 < 3000 && MAXBASE:캐릭터_ID:체력 >= 1000
+			MAXBASE:캐릭터_ID:체력 += (CFLAG:캐릭터_ID:401 * 4)
+
+		SIF MAXBASE:캐릭터_ID:체력 < 5000 && MAXBASE:캐릭터_ID:체력 >= 3000
+			MAXBASE:캐릭터_ID:체력 += (CFLAG:캐릭터_ID:401 * 3)
+
+		SIF MAXBASE:캐릭터_ID:체력 < 7000 && MAXBASE:캐릭터_ID:체력 >= 5000
+			MAXBASE:캐릭터_ID:체력 += (CFLAG:캐릭터_ID:401 * 2)
+
+		SIF MAXBASE:캐릭터_ID:체력 < 10000 && MAXBASE:캐릭터_ID:체력 >= 7000
+			MAXBASE:캐릭터_ID:체력 += (CFLAG:캐릭터_ID:401 * 2)
+
+		SIF MAXBASE:캐릭터_ID:체력 < 15000 && MAXBASE:캐릭터_ID:체력 >= 10000
+			MAXBASE:캐릭터_ID:체력 += (CFLAG:캐릭터_ID:401 * 1)
+
+		SIF MAXBASE:캐릭터_ID:체력 < 30000 && MAXBASE:캐릭터_ID:체력 >= 15000
+			MAXBASE:캐릭터_ID:체력 += (CFLAG:캐릭터_ID:401 * 1)
+
+		SIF MAXBASE:캐릭터_ID:체력 >= 30000
+			MAXBASE:캐릭터_ID:체력 += (CFLAG:캐릭터_ID:401 * 1)
+
+		SIF INRANGE(CFLAG:캐릭터_ID:지방, 1, 299) && MAXBASE:캐릭터_ID:체력 < 30000
+			MAXBASE:캐릭터_ID:체력 += (CFLAG:캐릭터_ID:지방 * 1)	
+		SIF INRANGE(CFLAG:캐릭터_ID:지방, 1, 299) && MAXBASE:캐릭터_ID:체력 < 10000
+			MAXBASE:캐릭터_ID:체력 += (CFLAG:캐릭터_ID:지방 * 2)
+		SIF INRANGE(CFLAG:캐릭터_ID:지방, 1, 299) && MAXBASE:캐릭터_ID:체력 < 5000
+			MAXBASE:캐릭터_ID:체력 += (CFLAG:캐릭터_ID:지방 * 2)
+
+		SIF MAXBASE:캐릭터_ID:체력 > 50000
+			MAXBASE:캐릭터_ID:체력 = 50000
+		체력AFTER = MAXBASE:캐릭터_ID:체력
+		SIF 체력BEFORE < 체력AFTER
+			PRINTFORML %CALLNAME:캐릭터_ID%체력UP！！：【{체력BEFORE}】→【{체력AFTER}】
+		SIF 체력BEFORE > 체력AFTER
+			PRINTFORML 체력이 떨어져서 고장이 날 가능성이 있다：【{기력BEFORE}】→【{기력AFTER}】
+	NEXT
+
+	FOR 캐릭터_ID,0,CHARANUM
+		SIF CFLAG:캐릭터_ID:401 == 0
+			CONTINUE
+		기력BEFORE = MAXBASE:캐릭터_ID:기력
+		SIF MAXBASE:캐릭터_ID:기력 < 1000
+			MAXBASE:캐릭터_ID:기력 += (CFLAG:캐릭터_ID:401 * 5)
+
+		SIF MAXBASE:캐릭터_ID:기력 < 3000 && MAXBASE:캐릭터_ID:기력 >= 1000
+			MAXBASE:캐릭터_ID:기력 += (CFLAG:캐릭터_ID:401 * 4)
+
+		SIF MAXBASE:캐릭터_ID:기력 < 5000 && MAXBASE:캐릭터_ID:기력 >= 3000
+			MAXBASE:캐릭터_ID:기력 += (CFLAG:캐릭터_ID:401 * 3)
+
+		SIF MAXBASE:캐릭터_ID:기력 < 7000 && MAXBASE:캐릭터_ID:기력 >= 5000
+			MAXBASE:캐릭터_ID:기력 += (CFLAG:캐릭터_ID:401 * 2)
+
+		SIF MAXBASE:캐릭터_ID:기력 < 10000 && MAXBASE:캐릭터_ID:기력 >= 7000
+			MAXBASE:캐릭터_ID:기력 += (CFLAG:캐릭터_ID:401 * 2)
+
+		SIF MAXBASE:캐릭터_ID:기력 < 15000 && MAXBASE:캐릭터_ID:기력 >= 10000
+			MAXBASE:캐릭터_ID:기력 += (CFLAG:캐릭터_ID:401 * 1)
+
+		SIF MAXBASE:캐릭터_ID:기력 < 30000 && MAXBASE:캐릭터_ID:기력 >= 15000
+			MAXBASE:캐릭터_ID:기력 += (CFLAG:캐릭터_ID:401 * 1)
+
+		SIF MAXBASE:캐릭터_ID:기력 >= 30000
+			MAXBASE:캐릭터_ID:기력 += (CFLAG:캐릭터_ID:401 * 1)
+
+		SIF INRANGE(CFLAG:캐릭터_ID:지방, 1, 299) && MAXBASE:캐릭터_ID:기력 < 30000
+			MAXBASE:캐릭터_ID:기력 += (CFLAG:캐릭터_ID:지방 * 1)	
+		SIF INRANGE(CFLAG:캐릭터_ID:지방, 1, 299) && MAXBASE:캐릭터_ID:기력 < 10000
+			MAXBASE:캐릭터_ID:기력 += (CFLAG:캐릭터_ID:지방 * 2)
+		SIF INRANGE(CFLAG:캐릭터_ID:지방, 1, 299) && MAXBASE:캐릭터_ID:기력 < 5000
+			MAXBASE:캐릭터_ID:기력 += (CFLAG:캐릭터_ID:지방 * 2)
+
+		SIF MAXBASE:캐릭터_ID:기력 > 50000
+			MAXBASE:캐릭터_ID:기력 = 50000
+		기력AFTER = MAXBASE:캐릭터_ID:기력
+		SIF 기력BEFORE < 기력AFTER
+			PRINTFORML %CALLNAME:캐릭터_ID%기력UP！！：【{기력BEFORE}】→【{기력AFTER}】
+		SIF 기력BEFORE > 기력AFTER
+			PRINTFORML 기력이 떨어져서 고장이 날 가능성이 있다：【{기력BEFORE}】→【{기력AFTER}】
+		CFLAG:캐릭터_ID:401 = 0
+	NEXT
+
+ENDIF
+
+
+@OPTION_BUSTUP
+#DIM 캐릭터_ID
+
+;虚가슴  550.0mm
+;絶壁  600.0mm
+;貧乳  650.0mm
+;並み  700.0mm
+;巨乳  800.0mm
+;爆乳  950.0mm
+;牛乳 1200.0mm
+;IF オプション_가슴AWS == 1
+;	FOR 캐릭터_ID,0,CHARANUM
+;		SIF TALENT:캐릭터_ID:성별 == 2
+;			CONTINUE
+;		IF (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장) >= 6000 && BUST_SIZE(캐릭터_ID) == -3
+;			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 6000
+;				TALENT:캐릭터_ID:가슴사이즈 = -2
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【절벽】이 되었다
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장) >= 6500 && BUST_SIZE(캐릭터_ID) == -2
+;			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 6500
+;				TALENT:캐릭터_ID:가슴사이즈 = -1
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【빈유】가 되었다
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장) >= 7000 && BUST_SIZE(캐릭터_ID) == -1
+;			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 7000
+;				TALENT:캐릭터_ID:가슴사이즈 = 0
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【평유】가 되었다
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장) >= 8000 && BUST_SIZE(캐릭터_ID) == 0
+;			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 8000
+;				TALENT:캐릭터_ID:가슴사이즈 = 1
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【거유】가 되었다
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장) >= 9500 && BUST_SIZE(캐릭터_ID) == 1
+;			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 9500
+;				TALENT:캐릭터_ID:가슴사이즈 = 2
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【폭유】가 되었다
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장) >= 12000 && BUST_SIZE(캐릭터_ID) == 2
+;			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 12000
+;				TALENT:캐릭터_ID:가슴사이즈 = 3
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴은【소젖】이 되었다
+;
+;				IF RAND:3 == 0
+;					TALENT:캐릭터_ID:함몰유두 = 1
+;					PRINTFORMW 그리고、 %CALLNAME:캐릭터_ID%의 젖꼭지는 함몰되어 버렸다……。
+;				ENDIF
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장) >= 13000 && BUST_SIZE(캐릭터_ID) == 3
+;			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 15000
+;				TALENT:캐릭터_ID:모유체질 = 1
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴에서 우유가 떨어지게 되었다
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장) >= 15000 && BUST_SIZE(캐릭터_ID) == 3
+;			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 15000
+;				TALENT:캐릭터_ID:가슴사이즈 = 4
+;				PRINTFORML %CALLNAME:캐릭터_ID%의 가슴은【마유】가 되었다
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장) >= 20000 && BUST_SIZE(캐릭터_ID) == 4
+;			IF 限界値_가슴AWS == 0 || 限界値_가슴AWS >= 20000
+;				TALENT:캐릭터_ID:가슴사이즈 = 5
+;				PRINTFORML %CALLNAME:캐릭터_ID%의 가슴은 이미【규격외】이다！
+;			ENDIF
+;		ENDIF
+;	NEXT
+;ENDIF
+CALL BUST_UP_BODYSIZE
+
+@OPTION_BUTTUP
+#DIM 캐릭터_ID
+
+;虚가슴  550.0mm
+;絶壁  600.0mm
+;貧乳  650.0mm
+;並み  700.0mm
+;巨乳  800.0mm
+;爆乳  950.0mm
+;牛乳 1200.0mm
+;IF オプション_尻AWS == 1
+;	FOR 캐릭터_ID,0,CHARANUM
+;		SIF TALENT:캐릭터_ID:성별 == 2
+;			CONTINUE
+;		IF (CFLAG:캐릭터_ID:엉덩이초기치 + CFLAG:캐릭터_ID:엉덩이성장) >= 6500 && TALENT:캐릭터_ID:엉덩이사이즈 == -2 
+;			IF 限界値_尻AWS == 0 || 限界値_尻AWS >= 6500
+;				TALENT:캐릭터_ID:엉덩이사이즈 = -1
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 엉덩이는【빈약한 엉덩이】가 되었다
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:엉덩이초기치 + CFLAG:캐릭터_ID:엉덩이성장) >= 7000 && TALENT:캐릭터_ID:엉덩이사이즈 == -1
+;			IF 限界値_尻AWS == 0 || 限界値_尻AWS >= 7000
+;				TALENT:캐릭터_ID:엉덩이사이즈 = 0
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 엉덩이는【평범한 엉덩이】가 되었다
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:엉덩이초기치 + CFLAG:캐릭터_ID:엉덩이성장) >= 8000 && TALENT:캐릭터_ID:엉덩이사이즈 == 0
+;			IF 限界値_尻AWS == 0 || 限界値_尻AWS >= 8000
+;				TALENT:캐릭터_ID:엉덩이사이즈 = 1
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 엉덩이는【순산형】이 되었다
+;				IF TALENT:캐릭터_ID:허벅지사이즈 < 1
+;					PRINTFORMW 거기에 %CALLNAME:캐릭터_ID%의 허벅지는【커다란 허벅지】가 되었다
+;				ENDIF
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:엉덩이초기치 + CFLAG:캐릭터_ID:엉덩이성장) >= 9500 && TALENT:캐릭터_ID:엉덩이사이즈 == 1
+;			IF 限界値_尻AWS == 0 || 限界値_尻AWS >= 9500
+;				TALENT:캐릭터_ID:엉덩이사이즈 = 2
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 엉덩이는【커다란 엉덩이】가 되었다
+;				IF TALENT:캐릭터_ID:허벅지사이즈 < 2
+;					PRINTFORMW 거기에 %CALLNAME:캐릭터_ID%의 허벅지는【두툼한 허벅지】가 되었다
+;				ENDIF
+;			ENDIF
+;		ELSEIF (CFLAG:캐릭터_ID:엉덩이초기치 + CFLAG:캐릭터_ID:엉덩이성장) >= 12000 && TALENT:캐릭터_ID:엉덩이사이즈 == 2
+;			IF 限界値_尻AWS == 0 || 限界値_尻AWS >= 12000
+;				TALENT:캐릭터_ID:엉덩이사이즈 = 3
+;				PRINTFORMW %CALLNAME:캐릭터_ID%의 엉덩이는 이제【질량병기】이다！
+;				PRINTFORMW 본인 앞에서 말했더니 혼났다………。
+;				IF TALENT:캐릭터_ID:허벅지사이즈 < 3
+;					PRINTFORMW 거기에 %CALLNAME:캐릭터_ID%의 두틈한 허벅지는【두꺼운 허벅지】가 되었다！
+;					PRINTFORMW 또 혼났다……。
+;				ENDIF
+;			ENDIF
+;		ENDIF
+;	NEXT
+;ENDIF
+CALL BUTT_UP_BODYSIZE
+
+@OPTION_FATTER
+#DIM 캐릭터_ID
+
+IF オプション_腹AWS == 1
+	FOR 캐릭터_ID,0,CHARANUM
+
+		SIF CFLAG:캐릭터_ID:지방 < 0
+			CFLAG:캐릭터_ID:지방 = 0
+
+		;IF  INRANGE(CFLAG:캐릭터_ID:지방, 100, 199)
+		;	TALENT:캐릭터_ID:몸두께 = 0
+		;	PRINTFORMW %CALLNAME:캐릭터_ID%의 배 둘레는 표준 체형이 되었다。
+		;ELSEIF INRANGE(CFLAG:캐릭터_ID:지방, 100, 199)
+		;	TALENT:캐릭터_ID:몸두께 = 1
+		;	PRINTFORMW %CALLNAME:캐릭터_ID%의 배 둘레는【살찐기미】가 되었다。
+		;ELSEIF INRANGE(CFLAG:캐릭터_ID:지방, 200, 299)
+		;	TALENT:캐릭터_ID:몸두께 = 2
+		;	PRINTFORMW %CALLNAME:캐릭터_ID%의 배 둘레가【포동포동】이 되었다。
+		;ELSEIF INRANGE(CFLAG:캐릭터_ID:지방, 300, 399)
+		;	TALENT:캐릭터_ID:몸두께 = 3
+		;	PRINTFORMW %CALLNAME:캐릭터_ID%의 배 둘레가【통통❤】가 되었다。
+		;ELSEIF INRANGE(CFLAG:캐릭터_ID:지방, 400, 499)
+		;	TALENT:캐릭터_ID:몸두께 = 4
+		;	PRINTFORMW %CALLNAME:캐릭터_ID%의 배 둘레가【뚱뚱】이 되었다。
+		;ELSEIF CFLAG:캐릭터_ID:지방 >= 500
+		;	TALENT:캐릭터_ID:몸두께 = 5
+		;	PRINTFORMW %CALLNAME:캐릭터_ID%는 이제 슬슬 운동하는 편이 좋을 것이다……。
+			IF  INRANGE(CFLAG:캐릭터_ID:지방, 0, 99) && TALENT:캐릭터_ID:몸두께 != 0
+			TALENT:캐릭터_ID:몸두께 = 0
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 배 둘레는 표준 체형이 되었다。
+		ELSEIF INRANGE(CFLAG:캐릭터_ID:지방, 100, 199) && TALENT:캐릭터_ID:몸두께 != 1
+			TALENT:캐릭터_ID:몸두께 = 1
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 배 둘레는【살찐기미】가 되었다。
+		ELSEIF INRANGE(CFLAG:캐릭터_ID:지방, 200, 299) && TALENT:캐릭터_ID:몸두께 != 2
+			TALENT:캐릭터_ID:몸두께 = 2
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 배 둘레가【포동포동】이 되었다。
+		ELSEIF INRANGE(CFLAG:캐릭터_ID:지방, 300, 399) && TALENT:캐릭터_ID:몸두께 != 3
+			TALENT:캐릭터_ID:몸두께 = 3
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 배 둘레가【통통❤】이 되었다。
+		ELSEIF INRANGE(CFLAG:캐릭터_ID:지방, 400, 499) && TALENT:캐릭터_ID:몸두께 != 4
+			TALENT:캐릭터_ID:몸두께 = 4
+			PRINTFORMW %CALLNAME:캐릭터_ID%의 배 둘레가【뚱뚱】이 되었다。
+		ELSEIF CFLAG:캐릭터_ID:지방 >= 500 && TALENT:캐릭터_ID:몸두께 != 5
+			TALENT:캐릭터_ID:몸두께 = 5
+			PRINTFORMW %CALLNAME:캐릭터_ID%는 이제 슬슬 운동하는 편이 좋을 것이다……。
+		ENDIF
+	NEXT
+ENDIF

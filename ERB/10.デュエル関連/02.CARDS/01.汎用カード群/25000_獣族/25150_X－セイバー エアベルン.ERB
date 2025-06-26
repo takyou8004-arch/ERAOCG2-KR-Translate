@@ -1,0 +1,92 @@
+﻿@CARDNAME_25150,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 엑스세이버 에어벨룸
+	CASE "略称"
+RESULTS = 에어벨룸
+	CASE "カテゴリ"
+RESULTS:0 = 엑스세이버
+ENDSELECT
+
+
+@CARD_25150(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 200
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+@CARD_EXPLANATION_25150(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,ライフ変強制誘発)
+PRINTL ①: 이 카드가 직접 공격으로 상대에게 전투 데미지를 주었을 경우에 발동할 수 있다.
+PRINTL 상대의 손패를 무작위로 1장 선택해서 버린다.
+
+@CARDCAN_25150(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25150)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ライフ変強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ダメージ受者 == 듀얼리스트
+		RETURN 0
+	SIF ダメージ종류 != "直接戦闘"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25150(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ライフ変強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25150)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"손패破壊",場所,"묘지")
+	ENDIF
+ENDIF
+

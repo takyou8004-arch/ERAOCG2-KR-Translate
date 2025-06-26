@@ -1,0 +1,184 @@
+﻿@CARDNAME_21511,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 보루샤크 보루자크
+	CASE "略称"
+RESULTS = B보루자크
+	CASE "カテゴリ"
+RESULTS:0 = 보루샤크
+RESULTS:1 = 아머드
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_21511(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 효과モン
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	;牝性/雄性があるよ
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_21511(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,攻撃時誘発)
+PRINTL ①: 자신의 레벨 5 이상의 「아머드」 몬스터의 공격 선언 시에 발동할 수 있다.
+PRINTL 그 카드를 패로 되돌리고 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 몬스터가 소환 / 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 자신의 라이프를 2000 회복한다.
+CALLFORM CARD_ABLE(0,戦闘→묘지 ,破壊→묘지)
+PRINTL ③: 필드의 이 카드가 전투 / 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 패에서 레벨 7 이하의 「보루샤크」 몬스터 1장을 특수 소환한다.
+CALLFORM CARD_ABLE(20,ターン開始時)
+PRINTL ④: 『종극 선언』
+PRINTL 자신의 턴 개시 시에 발동할 수 있다.
+PRINTL LP를 1이 되도록 지불하고, 자신은 덱에서 5장 드로우한다.
+PRINTL 『종극 선언』은 듀얼 중에 1번밖에 사용할 수 없다.
+
+@CARDCAN_21511(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21511)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,21511)
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF !MATCH(RESULTS, "아머드")
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_星:戦闘場所(듀얼리스트)") < 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,21511)
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般",2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 볼샤크
+	효과条件소환可 = 1
+	CALL 효과条件レベル_ADV(7, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	SIF 발동済_D1(듀얼리스트,21511)
+		RETURN 0
+	RETURN 1
+ENDIF
+		
+@CARDEFFECT_21511(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC LP修正
+#DIM DYNAMIC 戦闘カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21511,1)
+	IF RESULT == 0
+		戦闘カード = 戦闘場所(듀얼리스트)
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,"필드",戦闘カード,손패行き)
+		IF RESULT == 1
+			SETCOLOR C_RED
+			PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+			PRINTL
+			PRINTFORMW 「革命체인지！」
+			PRINTL
+			CUSTOMDRAWLINE ―	
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+			IF GETVAR(@"%듀얼리스트%_필드:カード소환先") > 0
+				CALL EVADE_ATTACK(듀얼리스트)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21511,2)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",2000)
+	ENDIF
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21511)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 볼샤크
+		CALL 효과条件レベル_ADV(7, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)	
+	ENDIF
+ELSEIF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21511,20)
+	IF RESULT == 0
+		LP修正 = GETVAR(@"ライフ_%듀얼리스트%") - 1
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",LP修正)
+		CALL CARDDRAW_BASIC(듀얼리스트,5)
+	ENDIF
+ENDIF

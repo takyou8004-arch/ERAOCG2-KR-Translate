@@ -1,0 +1,147 @@
+﻿@CARDNAME_1178,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = LL－리사이트 스털링
+	CASE "略称"
+RESULTS = 렉 스털링
+	CASE "カテゴリ"
+RESULTS:0 = 리리컬 루스키니아
+ENDSELECT
+
+
+@CARD_1178(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_1178(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件レベル = 1
+素材条件数自由 = 1
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,1178) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_1178(종류)
+#DIM DYNAMIC 종류
+PRINTL 레벨 1 몬스터 × 2장 이상
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 X소환에 성공했을 경우, 필드의 앞면표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 공격력 / 수비력은, 이 카드의 X 소재의 수× 300 올린다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 이 카드의 X 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 덱에서 비행야수족 레벨 1 몬스터 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(1,攻撃時強制誘発)
+PRINTL ③: X소환한 이 카드의 전투로 발생하는 자신에게로의 전투 데미지는 상대도 받는다.
+
+@CARDCAN_1178(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1178)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	RETURN 1	
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 비행야수족
+	효과条件レベル = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種EX덱
+		RETURN 0
+	RETURN 1	
+ENDIF
+
+@CARDEFFECT_1178(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1178)
+	IF RESULT == 0
+		攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") + 1
+		攻撃力修正 = 300 * 攻撃力修正
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		CALL CARD_GRANT_ADV(듀얼리스트,ゾーン,場所,"永攻",攻撃力修正)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1178,10,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종족 = 비행야수족
+		효과条件レベル = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ乱反射",1)
+ENDIF

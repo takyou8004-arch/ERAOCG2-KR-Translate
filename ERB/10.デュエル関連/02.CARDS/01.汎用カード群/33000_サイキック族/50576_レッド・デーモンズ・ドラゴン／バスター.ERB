@@ -1,0 +1,169 @@
+﻿@CARDNAME_50576,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 레드 데몬즈 드래곤/버스터
+	CASE "略称"
+RESULTS = R 데몬즈/B
+	CASE "カテゴリ"
+RESULTS:0 = 레드 데몬
+RESULTS:1 = 버스터
+ENDSELECT
+
+
+@CARD_50576(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3500
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50576(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50576) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50576(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 "버스터 모드"의 효과로 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드 이외의 필드의 카드 전부를, 어떠한 내성도 무시하고 묘지로 보낸다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 배틀 페이즈 중에 2번 공격할 수 있다.
+CALLFORM CARD_ABLE(0,戦闘→묘지 ,破壊→묘지)
+PRINTL ③: 필드의 이 카드가 파괴되었을 때 발동할 수 있다.
+PRINTL 묘지에서 "레드 데몬즈 드래곤" 1장을 특수 소환한다.
+
+@CARDCAN_50576(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50576)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	IF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+	ENDIF
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL CARD_SS_CHECK(듀얼리스트,50565,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50576(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50576)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+				CONTINUE
+			SIF カウンタ == 場所
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"필드",カウンタ)
+		NEXT
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_마함:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"마함",カウンタ)
+		NEXT
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(対面者,"필드",カウンタ)
+		NEXT
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_마함:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(対面者,"마함",カウンタ)
+		NEXT
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",1)
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50576)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 레드 데몬즈 드래곤
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

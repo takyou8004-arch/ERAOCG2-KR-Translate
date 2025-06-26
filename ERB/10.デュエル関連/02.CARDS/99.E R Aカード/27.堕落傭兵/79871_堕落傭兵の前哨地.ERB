@@ -1,0 +1,109 @@
+@CARDNAME_79871,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 타락용병의 전초지
+	CASE "略称"
+		RESULTS = 타락용병 전초지
+	CASE "カテゴリ"
+		RESULTS:0 = 타락용병
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79871(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+	CASE "추가日"
+		RETURN 250412
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79871(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL 자신 필드는 「타락용병의 전초지」가 된다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：필드에 타락용병" 몬스터가 존재하는 한、
+PRINTL 이 카드는 상대의 효과로 파괴되지 않는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드가 필드위에 존재하는 한、
+PRINTL 필드의「타락용병" 몬스터가 엔드페이즈에 발동하는 효과는 한 번 더 발동한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드가 필드 위에 존재하는 한 자신은 통상 소환에 더하여 1 번 더 
+PRINTL 자신 메인페이즈에 타락용병 몬스터를 1장 더 소환할 수 있다.
+
+@CARDCAN_79871(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79871)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+    RETURN 1
+ENDIF
+
+@CARDEFFECT_79871(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+
+IF 종류 == 지속효과
+	;횟수増加효과はモンスター側で설정している。
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "타락전초지")
+	CALL FULLRESET
+	효과条件カテゴリ = 타락용병
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件カテゴリ = 타락용병
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"破耐")
+
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79871)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ENDIF

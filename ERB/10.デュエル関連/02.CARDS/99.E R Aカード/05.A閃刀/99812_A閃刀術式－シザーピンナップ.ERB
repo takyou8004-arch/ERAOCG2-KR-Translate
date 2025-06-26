@@ -1,0 +1,131 @@
+﻿@CARDNAME_99812,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = A섬도술식－시저 핀업
+	CASE "略称"
+		RESULTS = A섬술－PINUP
+	CASE "カテゴリ"
+		RESULTS:0 = A섬도
+		RESULTS:1 = E.R.A
+		RESULTS:2 = 섬도
+ENDSELECT
+
+
+@CARD_99812(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 지속함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99812(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  효과는 1턴에 1번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,마함起動)
+PRINTL ①：상대 묘지의 암컷 몬스터 1장을 선택하고, 상대 필드에 공격 표시로 특수 소환한다。
+PRINTL 그 후, 자신은 묘지에서 "A섬도」 함정 카드 1장을 자신의 필드에 세트한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99812(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限달성
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99812)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,99812)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과条件성별 = 牝性
+	효과条件소환可 = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = A섬도
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0		
+	RETURN 1
+	
+ELSEIF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+
+
+@CARDEFFECT_99812(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99812,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과条件성별 = 牝性 
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,1,,1)
+		IF RESULT == 1
+			PRINTFORMW 아자레아는 쓰러진 상대의 머리를 난잡하게 움켜쥐고 일으켜 세웠다. 아직 훈련은 끝나지 않았다며, 새로운 장난감을 들이밀었다。
+			CALL FULLRESET
+			효과条件종류 = 함정全般
+			효과条件カテゴリ = A섬도
+			CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"裏側표시")
+		ENDIF
+	ENDIF
+		
+ELSEIF 종류 == 마함起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99812)
+	IF RESULT == 0
+	ENDIF
+ENDIF

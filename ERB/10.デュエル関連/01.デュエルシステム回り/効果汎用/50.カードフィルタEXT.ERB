@@ -1,0 +1,467 @@
+﻿@CARD_FILTER_EXT(듀얼리스트,参照先,종류,場所,めくり数,チェック플래그,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 実行者
+#DIM DYNAMIC リピート횟수
+#DIM DYNAMIC めくり数
+
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 上級플래그
+#DIM DYNAMIC 上級値
+#DIM DYNAMIC 参照先セットアップ, 30
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC チェック플래그
+#DIM DYNAMIC カードID
+#DIM DYNAMIC サーチ範囲
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 完全条件달성
+#DIM DYNAMIC 現在最大攻撃力
+#DIM DYNAMIC 現在最小攻撃力
+#DIMS DYNAMIC MZ魔판정
+#DIMS DYNAMIC カード追カテ,10
+
+
+
+実行者 = %듀얼리스트%
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+VARSET 選択カード, -1
+VARSET 現在最大攻撃力, -1
+VARSET 現在最小攻撃力, 999999
+
+
+IF 参照先 == "上級"
+	SIF 濾過範囲필드 == 1
+		参照先セットアップ:0 = 1
+	SIF 濾過範囲마함 == 1
+		参照先セットアップ:1 = 1
+	SIF 濾過範囲손패 == 1
+		参照先セットアップ:2 = 1
+	SIF 濾過範囲묘지 == 1
+		参照先セットアップ:3 = 1
+	SIF 濾過範囲덱 == 1
+		参照先セットアップ:4 = 1
+	SIF 濾過範囲EX덱 == 1
+		参照先セットアップ:5 = 1
+	SIF 濾過範囲제외 == 1
+		参照先セットアップ:6 = 1
+
+	SIF 濾過範囲상대필드 == 1
+		参照先セットアップ:10 = 1
+	SIF 濾過範囲상대마함 == 1
+		参照先セットアップ:11 = 1
+	SIF 濾過範囲상대손패 == 1
+		参照先セットアップ:12 = 1
+	SIF 濾過範囲상대묘지 == 1
+		参照先セットアップ:13 = 1
+	SIF 濾過範囲상대덱 == 1
+		参照先セットアップ:14 = 1
+	上級플래그 = 1
+ENDIF
+
+
+$INPUTLOOP
+IF 上級플래그
+	;PRINTFORML 参照先セットアップ:{カウンタB} == {参照先セットアップ:カウンタB}
+	IF 参照先セットアップ:カウンタB == 0
+		カウンタB ++
+		IF カウンタB <= 19
+			GOTO INPUTLOOP
+		ELSE
+			GOTO INPUTSKIP
+		ENDIF
+	ENDIF
+	IF カウンタB == 0
+		参照先 = 필드
+	ELSEIF カウンタB == 1
+		参照先 = 마함
+	ELSEIF カウンタB == 2
+		参照先 = 손패
+	ELSEIF カウンタB == 3
+		参照先 = 묘지
+	ELSEIF カウンタB == 4
+		参照先 = 덱
+	ELSEIF カウンタB == 5
+		参照先 = EX덱
+	ELSEIF カウンタB == 6
+		参照先 = 제외
+
+	ELSEIF カウンタB == 10
+		参照先 = 상대필드
+	ELSEIF カウンタB == 11
+		参照先 = 상대마함
+	ELSEIF カウンタB == 12
+		参照先 = 상대손패
+	ELSEIF カウンタB == 13
+		参照先 = 상대묘지
+	ELSEIF カウンタB == 14
+		参照先 = 상대덱
+	ELSEIF カウンタB == 15
+		参照先 = 상대EX덱
+	ENDIF
+ENDIF
+
+;PRINTFORML カウンタ:-1 参照先:%参照先%
+IF 参照先 == "필드"
+	サーチ範囲 = 5
+	MZ魔판정 = MZ
+ELSEIF 参照先 == "마함"
+	サーチ範囲 = 5
+	MZ魔판정 = 魔
+	上級値 = 10
+ELSEIF 参照先 == "손패"
+	サーチ範囲 = 99
+	上級値 = 100
+ELSEIF 参照先 == "묘지"
+	サーチ範囲 = 99
+	上級値 = 200
+ELSEIF 参照先 == "덱"
+	IF めくり数 != 0
+		サーチ範囲 = めくり数
+	ELSE
+		サーチ範囲 = 99
+	ENDIF
+	上級値 = 300
+ELSEIF 参照先 == "EX덱"
+	サーチ範囲 = 99
+	上級値 = 400
+ELSEIF 参照先 == "제외"
+	サーチ範囲 = 99
+	上級値 = 500
+ELSEIF 参照先 == "상대필드"
+	サーチ範囲 = 5
+	MZ魔판정 = MZ
+	듀얼리스트 = %対面者%
+	参照先 = 필드
+	上級値 = 2000
+ELSEIF 参照先 == "상대마함"
+	サーチ範囲 = 5
+	MZ魔판정 = 魔
+	듀얼리스트 = %対面者%
+	参照先 = 마함
+	上級値 = 2010
+ELSEIF 参照先 == "상대손패"
+	サーチ範囲 = 99
+	듀얼리스트 = %対面者%
+	参照先 = 손패
+	上級値 = 2100
+ELSEIF 参照先 == "상대묘지"
+	サーチ範囲 = 99
+	듀얼리스트 = %対面者%
+	参照先 = 묘지
+	上級値 = 2200
+ELSEIF 参照先 == "상대덱"
+	サーチ範囲 = 99
+	듀얼리스트 = %対面者%
+	参照先 = 덱
+	上級値 = 2300
+ELSEIF 参照先 == "상대EX덱"
+	サーチ範囲 = 99
+	듀얼리스트 = %対面者%
+	参照先 = EX덱
+	上級値 = 2400
+ELSE
+	サーチ範囲 = 99
+ENDIF
+
+SIF 上級플래그 == 0
+	上級値 = 0
+
+;PRINTFORML カウンタ0：スタート
+FOR カウンタ,0,サーチ範囲
+	SIF GETVAR(@"%듀얼리스트%_%参照先%:カウンタ") == -1
+		CONTINUE
+	;PRINTFORML カウンタ1:カウンタ
+	IF チェック플래그 == 2
+		CALL CARD_SS_CHECK(듀얼리스트,GETVAR(@"%듀얼리스트%_%参照先%:カウンタ"),参照先)
+		SIF RESULT == 1
+			CONTINUE
+	ENDIF
+	IF 濾過条件固定 > -1
+		SIF 濾過条件固定 != カウンタ
+			CONTINUE
+	ENDIF
+	IF 濾過条件複数選択 > -1
+		SIF MATCH(濾過条件複数選択, カウンタ)
+			CONTINUE
+	ENDIF
+	IF 濾過条件他所 > 0
+		;PRINTFORML カウンタ：カウンタ/場所:{場所}
+		SIF カウンタ == 場所
+			CONTINUE
+	ENDIF
+;	IF 종류 == 필드起動 && 参照先 == "필드"
+;		SIF カウンタ == 場所
+;			CONTINUE
+	IF 종류 == 손패起動 && 参照先 == "손패"
+		SIF カウンタ == 場所
+			CONTINUE
+	ENDIF
+	;PRINTFORML カウンタ2:カウンタ
+	IF 濾過条件名前 != ""
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "名前"
+		SIF !MATCH(濾過条件名前, RESULTS)
+			CONTINUE
+	ENDIF
+	IF 濾過条件固名前 != ""
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "名前"
+		SIF MATCH(濾過条件固名前, RESULTS)
+			CONTINUE
+	ENDIF
+	IF 濾過条件カテゴリ != ""
+		VARSET 条件달성
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "カテゴリ"
+		SIF MATCH(RESULTS, 濾過条件カテゴリ)
+			条件달성 ++
+		SIF MATCH(濾過条件カテゴリ, RESULTS)
+			条件달성 ++
+	
+		IF 参照先 == "필드"
+			カード追カテ = GETVAR(@"%듀얼리스트%_MZ_追カテ:カウンタ")
+			カード追カテ:1 = GETVAR(@"%듀얼리스트%_MZ_追カテ2:カウンタ")
+			SIF MATCH(濾過条件カテゴリ, カード追カテ)
+				条件달성 ++
+			SIF MATCH(カード追カテ, 濾過条件カテゴリ)
+				条件달성 ++
+		ENDIF
+		IF 参照先 == "마함"
+			カード追カテ = GETVAR(@"%듀얼리스트%_魔_追カテ:{カウンタ}")
+			カード追カテ:1 = GETVAR(@"%듀얼리스트%_魔_追カテ2:{カウンタ}")
+			SIF MATCH(濾過条件カテゴリ, カード追カテ)
+				条件달성 ++
+			SIF MATCH(カード追カテ, 濾過条件カテゴリ)
+				条件달성 ++
+		ENDIF
+		SIF 条件달성 == 0					
+			CONTINUE
+	ENDIF
+;	PRINTFORML カウンタ4:カウンタ
+	IF 濾過条件종류 > 0
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "종류"
+		IF 濾過条件종류 == モン全般
+			SIF RESULT > モン全般
+				CONTINUE
+		ELSEIF 濾過条件종류 == EXモン全般
+			SIF !GROUPMATCH(RESULT, 융합, 싱크로, 엑시즈, 링크)
+				CONTINUE
+		ELSEIF 효과条件종류 == EX以外全般
+			SIF GROUPMATCH(RESULT, 융합, 싱크로, 엑시즈, 링크)
+				CONTINUE
+		ELSEIF 濾過条件종류 == 링크以外
+			SIF RESULT == 링크
+				CONTINUE
+		ELSEIF 濾過条件종류 == 효과全般
+			SIF RESULT == 通常モン
+				CONTINUE
+		ELSEIF 濾過条件종류 == 마법全般
+			SIF !INRANGE(RESULT, 20, 29) 
+				CONTINUE
+		ELSEIF 濾過条件종류 == 함정全般
+			SIF RESULT < 30 
+			CONTINUE
+		ELSEIF 濾過条件종류 == 마함全般
+			SIF RESULT <= 20 
+				CONTINUE	
+		ELSE
+			VARSET 条件달성
+			SIF MATCH(濾過条件종류, RESULT)
+				条件달성 ++
+			SIF MATCH(RESULT, 濾過条件종류)
+				条件달성 ++
+			SIF 条件달성 == 0					
+				CONTINUE
+		ENDIF
+	ENDIF
+	IF チェック플래그 == 2
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "종류"
+		SIF RESULT > 10
+			CONTINUE
+		SIF RESULT == 3 && 濾過条件의식無視 == 0
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "특수불가"
+		SIF RESULT == 1
+			CONTINUE
+	ENDIF
+	IF 参照先 == "필드" || 参照先 == "마함"
+		IF 濾過条件표시 > 0
+			;濾過불가裏側표시
+			SIF 濾過条件표시 == 30 && GETVAR(@"%듀얼리스트%_%MZ魔판정%_表:カウンタ") != 3
+				CONTINUE
+			;裏側표시
+			IF 濾過条件표시 == 20
+				IF 参照先 == "필드"
+					SIF GETVAR(@"%듀얼리스트%_%MZ魔판정%_表:カウンタ") != 3
+						CONTINUE
+				ELSEIF 参照先 == "마함"		
+					SIF GETVAR(@"%듀얼리스트%_%MZ魔판정%_表:カウンタ") == 1
+						CONTINUE
+				ENDIF
+			ENDIF
+			;表側표시
+			IF 濾過条件표시 == 10
+				IF 参照先 == "필드"
+					SIF GETVAR(@"%듀얼리스트%_%MZ魔판정%_表:カウンタ") == 3
+						CONTINUE
+				ELSEIF 参照先 == "마함"		
+					SIF GETVAR(@"%듀얼리스트%_%MZ魔판정%_表:カウンタ") != 1
+						CONTINUE
+				ENDIF
+			ENDIF
+			;その他
+			SIF 濾過条件표시 <= 9 && GETVAR(@"%듀얼리스트%_%MZ魔판정%_表:カウンタ") != 濾過条件표시
+				CONTINUE
+		ENDIF
+	ENDIF
+
+	IF 参照先 == "필드"
+		IF 濾過条件튜너 > 0
+			SIF GETVAR(@"%듀얼리스트%_MZ_Ｔ:カウンタ") == 0
+				CONTINUE
+		ENDIF
+		IF 濾過条件속성 > 0
+			SIF !MATCH(濾過条件속성, GETVAR(@"%듀얼리스트%_MZ_属:カウンタ"))
+				CONTINUE
+		ENDIF
+		IF 濾過条件종족 > 0
+			SIF !MATCH(濾過条件종족, GETVAR(@"%듀얼리스트%_MZ_種:カウンタ"))
+				CONTINUE
+		ENDIF
+		IF 濾過条件レベル > 0
+			SIF !MATCH(濾過条件レベル, GETVAR(@"%듀얼리스트%_MZ_星:カウンタ"))
+				CONTINUE
+		ENDIF
+		IF 濾過条件攻撃力 > 0
+			SIF GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ") > 濾過条件攻撃力
+				CONTINUE
+		ENDIF
+
+		IF 濾過条件守備力 > 0
+			SIF GETVAR(@"%듀얼리스트%_MZ_守:カウンタ")  > 濾過条件守備力
+				CONTINUE
+		ENDIF
+		IF 濾過条件以攻撃力 > 0
+			SIF GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ") < 濾過条件以攻撃力
+				CONTINUE
+		ENDIF
+		
+		SIF GETVAR(@"%듀얼리스트%_MZ_不材:カウンタ") != 0
+			CONTINUE
+	ELSE
+		IF 濾過条件튜너 > 0
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "튜너"
+			SIF RESULT != 濾過条件튜너
+				CONTINUE
+		ENDIF
+		IF 濾過条件속성 > 0
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "속성"
+			SIF !MATCH(濾過条件속성, RESULT)
+				CONTINUE
+		ENDIF
+		IF 濾過条件종족 > 0
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "종족"
+		SIF !MATCH(濾過条件종족, RESULT)
+			CONTINUE
+		ENDIF
+		IF 濾過条件レベル > 0
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "レベル"
+			SIF !MATCH(濾過条件レベル, RESULT)
+				CONTINUE
+		ENDIF
+		IF 濾過条件攻撃力 > 0
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "攻撃力"
+			SIF RESULT > 濾過条件攻撃力
+				CONTINUE
+		ENDIF
+		IF 濾過条件攻固撃力 > 0
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "攻撃力"
+			SIF RESULT != 濾過条件攻固撃力
+				CONTINUE
+		ENDIF
+
+		IF 濾過条件守備力 > 0
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "守備力"
+			SIF RESULT > 濾過条件守備力
+				CONTINUE
+		ENDIF
+		IF 濾過条件성별 > 0
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "성별"
+			SIF !MATCH(RESULT, 濾過条件성별)
+				CONTINUE
+		ENDIF
+		IF 濾過条件소환可 > 0
+			IF 参照先 == "EX덱"
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:カウンタ")}(듀얼리스트,カウンタ,1)
+				SIF RESULT != 1
+					CONTINUE
+			ELSEIF 参照先 == "손패"
+				;PRINTFORML ここ通過:カウンタ
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_손패:カウンタ")}(듀얼리스트,カウンタ + 100,1)
+				;PRINTFORML リザルト:{RESULT}/ここ通過:カウンタ
+				SIF RESULT != 1
+					CONTINUE
+			ELSEIF 参照先 == "묘지"
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}(듀얼리스트,カウンタ + 200,1)
+				SIF RESULT != 1
+					CONTINUE
+			ELSEIF 参照先 == "덱"
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_덱:カウンタ")}(듀얼리스트,カウンタ + 300,1)
+				SIF RESULT != 1
+					CONTINUE
+			ENDIF
+		ENDIF
+	ENDIF
+;	PRINTFORML カウンタ6:カウンタ/実行者:%実行者%
+	IF 実行者 == "자신"
+		SIF チェック플래그 == 1
+			SKIPDISP チェック플래그
+		CALL CARD_SETCOLOR(듀얼리스트,参照先,カウンタ)
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "名前"
+		PRINTFORML %参照先%[{カウンタ + 上級値,4}] == %RESULTS%
+		RESETCOLOR
+
+	ELSEIF 実行者 == "상대"
+		IF 参照先 == "필드"
+			IF GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ") > 現在最大攻撃力
+				現在最大攻撃力 = RESULT
+				選択カード = カウンタ 
+			ENDIF
+		ELSE
+			CALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "攻撃力"
+			IF  RESULT > 現在最大攻撃力
+				現在最大攻撃力 = RESULT
+				選択カード = カウンタ + 上級値
+			ENDIF
+		ENDIF
+	ENDIF
+	完全条件달성 ++
+NEXT
+
+
+IF 上級플래그 && カウンタB <= 19
+	カウンタB ++
+	GOTO INPUTLOOP
+ENDIF
+$INPUTSKIP
+VARSET RESULT:1
+;PRINTFORML 完全条件달성:{完全条件달성}
+RESULT:1 = 完全条件달성
+
+SKIPDISP 0
+
+;PRINTFORML 選択カード!:{選択カード},実行者:%実行者%
+IF 実行者 == "자신"
+	RETURN 0
+ELSEIF 実行者 == "상대"
+	;PRINTFORML 選択カード!:{選択カード}
+	IF 選択カード != -1
+		RETURN 選択カード
+	ELSE
+		RETURN 9999
+	ENDIF
+ENDIF

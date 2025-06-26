@@ -1,0 +1,208 @@
+﻿@CARDNAME_23067,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 카오스 솔저─황혼의 어둠의 사자
+	CASE "略称"
+RESULTS = 황혼의어둠의사자
+	CASE "カテゴリ"
+RESULTS:0 = 카오스 솔저
+RESULTS:1 = 카오스
+ENDSELECT
+
+
+@CARD_23067(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+	CASE "소환불가"
+		RETURN 1
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23067(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 일반 소환할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL 자신 묘지에서 빛/어둠 속성 몬스터 1장을 제외했을 경우에만 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,특수소환時)
+PRINTL ①: 이 카드가 특수 소환했을 경우, 자신 제외 존의 빛/어둠 속성 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터와 같은 속성의 몬스터를 자신 묘지에서 전부 제외하고, 그 속성에 따라 이하의 효과를 적용한다.
+PRINTL 이 턴, 이 카드는 공격할 수 없다.
+PRINTL ●빛 속성: 이 효과로 제외한 몬스터의 수만큼, 필드의 몬스터를 고르고 제외한다.
+PRINTL ●어둠 속성: 이 효과로 제외한 몬스터의 수만큼, 상대의 패를 무작위로 고르고 제외한다.
+PRINTL (이 효과로 제외된 카드는 효과를 발동할 수 없다.) 다음 상대 턴 종료 시,
+PRINTL 상대는 자신 제외 존의 카드를 무작위로 5장까지 패에 넣는다.
+
+@CARDCAN_23067(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23067)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,23067,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성:0 = 빛속성
+	효과条件속성:1 = 어둠속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件속성:0 = 빛속성
+	효과条件속성:1 = 어둠속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성:0 = 빛속성
+	효과条件속성:1 = 어둠속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時予約
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과範囲상대제외 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23067(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択속성
+#DIM DYNAMIC 제외枚数
+#DIM DYNAMIC 当選番号
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23067)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件속성:0 = 빛속성
+		효과条件속성:1 = 어둠속성
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23067)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件속성:0 = 빛속성
+		효과条件속성:1 = 어둠속성
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"제외",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_제외:選択カード")},"속성"
+			選択속성 = RESULT
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") == -1
+					CONTINUE
+				TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")},"속성"
+				SIF RESULT != 選択속성
+					CONTINUE
+				CALL CARD_DISPOSE(듀얼리스트,"묘지",カウンタ)
+				제외枚数 ++
+			NEXT
+			REPEAT 제외枚数
+				IF 選択속성 == 빛속성
+					CALL FULLRESET
+					효과条件任意 = 1
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"제외")
+					SIF RESULT != 1
+						BREAK
+				ELSEIF 選択속성 == 어둠속성
+					CALL CARD_RESERV(듀얼리스트,23067,スタン予約)
+					CALL FULLRESET
+					효과条件任意 = 1
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"손패破壊",場所,"完全제외")
+					SIF RESULT != 1
+						BREAK
+				ENDIF
+			REND
+		ENDIF
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無",1)
+	ENDIF
+ELSEIF 종류 == ターン開始時予約
+	CALL CARD_RESERV(듀얼리스트,23067)
+ELSEIF 종류 == ターン終了時予約
+	IF 제외数(対面者) <= 5
+		CALL FULLRESET
+		효과条件複数 = 제외数(対面者)
+		CALL CARD_ADD_BASIC(듀얼리스트,"제외",ゾーン,場所)
+	ELSE
+		FOR カウンタ,0,5
+			$LOOPPOINT
+			当選番号 = RAND:제외数(対面者)
+			SIF GETVAR(@"%듀얼리스트%_제외:{当選番号}") == -1
+				GOTO LOOPPOINT
+			CALL FULLRESET
+			효과条件固定 = 当選番号
+			CALL CARD_ADD_BASIC(対面者,"제외",ゾーン,場所)
+		NEXT
+	ENDIF
+ENDIF

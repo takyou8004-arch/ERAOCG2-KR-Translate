@@ -1,0 +1,140 @@
+﻿@CARDNAME_20215,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 혜안의 마술사
+	CASE "略称"
+RESULTS = 혜안의 마술사
+	CASE "カテゴリ"
+RESULTS:0 = 마술사
+ENDSELECT
+
+
+@CARD_20215(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1500
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_20215(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+CALLFORM CARD_ABLE(10,마함起動)
+PRINTL ①: 1턴에 1번, 자신의 마법 & 함정 존에 이 카드 이외의 "마술사" 또는 "EM" 카드가 존재할 경우에 발동할 수 있다.
+PRINTL 이 카드를 파괴하고, 덱에서 "혜안의 마술사" 이외의 "마술사" P 몬스터 1장을 자신의 마법 / 함정 존에 놓는다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ①: 몬스터 존의 이 카드가 파괴되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 자신의 마법 / 함정 존에 놓는다.
+
+@CARDSUMMON_AA_20215
+
+
+@CARDCAN_20215(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20215)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件カテゴリ:0 = 마술사
+	효과条件カテゴリ:1 = EM
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊")
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_20215(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20215)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20215,10)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件固名前 = 혜안의 마술사
+		효과条件カテゴリ = 마술사
+		효과条件分割 = 펜듈럼
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20215)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+효과条件名前 = 혜안의 마술사
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+	ENDIF
+ENDIF

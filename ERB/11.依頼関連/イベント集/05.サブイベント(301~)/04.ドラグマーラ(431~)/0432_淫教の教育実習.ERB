@@ -1,0 +1,492 @@
+@IRAI_EVENT_432(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = (CP-DMR2)음교의 교육실습
+	CASE "이벤트種"
+		RETURN 이벤트_通常
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL あのパーティーの後、改めて手紙が届いた。
+		PRINTL 
+		PRINTL 
+		PRINTL 
+	CASE "条件"
+		SIF 依頼_完了횟수:431 == 0
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_432(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(1883);クエム
+
+IF 依頼_달성상황 == 0
+	PRINTFORMW あのパーティーの後、改めて手紙が届いた。
+	PRINTFORMW 実習の準備が整ったので、都合のいい時に教会に来て欲しいそうだ。
+	PRINTFORMW 暇のある時に教会に向かうとしよう。
+	TIME += 10
+	依頼_場所 = 場所_教会
+	依頼_달성상황 ++
+
+ELSEIF 依頼_달성상황 == 1
+	PRINTFORMW 教会に入ると、クエムに迎えられた。
+	PRINTFORMW 「ようこそいらっしゃらいました。ではこちらへどうぞ」
+	PRINTFORMW そして早速教会の奥に案内され、땅下にある部屋に入る。
+	PRINTFORMW その部屋は如何にも性的な行為をするためのような部屋で、片隅にはクエムによく似た少女がいた。
+	PRINTFORMW 「コレは今回の実習のために用意した私の분신です
+	PRINTFORMW 　あなた様はこの部屋の力を使って、私の분신を교육してください」
+	PRINTFORMW 교육って、どうすればいい？
+	PRINTFORMW 「心配はありません。교육はあなた様の得意なデュエルに似た形で行われます
+	PRINTFORMW 　あなた様ならばすぐに理解できるでしょう」
+	PRINTFORMW 詳しい説明を聞く間もなく、クエムの분신が詰め寄って来る。
+	PRINTFORMW %NAME:MASTER%는何となくデュエルディスクを構えた。
+	$DUEL_LOOP
+	TARGET = 이벤트主:0
+	CALL DUEL_SYSTEM(1,432,,2)
+	
+	IF RESULT == 1
+		PRINTFORMW 勝った。
+	ELSE
+		PRINTFORMW 負けた……
+		PRINTFORMW 「どうすればいいのか、まだ分かりませんでしたか？
+		PRINTFORMW 　大丈夫です。分かるまで何度でも繰り返しましょう」
+		SIF BASE:MASTER:체력 < 1000
+			BASE:MASTER:체력 = 1000
+		SIF BASE:MASTER:기력 < 1000
+			BASE:MASTER:기력 = 1000
+		SIF BASE:(이벤트主:0):체력 < 1000
+			BASE:(이벤트主:0):체력 = 1000
+		SIF BASE:(이벤트主:0):기력 < 1000
+			BASE:(이벤트主:0):기력 = 1000
+		GOTO DUEL_LOOP
+	ENDIF
+	PRINTFORMW 「お見事です。これで私は正真正銘、あなた様の徒です」
+	PRINTFORML 
+	NAME:(이벤트主:0) = 드래그마ーラの性女・クエム
+	CALL CARD_GET_SINGLE(39773)
+	CFLAG:(이벤트主:0):소유함 = 1
+	TALENT:(이벤트主:0):음교의신도 = 1
+	MARK:(이벤트主:0):반발각인 = 0
+	CFLAG:(이벤트主:0):아르바이트 = 433
+	IF CFLAG:(이벤트主:0):호감도 < 2000
+		CFLAG:(이벤트主:0):호감도 = 2000
+	ELSE
+		CALL EVENT_FAVUP(이벤트主:0,1000)
+	ENDIF
+	SIF TALENT:(이벤트主:0):임신 == 0 && TALENT:MASTER:매지컬자지 == 1
+		TALENT:(이벤트主:0):임신가능 = 1
+	IF ABL:(이벤트主:0):순종 < 3
+		ABL:(이벤트主:0):순종 += 2
+	ELSE
+		ABL:(이벤트主:0):순종 += 1
+	ENDIF
+	CFLAG:(이벤트主:0):기정사실 = 1
+	PRINTFORML 
+	PRINTFORMW 「今後、費用は必要になりますが、一般の信徒を使って新しい信徒の候補を連れて来させます。
+	PRINTFORMW 　あなた様はその度に、新しい信徒の候補を교육して頂ければそれで十分です。
+	PRINTFORMW 　교육された信徒はあなた様に従いやすくなり、すぐにでもあなた様の御子を身籠る事ができるようになります。
+	PRINTFORMW 　そして、毎朝あなた様の手で교육された信徒の数に合わせた上納金が収められます。
+	PRINTFORMW 　最初は마법사족・빛 속성의 몬스터밖에 勧誘できませんが、信徒の数が増える程に勧誘できる範囲も広がります。
+	PRINTFORMW 　……説明は以上です」
+	PRINTFORMW 大体わかった。
+	PRINTFORMW ここで連れて来られた女の子とデュエルするだけで、その子が자신의 物になり、お金も入るようになるんだと。
+	PRINTFORMW 「その理解で問題ありません
+	PRINTFORMW 　一回の勧誘に必要な費用は、この땅にお金で40000円が必要になります」
+	PRINTFORMW 結構高い！
+	PRINTFORMW 「申し訳ありません。信徒たちがこの땅で活動するためにはどうしてもこの金額が必要なのです」
+	PRINTFORMW それなら仕方ないか……
+	PRINTFORMW 「費用の準備が出来ましたら、いつでも申し付けてください
+	PRINTFORMW 　それと、この部屋の力をいつでも使えるように致します」
+	PRINTFORML 
+	CALL CARD_GET_SINGLE(79777)
+	PRINTFORML 
+	PRINTFORMW 「それでは……」
+	PRINTFORMW ここで出来る事はもう無さそうなので、教会から出た。
+	PRINTFORMW 勧誘費用が用意できたら、また来よう。
+	;드래그마ーラパックが未開放なら解放
+	IF パック_解放:97 != 1
+		PRINTFORML 
+		CALL CARD_PACK_RELEASE(97)
+		PRINTFORML 
+	ENDIF
+	TIME += 60
+	RETURN 2
+ENDIF
+
+
+@IRAI_DUEL_INTRO_432
+
+PRINTFORMW 「この카드를 ……」
+PRINTFORMW クエムから카드를 渡された。
+PRINTFORML 
+CALL CARD_GENERATE_HAND("자신",279777)
+;PRINTFORML 
+;CALL CARD_GENERATE_MAGIC("자신",79777,1)
+SETVAR @"자신_마함:2",79777
+SETVAR @"자신_魔_所有:2", 1
+SETVAR @"자신_魔_表:2", 1
+SETVAR @"자신_魔_破耐:2",2
+SETVAR @"자신_魔_対耐:2",2
+
+SETVAR @"상대_마함:2",279778
+SETVAR @"상대_魔_所有:2", 1
+SETVAR @"상대_魔_表:2", 1
+SETVAR @"상대_魔_破耐:2",2
+SETVAR @"상대_魔_対耐:2",2
+
+@IRAI_DECK_432(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+SIF 듀얼리스트 == "자신"
+	RETURN 20432
+SIF 듀얼리스트 == "상대"
+	RETURN 20433
+RETURN 0
+
+
+;교육用자신덱
+@DUELDECK_20432(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(1)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 39772
+
+
+
+
+
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(1)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+
+
+;교육用상대덱
+@DUELDECK_20433(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 조교대상
+
+
+조교대상 = NO:TARGET
+
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(1)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 조교대상
+
+
+
+
+
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(1)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", -1
+
+
+
+
+
+
+;이벤트用カード
+@CARDNAME_279777,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 드래그마ーラ・バースト
+	CASE "略称"
+		RESULTS = 음교の구제
+	CASE "カテゴリ"
+		RESULTS:0 = 드래그마ーラ
+		RESULTS:1 = 드래그마
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_279777(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_279777(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL この 카드는 묘지からも발동でき、このカード名의 효과는 １턴에 １번밖에 발동할 수 없다。
+PRINTL ①：자신 필드의 몬스터 １体につき、상대에게 2000데미지를 준다。
+PRINTL この 카드는 효과발동 후、묘지로 보られない。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_279777(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,279777)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,279777)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_279777(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,279777,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		カウンタ = RESULT
+		IF TALENT:TARGET:성별 == 1
+			PRINTFORML
+			PRINTFORML
+			SETCOLOR C_PINK
+			PRINTFORMW %CALLNAME:조교대상%는음교の信者としての교육《ちょうきょう》の仕上げに聖液をバーストした…！
+			RESETCOLOR
+			PRINTFORML
+			CALL EROTIC_MOVE("前穴凌辱",TARGET, MASTER, カウンタ * 300)
+		ENDIF
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",カウンタ * 2000,1)
+
+	ENDIF
+ENDIF
+
+
+
+
+@CARDNAME_279778,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 조교の鉄檻
+	CASE "略称"
+		RESULTS = 조교の鉄檻
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_279778(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_279778(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL ①：この카드가 필드에 존재하는 한、
+PRINTL コントローラーは몬스터의 특수소환・효과발동할 수 없으며、
+PRINTL 자신 / 상대の필드에 存在する몬스터의 효과는 무효화되고、攻撃할 수 없다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_279778(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,279778)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 常在無効
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_279778(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"モン효과無効",3)
+	CALL SET_PLAYER_INFO(듀얼리스트,"SS阻害状態",3)
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦無")
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"戦無")
+ELSEIF 종류 == 常在無効
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"無効")
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+ENDIF
+
+
+

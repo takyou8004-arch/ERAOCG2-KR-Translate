@@ -1,0 +1,137 @@
+﻿@CARDNAME_20071,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 풍부한 신기 프레이야
+	CASE "略称"
+RESULTS = 프레이야
+	CASE "カテゴリ"
+RESULTS:0 = 제네시스
+RESULTS:1 = 신기
+RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_20071(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20071(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 각각 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：이 카드가 소환ㆍ특수 소환했을 경우에 발동할 수 있다.
+PRINTL 자신 패를 1장 고르고 제외하고,
+PRINTL 이 카드명 이외의 레벨 4 이하의 천사족 몬스터 1장을 덱에서 특수 소환한다.
+PRINTL 이 턴, 자신은 천사족 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+CALL CARD_ABLE(2,제외時)
+PRINTL ②：이 카드가 제외되었을 경우에 발동할 수 있다.
+PRINTL 다음 턴의 스탠바이 페이즈에, 제외 상태의 이 카드를 특수 소환한다.
+
+
+@CARDCAN_20071(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20071)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,20071)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 천사족
+	효과条件固名前 = 풍부한 신기 프레이야
+	CALLFORM 효과条件レベル_ADV(4,"以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 제외時
+	SIF 발동済_2(듀얼리스트,20071)
+		RETURN 0
+	RETURN 1	
+ELSEIF 종류 == ターン開始時予約
+	CALL CARD_SS_CHECK(듀얼리스트,20071,"제외")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20071(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20071,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종족 = 천사족
+			효과条件固名前 = 풍부한 신기 프레이야
+			CALLFORM 효과条件レベル_ADV(4,"以下")
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			EX소환可能종족 = 천사족
+			CALL CARD_EX_RESTRICTION(듀얼리스트)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20071,2)
+	IF RESULT == 0
+		CALL CARD_RESERV(듀얼리스트,20071,スタン予約)
+	ENDIF
+ELSEIF 종류 == ターン開始時予約
+	CALL FULLRESET
+	효과範囲제외 = 1
+효과条件名前 = 풍요의 신기 프레이야
+	CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+ENDIF
+

@@ -1,0 +1,363 @@
+﻿@CARDNAME_51403,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 풀 아머드 드라고뉴트
+	CASE "略称"
+RESULTS = 근위병룡
+	CASE "カテゴリ"
+RESULTS:0 = 드라고뉴트
+RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_51403(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1500
+	CASE "C불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_51403(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件レベル = 4
+素材条件数自由 = 1
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51403) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_51403(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 몬스터 × 2체 이상
+PRINTL 이 카드의 효과 발동에 대해 상대는 효과를 발동할 수 없다.
+CALL CARD_ABLE(0,필드起動,フリー誘発)
+PRINTL ①：자신·상대 턴에, 이 카드의 엑시즈 소재를 1개 제거하고 발동할 수 있다.
+PRINTL 덱에서 레벨 4의 「드라고뉴트」 몬스터 1장을 묘지로 보내고,
+PRINTL 이 카드는, 그 몬스터의 무장을 얻는다.
+PRINTL
+
+@CARDCAN_51403(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 효과使用불가,10
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51403)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) != 1 && GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) == 1
+		;액스 드라고뉴트→コピー1，발동6
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),1) == 1
+			효과使用불가:1 = 1
+		SIF モンスター数(듀얼리스트) >= 5
+			효과使用불가:1 = 1
+	ELSE
+		효과使用불가:1 = 1
+	ENDIF
+
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) == 1
+		;랜서 드라고뉴트→コピー2，발동7
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),2) == 1
+			효과使用불가:2 = 1
+	ELSE
+		효과使用불가:2 = 1
+	ENDIF
+
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),3) == 1
+		;세이버 드라고뉴트→コピー3，발동8
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),3) == 1
+			효과使用불가:3 = 1
+	ELSE
+		효과使用불가:3 = 1
+	ENDIF
+
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) == 1
+		;해머 드래고뉴트→コピー4，발동9
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),4) == 1
+			효과使用불가:4 = 1
+	ELSE
+		효과使用불가:4 = 1
+	ENDIF
+
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) == 1
+		;저격 드라고뉴트→コピー5，발동10
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),5) == 1
+			효과使用불가:5 = 1
+	ELSE
+		효과使用불가:5 = 1
+	ENDIF
+
+	SIF 효과使用불가:1 == 1 && 효과使用불가:2 == 1 && 효과使用불가:3 == 1 && 효과使用불가:4 == 1 && 효과使用불가:5 == 1
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般",1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환",1)
+	SIF RESULT != 1
+		효과使用불가:4 = 1
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) == 1
+		;해머 드래고뉴트→コピー4，발동9
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),4) == 1
+			효과使用불가:4 = 1
+	ELSE
+		효과使用불가:4 = 1
+	ENDIF
+
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) == 1
+		;저격 드라고뉴트→コピー5，발동10
+		SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),5) == 1
+			효과使用불가:5 = 1
+	ELSE
+		효과使用불가:5 = 1
+	ENDIF
+
+	SIF 효과使用불가:4 == 1 && 효과使用불가:5 == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件名前:0 = ダミ-０
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) != 1
+		효과条件名前:1 = 액스 드라고뉴트
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) != 1 
+		효과条件名前:2 = 랜서 드라고뉴트
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),3) != 1
+		효과条件名前:3 = 세이버 드라고뉴트
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) != 1
+		효과条件名前:4 = 해머 드래고뉴트
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) != 1
+		효과条件名前:5 = 저격 드라고뉴트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1	
+ENDIF
+
+@CARDEFFECT_51403(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+#DIM DYNAMIC 효과使用불가,10
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 지속효과
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) == 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"貫通")
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) == 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦阻")
+
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51403)
+	IF RESULT == 0
+		IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) == 1 && GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),1) != 1 && モンスター数(듀얼리스트) <= 4
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 드라고뉴트
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"T1汎数",2)
+		ENDIF
+
+		IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) == 1 && GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),2) != 1
+			CALL FULLRESET
+			효과条件カテゴリ = 드라고뉴트
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"T1汎数",4)
+		ENDIF
+
+		IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),3) == 1 && GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),3) != 1 && モンスター数(듀얼리스트) <= 4
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 드라고뉴트
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"T1汎数",8)
+		ENDIF
+
+		IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) == 1 && GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),4) != 1
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"T1汎数",16)
+			ENDIF
+		ENDIF
+
+		IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) == 1 && GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),5) != 1
+			CALL FULLRESET
+			효과条件カテゴリ = 드라고뉴트
+			CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"一破",1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"T1汎数",32)
+		ENDIF
+    ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) == 1 && GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),4) != 1
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"T1汎数",16)
+		ENDIF
+	ENDIF
+
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) == 1 && GETBIT(GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所"),5) != 1
+		CALL FULLRESET
+		효과条件カテゴリ = 드라고뉴트
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"一破",1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"T1汎数",32)
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51403,1,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 드라고뉴트
+		효과条件レベル = 4
+		효과範囲덱 = 1
+		효과条件固名前:0 = ダミ-０
+		IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) == 1
+			효과条件固名前:1 = 액스 드라고뉴트
+		ELSE
+			효과条件固名前:1 = ダミ-Ａ
+		ENDIF
+		IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) == 1
+			효과条件固名前:2 = 랜서 드라고뉴트
+		ELSE
+			효과条件固名前:2 = ダミ-Ｂ
+		ENDIF
+		IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),3) == 1
+			효과条件固名前:3 = 세이버 드라고뉴트
+		ELSE
+			효과条件固名前:3 = ダミ-Ｃ
+		ENDIF
+		IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) == 1
+			효과条件固名前:4 = 해머 드래고뉴트
+		ELSE
+			효과条件固名前:4 = ダミ-Ｄ
+		ENDIF		
+		IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) == 1
+			효과条件固名前:5 = 저격 드라고뉴트
+		ELSE
+			효과条件固名前:5 = ダミ-Ｅ
+		ENDIF
+
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		選択カード = RESULT	
+		IF 選択カード != 9999
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_덱:選択カード")}, "名前"
+			IF MATCH(RESULTS, "액스 드라고뉴트")
+				PRINTW 룡の전사は、斧をその手に取った！
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",1000)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",200)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",2);破壊時リクル-ト
+			ELSEIF MATCH(RESULTS, "랜서 드라고뉴트")
+				PRINTW 룡の전사は、槍をその手に取った！
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",500)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",800)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",4);貫通、破壊時サーチ
+			ELSEIF MATCH(RESULTS, "세이버 드라고뉴트")
+				PRINTW 룡の전사は、剣をその手に取った！
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",700)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",700)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",8);破壊時蘇生
+			ELSEIF MATCH(RESULTS, "해머 드래고뉴트")
+				PRINTW 룡の전사は、鎚をその手に取った！
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",900)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",400)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",16);戦阻、破壊時or소환時破壊
+			ELSEIF MATCH(RESULTS, "저격 드라고뉴트")
+				PRINTW 룡の전사は、弓矢をその手に取った！
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",600)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",700)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",32);破壊or소환時耐性付与
+			ENDIF
+		CALL CARD_DISPOSE(듀얼리스트,"덱",選択カード)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,101 @@
+﻿@CARDNAME_20999,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 魔導サイエンティスト
+	CASE "略称"
+		RESULTS = 魔導サイエン
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+ENDSELECT
+
+@CARD_20999(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 300
+	CASE "守備力"
+		RETURN 300
+	CASE "制限"
+		RETURN 制限
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20999(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ①：１０００ＬＰ払って발동할 수 있다。
+PRINTL ＥＸ덱에서 레벨６이하의 융합몬스터 １体を특수  소환한다。
+PRINTL 이 효과로 특수 소환한 モンスターは直接공격할 수 없고、ターン終了時にＥＸ덱에 돌아간다。
+
+@CARDCAN_20999(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20999)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 1000
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	CALLFORM 효과条件レベル_ADV(6,"以下")
+	효과条件特不無視 = 1
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20999(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20999)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1000)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종류 = 융합
+		CALLFORM 효과条件レベル_ADV(6,"以下")
+		효과条件特不無視 = 1
+		효과추가종류:0 = 効追直無
+		효과추가종류:1 = 効追終山
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

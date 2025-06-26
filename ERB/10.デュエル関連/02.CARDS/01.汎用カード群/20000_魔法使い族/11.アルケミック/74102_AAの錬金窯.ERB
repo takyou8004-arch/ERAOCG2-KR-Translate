@@ -1,0 +1,139 @@
+﻿@CARDNAME_74102,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 알케믹 아틀리에 크리에이트
+	CASE "略称"
+RESULTS = AA의 연금 가마
+	CASE "カテゴリ"
+RESULTS:0 = 알케믹 아틀리에
+ENDSELECT
+
+
+@CARD_74102(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_74102(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신 필드에 X 소재를 가진 「알케믹 아틀리에」 X 몬스터가 존재할 경우, 패에서 카드 1장을 묘지로 보내고 발동할 수 있다.
+PRINTL 자신 필드의 「알케믹 아틀리에」 몬스터의 엑시즈 소재 1개를 제거하고,
+PRINTL 덱에서 「알케믹 아틀리에」 마법 카드 1장을 선택하여 패에 넣는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 앞면 표시로 필드에 존재하는 한, 자신의 「알케믹 아틀리에」 몬스터는 파괴 내성을 얻는다.
+PRINTL 
+
+@CARDCAN_74102(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,74102)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,74102)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 엑시즈
+	효과条件カテゴリ = 알케믹 아틀리에
+	효과範囲필드 = 1
+	효과条件Ｘ素所持 = 999
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = 通常마법
+	효과条件カテゴリ = 알케믹 아틀리에
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_74102(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,74102,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件종류 = 엑시즈
+			효과条件カテゴリ = 알케믹 아틀리에
+			효과条件Ｘ素所持 = 999
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			選択カード = RESULT
+			SIF 選択カード == 9999
+				RETURN 0
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"Ｘ",-1)
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = 通常마법
+			효과条件カテゴリ = 알케믹 아틀리에
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,74102)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 알케믹 아틀리에
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+ENDIF

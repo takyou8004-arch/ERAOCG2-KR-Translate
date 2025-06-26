@@ -1,0 +1,144 @@
+﻿@CARDNAME_2030,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 얼음의 마요괴-설녀
+	CASE "略称"
+RESULTS = 얼음의 마요괴
+	CASE "カテゴリ"
+RESULTS:0 = 마요괴
+ENDSELECT
+
+
+@CARD_2030(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 언데드족 
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_2030(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件カテゴリ = 마요괴
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,2030) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_2030(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 「마요괴」 몬스터 2체
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL ①：「얼음의 마요괴-설녀」는 자신 필드에 1체밖에 앞면 표시로 존재할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신 필드에 S 몬스터가 존재하는 한, 상대는 이 카드를 공격 대상으로 선택할 수 없다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ③: 이 카드가 몬스터 존에 존재하고, 자신의 S 몬스터가 전투 또는 상대의 효과로 파괴되었을 경우,
+PRINTL 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 공격력은 턴 종료시까지 절반이 된다.
+
+
+@CARDCAN_2030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2030)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,2030)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 싱크로
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件표시 = 表側표시
+	효과条件他所 = 1
+	효과条件종류 = 싱크로
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID 
+#DIM DYNAMIC リピート횟수
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2030,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 2
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所, "一攻DOWN")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻避")
+ENDIF

@@ -1,0 +1,107 @@
+﻿@CARDNAME_26100,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = BF－정예의 제피로스
+	CASE "略称"
+RESULTS = BF 제피로스
+	CASE "カテゴリ"
+RESULTS:0 = 블랙 페더
+ENDSELECT
+
+
+@CARD_26100(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26100(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 듀얼 중에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(20,묘지起動)
+PRINTL ①: 이 카드가 묘지에 존재할 경우, 자신 필드의 앞면 표시 카드 1장을 주인의 패로 되돌리고 발동할 수 있다.
+PRINTL 이 카드를 묘지에서 특수 소환하고, 자신은 400 데미지를 받는다.
+PRINTL 
+
+
+@CARDCAN_26100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26100)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 묘지起動
+	SIF 발동済_D1(듀얼리스트,26100)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,26100,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件표시 = 10
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード
+IF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26100,20)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		SIF モンスター数(듀얼리스트) < 5
+			효과範囲마함 = 1
+		효과条件표시 = 10
+		효과条件行先플래그 = 손패行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",400)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,195 @@
+﻿@CARDNAME_79681,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 슈가러쉬★카스테일라
+	CASE "略称"
+		RESULTS =  카스테일라
+	CASE "カテゴリ"
+		RESULTS:0 = 슈가러쉬
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79681(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79681(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  카드는 １턴에 １장밖에 발동할 수 없다。
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：상대플레이어、또는 상대필드의 몬스터를 １장 고르고 발동할 수 있다。
+PRINT 고른 대상에게
+FONTSTYLE 4
+PRINT 드러그
+FONTSTYLE 0
+PRINTL 해피카운터를 놓아、상대는 자신과 필드위의 해피카운터의 합계×１００ＬＰ 회복한다。
+PRINTL 그 후、고른 대상에 따라 이하의 효과를 적용할 수 있다。
+PRINTL ●상대플레이어-：자신의 덱 위에서 카드를 ３장 뒤집는다。
+PRINTL 그 안에서「슈가러쉬」카드 １장을 골라 패에 넣는다、남은 카드는 덱으로 되돌린다。
+PRINTL 그 후、상대에게 해피카운터가 ３개 이상 놓여져 있을 경우、
+PRINTL 자신 필드의「트립 트리트」 마법 / 함정 카드는 턴 종료시까지、파괴내성과 대상내성을 얻는다。
+PRINTL ●상대 몬스터：엔드 페이즈시까지 그 몬스터의 효과를 무효화하고、소재불가로 한다。
+PRINTL 그 후、자신 필드에「해피프렌드」를 ２장까지 특수 소환한다。
+CALL TEXT_DECORATION("ROGUE")
+@CARDCAN_79681(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79681)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		IF GETVARS(@"%듀얼리스트%_フィールド名") != "트립 트리트 トラック！"
+			SIF ターンプレイヤー != 듀얼리스트
+				RETURN 0
+		ENDIF
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,79681)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79681(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 回復量
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79681,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1	
+			PRINTL 어느쪽에게 효과를 사용하시겠습니까？
+			CALL YN_CHOICE(듀얼리스트,"●상대플레이어","●상대 몬스터")
+		ELSE
+			RESULT = 0
+		ENDIF
+
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL SET_PLAYER_INFO(듀얼리스트,"薬Ｃ",1,1,1)
+			
+			CALL FIELD_INFO_COUNT(듀얼리스트,"薬Ｃ",1,2)
+			回復量 += RESULT + GETVAR(@"%対面者%_薬Ｃ")
+			CALL LIFE_CHANGE(対面者,"増加","효과", 回復量 * 100)
+
+			SIF 듀얼리스트 == "자신"
+				PRINTL 덱 위에서 ３장을 뒤집으시겠습니까？
+			CALL YN_CHOICE(듀얼리스트)
+			SIF RESULT == いいえ
+				RETURN 0
+			
+			CALL FULLRESET
+			효과条件カテゴリ = 슈가러쉬
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,3)
+			
+			IF GETVAR(@"%対面者%_薬Ｃ") >= 3
+				CALL FULLRESET
+				효과条件カテゴリ = 트립 트리트
+   				CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐",1)
+  				CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"対耐",1)
+			ENDIF
+
+		ELSEIF RESULT == 1
+			;新しい除去타입、"選択"これで除去の필터越しに대상을 選べるよ
+			;대상に取った 카드의 "위치"はRESULT:1に入るので、選択カードに = で格納することを忘れないこと
+			;대상不全の時はRESULTに0、成立している場合は1が入るよ
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"選択")
+			IF RESULT == 1
+				選択カード = RESULT:1
+				CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",選択カード,1)
+				IF RESULT != -1
+					조교대상 = RESULT
+					PRINTFORML %CALLNAME:조교대상%는 과자가 가져다주는 고양에 저항하지 못하고、자위를 시작해버렸다。
+					CALL EROTIC_MOVE("麻薬자위",조교대상)
+				ENDIF
+				CALL SET_FIELD_INFO(対面者,"필드",選択カード,"薬Ｃ",1) 
+				
+				;필드의  카드의 情報を数えるよ！
+				;듀얼리스트はまんま발동しているプレイヤー、薬Ｃは見たい情報
+				;1になってるのが「설정타입」、これが1立ってるとフィールド全体の카운터の数、立っていなければ（0なら）카운터の乗ってる 몬스터의 수を返すよ
+				;2になってるのが「대상설정」、これが0なら자신의 フィールドだけを、1なら상대 필드を、2ならフィールド全장을 見るよ！
+				CALL FIELD_INFO_COUNT(듀얼리스트,"薬Ｃ",1,2)
+				回復量 += RESULT + GETVAR(@"%対面者%_薬Ｃ")
+				CALL LIFE_CHANGE(対面者,"増加","효과", 回復量 * 100)
+				;めんどくさいことになるので欲張らないように
+
+				SIF 듀얼리스트 == "자신"
+					PRINTL 몬스터의 효과를 무효로하고、소재불가를 붙이시겠습니까？
+				CALL YN_CHOICE(듀얼리스트)
+				SIF RESULT == いいえ
+					RETURN 0
+
+				CALL SET_FIELD_INFO(対面者,"필드",選択カード,"不材",2,1) 
+				CALL SET_FIELD_INFO(対面者,"필드",選択カード,"無効",2,1) 
+
+				IF モンスター数(듀얼리스트) <= 4
+					PRINTL 해피프렌드를 특수소환하시겠습니까？（１장째）
+					CALL YN_CHOICE(듀얼리스트)
+				ELSE
+					RESULT = いいえ
+				ENDIF
+				IF RESULT == はい
+					CALL FULLRESET
+					CALL CARD_GENERATE(듀얼리스트,179680)
+
+					IF モンスター数(듀얼리스트) <= 4
+						PRINTL 해피프렌드를 특수소환하시겠습니까？（２장째）
+						CALL YN_CHOICE(듀얼리스트)
+					ELSE
+						RESULT = いいえ
+					ENDIF
+					IF RESULT == はい
+						CALL FULLRESET
+						CALL CARD_GENERATE(듀얼리스트,179680)
+					ENDIF
+
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

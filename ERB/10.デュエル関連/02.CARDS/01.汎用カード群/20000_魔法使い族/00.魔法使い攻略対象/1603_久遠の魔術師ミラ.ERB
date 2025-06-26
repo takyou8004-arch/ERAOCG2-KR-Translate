@@ -1,0 +1,102 @@
+﻿@CARDNAME_1603,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 영원의 마술사 미라
+	CASE "略称"
+RESULTS = 마술사 미라
+	CASE "カテゴリ"
+RESULTS:0 = 마술사
+ENDSELECT
+
+
+@CARD_1603(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1603(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드의 효과 발동에 대해 상대는 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환에 성공했을 경우,
+PRINTL 상대의 마법 & 함정 존에 세트된 카드를 전부 확인하고, 그 중에서 1장을 대상으로 발동할 수 있다.
+PRINTL 그 상대의 카드의 복사본을 패에 넣는다.
+PRINTL 
+
+@CARDCAN_1603(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1603)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	효과条件표시 = 裏側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,1095)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1603(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC コピー先
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1603)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 裏側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대마함",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = GETVAR(@"%対面者%_마함:選択カード")
+			PRINTFORML ミラは杖の鏡に상대の카드를 映し、念写した카드를 %듀얼리스트%の손패に加えた。
+			CALL CARD_GENERATE_HAND(듀얼리스트,選択カード_ID)
+		ENDIF
+	ENDIF
+ENDIF
+
+

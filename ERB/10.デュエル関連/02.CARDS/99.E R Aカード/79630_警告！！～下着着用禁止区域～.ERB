@@ -1,0 +1,150 @@
+﻿@CARDNAME_79630,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 경고!! ~속옷착용금지구역~
+	CASE "略称"
+RESULTS = 속옷착용금지구역
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79630(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79630(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,지속효과)
+PRINTL ①：이 카드가 필드에 앞면 표시로 존재하는 한,
+PRINTL 　필드의 암컷 몬스터는 수비 표시가 되고, 공격할 수 없다.
+CALL CARD_ABLE(2,ターン終了時強制)
+PRINTL ②：상대 엔드 페이즈에, 이 카드는 묘지로 보내진다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79630(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79630)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+
+ELSEIF 종류 == 지속효과 || 종류 == リアクション효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79630(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79630)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件성별 = 牝性
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"表",2)
+	CALL FULLRESET
+	효과条件성별 = 牝性
+;	효과元カードID = 79630
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"表",2,79630)
+	
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%対面者%_MZ_服状:カウンタ") <= 0
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"服状",1,1,1)
+	NEXT
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_MZ_服状:カウンタ") <= 0
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"服状",1,1)
+	NEXT
+ELSEIF 종류 == リアクション효과
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_MZ_リ数:カウンタ") >= 10
+			CONTINUE
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML %CALLNAME:조교대상%는 부끄러운 듯이 하반신을 꾹 누르면서, 사라진 속옷을 찾기 시작했다.
+			CALL EROTIC_MOVE("팬티晒し",조교대상)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"リ数",1)
+		ENDIF
+	NEXT
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%対面者%_MZ_リ数:カウンタ") >= 10
+			CONTINUE
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ,1)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML %CALLNAME:조교대상%는 부끄러운 듯이 하반신을 꾹 누르면서, 사라진 속옷을 찾기 시작했다.
+			CALL EROTIC_MOVE("팬티晒し",조교대상)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"リ数",1,0,1)
+		ENDIF
+	NEXT
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_DISPOSE(듀얼리스트,"필드",場所)
+ENDIF

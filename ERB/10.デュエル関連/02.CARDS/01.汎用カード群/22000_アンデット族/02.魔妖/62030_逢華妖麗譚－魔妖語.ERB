@@ -1,0 +1,135 @@
+﻿@CARDNAME_62030,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 봉화요려담-마요괴이야기
+	CASE "略称"
+RESULTS = 봉화요려담마요괴
+	CASE "カテゴリ"
+RESULTS:0 = 마요괴
+ENDSELECT
+
+
+@CARD_62030(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62030(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動 ,フリー誘発)
+PRINTL ①: 자신 필드의 언데드족 S 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 자신의 묘지 / 제외 상태의 몬스터 중에서,
+PRINTL 대상 몬스터와 속성이 다른 언데드족 몬스터 1장을 골라 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터는 엔드 페이즈에 제외된다.
+PRINTL 이 카드의 발동 후, 턴 종료시까지 자신은 언데드족 몬스터밖에 특수 소환할 수 없다.
+
+@CARDCAN_62030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,62030)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,62030)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 싱크로
+	효과条件종족 = 언데드족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件종족 = 언데드족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_62030(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 속성条件
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,62030,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 싱크로
+		효과条件종족 = 언데드족
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			選択カード = RESULT
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:選択カード")},"속성"
+			속성条件 = RESULT
+			;PRINTFORMW {속성条件}
+
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲제외 = 1
+			효과条件종족 = 언데드족
+			효과추가종류 = 10 + 제외行き
+			SIF 속성条件 != 1
+				효과条件속성:0 = 빛속성
+			SIF 속성条件 != 2
+				효과条件속성:1 = 어둠속성
+			SIF 속성条件 != 3
+				효과条件속성:2 = 땅속성
+			SIF 속성条件 != 4
+				효과条件속성:3 = 물속성
+			SIF 속성条件 != 5
+				효과条件속성:4 = 화염속성
+			SIF 속성条件 != 6
+				효과条件속성:5 = 바람속성
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+		SS소환可能종족 = 언데드족
+		CALL CARD_SS_RESTRICTION(듀얼리스트)
+	ENDIF
+ENDIF
+

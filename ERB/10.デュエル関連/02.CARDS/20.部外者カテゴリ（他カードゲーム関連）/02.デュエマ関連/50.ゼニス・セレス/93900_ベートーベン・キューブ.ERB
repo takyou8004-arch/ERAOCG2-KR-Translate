@@ -1,0 +1,138 @@
+﻿@CARDNAME_93900,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 베토벤 큐브
+	CASE "略称"
+RESULTS = B 큐브
+	CASE "カテゴリ"
+RESULTS:0 = 제니스
+RESULTS:1 = 베토벤
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_93900(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93900(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL 이 카드는 패에서 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 자신의 덱 위에서 3장을 본다.
+PRINTL 그 중에서 "언노운" 몬스터 또는 "오라클" 몬스터 1장을 특수 소환하고,
+PRINTL 나머지를 자신의 마법 & 함정 존에 세트한다. 이 효과로 세트한 카드는 발동할 수 없다.
+PRINTL 그 후, 자신의 "제니스" 몬스터 모두에게 턴 종료시까지 완전 내성을 부여한다.
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ②: 자신 필드에 "제니스" 몬스터가 존재할 경우에 발동할 수 있다.
+PRINTL 묘지의 이 카드를 세트한다.
+PRINTL 이 효과로 세트한 이 카드는 발동할 수 없으며, 필드에서 벗어났을 경우에 제외된다.
+PRINTL 
+
+@CARDCAN_93900(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,93900)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,93900)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5 && 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 마함数(듀얼리스트) == 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 제니스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_93900(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93900,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ:0 = 언노운
+		효과条件カテゴリ:1 = 오라클
+		효과条件山切り無し = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"",3)
+		IF RESULT == 1
+			REPEAT 2
+				CALL CARD_DISPOSE(듀얼리스트,"덱",0,마함行き,4)
+			REND
+		ELSE
+			REPEAT 3
+				CALL CARD_DISPOSE(듀얼리스트,"덱",0,마함行き,4)
+			REND
+		ENDIF
+		
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 제니스
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)		
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件カテゴリ = 제니스
+			CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"モ耐",1)
+			CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"魔耐",1)
+			CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"함정耐",1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93900)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 2
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き,4)
+	ENDIF
+ENDIF
+

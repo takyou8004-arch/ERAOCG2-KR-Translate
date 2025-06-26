@@ -1,0 +1,118 @@
+﻿@CARDNAME_4062,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 천재 데드담
+	CASE "略称"
+RESULTS = 데드담
+	CASE "カテゴリ"
+RESULTS:0 = 커맨드
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_4062(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4062(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,소환時 ,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환되었을 경우 발동할 수 있다.
+PRINTL 덱 위에서 3장을 넘기고,
+PRINTL 그 중에서 레벨 3 이하의 몬스터 1장을 고르고 효과를 무효화하여 수비 표시로 특수 소환하고,
+PRINTL 그 후, 그 중에서 카드 1장을 묘지로 보내고, 다른 1장을 패에 넣는다.
+PRINTL 이 효과 발동 후, 이 듀얼 중 자신은 빛, 화염, 땅 속성 몬스터의 효과를 발동할 수 없다.
+
+@CARDCAN_4062(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4062)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,4062)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4062(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 횟수制限
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4062,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		CALL 효과条件レベル_ADV(3, "以下")
+		효과추가종류 = 効追無効
+		효과条件山切り無し = 1
+		효과条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시",3)
+		CALL FULLRESET
+		효과条件山切り無し = 1
+		효과条件任意 = 1
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所,2)
+		CALL FULLRESET
+		효과条件任意 = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,1)
+
+
+		CALL SET_PLAYER_INFO(듀얼리스트,"超속성효과無効",10)
+	ENDIF
+ENDIF

@@ -1,0 +1,123 @@
+﻿@CARDNAME_50593,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마왕룡 베엘제
+	CASE "略称"
+RESULTS = 베엘제
+	CASE "カテゴリ"
+RESULTS:0 = 듀얼룡
+ENDSELECT
+
+
+@CARD_50593(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50593(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+IF EX参照 == 0 || EX参照 == 1
+	素材条件속성 = 어둠속성
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50593) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50593(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 어둠 속성 튜너 ＋ 튜너 이외의 몬스터 1장 이상
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 전투 / 효과로는 파괴되지 않는다.
+CALL CARD_ABLE(0,효과後誘発)
+PRINTL ②: 자신이 데미지를 받았을 경우 발동한다. 그 수치만큼 이 카드의 공격력을 올린다.
+
+
+@CARDCAN_50593(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50593)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"被弾者")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_50593(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+ELSEIF 종류 == 효과後誘発
+	ダメージ量 = GETVAR(@"%듀얼리스트%_変動値")
+	CALL FULLRESET
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",ダメージ量)
+ENDIF

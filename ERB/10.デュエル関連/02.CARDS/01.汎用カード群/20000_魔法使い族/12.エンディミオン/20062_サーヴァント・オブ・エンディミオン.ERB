@@ -1,0 +1,236 @@
+﻿@CARDNAME_20062,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 서번트 오브 엔디미온
+	CASE "略称"
+RESULTS = 서번트Edm
+	CASE "カテゴリ"
+RESULTS:0 = 엔디미온
+RESULTS:1 = 마력 카운터
+ENDSELECT
+
+
+@CARD_20062(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 900 
+	CASE "守備力"
+		RETURN 1500
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "성별"
+		RETURN 牝性
+	CASE "특수制限"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_20062(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+
+CALLFORM CARD_ABLE(0,발동強制誘発)
+PRINTL ①: 자신 또는 상대가 마법 카드 효과를 발동할 때마다, 이 카드에 마력 카운터를 1개 놓는다.
+
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ②: 이 카드의 마력 카운터를 3개 제거하고 발동할 수 있다.
+PRINTL 덱에서 마력 카운터를 놓을 수 있는 몬스터 1장과 마법 & 함정 존의 이 카드를 특수 소환하고,
+PRINTL 그 2장에 마력 카운터를 1개씩 놓는다.
+
+CALL TEXT_DECORATION("P_MAGIC_2")
+
+PRINTL 자신은 "서번트 오브 엔디미온"을 1턴에 1번밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 마력 카운터가 놓여 있는 이 카드는 직접 공격할 수 있다.
+
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 상대 턴에 1번, 패를 1장 버리고 발동할 수 있다.
+PRINTL 이 카드 및 자신 필드의 마력 카운터를 놓을 수 있는 카드 전체에 마력 카운터를 1개씩 놓는다.
+
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ③: 몬스터 존의 이 카드가 파괴되었을 경우 발동할 수 있다. 이 카드를 자신의 마법 & 함정 존에 놓는다.
+
+
+
+@CARDSUMMON_AA_20062
+
+
+@CARDCAN_20062(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 발동불가,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20062)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_START_DATA_2(듀얼리스트,2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 4
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_魔Ｃ:場所") < 3
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,20062,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 마력카운터
+	효과条件以攻撃力 = 1000
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_魔Ｃ:場所") == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 손패数(듀얼리스트) == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊")
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_20062(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 발동불가,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;P
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20062)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 발동強制誘発
+	PRINTFORML 
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"魔Ｃ",1)
+
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20062)
+	IF RESULT == 0
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 마력카운터
+		효과条件以攻撃力 = 1000
+		효과추가종류 = 201
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과추가종류 = 201
+		CALL CARD_SP_SUMMON(듀얼리스트, "마함", 場所)
+	ENDIF
+;モンスター효과-------------------------
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直攻")
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20062)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+					CONTINUE
+				SIF GETVAR(@"%듀얼리스트%_MZ_表:{カウンタ}") == 3
+					CONTINUE
+				TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "カテゴリ"	
+				SIF !MATCH(RESULTS, "마력카운터")
+					CONTINUE
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"魔Ｃ",1)
+			NEXT
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%듀얼리스트%_마함:{カウンタ}") == -1
+					CONTINUE
+				SIF GETVAR(@"%듀얼리스트%_魔_表:{カウンタ}") >= 2
+					CONTINUE
+				TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_마함:{カウンタ}")}, "カテゴリ"	
+				SIF !MATCH(RESULTS, "마력카운터")
+					CONTINUE
+				CALL SET_FIELD_INFO(듀얼리스트,"마함",カウンタ,"魔Ｃ",1)
+			NEXT
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20062)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件名前 = 서번트 오브 엔디미온
+		CALL CARD_SET_BASIC(듀얼리스트,"EX덱",ゾーン,場所,"表側표시")
+	ENDIF
+ENDIF

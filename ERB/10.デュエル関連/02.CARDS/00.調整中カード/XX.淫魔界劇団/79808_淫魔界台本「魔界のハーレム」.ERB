@@ -1,0 +1,317 @@
+@CARDNAME_79808,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 음마계대본 「마계의 하렘」
+	CASE "略称"
+RESULTS = 「마계 하렘」
+	CASE "カテゴリ"
+RESULTS:0 = 마계대본
+RESULTS:1 = 음마계대본
+RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79808(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250523
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79808(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드 이름의 ①②의 효과는 각각 1턴에 한 번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①: 자신 필드에 「음마계극단」 암컷 몬스터가 2장 이상 존재할 경우에 발동할 수 있다.
+PRINTL 자신 필드의 「음마계극단」 암컷 몬스터의 수만큼 상대 필드의 카드(앞면 표시)
+PRINTL 를 선택하고 효과를 무효로 한다.
+CALLFORM CARD_ABLE(2,破壊→묘지)
+PRINTL ②: 필드에 「음마계극단」 카드가 존재하고,
+PRINTL 이 카드가 상대의 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 덱에서 암컷 카드를 2장 패에 추가한다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79808(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79808)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,79808)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件성별 = 牝性
+	효과条件カテゴリ = 음마계극단
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 破壊→묘지
+	SIF 발동済_2(듀얼리스트,79808)
+		RETURN 0
+	SIF 処理中_듀얼리스트 == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 음마계극단
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79808(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 女優대상, 5
+#DIM DYNAMIC 女優ID , 5
+#DIM DYNAMIC 女優人数
+#DIM DYNAMIC 実行횟수
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79808,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件성별 = 牝性
+		효과条件カテゴリ = 음마계극단
+			효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		実行횟수 = RESULT
+		CALL FULLRESET
+		효과条件표시 = 10
+		효과条件除去種 = 無効
+		효과条件複数 = 100 - 実行횟수
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"無効")
+		IF 듀얼리스트 == "자신"
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+					CONTINUE
+				TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "カテゴリ"	
+				IF !MATCH(RESULTS, "음마계극단")
+					SIF GETVARS(@"%듀얼리스트%_MZ_追カテ:{カウンタ}") != "음마계극단"
+						CONTINUE
+				ENDIF
+				TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "성별"	
+				SIF !MATCH(RESULT, 牝性)
+					CONTINUE
+				CALL CARD_EROTICS(GETVAR(@"%듀얼리스트%_필드:{カウンタ}"))
+				IF RESULT > 0
+					女優대상:女優人数 = RESULT
+					女優ID:女優人数 = GETVAR(@"%듀얼리스트%_필드:{カウンタ}")
+					IF 女優人数 == 0
+						SETCOLOR C_YELLOW
+						PRINTFORMW 하렘 박품의 촬영이 시작되었다
+						PRINTL
+					ELSE
+						SETCOLOR C_YELLOW
+						PRINTFORM %TEXTR("一方、/負けじと、/さらに、/そして、")%
+					ENDIF
+					SELECTCASE RAND:5
+						CASE 0
+							PRINTFORMW %CALLNAME:(女優대상:女優人数)%%TEXTR("は/が")%입술을 열어젖히고 혀를 엮는다
+							PRINTL
+							RESETCOLOR
+							CALL EROTIC_MOVE("ディ-プ키스",女優대상:女優人数,MASTER,500)
+						CASE 1
+							PRINTFORMW %CALLNAME:(女優대상:女優人数)%%TEXTR("は/が")%전신을 사용해 봉사한다
+							PRINTL
+							RESETCOLOR
+							CALL EROTIC_MOVE("全身凌辱",女優대상:女優人数,MASTER,500)
+						CASE 2
+							PRINTFORMW %CALLNAME:(女優대상:女優人数)%%TEXTR("は/が")%암컷구멍을 내민다
+							PRINTL
+							RESETCOLOR
+							CALL EROTIC_MOVE("前穴凌辱",女優대상:女優人数,MASTER,500)
+						CASE 3
+							PRINTFORMW %CALLNAME:(女優대상:女優人数)%%TEXTR("は/が")%%TOSTR_CUPSIZE(女優대상:女優人数)%컵의 가슴을 사용해 봉사한다
+							PRINTL
+							RESETCOLOR
+							CALL EROTIC_MOVE("파이즈리",女優대상:女優人数,MASTER,500)
+						CASE 4
+							PRINTFORMW %CALLNAME:(女優대상:女優人数)%%TEXTR("は/が")%입으로 봉사를 한다
+							PRINTL
+							RESETCOLOR
+							CALL EROTIC_MOVE("フェラチオ",女優대상:女優人数,MASTER,500)
+					ENDSELECT
+					女優人数 ++
+				ENDIF
+			NEXT
+		ENDIF
+		IF 女優人数 > 0 && GETVARS(@"%듀얼리스트%_フィールド名") == "음마계 스튜디오"
+			CALL INMAKAIFILM_GENERATE(듀얼리스트,79808,1,女優ID:0,女優ID:1,女優ID:2,女優ID:3,女優ID:4)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79808,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件성별 = 牝性
+		효과条件固名前選択 = 1
+		효과条件複数 = 2
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		女優ID:0 = RESULT:1
+		女優ID:1 = RESULT:2
+		CALL CARD_EROTICS(女優ID:0)
+		女優대상:0 = RESULT
+		CALL CARD_EROTICS(女優ID:1)
+		女優대상:1 = RESULT
+		IF 女優대상:0 > 0 && 女優대상:1 > 0  && 듀얼리스트 == "자신"
+			SETCOLOR C_YELLOW
+			PRINTFORMW 3P작품의 촬영이 시작되었다
+			PRINTL
+			SELECTCASE RAND:4
+				CASE 0
+					PRINTFORMW %CALLNAME:(女優대상:0)%と %CALLNAME:(女優대상:1)%는 양쪽에서 %CALLNAME:MASTER%의 자지를 끼우고 봉사하고있다
+					PRINTL
+					RESETCOLOR
+					CALL EROTIC_MOVE("파이즈리",女優대상:0,MASTER,500)
+					CALL EROTIC_MOVE("파이즈리",女優대상:1,MASTER,500)
+				CASE 1
+					PRINTFORMW %CALLNAME:(女優대상:0)%と %CALLNAME:(女優대상:1)%는 양쪽에서 %CALLNAME:MASTER%의 자지를 번갈아가며 핥고있다
+					PRINTL
+					RESETCOLOR
+					CALL EROTIC_MOVE("フェラチオ",女優대상:0,MASTER,500)
+					CALL EROTIC_MOVE("フェラチオ",女優대상:1,MASTER,500)
+				CASE 2
+					PRINTFORMW 누운 %CALLNAME:MASTER%에게 올라탄 %CALLNAME:(女優대상:0)%가 허리를 튕기는 한 편、
+					PRINTFORML %CALLNAME:(女優대상:1)%이 %CALLNAME:MASTER%에게 감싸한겨 혀를 엮고있다
+					PRINTL
+					RESETCOLOR
+					CALL EROTIC_MOVE("騎乗位",女優대상:0,MASTER,500)
+					CALL EROTIC_MOVE("ディ-プ키스",女優대상:1,MASTER,500)
+				CASE 3
+					PRINTFORMW %CALLNAME:(女優대상:0)%와 %CALLNAME:(女優대상:1)%는 늘어서서 %CALLNAME:MASTER%의 자지를 번갈아가며 삽입당하고있다
+					PRINTL
+					RESETCOLOR
+						CALL EROTIC_MOVE("前穴凌辱",女優대상:0,MASTER,500)
+						CALL EROTIC_MOVE("前穴凌辱",女優대상:1,MASTER,500)
+			ENDSELECT
+		ENDIF
+		SIF GETVARS(@"%듀얼리스트%_フィールド名") == "음마계 스튜디오" && 女優ID:0 > 0 && 女優ID:1 > 0 
+			CALL INMAKAIFILM_GENERATE(듀얼리스트,79808,2,女優ID:0,女優ID:1)
+	ENDIF
+ENDIF
+
+;台本の①의 효과で生成されるフィルムの설정
+@INMAKAIFILM_79808_1(女優ID:0,女優ID:1,女優ID:2,女優ID:3,女優ID:4)
+#DIM DYNAMIC 女優ID, 5 ;대상の牝몬스터의 カードID
+#DIM DYNAMIC 女優대상, 5 ;えっち用のID：csv無しなら-1
+#DIMS DYNAMIC 女優名前, 5
+#DIM DYNAMIC 女優人数 ;女優IDが存在する総人数
+#DIM DYNAMIC シチュ종류 ;표시される画像のシチュエ-ション지정したい場合「シチュ종류 = シチュ_파이즈리」のようにする。特に지정しない(ランダムでいい)場合シチュ종류 = 0。지정できるシチュは@IMAGE_HAMEDORIを参照。
+#DIMS DYNAMIC タイトル
+#DIM DYNAMIC カウンタ
+VARSET RESULT
+VARSET RESULTS
+
+FOR カウンタ,0,5
+	IF 女優ID:カウンタ <= 0
+		女優人数 = カウンタ
+		BREAK
+	ENDIF
+	CALL INMAKAIFILM_GETNAME(女優ID:カウンタ)
+	女優대상:カウンタ = RESULT
+	女優名前:カウンタ = %RESULTS%
+NEXT
+
+;生成されるフィルムは【%女優名前%】『%タイトル%』となる
+SELECTCASE RAND:2
+	CASE 0
+		タイトル = 꿈의 {女優人数 + 1}P 하렘 봉사 %女優名前:0% %女優名前:1% %女優名前:2% %女優名前:3% %女優名前:4%
+	CASE 1
+		タイトル = 극상의 암컷 몬스터、{女優人数}명 동시 펜듈럼 소환！ %女優名前:0% %女優名前:1% %女優名前:2% %女優名前:3% %女優名前:4%
+ENDSELECT
+
+RESULT = シチュ종류
+RESULTS = %타이틀%
+
+;台本の②의 효과で生成されるフィルムの설정
+@INMAKAIFILM_79808_2(女優ID:0,女優ID:1,女優ID:2,女優ID:3,女優ID:4)
+#DIM DYNAMIC 女優ID, 5 ;대상の牝몬스터의 カードID
+#DIM DYNAMIC 女優대상, 5 ;えっち用のID：csv無しなら-1
+#DIMS DYNAMIC 女優名前, 5
+#DIM DYNAMIC 女優人数 ;女優IDが存在する総人数
+#DIM DYNAMIC シチュ종류 ;표시される画像のシチュエ-ション지정したい場合「シチュ종류 = シチュ_파이즈리」のようにする。特に지정しない(ランダムでいい)場合シチュ종류 = 0。지정できるシチュは@IMAGE_HAMEDORIを参照。
+#DIMS DYNAMIC タイトル
+#DIM DYNAMIC カウンタ
+VARSET RESULT
+VARSET RESULTS
+
+FOR カウンタ,0,5
+	IF 女優ID:カウンタ <= 0
+		女優人数 = カウンタ
+		BREAK
+	ENDIF
+	CALL INMAKAIFILM_GETNAME(女優ID:カウンタ)
+	女優대상:カウンタ = RESULT
+	女優名前:カウンタ = %RESULTS%
+NEXT
+
+SELECTCASE RAND:2
+	CASE 0
+		タイトル = 최강 에로 태그、%女優名前:0%＆%女優名前:1%에게 끼워저 착정당한다
+	CASE 1
+		タイトル = %女優名前:0%＆%女優名前:1% 개변태 더블 튜닝！
+ENDSELECT
+
+RESULT = シチュ종류
+RESULTS = %타이틀%

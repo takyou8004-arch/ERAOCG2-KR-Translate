@@ -1,0 +1,169 @@
+﻿@CARDNAME_53102,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 트라이브리게이드 은탄의 루갈
+	CASE "略称"
+RESULTS = 루갈
+	CASE "カテゴリ"
+RESULTS:0 = 트라이브리게이드
+ENDSELECT
+
+
+@CARD_53102(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_53102(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 야수족 / 비행야수족 몬스터 2장 이상
+PRINTL 이 카드명의 ①② 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ①: 상대 메인 페이즈에 발동할 수 있다.
+PRINTL 자신의 패 / 묘지에서 레벨 4 이하의 야수족 또는 비행야수족 몬스터 1장을 고르고 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터의 효과는 무효화되어, 엔드 페이즈에 주인의 패로 되돌아간다.
+CALLFORM CARD_ABLE(2,필드→묘지 ,손패→묘지 ,덱→묘지 ,破壊→묘지 ,戦闘→묘지)
+PRINTL ②: 이 카드가 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 상대 필드의 모든 몬스터의 공격력은 턴 종료시까지, 자신 필드의 몬스터의 종족의 종류 × 300 줄어든다.
+PRINTL 
+
+
+
+
+@CARDSUMMON_53102(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 3
+素材条件종족:0 = 야수족
+素材条件종족:1 = 비행야수족
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,53102) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_53102(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,53102)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,53102)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件종족:0 = 야수족
+	효과条件종족:1 = 비행야수족
+	CALL 효과条件レベル_ADV(4, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_2(듀얼리스트,53102)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) < 1 || モンスター数(対面者) < 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_53102(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 最大レベル
+#DIM DYNAMIC 종족数
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53102,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件종족:0 = 야수족
+		효과条件종족:1 = 비행야수족
+		효과추가종류:0 = 1		
+		효과추가종류:1 = 10 + 손패行き
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,53102,2)
+	IF RESULT == 0
+		FOR カウンタ,1,16
+			FOR カウンタB,0,5
+				SIF GETVAR(@"%듀얼리스트%_필드:カウンタB") == -1
+					CONTINUE
+				IF GETVAR(@"%듀얼리스트%_MZ_種:カウンタB") == カウンタ
+					종족数 += 1
+					BREAK
+				ENDIF
+			NEXT
+		NEXT
+		CALL FULLRESET
+		攻撃力修正 = 300 * 종족数
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"一攻DOWN",攻撃力修正)
+	ENDIF
+ENDIF
+
+
+
+

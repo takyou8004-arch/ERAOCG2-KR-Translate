@@ -1,0 +1,162 @@
+﻿@CARDNAME_4803,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 땅의 오파토스
+	CASE "略称"
+RESULTS = 오파토스
+	CASE "カテゴリ"
+RESULTS:0 = 일루바의 신
+RESULTS:2 = 엘로나
+ENDSELECT
+
+
+@CARD_4803(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 융합
+	CASE "속성"
+		RESULT:1 = 땅속성
+		RETURN 신속성
+	CASE "종족"
+		RETURN 환신야수족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수불가"
+		RETURN 1
+	CASE "C불가"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_4803(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 5
+素材条件R종족起動 = 1
+素材条件속성 = 땅속성
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,4803) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_4803(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 종족이 다른 땅 속성 몬스터 ×5
+PRINTL
+PRINTL 이 카드의 효과 발동에 대해 상대는 효과를 발동할 수 없다.
+PRINTL 이 카드는 융합 소환으로만 특수 소환할 수 있다.
+CALL CARD_ABLE(0,EX소환時強制,특수소환時強制)
+PRINTL ①: 이 카드가 특수 소환했을 경우 발동한다.
+PRINTL 필드의 모든 마법 & 함정 카드를 파괴한다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②: 서로의 필드는 「일루바」가 된다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ③: 필드의 이 카드는 완전 철벽 (전투 / 효과 파괴 대상 내성)을 가지며,
+PRINTL 상대 필드의 모든 몬스터에게 1번씩 공격할 수 있다.
+CALL CARD_ABLE(0,戦闘→묘지,필드→묘지,破壊→묘지,필드→戦離)
+PRINTL ④: 이 카드가 필드를 벗어났을 경우 발동한다.
+PRINTL 필드의 모든 카드를 파괴하고, 서로의 플레이어는 각자 손패가 5장이 되도록 드로우한다.
+
+
+@CARDCAN_4803(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC ドロー枚数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4803)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時強制 || 종류 == 특수소환時強制
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 필드→묘지 || 종류 == 破壊→묘지 || 종류 == 필드→戦離 || 종류 == 제외時
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4803(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ドロー枚数
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時強制 || 종류 == 특수소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4803)
+	IF RESULT == 0
+		SETCOLOR C_GOLD
+		PRINTW 「フハハハハハハハハ！」
+		RESETCOLOR
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両마함全体",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦")
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트,"イルヴァ")
+	CALL SET_FIELD_MAGIC_INFO(対面者,"イルヴァ")
+ELSEIF 종류 == 戦闘→묘지 || 종류 == 필드→묘지 || 종류 == 破壊→묘지 || 종류 == 필드→戦離 || 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4803)
+	IF RESULT == 0
+		SETCOLOR C_GOLD
+		PRINTW 「逝け！逝け！　フハハハッ！」
+		RESETCOLOR
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場全体",場所,"묘지")
+		IF  손패数(듀얼리스트) < 5
+			ドロー枚数 = 5 - 손패数(듀얼리스트)
+			CALL CARDDRAW_BASIC(듀얼리스트,ドロー枚数)
+		ENDIF
+		IF 손패数(対面者) < 5
+			ドロー枚数 = 5 - 손패数(対面者)
+			CALL CARDDRAW_BASIC(対面者,ドロー枚数)
+		ENDIF
+	ENDIF
+ENDIF
+

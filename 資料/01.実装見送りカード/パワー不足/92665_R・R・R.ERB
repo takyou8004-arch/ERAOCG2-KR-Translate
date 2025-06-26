@@ -1,0 +1,105 @@
+﻿@CARDNAME_92665,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = レイド・ラプターズ・レプリカ
+	CASE "略称"
+		RESULTS = Ｒ・Ｒ・Ｒ
+	CASE "カテゴリ"
+		RESULTS:0 = レイドラプターズ
+ENDSELECT
+
+
+@CARD_92665(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92665(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動 ,フリー誘発)
+PRINTL ①：자신 필드의 「RR」몬스터 １体を대상として발동할 수 있다。
+PRINTL その同名몬스터 １体を덱에서 특수  소환한다。
+PRINTL 이 효과로 특수 소환한 モンスターは攻撃誘導を得る。
+
+@CARDCAN_92665(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92665)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	IF ゾーン == "마함"
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	ENDIF
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,0,"덱")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = レイドラプターズ
+	효과条件종류 = レベル持ち
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_92665(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カード名
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92665)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = レイドラプターズ
+		효과条件종류 = レベル持ち
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カードID = RESULT:1
+			TRYCALLFORM CARDNAME_{選択カードID}, "名前"
+			選択カード名 = %RESULTS%
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件名前 = %選択カード名%
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			CALL STATCHANGE_EFFECT(듀얼리스트,"필드",RESULT,"攻誘")
+		ENDIF
+	ENDIF
+ENDIF

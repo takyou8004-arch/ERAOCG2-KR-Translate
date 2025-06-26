@@ -1,0 +1,140 @@
+﻿@CARDNAME_21226,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 바렐 리차저
+	CASE "略称"
+RESULTS = B 리차저
+	CASE "カテゴリ"
+RESULTS:0 = 바렐
+ENDSELECT
+
+
+@CARD_21226(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2100
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21226(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①: 자신의 어둠 속성 EX 몬스터가 전투 / 효과로 파괴되었을 경우,
+PRINTL 패 / 필드의 이 카드를 묘지로 보내고, 묘지의 어둠 속성 EX 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터와는 원래 카드명이 다른 어둠 속성 몬스터 1장을 자신 묘지에서 특수 소환한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: EX덱에서 특수 소환된 어둠 속성 몬스터가 자신 필드에 존재하는 한,
+PRINTL 상대 몬스터는 이 카드를 공격 대상으로 선택할 수 없다.
+
+@CARDCAN_21226(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21226)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,21226)
+		RETURN 0
+	SIF ゾーン != "필드" && ゾーン != "손패"
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF モンスター数(듀얼리스트) >= 5
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과条件종류 = EXモン全般
+	효과条件속성 = 어둠속성
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 어둠속성
+	효과条件종류 = EXモン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 어둠속성
+	효과条件召種 = 召種EX덱
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_21226(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名前
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21226,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = EXモン全般
+		효과条件속성 = 어둠속성
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT != 9999
+			TRYCALLFORM CARDNAME_{RESULT:99},"名前"
+			選択カード名前 = %RESULTS%
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件속성 = 어둠속성
+			효과条件固名前 = %選択カード名前%
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻避")
+ENDIF
+
+
+

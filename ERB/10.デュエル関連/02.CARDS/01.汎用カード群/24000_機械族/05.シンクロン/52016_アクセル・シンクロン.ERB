@@ -1,0 +1,175 @@
+﻿@CARDNAME_52016,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 액셀 싱크론
+	CASE "略称"
+RESULTS = 액셀 싱크로
+	CASE "カテゴリ"
+RESULTS:0 = 싱크론
+ENDSELECT
+
+
+@CARD_52016(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 2100
+	CASE "튜너"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52016(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 5
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52016) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52016(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 ＋ 튜너 이외의 몬스터 1체 이상
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 S소환했을 때 발동할 수 있다.
+PRINTL 덱에서 「싱크론」 몬스터 1장을 묘지로 보내고, 그 몬스터의 레벨만큼, 이 카드의 레벨을 올리거나 내린다.
+CALLFORM CARD_ABLE(10,필드起動 ,フリー誘発)
+PRINTL ②: 상대 메인 페이즈에 1번 발동할 수 있다.
+PRINTL 이 카드명을 포함하는 자신 필드의 몬스터를 소재로 S소환을 실행한다.
+
+
+@CARDCAN_52016(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52016)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 싱크론
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 싱크로
+	強制素材場所 = 지정場所(場所,ゾーン)
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52016(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_星
+#DIM DYNAMIC 選択カード_ID
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52016)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 싱크론
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			TRYCALLFORM CARD_{選択カード_ID}, "レベル"
+			選択カード_星 = RESULT
+			IF RESULT < 5
+PRINTL 레벨을 낮추겠습니까?
+				CALL YN_CHOICE(듀얼리스트)
+				IF RESULT == はい
+					CALL FULLRESET
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星", -選択カード_星)
+				ELSE
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星", 選択カード_星)
+				ENDIF
+			ELSE
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星", 選択カード_星)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52016,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 싱크로
+		強制素材場所 = 지정場所(場所,ゾーン)
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL SYNSUMMON(듀얼리스트, 選択カード)
+		ENDIF
+	ENDIF
+ENDIF

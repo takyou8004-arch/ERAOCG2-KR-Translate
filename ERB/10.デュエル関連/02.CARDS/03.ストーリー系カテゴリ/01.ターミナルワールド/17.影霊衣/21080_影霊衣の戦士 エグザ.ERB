@@ -1,0 +1,123 @@
+﻿@CARDNAME_21080,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 네크로즈의 전사 엑사
+	CASE "略称"
+RESULTS = 전사 엑사
+	CASE "カテゴリ"
+RESULTS:0 = 네크로즈
+ENDSELECT
+
+
+@CARD_21080(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21080(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드명의 ①② 효과는 1턴에 1번, 어느 한 가지 효과밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,R素材時효과)
+PRINTL ①: 이 카드가 의식 소환의 소재가 되었을 경우에 발동할 수 있다.
+PRINTL 덱에서 드래곤족의 「네크로즈」 의식 몬스터 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(1,제외時)
+PRINTL ②: 이 카드가 제외되었을 경우, 자신의 제외 상태인 다른 「네크로즈」 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터를 특수 소환한다.
+
+
+@CARDCAN_21080(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21080)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == R素材時효과
+	SIF 발동済_1(듀얼리스트,21080)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 네크로즈
+	효과条件종족 = 드래곤족
+	효과条件종류 = 의식
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 제외時
+	SIF 발동済_1(듀얼리스트,21080)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件カテゴリ = 네크로즈
+	효과条件종류 = 의식以外
+	효과条件固名前 = 네크로즈의 전사 엑사
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21080(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21080,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 네크로즈
+		효과条件종족 = 드래곤족
+		효과条件종류 = 의식
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == R素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21080,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件カテゴリ = 네크로즈
+		효과条件固名前 = 네크로즈의 전사 엑사
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

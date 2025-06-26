@@ -1,0 +1,186 @@
+﻿@CARDNAME_35210,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 바다거북 파괴수 가메시엘
+	CASE "略称"
+RESULTS = 가메시엘
+	CASE "カテゴリ"
+RESULTS:0 = 파괴수
+ENDSELECT
+
+@CARD_35210(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 3000
+	CASE "レア度"
+		RETURN SPR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_35210(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①：상대 필드에 "파괴수" 몬스터가 존재하지 않을 때, 상대 필드의 몬스터 1장을 릴리스하고 발동할 수 있다.
+PRINTL 이 카드를 패에서 상대 필드에 공격 표시로 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ②：자신 필드에 "파괴수" 몬스터가 존재하지 않고, 상대 필드에 "파괴수" 몬스터가 존재하는 경우,
+PRINTL 이 카드는 패에서 공격 표시로 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ③：상대가 마법 / 함정 / 몬스터의 효과를 발동했을 때, 자신 / 상대 필드의 파괴수 카운터를 2개 제거하고 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 제외한다.
+
+
+@CARDCAN_35210(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,35210)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,35210,"손패",1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 =1
+	효과条件カテゴリ = 파괴수
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 파괴수
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			RETURN 0
+		ENDIF
+	ENDIF	
+	RETURN 1
+;ここまで共通효과
+
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件カテゴリ = 파괴수
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT:9 < 2
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_35210(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35210)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件カテゴリ = 파괴수
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ = 파괴수
+			효과条件종류 = モン全般
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 0
+				CALL FULLRESET
+				효과範囲필드 = 1
+				CALL CARD_SP_SUMMON(듀얼리스트, ゾーン, 場所, "攻撃표시")
+			ENDIF
+		ELSE
+			CALL FULLRESET
+			효과範囲필드 = 1
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"상대필드",ゾーン,場所)	
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트, ゾーン, 場所, "攻撃표시",1)
+			ENDIF
+		ENDIF
+	ENDIF
+;ここまで共通효과
+
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35210,2)
+	IF RESULT == 0
+		REPEAT 2
+PRINTL 파괴수 카운터를 제거할 카드 선택
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			효과条件カテゴリ = 파괴수
+			효과条件個Ｃ所持 = 999
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_SELECT(듀얼리스트,RESULT)
+				CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"個Ｃ",-1)
+				条件달성 ++
+			ENDIF
+		REND
+		IF 条件달성 == 2
+			PRINTFORMW ガメシエルが身を挺して %CALLNAME:MASTER%を守った！
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"제외")
+		ENDIF
+	ENDIF
+ENDIF
+

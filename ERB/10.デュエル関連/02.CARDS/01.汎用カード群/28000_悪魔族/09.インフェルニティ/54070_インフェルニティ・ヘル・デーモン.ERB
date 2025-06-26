@@ -1,0 +1,179 @@
+﻿@CARDNAME_54070,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 인페르니티 헬 데몬
+	CASE "略称"
+RESULTS = 만족H 데몬
+	CASE "カテゴリ"
+RESULTS:0 = 인페르니티
+RESULTS:1 = 데몬
+ENDSELECT
+
+
+@CARD_54070(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족 
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 1600
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_54070(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너＋튜너 이외의 몬스터 1장 이상
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 필드의 앞면 표시의 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드의 효과를 턴 종료시까지 무효로 한다.
+PRINTL 자신 패가 0장일 경우, 추가로 그 카드를 파괴할 수 있다.
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ②: 자신 패가 0장인 한, 이 카드가 상대 몬스터와의 전투로 상대에게 주는 전투 데미지는 배가 된다.
+CALLFORM CARD_ABLE(0,S素材時효과)
+PRINTL ③: 이 카드가 어둠 속성 S 몬스터의 S 소재가 되었을 경우,
+PRINTL 자신 필드의 어둠 속성 S 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 이 턴에, 그 몬스터는 1번의 배틀 페이즈 중에 2번 공격할 수 있다.
+
+@CARDSUMMON_54070(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 6
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,54070) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_54070(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54070)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	IF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+	ENDIF
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == S素材時효과
+	CALL FULLRESET
+	효과条件종류 = 싱크로
+	효과条件속성 = 어둠속성
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF 손패数(듀얼리스트) != 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54070(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54070,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場単体",場所,"選択")
+		IF RESULT:1 != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT:1)
+			選択カード = RESULT
+			CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード,"無効",1)
+
+			SIF 손패数(듀얼리스트) != 0
+				RETURN 0
+			SIF 듀얼리스트 == "자신"
+PRINTL 카드를 파괴하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+			SIF RESULT == はい
+				CALL CARD_DISPOSE(대상者（CS）,参照先（CS）,選択カード,破壊行き)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == S素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54070)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件속성 = 어둠속성
+		효과条件종류 = 싱크로
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",RESULT,"戦",2,1)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ倍化",3,1)
+ENDIF
+
+
+

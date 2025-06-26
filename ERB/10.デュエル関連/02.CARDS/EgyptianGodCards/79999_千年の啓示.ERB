@@ -1,0 +1,176 @@
+﻿@CARDNAME_79999,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 천년의 계시
+	CASE "略称"
+RESULTS = 천년의 계시
+	CASE "カテゴリ"
+RESULTS:0 = 삼환신
+RESULTS:1 = 천년
+ENDSELECT
+
+
+@CARD_79999(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79999(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번 밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1)
+PRINTL ①：자신 메인페이즈에 발동할 수 있다.
+PRINTL 패를 1장 버린다.이후、자신의 묘지에 '삼환신'몬스터가 존재할 경우、
+PRINTL 자신의 덱 묘지에서 「죽은 자의 소생」１장을 패에 넣는다.
+CALLFORM CARD_ABLE(2)
+PRINTL ②：상대 턴에 발동할 수 있다.
+PRINTL 마법＆함정 존의 이 카드를 묘지로 보내고、
+PRINTL 자신 마법＆함정 존의「죽은 자의 소생」１장을 발동한다.
+
+
+
+@CARDCAN_79999(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79999)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	IF ターンプレイヤー == 듀얼리스트
+		SIF 발동済_1(듀얼리스트,79999)
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF 손패数(듀얼리스트) <= 0
+			RETURN 0
+		IF 듀얼리스트 == "상대"
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 삼환신
+			효과条件종류 = モン全般
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 1
+				RETURN 0
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과範囲묘지 = 1
+효과条件名前 = 죽은 자의 소생
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 1
+				RETURN 0
+		ENDIF
+		RETURN 1
+	ELSEIF ターンプレイヤー == 対面者
+		SIF 발동済_2(듀얼리스트,79999)
+			RETURN 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+효과条件名前 = 죽은 자의 소생
+		효과条件표시 = 0
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		RETURN 1
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79999(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79999)
+	IF RESULT == 0
+		IF ターンプレイヤー == 듀얼리스트
+			CALL CARD_EFFECT_USE(듀얼리스트,79999,1)
+			CALL FULLRESET
+			IF 듀얼리스트 == "상대"
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 삼환신
+				효과条件종류 = モン全般
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF RESULT != 1
+					CALL FULLRESET
+					효과条件カテゴリ = 삼환신
+					효과条件종류 = モン全般
+				ENDIF
+			ENDIF
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 삼환신
+				효과条件종류 = モン全般
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF RESULT == 1
+					CALL FULLRESET
+					효과範囲덱 = 1
+					효과範囲묘지 = 1
+효과条件名前 = 죽은 자의 소생
+					CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+				ENDIF
+			ENDIF
+		ELSEIF ターンプレイヤー == 対面者
+			CALL CARD_EFFECT_USE(듀얼리스트,79999,2)
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+효과条件名前 = 죽은 자의 소생
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"마함",ゾーン,場所)
+			IF RESULT == 1
+				TRYCALLFORM CARDEFFECT_70001(듀얼리스트,마함起動,"효과処理")
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79999)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ENDIF

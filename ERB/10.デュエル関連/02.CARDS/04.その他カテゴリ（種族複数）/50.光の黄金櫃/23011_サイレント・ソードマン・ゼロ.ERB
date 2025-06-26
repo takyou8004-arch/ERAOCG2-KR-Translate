@@ -1,0 +1,118 @@
+﻿@CARDNAME_23011,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 사일런트 소드맨 제로
+	CASE "略称"
+RESULTS = 침묵의 검사 0
+	CASE "カテゴリ"
+RESULTS:0 = 사일런트
+RESULTS:1 = 빛의 황금궤
+ENDSELECT
+
+
+@CARD_23011(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23011(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,ターン開始時強制)
+PRINTL ①: 자신, 상대의 스탠바이 페이즈에 발동한다. 이 카드의 레벨을 1개 올린다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드의 레벨이 원래 레벨보다 높을 경우, 그 차이 × 500만큼 이 카드의 공격력은 상승한다.
+CALLFORM CARD_ABLE(3,지속효과)
+PRINTL ③: 자신 필드의 「빛의 황금궤」 또는 「빛의 황금궤」 몬스터는 대상 내성을 얻는다.
+
+
+
+@CARDCAN_23011(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23011)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") >= 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") >= 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23011(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC レベル修正
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == ターン開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23011)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星",1)
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	レベル修正 = GETVAR(@"%듀얼리스트%_MZ_星:場所") - 4
+	攻撃力修正 = 500 * レベル修正
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 빛의 황금궤
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+	CALL FULLRESET
+	효과条件名前 = 빛의 황금궤
+	CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"対耐")
+ENDIF

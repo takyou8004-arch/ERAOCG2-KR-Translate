@@ -1,0 +1,159 @@
+﻿@CARDNAME_35600,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 볼메테우스 무사 드래곤
+	CASE "略称"
+RESULTS = 볼무사
+	CASE "カテゴリ"
+RESULTS:0 = 사무라이
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_35600(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_35600(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時 ,특수소환時)
+PRINTL ①：『사무라이류 제너레이트』
+PRINTL 이 카드가 소환 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 자신의 손패 묘지에서 「크로스기어」 카드 1장을 고르고, 이 카드에 장착한다.
+PRINTL 그렇게 했을 경우, 그 카드의 패에서 발동했을 때의 능력을 발동할 수 있다.
+CALLFORM CARD_ABLE(10,소환時 ,특수소환時,攻撃時誘発)
+PRINTL ②：1턴에 1번, 이 카드의 소환 특수 소환에 성공했을 경우, 또는 공격 선언 시에 2000LP를 지불하고 발동할 수 있다.
+PRINTL 상대 필드에 존재하는 공격력 2000 이하의 몬스터 1장을 파괴하고, 자신은 카드를 1장 드로우한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드는 자신 필드에 다른 사무라이 카드가 2장 이상 존재하지 않는 한, 소환 특수 소환한 턴에 공격할 수 없다.
+
+
+@CARDCAN_35600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,35600)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_T1召種:場所") != 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 사무라이
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_35600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35600)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 크로스기어
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			CALL FULLRESET
+			효과範囲필드 = 1
+효과条件名前 = 보루메테우스 무사 드래곤
+			CALLFORM CARD_EQUIP_ADV(듀얼리스트,選択カード（CS）,参照先（CS）)
+			CALLFORM CARDEFFECT_{選択カード_ID}(듀얼리스트,손패起動,"효과処理")
+		ENDIF
+	ENDIF
+PRINTL 라이프를 2000 지불하고, 상대 몬스터를 파괴하시겠습니까?
+	CALL YN_CHOICE(듀얼리스트)
+	IF RESULT == 0
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35600,10)
+		IF RESULT == 0
+			CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",2000)
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			효과条件攻撃力 = 2000
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35600,10)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",2000)
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과条件攻撃力 = 2000
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無",1)
+ENDIF

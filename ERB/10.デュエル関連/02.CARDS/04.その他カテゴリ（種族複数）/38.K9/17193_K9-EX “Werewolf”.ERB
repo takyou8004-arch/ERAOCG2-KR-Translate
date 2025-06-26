@@ -1,0 +1,170 @@
+﻿@CARDNAME_17193,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = K9-EX“Werewolf”
+	CASE "略称"
+		RESULTS = K9“Werewolf”
+	CASE "カテゴリ"
+		RESULTS:0 = K9
+ENDSELECT
+
+
+@CARD_17193(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 3300
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250322
+	CASE "連動ID"
+		RETURN 7193
+ENDSELECT
+RETURN 0
+
+
+@CARDSUMMON_17193(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 9
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,17193) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_17193(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨９ 몬스터×２
+PRINTL 이 카드명의 ②의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：X소재를 持っている이 카드는 、その数まで１번のバトルフェイズ中に攻撃할 수 있다。
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ②：상대가 효과를 발동했을 때、이 카드의 X소재를 １개 제거하고、
+PRINTL 발동 턴에 よって이하의 효과를 발동할 수 있다。
+PRINTL ●자신ターン：상대 필드及び묘지의  카드를 각각 １장까지 제외한다。
+PRINTL ●상대ターン：상대의 패를 확인하고、그 안에서 １장을 고르고 엔드 페이즈까지 제외한다。
+
+
+@CARDSUMMON_AA_17193
+
+
+@CARDCAN_17193(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,17193)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,17193)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+	IF ターンプレイヤー == 듀얼리스트
+		CALL FULLRESET
+		IF 듀얼리스트 == "상대"
+			;CPUの場合は場の 카드를 제외できる時にだけ
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+		ELSEIF 듀얼리스트 == "자신"
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			효과範囲상대묘지 = 1
+		ENDIF
+		효과条件除去種 = 제외
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		CALL FULLRESET
+		효과範囲상대손패 = 1
+		효과条件除去種 = 제외
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_17193(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"追戦",GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所"))
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,17193,2,1)
+	IF RESULT == 0
+		IF ターンプレイヤー == 듀얼리스트
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"제외")
+			CALL FULLRESET
+			효과範囲상대묘지 = 1
+			효과条件行先플래그 = 제외行き
+			효과条件任意 = 1
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ELSE
+			CALL FULLRESET
+			효과範囲상대손패 = 1
+			효과条件行先플래그 = 제외行き
+			효과条件추가플래그 = 3
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

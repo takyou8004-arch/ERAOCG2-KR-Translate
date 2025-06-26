@@ -1,0 +1,152 @@
+﻿@CARDNAME_50514,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 천위룡－물라 아다라
+	CASE "略称"
+		RESULTS = 물라 아다라
+	CASE "カテゴリ"
+		RESULTS:0 = 천위
+ENDSELECT
+
+
+@CARD_50514(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50514(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50514) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50514(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 + 튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의  ①의 효과는 1턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 싱크로 소환했을 경우, 자신의 묘지 / 제외 상태의 드래곤족 몬스터가 2장 이상 존재하고 있으면 발동할 수 있다。
+PRINTL 덱에서 필드 마법 카드 1장을 패에 넣는다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：필드에 효과 몬스터 이외의 앞면 표시 몬스터가 존재하는 한, 이 카드는 이하의 효과를 얻는다。
+PRINTL ●이 카드는 효과로 파괴되지 않는다。
+PRINTL ●상대는 이 카드를 효과의 대상으로 할 수 없다。
+PRINTL ●이 카드는 1번의 배틀 페이즈 중에 2회 공격할 수 있다。
+
+
+@CARDCAN_50514(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50514)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,50514)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件종족 = 드래곤족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = フィールド
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 효과無し全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_50514(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50514,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종류 = フィールド
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"破耐",3)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"対耐",3)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"追戦",1)
+ENDIF

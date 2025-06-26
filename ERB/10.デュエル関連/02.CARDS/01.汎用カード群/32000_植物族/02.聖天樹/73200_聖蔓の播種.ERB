@@ -1,0 +1,138 @@
+﻿@CARDNAME_73200,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 선바인 소잉
+	CASE "略称"
+RESULTS = 성만의 파종
+	CASE "カテゴリ"
+RESULTS:0 = 생아발론
+RESULTS:1 = 선바인
+ENDSELECT
+
+
+@CARD_73200(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73200(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 덱에서 「선바인」 몬스터 1장을 특수 소환하고, 자신은 1000 데미지를 받는다.
+PRINTL 자신 필드에 「생아발론」 L 몬스터가 존재하지 않을 경우, 「성종의 지령」밖에 특수 소환할 수 없다.
+PRINTL 이 카드의 발동 후, 턴 종료 시까지 자신은 식물족 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ②: 자신 필드의 식물족 L 몬스터가 전투 / 효과로 파괴될 경우,
+PRINTL 대신에 묘지의 이 카드를 제외할 수 있다.
+
+
+@CARDCAN_73200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73200)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,73200)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 선바인
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF !GROUPMATCH(ゾーン,"묘지")
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	TRYCALLFORM CARD_{破壊대상ID}("종족")
+	SIF RESULT != 식물족
+		RETURN 0
+	TRYCALLFORM CARD_{破壊대상ID}("종류")
+	SIF RESULT != 링크
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_73200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 설정レベル
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73200,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;通常마법汎用処理
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 링크
+		효과条件カテゴリ = 생아발론
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件カテゴリ = 선바인
+		ELSE
+			CALL FULLRESET
+효과条件名前 = 태양의 씨앗, 장소의 수호정령
+		ENDIF
+		효과範囲덱 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",1000)
+		EX소환可能종족 = 식물족
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73200)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

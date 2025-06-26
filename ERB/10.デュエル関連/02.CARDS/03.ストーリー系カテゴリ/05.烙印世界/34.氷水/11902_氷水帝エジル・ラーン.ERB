@@ -1,0 +1,192 @@
+﻿@CARDNAME_11902,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 히스이제 에질 란
+	CASE "略称"
+RESULTS = 에질 란
+	CASE "カテゴリ"
+RESULTS:0 = 히스이
+ENDSELECT
+
+
+@CARD_11902(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 2500
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_11902(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 패에서 이 카드 이외의, "히스이" 카드 1장 또는 물 속성 몬스터 1장을 버리고 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+PRINTL 그 후, 자신 필드에 "히스이 토큰"(원소정령족 물 별 3 공/수 0) 1장을 특수 소환할 수 있다.
+PRINTL 이 턴, 자신은 물 속성 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드가 장착 카드를 장착하고 있는 한, 자신 필드는 "히스이 밑 이니온 크레이들"이 된다.
+
+@CARDSUMMON_AA_11902
+
+
+@CARDCAN_11902(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,11902)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,11902)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,11902,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件속성 = 물속성
+	효과条件スーパーカテゴリ = 히스이
+	효과範囲손패 = 1
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_11902(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC ダメージ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,11902,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件속성 = 물속성
+		효과条件スーパーカテゴリ = 히스이
+		효과範囲손패 = 1
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+			SIF 듀얼리스트 == "자신"
+PRINTL 토큰을 특수 소환하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+			IF RESULT == はい
+				IF モンスター数(듀얼리스트) < 5
+					CALL FULLRESET
+					CALL CARD_GENERATE(듀얼리스트,111902)
+				ENDIF
+			ENDIF
+		ENDIF
+		EX소환可能속성 = 물속성
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "히스이底イニオン クレイドル")
+ENDIF
+
+
+
+
+@CARDNAME_111902,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 히스이 토큰
+	CASE "略称"
+RESULTS = 히스이 토큰
+	CASE "カテゴリ"
+RESULTS:0 = 히스이
+ENDSELECT
+
+
+@CARD_111902(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+
+@CARDCAN_111902(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+RETURN 0

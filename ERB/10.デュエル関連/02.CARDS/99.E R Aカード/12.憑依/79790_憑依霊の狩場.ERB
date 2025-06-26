@@ -1,0 +1,152 @@
+﻿@CARDNAME_79790,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 빙의령의 사냥터
+	CASE "略称"
+		RESULTS = 빙의령의 사냥터
+	CASE "カテゴリ"
+		RESULTS:0 = 포제션
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79790(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79790(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드는 "포제션" 카드로 취급한다。자신 필드는 "빙의령의 사냥터"가 된다。
+CALL CARD_ABLE(1,마함起動)
+;PRINTL ①：상대 몬스터의 공격 선언시에、자신의 패 / 필드（表側표시）から「포제션」함정카드 １장을 묘지로 보내고、이하의 효과에서 １つ選択して발동할 수 있다。
+PRINTL ①：상대 몬스터의 공격선언시에、자신의 패 / 필드에서 "포제션" 함정카드 １장을 묘지로 보내고、이하의 효과에서 １개 선택해서 발동할 수 있다。
+PRINTL ●그 공격몬스터의 공격을 무효로 하고、그 공격력의 반만큼의 데미지를 상대에게 주고、준 데미지 만큼 자신의 LP를 회복한다。
+PRINTL ●덱 / 묘지에서 "포제션" 함정카드 １장을 고르고 패에 넣는다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79790(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79790)
+SIF RESULT == 1
+	RETURN 0
+
+;;; 카드의 효과발동条件を지정する部分;;;
+;フィールド마법として발동する효과
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+;フィールド마법として場に有る경우에 발동し続ける효과
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+;상대공격 선언시에 발동する효과
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲손패 = 1
+	효과条件カテゴリ = 포제션
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79790(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 回復量
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;カード발동＆설치まで
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79790)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	;カード발동確認 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79790)
+	IF RESULT == 0
+		ダメージ量 = GETVAR(@"%対面者%_MZ_攻:(%対面者%_戦闘カード)")
+		回復量 = ダメージ量 / 2
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과範囲손패 = 1
+		효과条件他所 = 1
+		효과条件종류 = 함정全般
+		효과条件カテゴリ = 포제션
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			PRINTL 상대의 공격을 무효로 하시겠습니까？
+			CALL YN_CHOICE(듀얼리스트)
+			IF RESULT == はい
+				CALL LIFE_CHANGE(듀얼리스트,"減少","효과",回復量,1)
+				CALL LIFE_CHANGE(듀얼리스트,"増加","효과",回復量)
+				CALL EVADE_ATTACK(듀얼리스트)
+				PRINTFORMW 몬스터가 공격하기 직전、빙의령이 상대 몬스터에게 빙의한다！
+				PRINTFORMW 사령파 ( 스피릿 번 ) ！빙의령은 몸소 희생해서 공격을 막고、더욱이 상대에게 데미지를 주었다！
+			ELSEIF RESULT == いいえ
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 포제션
+				효과条件종류 = 함정全般
+				CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+				PRINTFORMW 몬스터가 공격하기 직전、빙의령은 몬스터의 몸에서 뛰쳐나왔다！
+				PRINTFORMW 빙의령은 다음 빙의처를 찾으며 싱글벙글 웃고있다……
+			ENDIF
+		ENDIF
+	ENDIF
+
+;フィールドが빙의령의 사냥터である事を示す
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "빙의령의 사냥터")
+ENDIF
+

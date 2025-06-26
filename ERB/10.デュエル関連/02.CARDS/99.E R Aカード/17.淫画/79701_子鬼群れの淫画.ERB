@@ -1,0 +1,192 @@
+﻿@CARDNAME_79701,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 소귀 무리의 음화
+	CASE "略称"
+		RESULTS = 소귀 음화
+	CASE "カテゴリ"
+		RESULTS:0 = 음화
+		RESULTS:1 = 고블린
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79701(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 0
+	CASE "分割"
+		RETURN 효과モン
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79701(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+PRINTL 자신의 필드가 “음화를 담은 미술관”이며, 상대 필드에 암컷 몬스터가 존재할 경우, 이 카드는 묘지에서 발동할 수 있다.
+CALL CARD_ABLE(1,마함起動,손패起動,묘지起動)
+PRINTL ①：발동한 이 카드는 ②의 효과를 가진 효과 몬스터가 되어 몬스터 존에 특수 소환한다.
+PRINTL （전사족·땅·레벨 3·공격력 1500·수비력 0)
+CALL CARD_ABLE(2,필드起動)
+PRINTL ②：자신의 메인 페이즈에 발동할 수 있다.
+PRINTL 자신의 필드에 있는 “음화” 몬스터의 공격력 합계 이하의 공격력을 가진 상대 암컷 몬스터 1장을 이 카드에 장비하고,
+PRINTL 이 카드를 장비한 몬스터와 같은 이름의 카드로도 취급한다. (1체만 장비 가능)
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79701(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 合計攻撃力
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79701)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,79701)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	IF 종류 == 묘지起動
+		SIF GETVARS(@"%듀얼리스트%_フィールド名") !=  "음화憶の美術館"
+			RETURN 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件성별 = 牝性
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	CALL CARD_SS_CHECK(듀얼리스트,79701,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,79701)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	FOR カウンタ,0,5
+		VARSET RESULT
+		SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+			CONTINUE
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "カテゴリ"
+		SIF !MATCH(RESULTS, "음화")
+			CONTINUE
+		合計攻撃力 += GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ")
+	NEXT
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	효과条件攻撃力 = 合計攻撃力
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79701(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 合計攻撃力
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79701,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79701,2)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			VARSET RESULT
+			SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "カテゴリ"
+			SIF !MATCH(RESULTS, "음화")
+				CONTINUE
+			合計攻撃力 += GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ")
+		NEXT
+		CALL FULLRESET
+		효과条件성별 = 牝性 
+		효과条件攻撃力 = 合計攻撃力
+		효과範囲상대필드 = 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード_ID = RESULT:99
+		CALL CARD_SELECT(듀얼리스트,RESULT)
+		CALL CARD_EQUIP_MONSTER(듀얼리스트,場所,本参照先（CS）,選択カード（CS）,4)
+		CALL CARD_EROTICS(選択カード_ID)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORMW %CALLNAME:조교대상%는 고블린이 번식하는 그림 속으로 끌려들어갔다！
+			CALL EROTIC_MOVE("拘束晒し",조교대상,-1,300)
+		ELSE
+			TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
+			PRINTFORMW %RESULTS%는 고블린이 번식하는 그림 속으로 끌려들어갔다！
+		ENDIF
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",選択カード_ID,上書きモード)
+	ENDIF
+ENDIF
+
+
+

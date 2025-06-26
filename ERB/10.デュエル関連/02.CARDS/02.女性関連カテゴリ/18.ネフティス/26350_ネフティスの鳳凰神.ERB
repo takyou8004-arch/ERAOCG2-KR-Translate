@@ -1,0 +1,118 @@
+﻿@CARDNAME_26350,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 네프티스의 봉황신
+	CASE "略称"
+RESULTS = 봉황신 네프티스
+	CASE "カテゴリ"
+RESULTS:0 = 네프티스
+ENDSELECT
+
+
+@CARD_26350(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26350(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,破壊→묘지)
+PRINTL ①: 이 카드가 효과로 파괴되어 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 다음 스탠바이 페이즈에, 이 카드를 묘지에서 특수 소환한다.
+CALLFORM CARD_ABLE(0,특수소환時)
+PRINTL ②: 이 카드가 특수 소환했을 경우에 발동할 수 있다.
+PRINTL 필드의 마법 / 함정 카드를 전부 파괴한다.
+
+
+@CARDCAN_26350(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26350)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 특수소환時
+	SIF 마함数(듀얼리스트) < 1 && 마함数(対面者) < 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 破壊→묘지
+
+	RETURN 1
+ELSEIF 종류 == ターン開始時予約
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26350(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26350)
+	IF RESULT == 0
+		SETCOLOR C_RED
+		PRINTW 鳳凰신の業火がフィールドに吹き荒れる！
+		RESETCOLOR
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両마함全体",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26350)
+	IF RESULT == 0
+		CALL CARD_RESERV(듀얼리스트,26350,スタン予約)
+	ENDIF
+ELSEIF 종류 == ターン開始時予約
+	IF モンスター数(듀얼리스트) >= 5
+		PRINTW 場がいっぱいなので특수소환できません
+		RETURN 0
+	ENDIF
+	SETCOLOR C_YELLOW
+PRINTL 봉황신이 재탄한다!
+	RESETCOLOR
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 네프티스의 봉황신
+	CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+ENDIF
+

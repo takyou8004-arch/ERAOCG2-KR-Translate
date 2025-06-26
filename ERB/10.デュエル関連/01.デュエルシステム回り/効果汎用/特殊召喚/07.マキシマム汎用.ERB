@@ -1,0 +1,194 @@
+﻿@MAXSUMMON(듀얼리스트, 소환カード, 出処, 条件無視,素材行先플래그)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 대상者
+
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC 소환カード_ID
+
+#DIMS DYNAMIC カード名
+#DIMS DYNAMIC 出処
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 上級値
+#DIM DYNAMIC 選択カード,99
+#DIM DYNAMIC 選択カード_ID,99
+#DIM DYNAMIC 素材行先플래그
+#DIM DYNAMIC 속성의식플래그
+#DIMS DYNAMIC カテゴリ의식플래그 ;ザポルグ追記
+
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 条件無視
+#DIMS DYNAMIC 추가場所
+
+#DIM DYNAMIC 最大値
+#DIM DYNAMIC 消去カード
+#DIM DYNAMIC 一時보존,99
+#DIMS DYNAMIC 使用素材名前,99
+#DIM DYNAMIC 素材数起動
+#DIM DYNAMIC 효과추가종류보존,20
+#DIM DYNAMIC 素材ID起動 ;Anonym추가
+#DIM DYNAMIC 보존素材ID
+#DIM DYNAMIC 書き換えLパーツ
+#DIM DYNAMIC 書き換えRパーツ
+#DIM DYNAMIC 書き換えMパーツ
+
+
+
+FOR カウンタ,0,10
+	효과추가종류보존:カウンタ = 효과추가종류:カウンタ
+NEXT
+
+TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%出処%:소환カード")}, "맥시멈"
+書き換えLパーツ = RESULT + 1
+書き換えRパーツ = RESULT + 2
+書き換えMパーツ = RESULT
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;융합소환
+VARSET 選択カード, -1
+VARSET 使用素材名前
+
+IF 条件無視 == 1
+	TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%出処%:소환カード")}, "名前"
+	PRINTFORML MAXIMUM소환、%RESULTS%！
+	CALL CARD_EX_SUMMON(듀얼리스트,出処,소환カード)
+	VARSET ALT条件
+	RETURN 1
+ENDIF
+
+
+$CHOICE_LOOP
+IF 듀얼리스트 == "자신"
+	TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%出処%:소환カード")}, "名前"
+	カード名 = %RESULTS%
+	PRINTFORML 소환 카드：《%カード名%》
+
+	CUSTOMDRAWLINE —
+	PRINTW 덮어쓸 몬스터를 골라주세요：
+	PRINTFORML 필요 레벨：{素材数}/{必要素材数}
+	CUSTOMDRAWLINE —
+	PRINTL
+ENDIF
+
+CALL CARD_FILTER_EXSS(듀얼리스트,소환カード,맥시멈,選択カード,出処)
+IF 듀얼리스트 == "자신"
+	PRINTL
+	PRINTL 　[9999] - 돌아간다
+	PRINTL
+	BINPUT
+	選択カード:素材数 = RESULT
+ELSE
+	選択カード:素材数 = RESULT
+ENDIF
+IF 選択カード:素材数 == 9999
+	PRINTFORMW 돌아갑니다。
+	VARSET ALT条件
+	RETURN 0
+ENDIF
+CALL CARD_SELECT(듀얼리스트,選択カード:素材数)
+TRYCALLFORM CARDNAME_{GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")}, "名前"
+使用素材名前:素材数 = %RESULTS%
+PRINTFORMW %使用素材名前:素材数%를 소재로 합니다({素材数+1}장째)
+
+素材数 ++
+;ここまで
+
+
+PRINTFORMW 소재수:{素材数}
+IF 素材数 >= 2
+	소환カード_ID = GETVAR(@"%듀얼리스트%_%出処%:소환カード")
+
+	;カードID설정
+	FOR カウンタ,0,素材数
+		CALL CARD_SELECT(듀얼리스트,選択カード:カウンタ)
+		選択カード_ID:カウンタ = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{RESULT}")
+	NEXT
+	VARSET 代替素材数
+
+
+	FOR カウンタ,0,5
+		CALL CARD_DISPOSE(듀얼리스트,"필드", カウンタ,完全묘지行き)
+	NEXT
+
+	CALL CARD_SELECT(듀얼리스트,選択カード:0)
+	CALL CARD_RECONSTRUCT(대상者（CS）,参照先（CS）, RESULT,書き換えLパーツ)
+	CALL CARD_SELECT(듀얼리스트,選択カード:1)
+	CALL CARD_RECONSTRUCT(대상者（CS）,参照先（CS）, RESULT,書き換えRパーツ)
+
+	CALL CARD_RECONSTRUCT(듀얼리스트,出処, 소환カード,書き換えMパーツ)
+
+
+	TRYCALLFORM CARDNAME_{書き換えMパーツ}, "名前"
+	カード名 = %RESULTS%
+	PRINTFORML 카드가 덮어씌워졌다！！
+
+	TRYCALLFORM CARD_FINISHER_SHOKO(듀얼리스트,소환カード_ID)
+
+	CALL MAT_EVENT_CHECK(듀얼리스트,カード名,使用素材名前)
+	PRINTFORML 맥시멈 소환、%カード名%！
+	맥시멈中 = 1
+	VARSET 효과추가종류
+	CALL CARD_EX_SUMMON(듀얼리스트, 出処, 소환カード,"攻撃표시")
+	CALL CARD_SELECT(듀얼리스트,選択カード:0)
+	CALL CARD_EX_SUMMON(대상者（CS）,参照先（CS）, RESULT,"守備표시")
+
+	CALL CARD_SELECT(듀얼리스트,選択カード:1)
+	CALL CARD_EX_SUMMON(대상者（CS）,参照先（CS）, RESULT,"守備표시")
+	맥시멈中 = 0
+
+	IF 듀얼리스트 == "자신"
+		リザルト：MAX소환 = 1
+	ENDIF
+	VARSET ALT条件
+	RETURN 1
+ELSE
+	GOTO CHOICE_LOOP
+ENDIF
+
+@MAXCAN(듀얼리스트,소환カード,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 出処
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 選択カード,99
+#DIM DYNAMIC 選択カード_ID,10
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC 소환カード_ID
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択済カード
+#DIM DYNAMIC 条件達成
+;융합소환
+VARSET 選択カード, 35
+選択カード = 소환カード
+出処 = 손패
+
+CALL CARD_SS_CHECK(듀얼리스트,カードID,出処,1)
+SIF RESULT == 1
+	RETURN 0
+$CHOICE_LOOP
+;PRINTFORML 素材条件종족:{素材条件종족}
+CALL CARD_FILTER_EXSS(듀얼리스트,소환カード,맥시멈,選択カード,出処,0,1)
+
+IF RESULT == 1
+	選択カード:素材数 = RESULT:1
+;	PRINTFORML 選択カード:素材数 :{選択カード:素材数}
+	素材数 ++
+;	PRINTFORML 소재수：{素材数}
+	IF 素材数 >= 2
+		RETURN 1
+	ELSE
+		GOTO CHOICE_LOOP
+	ENDIF
+ELSEIF RESULT == 0 || RESULT == 9999
+	RETURN 0
+ENDIF

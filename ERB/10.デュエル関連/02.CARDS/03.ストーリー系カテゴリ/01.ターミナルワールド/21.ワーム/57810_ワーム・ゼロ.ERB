@@ -1,0 +1,239 @@
+﻿@CARDNAME_57810,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 웜 제로
+	CASE "略称"
+RESULTS = 웜 제로
+	CASE "カテゴリ"
+RESULTS:0 = 웜
+ENDSELECT
+
+
+@CARD_57810(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_57810(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「웜」 몬스터를 포함하는 카드명이 다른 미확인족 몬스터 x 2장 이상
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 공격력은, 이 카드의 융합 소재로 한 몬스터의 수 x 500 포인트 올린다.
+PRINTL ②: 이 카드는 융합 소재로 한 몬스터의 종류에 따라 이하의 효과를 얻는다.
+CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
+PRINTL ●4종류 이상: 서로의 턴에 발동할 수 있다.
+PRINTL 　덱 / EX덱에서 「웜」 몬스터 1장을 특수 소환한다.
+PRINTL 「웜 제로」의 이 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(15,발동誘発)
+PRINTL ●6종류 이상: 상대 몬스터의 효과가 발동했을 때에 발동할 수 있다.
+PRINTL 　그 발동을 무효로 하고 파괴하며, 자신은 1장 드로우한다.
+PRINTL 「웜 제로」의 이 효과는 1턴에 2번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,ターン終了時)
+PRINTL ●10종류 이상: 엔드 페이즈에 발동할 수 있다.
+PRINTL 　서로의 필드 / 묘지의 미확인족 이외의 몬스터 카드를 전부 덱으로 되돌린다.
+CALLFORM CARD_ABLE(0,EX소환時強制)
+PRINTL ●25종류 이상: 이 카드가 융합 소환했을 때, 자신은 듀얼에서 승리한다.
+
+
+
+@CARDSUMMON_57810(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 99
+素材条件固名前起動 = 1
+素材条件数自由 = 1
+素材条件素材数起動 = 1
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 웜
+ELSEIF EX参照 >= 10
+	素材条件종족 = 미확인족
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,57810) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_57810(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 素材数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57810)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,57810)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 웜
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	素材数 = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+	SIF 素材数 < 4
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,57810) && 발동済_2(듀얼리스트,57810)
+		RETURN 0
+
+	素材数 = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+	SIF 素材数 < 6
+		RETURN 0
+
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "필드"
+		RETURN 0
+	素材数 = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+	SIF 素材数 < 10
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == EX소환時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	素材数 = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+	SIF 素材数 < 25
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_57810(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻守変動
+	攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_汎数:場所") * 500
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57810,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 웜
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57810,15)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+	RETURN 0
+
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57810)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALLFORM 효과条件속성_ADV(빛속성,"以外")
+		CALLFORM 효과条件종족_ADV(미확인족,"以外")
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드全体",場所,"덱")
+
+		FOR カウンタ,0,紙束最大値
+			SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}, "종류"
+			SIF RESULT >= 10
+				CONTINUE
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}, "종족"
+			SIF MATCH(RESULT,미확인족)
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"묘지",カウンタ,덱行き)
+		NEXT
+		FOR カウンタ,0,紙束最大値
+			SIF GETVAR(@"%対面者%_묘지:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARD_{GETVAR(@"%対面者%_묘지:カウンタ")}, "종류"
+			SIF RESULT >= 10
+				CONTINUE
+			TRYCALLFORM CARD_{GETVAR(@"%対面者%_묘지:カウンタ")}, "종족"
+			SIF MATCH(RESULT,미확인족)
+				CONTINUE
+			CALL CARD_DISPOSE(対面者,"묘지",カウンタ,덱行き)
+		NEXT
+	ENDIF
+
+ELSEIF 종류 == EX소환時強制
+	PRINTL
+	PRINTW 星が　墜ちる
+	PRINTW 全てを飲み込み　肥大化した肉体
+	PRINTW 世界が　ゼロになる
+	CALL SET_PLAYER_INFO(듀얼리스트,"듀얼패배플래그",10,1)
+ENDIF

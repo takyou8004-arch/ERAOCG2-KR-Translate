@@ -1,0 +1,188 @@
+﻿@CLOTHES_RESET(ARG)
+FOR LOCAL,0,20
+	EQUIP:ARG:LOCAL = CFLAG:ARG:(200 + LOCAL)
+NEXT
+
+
+
+@CLOTHES_ZENRA(ARG)
+FOR LOCAL,0,20
+	EQUIP:ARG:LOCAL = 0
+NEXT
+CALL CLOTHES_SETTING_TRAIN(ARG)
+
+;EQUIPからTEQUIPに変換
+@CLOTHES_SETTING_TRAIN(ARG)
+TEQUIP:ARG:0 = 0
+TEQUIP:ARG:1 = 0
+
+;着せ替えが有効でない
+SIF !EQUIP:ARG:0
+	RETURN 0
+;하반신
+;TEQUIP:0 하반신착의상황(ビット0=치마 1=ずらし可 2=ずらし불가 3=ずらせない하반신겉옷)
+;	(ビットを使いたくない人用 0=なし 1=ノーパン치마 2=パンティのみ 3=치마+パンティ 
+;	4=スパッツ(속옷)もしくはノーパン바지 5=치마+スパッツ 6=바지+パンティ 7=フル装備(このバリアントでは無理)）
+;EQUIP:5,6 하반신속옷
+SIF EQUIP:ARG:하반신속옷１
+	TEQUIP:ARG:0 |= 4
+SIF EQUIP:ARG:하반신속옷２
+	TEQUIP:ARG:0 |= 2
+;EQUIP:7～9 하반신겉옷
+IF EQUIP:ARG:바지
+	TEQUIP:ARG:0 |= 4
+	TEQUIP:ARG:0 |= 8
+ENDIF
+SIF EQUIP:ARG:하반신겉옷
+	TEQUIP:ARG:0 |= 2
+SIF EQUIP:ARG:치마
+	TEQUIP:ARG:0 |= 1
+;EQUIP:14～16 全身上着
+IF EQUIP:ARG:바디슈트
+	TEQUIP:ARG:0 |= 4
+	TEQUIP:ARG:0 |= 8
+	TEQUIP:ARG:0 |= 16	
+ENDIF
+SIF EQUIP:ARG:원피스
+	TEQUIP:ARG:0 |= 1
+SIF EQUIP:ARG:기모노
+	TEQUIP:ARG:0 |= 1
+IF EQUIP:ARG:레오타드
+	TEQUIP:ARG:0 |= 2
+	TEQUIP:ARG:0 |= 16
+ENDIF
+;상반신
+;TEQUIP:1 상반신착의상황(0=なし 1=はだけ可 2=はだけ불가 3=突っ込み불가)
+;	(ビットを使いたくない人用 0=なし 1=ノーブラ和服 2=ブラのみ 3=和服+ブラ）
+;EQUIP:10,11 상반신속옷
+IF EQUIP:ARG:상반신속옷１
+	TEQUIP:ARG:1 |= 2
+	TEQUIP:ARG:1 |= 4
+ENDIF
+SIF EQUIP:ARG:상반신속옷２
+	TEQUIP:ARG:1 |= 1
+;EQUIP:12,13 상반신上着
+IF EQUIP:ARG:외투
+	TEQUIP:ARG:1 |= 2
+	TEQUIP:ARG:1 |= 4
+ENDIF
+SIF EQUIP:ARG:이너
+	TEQUIP:ARG:1 |= 1
+;EQUIP:14～16 全身上着
+IF EQUIP:ARG:바디슈트
+	TEQUIP:ARG:1 |= 2
+	TEQUIP:ARG:1 |= 4
+ENDIF
+SIF EQUIP:ARG:원피스
+	TEQUIP:ARG:1 |= 2
+SIF EQUIP:ARG:기모노
+	TEQUIP:ARG:1 |= 1
+IF EQUIP:ARG:레오타드
+	TEQUIP:ARG:1 |= 2
+	TEQUIP:ARG:1 |= 4
+ENDIF
+
+;ずらし処理
+SIF TEQUIP:ARG:3
+	CLEARBIT TEQUIP:ARG:1,2
+SIF TEQUIP:ARG:4
+	CLEARBIT TEQUIP:ARG:1,1
+;-------------------------------------------------
+;関数名:SHOW_BOTTOM
+;概　要:하반신服装名취득関数
+;戻り値:服装名(文字列)
+;引数:0 参照する캐릭터番号
+;引数:1치마、2ずらし可、3ずらし불가、4하반신겉옷ずらし불가の種別(省略した場合は最も노출を妨げているもの)
+;備　考:文中関数
+;TEQUIP:0に対応して一番上に着ている衣装の종류를 返す
+;-------------------------------------------------
+@SHOW_BOTTOM(ARG,ARG:1)
+#FUNCTIONS
+LOCAL = 0
+IF TEQUIP:ARG:0 & 8
+	LOCAL = 4
+ELSEIF TEQUIP:ARG:0 & 4
+	LOCAL = 3
+ELSEIF TEQUIP:ARG:0 & 2
+	LOCAL = 2
+ELSEIF TEQUIP:ARG:0 & 1
+	LOCAL = 1
+ENDIF
+LOCAL = ARG:1 ? ARG:1 # LOCAL
+
+
+SELECTCASE LOCAL
+	CASE 4
+		IF EQUIP:ARG:바지
+			RETURNF "옷"
+		ELSEIF EQUIP:ARG:바디슈트
+			RETURNF "옷"
+		ENDIF
+	CASE 3
+		IF EQUIP:ARG:바디슈트
+			RETURNF "옷"
+		ELSEIF EQUIP:ARG:바지
+			RETURNF "옷"
+		ELSEIF EQUIP:ARG:하반신속옷１
+			RETURNF "속옷"
+		ENDIF
+	CASE 2
+		IF EQUIP:ARG:레오타드
+			RETURNF "옷"
+		ELSEIF EQUIP:ARG:하반신겉옷
+			RETURNF "옷"
+		ELSEIF EQUIP:ARG:하반신속옷２
+			RETURNF "속옷"
+		ENDIF
+	CASE 1
+		IF EQUIP:ARG:치마 == 1
+			RETURNF "치마"
+		ELSEIF EQUIP:ARG:치마 == 2
+			RETURNF "긴치마"
+		ELSEIF EQUIP:ARG:치마 == 3
+			RETURNF "미니스커트"
+		ELSEIF EQUIP:ARG:원피스
+			RETURNF "치마"
+		ELSEIF EQUIP:ARG:기모노
+			RETURNF "기모노의 옷단"
+		ENDIF
+ENDSELECT
+;-------------------------------------------------
+;関数名:SHOW_TOP
+;概　要:상반신服装名취득関数
+;戻り値:服装名(文字列)
+;引数:0 参照する캐릭터番号
+;引数:1はだけ可、2はだけ불가(省略した場合は最も노출を妨げているもの)
+;備　考:文中関数
+;TEQUIP:0に対応して一番上に着ている衣装の종류를 返す
+;-------------------------------------------------
+@SHOW_TOP(ARG,ARG:1)
+#FUNCTIONS
+LOCAL = 0
+IF TEQUIP:ARG:1 & 2
+	LOCAL = 2
+ELSEIF TEQUIP:ARG:1 & 1
+	LOCAL = 1
+ENDIF
+LOCAL = ARG:1 ? ARG:1 # LOCAL
+IF LOCAL == 2
+	IF EQUIP:ARG:바디슈트 || EQUIP:ARG:원피스 || EQUIP:ARG:레오타드
+		RETURNF "옷"
+	ELSEIF EQUIP:ARG:원피스 == 3
+		RETURNF "마법사옷"
+	ELSEIF EQUIP:ARG:원피스 == 2
+		RETURNF "차이나복"
+	ELSEIF EQUIP:ARG:외투 == 1
+		RETURNF "겉옷"
+	ELSEIF EQUIP:ARG:상반신속옷１
+		RETURNF "속옷"
+	ENDIF
+ELSEIF LOCAL == 1
+	IF EQUIP:ARG:기모노
+		RETURNF "기모노"
+	ELSEIF EQUIP:ARG:이너
+		RETURNF "블라우스"
+	ELSEIF EQUIP:ARG:상반신속옷２
+		RETURNF "속옷"
+	ENDIF
+ENDIF

@@ -1,0 +1,179 @@
+﻿@CARDNAME_42364,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 엑스큐티 프라우티 프론티어
+	CASE "略称"
+RESULTS = 프라우티 F
+	CASE "カテゴリ"
+RESULTS:0 = 엑스큐티
+ENDSELECT
+
+
+@CARD_42364(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250502
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_42364(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+素材条件名前 = 엑스큐티 프라우티
+ELSEIF EX参照 >= 10
+素材条件名前 = 엑스큐티 레아
+ENDIF
+
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,42364) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_42364(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 「엑스큐티 프라우티」＋「엑스큐티 레아」
+PRINTL 이 카드는 자신 필드의 상기 카드를 덱으로 되돌리고 융합 소환할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 상대 필드의 몬스터의 공격력 / 수비력은 600 다운한다.
+CALLFORM CARD_ABLE(0,ターン開始時)
+PRINTL ②: 상대 몬스터가 전투로 파괴되어 묘지로 보내졌을 경우 발동한다. 자신은 600 LP 회복한다.
+CALLFORM CARD_ABLE(0,破壊→묘지,戦闘→묘지)
+PRINTL ③: 이 카드가 파괴되었을 경우 발동할 수 있다.
+PRINTL 덱에서 「엑스큐티 프라우티」 또는 「엑스큐티 레아」 1장을 특수 소환한다.
+
+
+@CARDCAN_42364(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,42364)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	CALL CARD_EX_CHECK(듀얼리스트,42364)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件名前 = 엑스큐티 류미엘
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件名前 = 엑스큐티 리리우스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件名前:0 = 엑스큐티 류미엘
+	효과条件名前:1 = 엑스큐티 리리우스
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_42364(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC ドロー枚数
+#DIM DYNAMIC 攻撃力상승値
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42364)
+	IF RESULT == 0
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		CALL FULLRESET
+		TRYCALLFORM CARDSUMMON_42364(듀얼리스트,場所)
+		CALL FUSSUMMON(듀얼리스트,場所,덱行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,-600,-600,42364)
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL LIFE_CHANGE(듀얼리스트,"増加","효과",600)
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42364)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件名前:0 = 엑스큐티 프라우티
+		효과条件名前:1 = 엑스큐티 레아
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

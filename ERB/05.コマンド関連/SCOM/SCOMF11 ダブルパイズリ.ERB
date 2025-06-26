@@ -1,0 +1,327 @@
+﻿;-------------------------------------------------
+;더블파이즈리
+;助手によるコマンド、及び레즈プレイ、レベル3
+;-------------------------------------------------
+@SCOM11
+;-------------------------------------------------
+;実行결정
+;-------------------------------------------------
+STR:0 = 더블파이즈리
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+;二人目
+LOCAL = MASTER_POSE(5,1,1)
+TCVAR:MASTER:사정대상캐릭터_1 = TARGET
+TCVAR:MASTER:사정대상캐릭터_2 = LOCAL
+TCVAR:MASTER:사정부위플래그 = 24
+TCVAR:MASTER:사정쾌락강도 = 2400
+
+
+;봉사쾌락
+TFLAG:봉사쾌락플래그 = 1
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;一人目
+	;消費체력、기력
+	DOWNBASE:체력 += 10
+	DOWNBASE:기력 += 100
+
+	CALL SOURCE_CALC_쾌Ｂ(TARGET, MASTER, 150)
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 30)
+	CALL SOURCE_CALC_접촉(TARGET, MASTER, 200)
+	CALL SOURCE_CALC_봉사(TARGET, MASTER, 500)
+
+	;애널、파과血、촉수の汚れ
+	IF (STAIN:MASTER:0 & 8) || (STAIN:MASTER:0 & 32) || (STAIN:MASTER:0 & 64)
+		CALL SOURCE_CALC_불결(TARGET, MASTER, 800)
+	;愛液,정액汚れ
+	ELSEIF STAIN:MASTER:0 & 1 || STAIN:MASTER:0 & 4
+		CALL SOURCE_CALC_불결(TARGET, MASTER, 400)
+	ELSE
+		CALL SOURCE_CALC_불결(TARGET, MASTER, 200)
+	ENDIF
+;二人目
+	;消費체력、기력
+	DOWNBASE:LOCAL:체력 += 10
+	DOWNBASE:LOCAL:기력 += 100
+
+	CALL SOURCE_CALC_쾌Ｂ(LOCAL, MASTER, 150)
+	CALL SOURCE_CALC_노출(LOCAL, MASTER, 30)
+	CALL SOURCE_CALC_접촉(LOCAL, MASTER, 200)
+	CALL SOURCE_CALC_봉사(LOCAL, MASTER, 500)
+
+	;애널、파과血、촉수の汚れ
+	IF (STAIN:MASTER:0 & 8) || (STAIN:MASTER:0 & 32) || (STAIN:MASTER:0 & 64)
+		CALL SOURCE_CALC_불결(LOCAL, MASTER, 800)
+	;愛液,정액汚れ
+	ELSEIF STAIN:MASTER:0 & 1 || STAIN:MASTER:0 & 4
+		CALL SOURCE_CALC_불결(LOCAL, MASTER, 400)
+	ELSE
+		CALL SOURCE_CALC_불결(LOCAL, MASTER, 200)
+	ENDIF
+
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;奴隷のＢ⇔조교者のＰの汚れが이동
+STAIN:5 |= STAIN:MASTER:2
+STAIN:MASTER:2 |= STAIN:5
+
+;助手のＢ⇔조교者のＰの汚れが이동
+STAIN:LOCAL:5 |= STAIN:MASTER:2
+STAIN:MASTER:2 |= STAIN:LOCAL:5
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+EXP:LOCAL:파이즈리경험 ++
+EXP:파이즈리경험 ++
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 3
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 3
+ENDIF
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,LOCAL)
+	EXP:LOCAL:(50 + HETEROSEX(TARGET,LOCAL)) += 3
+	EXP:TARGET:(50 + HETEROSEX(TARGET,LOCAL)) += 3
+ENDIF
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(LOCAL,MASTER)
+	EXP:LOCAL:(50 + HETEROSEX(LOCAL,MASTER)) += 3
+	EXP:MASTER:(50 + HETEROSEX(LOCAL,MASTER)) += 3
+ENDIF
+
+RETURN 1
+
+@CAN_SCOM11(ARG)
+#DIM DYNAMIC 素質確認
+#DIM DYNAMIC 판정値
+#DIM DYNAMIC 汚れ値
+#DIM DYNAMIC 実行値
+SKIPDISP ARG
+PRINTL 더블파이즈리
+;-------------------------------------------------
+;実行판정処理
+;-------------------------------------------------
+
+
+;すべての命令に共通の要素を考慮
+;(순종が高いと命令に従いやすいなど)
+CALL COM_ORDER
+素質確認 = RESULT:1
+판정値 += RESULT
+;ABL:욕망
+IF ABL:욕망
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:욕망 * 1
+	PRINT 욕망
+	PRINTV 'LV,ABL:욕망,'(,ABL:욕망 * 1,')
+	素質確認 = 1
+ENDIF
+;ABL:봉사정신
+IF ABL:봉사정신
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:봉사정신 * 4
+	PRINT 봉사정신
+	PRINTV 'LV,ABL:봉사정신,'(,ABL:봉사정신 * 4,')
+	素質確認 = 1
+ENDIF
+;ABL:정액중독
+IF ABL:정액중독
+	SIF 素質確認
+		PRINT  + 
+	판정値 += ABL:정액중독 * 3
+	PRINT 정액중독
+	PRINTV 'LV,ABL:정액중독,'(,ABL:정액중독 * 3,')
+	素質確認 = 1
+ENDIF
+
+IF MARK:쾌락각인
+	SIF 素質確認
+		PRINT  + 
+	판정値 += MARK:쾌락각인 * 1
+	PRINT 쾌락각인
+	PRINTV 'LV,MARK:쾌락각인,'(,MARK:쾌락각인 * 1,')
+	素質確認 = 1
+ENDIF
+;PALAM:욕정
+IF GETPALAMLV(PALAM:욕정,5)
+	SIF 素質確認
+		PRINT  + 
+	판정値 += GETPALAMLV(PALAM:욕정,5) * 1
+	PRINT 욕정
+	PRINTV 'LV,GETPALAMLV(PALAM:욕정,5),'(,GETPALAMLV(PALAM:욕정,5) * 1,')
+	素質確認 = 1
+ENDIF
+;恥じらい
+IF TALENT:수치심 > 0
+	PRINT  - 
+	판정値 -= 1
+	PRINT 恥じらい
+	PRINTV '(,1,')
+	素質確認 = 1
+ENDIF
+;汚臭鈍感
+IF TALENT:악취내성 > 0
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 1
+	PRINT 汚臭鈍感
+	PRINTV '(,1,')
+	素質確認 = 1
+ENDIF
+;汚臭敏感
+IF TALENT:악취내성 < 0
+	PRINT  - 
+	판정値 -= 3
+	PRINT 汚臭敏感
+	PRINTV '(,3,')
+	素質確認 = 1
+ENDIF
+;헌신적
+IF TALENT:헌신적
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 6
+	PRINT 헌신적
+	PRINTV '(,6,')
+	素質確認 = 1
+ENDIF
+;쾌락の부정（음란、쾌락狂で無効）
+IF TALENT:쾌감반응 < 0 && !TALENT:음란
+	PRINT  - 
+	판정値 -= 1
+	PRINT 쾌락の부정
+	PRINTV '(,1,')
+	素質確認 = 1
+ENDIF
+;男嫌い（연모、친애で無効）
+IF TALENT:성별기호 & 1 &&  !(TALENT:MASTER:성별 & 1) && (!TALENT:연모 || MASTER != MASTER)
+	PRINT  - 
+	판정値 -= 12
+	PRINT 男嫌い
+	PRINTV '(,12,')
+	素質確認 = 1
+ENDIF
+;음란
+IF TALENT:음란
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 5
+	PRINT 음란
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+;쾌락狂
+IF TALENT:음란 > 1
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 5
+	PRINT 쾌락狂
+	PRINTV '(,5,')
+	素質確認 = 1
+ENDIF
+
+;조교者がふたなり
+IF (TALENT:MASTER:성별 & 3) == 3
+	SIF 素質確認
+		PRINT  + 
+	판정値 += 8
+	PRINT ふたなり
+	PRINTV '(,8,')
+	素質確認 = 1
+ENDIF
+
+
+;愛液の汚れ
+SIF STAIN:MASTER:2 & 1
+	汚れ値 += 1
+;정액の汚れ
+SIF STAIN:MASTER:2 & 4
+	汚れ値 += 3
+;애널の汚れ
+SIF STAIN:MASTER:2 & 8
+	汚れ値 += 7
+SIF STAIN:MASTER:2 & 16
+	汚れ値 += 15
+汚れ値 = 汚れ値 * (2 - TALENT:악취내성) / 2
+
+;汚れあり
+IF 汚れ値
+ 	PRINT  - 
+	판정値 -= 汚れ値
+	PRINT 汚れあり
+	;汚臭鈍感
+	IF TALENT:악취내성 > 0
+		PRINT 、汚臭鈍感
+	ELSEIF TALENT:악취내성 < 0
+		PRINT 、汚臭敏感
+	ENDIF
+	PRINTV '(,汚れ値,')
+	素質確認 = 1
+ENDIF
+
+;合計を표시(38以上で実行)
+PRINT  = 
+PRINTV 판정値
+
+実行値 = 38
+SIF 판정値 < 実行値
+	PRINT  < 
+SIF 판정値 == 実行値
+	PRINT  = 
+SIF 판정値 > 実行値
+	PRINT  > 
+PRINT 実行値
+PRINTV 実行値
+
+WAIT
+SKIPDISP 0
+;実行できない
+SIF 판정値 < 実行値
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE911
+;더블파이즈리
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(911)
+	RETURN RESULT
+LOCAL = MASTER_POSE(5,1,1)
+;主人がオトコか半人半妖かふたなりじゃないとダメ
+SIF !(TALENT:MASTER:성별 & 2)
+	RETURN 0
+;고양이혀の奴隷の場合は기교Lv2以上必要
+SIF TALENT:고양이혀 && ABL:기교 < 2
+	RETURN 0
+;고양이혀の助手の場合は기교Lv2以上必要
+SIF TALENT:LOCAL:고양이혀 && ABL:LOCAL:기교 < 2
+	RETURN 0
+
+;助手が봉사정신ＬＶ３以上、기교ＬＶ４以上じゃないとダメ
+SIF ABL:LOCAL:기교 < 4 || ABL:LOCAL:봉사정신 < 3
+	RETURN 0
+;助手とTARGETの両方に가슴がないとダメ
+SIF !(TALENT:2 & 1) || !(TALENT:LOCAL:2 & 1)
+	RETURN 0
+;상반신착의
+SIF TEQUIP:1 > 1
+	RETURN 0
+;밧줄사용중/手足が使えないと불가
+SIF TEQUIP:밧줄 || TEQUIP:사지없음 || TEQUIP:LOCAL:밧줄
+	RETURN 0
+RETURN 1

@@ -1,0 +1,90 @@
+﻿;-------------------------------------------------
+;피스트 퍽
+;ハードな조교コマンド、レベル4
+;-------------------------------------------------
+@COM141
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 300
+DOWNBASE:기력 += 150
+
+CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER, 200)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 100)
+
+;固定値
+CALL SOURCE_CALC_고통(TARGET, MASTER, 1000)
+;変動値分の추가
+LOCAL = 1500 *  PAIN_CHECK_V(TARGET) / 1000
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;Ｖ경험
+EXP:Ｖ경험 += 24
+;Ｖ확장경험
+IF !EXP:Ｖ확장경험 && !EXP:Ａ확장경험 && !GETBIT(CFLAG:4 ,5)
+	EXP:이상경험 ++
+	SETBIT CFLAG:4,5
+ENDIF
+
+EXP:Ｖ확장경험 += 5
+
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 1
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 1
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE141
+;피스트 퍽
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(141)
+	RETURN RESULT
+;一定のＶ경험が必要
+SIF EXP:Ｖ경험 < 150
+	RETURN 0
+;바이브/딜도/로터삽입중はダメ
+SIF TEQUIP:바이브 || TEQUIP:딜도 || TEQUIP:로터
+	RETURN 0
+;オトコだとダメ
+SIF !(TALENT:2 & 1)
+	RETURN 0
+
+;小柄체형なら순종が4以上かつ마조끼が4以上じゃないと実行できない
+IF TALENT:체형 < 0
+	SIF ABL:순종 <= 3 || ABL:마조끼 <= 3
+		RETURN 0
+ENDIF
+;조교대상が小人체형の場合は主人が금단의지식持ちじゃないとダメ
+SIF ABS(TALENT:체형 - TALENT:MASTER:체형) > 2 && TALENT:MASTER:금단의지식 == 0
+	RETURN 0
+
+;하반신착의
+SIF TEQUIP:0 > 1
+	RETURN 0
+;샤워中はダメ
+SIF TEQUIP:32
+	RETURN 0
+;목욕탕플레이 중は플레이매트が無いとダメ
+IF TEQUIP:목욕탕플레이
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ENDIF
+;새댁플레이 중はダメ
+SIF TEQUIP:새댁플레이
+	RETURN 0
+;침대ルームでないとダメ
+SIF !BEDROOM(CFLAG:MASTER:현재위치)
+	RETURN 0
+RETURN 1

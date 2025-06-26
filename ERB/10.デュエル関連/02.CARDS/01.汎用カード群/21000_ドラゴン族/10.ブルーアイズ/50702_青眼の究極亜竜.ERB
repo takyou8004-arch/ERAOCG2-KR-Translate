@@ -1,0 +1,133 @@
+﻿@CARDNAME_50702,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 푸른 눈의 궁극 아룡
+	CASE "略称"
+RESULTS = 푸른눈의궁극아룡
+	CASE "カテゴリ"
+RESULTS:0 = 푸른 눈의 백룡
+ENDSELECT
+
+
+@CARD_50702(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 4500
+	CASE "守備力"
+		RETURN 3800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50702(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「푸른 눈의 백룡」＋「푸른 눈의 백룡」＋「푸른 눈의 백룡」
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 대상 내성과 파괴 내성을 가진다.
+CALL CARD_ABLE(10,발동誘発)
+PRINTL ②: 1턴에 1번, 상대 필드의 카드 1장을 대상으로 하여 발동할 수 있다
+PRINTL (이 카드가 「푸른 눈의 아백룡」을 소재로 하고 있을 경우, 대상을 2장 또는 3장으로 할 수 있다).
+PRINTL 그 카드를 파괴한다. 이 효과를 발동하는 턴에, 이 카드는 공격할 수 없다.
+
+@CARDSUMMON_50702(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件スーパーカテゴリ = 푸른 눈의 백룡
+素材条件スーパー종류 = モン全般
+素材条件名前 = 푸른 눈의 화이트 드래곤
+지정素材名前 = 푸른 눈의 A ホ화이트 드래곤
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,50702) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_50702(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50702)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50702(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 破壊枚数
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50702,10)
+	IF RESULT == 0
+		IF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+			破壊枚数 = 1
+		ELSE
+			破壊枚数 = 3
+		ENDIF
+		CALL FULLRESET
+		효과条件複数 = 100 - 破壊枚数
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無",1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+ENDIF

@@ -1,0 +1,165 @@
+﻿@CARDNAME_41075,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 유벨－Das Ewig Liebe Wachter
+	CASE "略称"
+RESULTS = 수호자 유벨
+	CASE "カテゴリ"
+RESULTS:0 = 유벨
+ENDSELECT
+
+
+@CARD_41075(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN ふたなり
+	CASE "連動ID"
+		RETURN 1075
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_41075(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 10
+素材条件数自由 = 1
+素材条件素材数起動 = 1
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 유벨
+	CALLFORM 素材条件レベル_ADV(10,"以上")
+ELSEIF EX参照 >= 10
+	素材条件종류 = 효과モン
+ENDIF
+
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,41075) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_41075(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 10 이상의 「유벨」 몬스터 + 효과 몬스터 1장 이상
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 융합 소환했을 경우에 발동할 수 있다.
+PRINTL 이 카드의 융합 소재의 수× 500 데미지를 상대에게 준다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 전투 / 효과로는 파괴되지 않으며, 이 카드의 전투로 발생하는 자신이 받는 전투 데미지는 0이 된다.
+CALLFORM CARD_ABLE(0,攻撃後強制誘発)
+PRINTL ③: 이 카드가 상대 몬스터와 전투를 실행한 데미지 스텝 종료시에 발동한다.
+PRINTL 그 상대 몬스터의 공격력만큼의 데미지를 상대에게 주고, 그 몬스터를 제외한다.
+
+@CARDSUMMON_AA_41075
+
+
+@CARDCAN_41075(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,41075)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,41075)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_41075(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41075,1)
+	IF RESULT == 0
+		ダメージ量 = GETVAR(@"%듀얼리스트%_MZ_汎数:場所") * 500
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL FULLRESET
+	효과範囲마함 = 1
+효과条件名前 = 나이트메어 페인
+	;효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ無効",3)
+ELSEIF 종류 == 攻撃後強制誘発
+	PRINTFORML
+	PRINTFORML 【유벨－Das Ewig Liebe Wachter의 효과】
+	PRINTFORML
+	ダメージ量 = GETVAR(@"%対面者%_MZ_攻:(%対面者%_戦闘カード)")
+	CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+	CALL FULLRESET
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘場所(듀얼리스트,1),"제외")
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+ENDIF
+
+

@@ -1,0 +1,110 @@
+﻿@CARDNAME_72046,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마도서의 심판
+	CASE "略称"
+RESULTS = 마도서의 심판
+	CASE "カテゴリ"
+RESULTS:0 = 마도서
+ENDSELECT
+
+
+@CARD_72046(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 速攻마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_72046(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①: 이 카드를 발동한 턴의 엔드 페이즈시, 자신 또는 상대가 발동한 마법 카드의 효과의 횟수까지,
+PRINTL 자신의 덱에서 「마도서의 심판」 이외의 「마도서」라는 이름이 붙은 마법 카드를 패에 더한다(최대 5장까지).
+PRINTL 그 후, 자신 또는 상대가 발동한 마법 카드의 매수만큼의 레벨을 가지는 마법사족 몬스터 1장을 덱에서 특수 소환할 수 있다.
+
+@CARDCAN_72046(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72046)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_DRAW_CHECK
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72046)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72046(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 묘지送カード,10
+#DIM DYNAMIC 손패묘지送カード,10
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 발동횟수
+#DIM DYNAMIC 処理횟수
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72046,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL CARD_RESERV(듀얼리스트,72046)
+	ENDIF
+ELSEIF 종류 == ターン終了時予約
+	발동횟수 = 자신_마법발동数 + 상대_마법발동数
+	REPEAT 발동횟수
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 마도서
+		효과条件固名前 = 마도서의 심판
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		SIF RESULT != 1
+			BREAK
+		処理횟수++
+		SIF 処理횟수 ==  5
+			BREAK
+	REND
+	IF 발동횟수 >= 1
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종족 = 마법사족
+		CALLFORM 효과条件レベル_ADV(발동횟수, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

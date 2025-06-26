@@ -1,0 +1,120 @@
+﻿@CARDNAME_92426,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 클리포트 다운
+	CASE "略称"
+RESULTS = 기각의 동결
+	CASE "カテゴリ"
+RESULTS:0 = 클리포트
+ENDSELECT
+
+
+@CARD_92426(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1000
+	CASE "分割"
+		RETURN 효과なし
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92426(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ①: 이 카드는 발동 후, 몬스터 존에 특수 소환한다.
+PRINTL 이 효과로 이 카드를 특수 소환한 턴,
+PRINTL 자신 필드의 「클리포트」 마법 / 함정 카드는 파괴 내성을 얻는다.
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ②: 자신 메인 페이즈에 몬스터 존의 이 카드를 묘지로 보내 발동할 수 있다.
+PRINTL 패에서 「클리포트」 몬스터 1장을 릴리스 없이 소환한다.
+
+@CARDCAN_92426(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92426)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,92426,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 클리포트
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_92426(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92426)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "마함", 場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 클리포트
+		CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐",1)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92426)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,"필드",場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 클리포트
+		효과条件종류 = モン全般
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "손패",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",1)
+		ENDIF
+	ENDIF
+ENDIF
+

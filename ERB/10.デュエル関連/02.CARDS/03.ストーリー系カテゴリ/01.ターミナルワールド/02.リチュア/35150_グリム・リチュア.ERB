@@ -1,0 +1,102 @@
+﻿@CARDNAME_35150,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 그림 리추어
+	CASE "略称"
+RESULTS = 그림
+	CASE "カテゴリ"
+RESULTS:0 = 리추어
+ENDSELECT
+
+
+@CARD_35150(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 바다생물족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 600
+	CASE "守備力"
+		RETURN 700
+	CASE "의식代用"
+		RETURN 물속성
+
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_35150(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 2번 효과는 1턴에 1번밖에 사용할 수 없다.
+PRINTL 1번: 물속성 의식 몬스터 1장을 의식 소환할 경우,
+PRINTL 이 카드 1장으로 의식 소환에 필요한 만큼의 릴리스로서 사용할 수 있다.
+CALLFORM CARD_ABLE(1,소환時 ,특수소환時)
+PRINTL 2번: 이 카드가 소환 / 특수 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 덱에서 "그림 리추어" 이외의 "리추어" 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 의식 몬스터로밖에 공격 선언할 수 없다
+PRINTL 
+
+@CARDCAN_35150(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,35150)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,35150)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 리추어
+	효과条件固名前 = 그림 리추어
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_35150(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35150,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 리추어
+		효과条件固名前 = 그림 리추어
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		攻撃可能종류 = 의식
+		CALL CARD_ATK_RESTRICTION(듀얼리스트)
+	ENDIF
+ENDIF
+

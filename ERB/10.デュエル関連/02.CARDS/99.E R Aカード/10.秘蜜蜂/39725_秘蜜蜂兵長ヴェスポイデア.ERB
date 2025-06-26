@@ -1,0 +1,208 @@
+@CARDNAME_39725,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 비밀벌 병장 베스포이데어
+	CASE "略称"
+		RESULTS = 비밀벌병장ＶＰ
+	CASE "カテゴリ"
+		RESULTS:0 = 비밀벌
+		RESULTS:1 = 비밀
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39725(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 곤충족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 3000
+	CASE "튜너"
+		RETURN 1
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "単一存在"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39725(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(0,손패起動)
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 ①의 Ｐ효과는 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,마함起動)
+PRINTL ①：자신의 메인 페이즈에 발동할 수 있다。
+PRINTL 덱에서 "비밀" 카드 １장을 패에 넣는다。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 "비밀벌 병장 베스포이데어" 는 자신 몬스터 존에 １장밖에 존재할 수 없으며、
+PRINTL 이 카드명의 ①③의 효과는 각각 １턴에 １번밖에 발동할 수 없다。
+CALL CARD_ABLE(2,특수소환時)
+PRINTL ①：이 카드가 특수 소환된 경우에 발동할 수 있다。
+PRINTL EX덱에서 "비밀벌" Ｓ몬스터를 이 카드에 장착하고、상대의 패를 랜덤으로 １장 버리게한다。
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드는 공격유도능력을 갖는다。
+CALL CARD_ABLE(3,ターン終了時)
+PRINTL ③：자신 / 상대의 엔드 페이즈에 발동할 수 있다。
+PRINTL 상대에게 ４００데미지를 주고、자신은 라이프를 ４００회복한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39725(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39725)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,39725)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 비밀
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,39725)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 비밀벌
+	효과条件종류 = 싱크로
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時
+	SIF 발동済_3(듀얼리스트,39725)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39725(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상 = -1
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39725)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39725,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 비밀
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39725,2)
+	IF RESULT == 0
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상 = RESULT
+		ENDIF
+
+		CALL FULLRESET
+		효과条件カテゴリ = 비밀벌
+		효과条件종류 = 싱크로
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EQUIP_MONSTER(듀얼리스트,場所,"EX덱",選択カード)
+			IF 조교대상 >= 0
+				PRINTFORML 비와한 형태를 한 비밀벌의 둥지는 여왕과 합체하여 진정한 모습을 보였다！
+				PRINTFORM 동굴 끝부분부터 뿜어져나온 꿀에 걸린 %CALLNAME:조교대상%는
+				PRINTFORML 숨이 콱 막힐것같은 달콤함에 도취되어버려 패를 떨어뜨려버렸다。
+				CALL EROTIC_MOVE("ぶっかけ",조교대상,-1,400)
+			ENDIF
+			CALL FULLRESET
+			CALL CARD_DISPOSE(対面者,"손패")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"攻誘")
+ELSEIF 종류 == ターン終了時
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	IF RESULT != -1
+		조교대상 = RESULT
+		PRINTFORML %CALLNAME:조교대상%은 몸속에 떼지은 벌들에게 애무되어、비순에서 흐르는 사랑꿀을 듬뿍 채집당했다。
+		PRINTFORM 너무 많이가서 몸을 경련시키는 %CALLNAME:조교대상%을 거들떠도 보지않고、벌들은 채집한 암컷꿀을 마스터에게 헌상한다。
+		CALL EROTIC_MOVE("前穴凌辱",조교대상,-1,400)
+	ENDIF
+	CALL FULLRESET
+	CALL LIFE_CHANGE(듀얼리스트,"減少","효과",400,1)
+	CALL FULLRESET
+	CALL LIFE_CHANGE(듀얼리스트,"増加","효과",400)
+	CALL CARD_EFFECT_USE(듀얼리스트,39725,3)
+ENDIF

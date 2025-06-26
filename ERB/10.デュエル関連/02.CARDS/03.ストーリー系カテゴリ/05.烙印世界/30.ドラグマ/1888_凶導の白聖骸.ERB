@@ -1,0 +1,161 @@
+﻿@CARDNAME_1888,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 드래그마 알버스 세인트
+	CASE "略称"
+RESULTS = 흉도의 백성해
+	CASE "カテゴリ"
+RESULTS = 드래그마
+ENDSELECT
+
+
+@CARD_1888(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 의식
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+
+@CARDSUMMON_1888(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 4
+
+IF EX参照 == 1
+	CALL RITCAN(듀얼리스트,소환カード,1888) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_1888(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「흉도의 장렬」에 의해 강림. 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 의식 소환에 성공했을 경우, 자신의 필드의 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드의 공격력은 필드의 공격력이 가장 높은 몬스터의 공격력만큼 올라간다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 자신 필드의 「드래그마」 몬스터는 전투로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(3,효과後誘発)
+PRINTL ③: 상대의 EX덱에서 몬스터가 특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 상대의 EX덱을 확인하고, 그 안의 몬스터 1장을 골라 묘지로 보낸다.
+
+
+
+@CARDCAN_1888(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1888)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_3(듀얼리스트,21251)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	CALL FULLRESET
+	효과条件종류 = 효과全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX특수소환",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1888(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1888)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+				CONTINUE
+			IF 攻撃力修正 < GETVAR(@"%듀얼리스트%_MZ_攻:{カウンタ}")
+				攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_攻:{カウンタ}")
+			ENDIF
+		NEXT
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_필드:{カウンタ}") == -1
+				CONTINUE
+			IF 攻撃力修正 < GETVAR(@"%対面者%_MZ_攻:{カウンタ}")
+				攻撃力修正 = GETVAR(@"%対面者%_MZ_攻:{カウンタ}")
+			ENDIF
+		NEXT
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999	
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永攻",攻撃力修正)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 드래그마
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐")
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1888,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"상대EX덱",ゾーン,場所)
+	ENDIF
+ENDIF

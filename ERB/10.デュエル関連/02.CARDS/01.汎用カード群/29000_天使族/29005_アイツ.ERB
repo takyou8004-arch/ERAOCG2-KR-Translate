@@ -1,0 +1,116 @@
+﻿@CARDNAME_29005,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 그 녀석
+	CASE "略称"
+RESULTS = 그 녀석
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_29005(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 100
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29005(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 매우 미덥지 못한 모습을 하고 있지만, 사실은 엄청난 잠재 능력을 숨겨 가지고 있는 것 같다.
+PRINTL 
+PRINTL
+PRINTL
+;PRINTL 「아이츠」は装備카드가 ５장의 時に이하의 潜在能力を発揮する。
+;PRINTL ①：「아이츠」は完全耐性を持つ。
+;PRINTL ②：자신バトルフェイズ終了時に、상대 필드에 モンスターが존재하지 않는 경우に발동할 수 있다。
+;PRINTL 아이츠アタックで「아이츠」の攻撃力分のダメージを상대に与える。
+
+@CARDSUMMON_AA_29005
+
+
+@CARDCAN_29005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29005)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == バトル終了時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件CNT = 1
+	CALL CARD_EQUIP_CHECK(듀얼리스트,場所,ゾーン)
+	SIF RESULT != 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29005(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ修正
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == バトル終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29005)
+	IF RESULT == 0
+		PRINTW 今がチャンスだ！아이츠アタ-ック！
+		ダメージ修正 = GETVAR(@"%듀얼리스트%_MZ_攻:場所")
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ修正,1)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+ENDIF

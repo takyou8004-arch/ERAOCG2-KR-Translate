@@ -1,0 +1,72 @@
+﻿@IRAI_EVENT_203(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상상대
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP3)듀얼의 상대를 해줬으면 한다。(반복수주 가능)
+	CASE "이벤트種"
+		RETURN 이벤트_ＲＥ
+	CASE "依頼先"
+		RETURN 場所_学校内
+	CASE "詳細"
+		PRINTL テストのため덱を調整したので상대をしてほしいようだ。
+		PRINTL アカデミアへと向かい、学生さんの상대しよう！
+		PRINTL 勝ち負けは관계ないので思いっきりぶつかりましょう！
+		PRINTL
+		PRINTL 報酬：2000DP
+
+	CASE "条件"
+		SIF 依頼_全完了횟수() == 0 && FLAG:게임모드 == 1
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_203(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 대상상대
+
+
+
+IF TIME_ZONE() >= T_夜時間
+	PRINTFORMW さすがにこんな時間なので誰もいないみたいだ……。
+	PRINTFORMW 明日早めの時間でまた受けてみよう……。
+	RETURN 依頼失敗
+ENDIF
+
+
+$INPUTLOOP
+대상상대 = RAND:CHARANUM
+IF TALENT:대상상대:연령 == -1 && TALENT:대상상대:듀얼리스트 >= 1 && 대상상대 != 0
+	TARGET = 대상상대
+ELSE
+	GOTO INPUTLOOP
+ENDIF
+PRINTFORMW 待ち合わせ場所で待っていると、依頼主である%NAME:TARGET%が現れた
+CALL SYOTAIMEN(TARGET)
+PRINTFORMW 軽く挨拶を済ませた後、さすがアカデミア生というべきか、
+PRINTFORMW ディスクを構え、デュエルの姿勢に入った。
+
+CALL CHOICE_DUEL_TYPE
+;PRINTFORML リザルト{RESULT}
+IF RESULT == 0
+	PRINTFORML まだ準備ができていなかったので、いったん待ってもらうことになりました	
+	RETURN 1
+ENDIF
+IF RESULT == 1
+	PRINTFORMW %CALLNAME:TARGET%に勝利すると、少し悔しそうながらも %CALLNAME:MASTER%に感謝し、
+ELSE
+	PRINTFORMW %CALLNAME:TARGET%는勝利すると、만족そうに微笑みながら %CALLNAME:MASTER%に感謝し、
+ENDIF
+
+PRINTFORMW 依頼料として2000DPを支払ってもらいました。
+FLAG:듀얼포인트 += 2000
+CALL SOURCE_CALC_환락(대상상대, MASTER, 500)
+TIME += 60
+RETURN 2
+

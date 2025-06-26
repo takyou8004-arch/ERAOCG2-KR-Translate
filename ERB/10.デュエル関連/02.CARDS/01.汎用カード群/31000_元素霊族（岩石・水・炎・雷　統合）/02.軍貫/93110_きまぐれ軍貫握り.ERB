@@ -1,0 +1,150 @@
+﻿@CARDNAME_93110,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 변덕스러운 군관니기리
+	CASE "略称"
+RESULTS = 변덕스러운 군관
+	CASE "カテゴリ"
+RESULTS:0 = 군관
+ENDSELECT
+
+
+@CARD_93110(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93110(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動,フリー誘発)
+PRINTL ①: 덱에서 "군관" 몬스터 3장을 고르고,
+PRINTL 그 중에서 무작위로 1장을 패에 더하고, 나머지를 덱으로 되돌린다.
+PRINTL 패에 "샤리 군관"이 존재할 경우, 대신에 덱에서 "군관" 몬스터 1장을 패에 더한다.
+CALLFORM CARD_ABLE(0,묘지起動,フリー誘発)
+PRINTL ②: 묘지의 이 카드를 제외하고, 자신의 묘지의 "군관" 몬스터 3장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 덱에 더하고, 자신은 덱에서 1장 드로우한다.
+PRINTL 
+
+@CARDCAN_93110(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,93110)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 군관
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	CALL FULLRESET
+	효과範囲묘지= 1
+	효과条件カテゴリ = 군관
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 2
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_93110(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード,10
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ランダム
+
+
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93110)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패= 1
+효과条件名前 = 샤리 군관
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件종류 = モン全般
+			효과条件カテゴリ = 군관
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ELSE
+			CALL FULLRESET
+			
+			효과条件종류 = モン全般
+			효과条件カテゴリ = 군관
+			효과条件複数 = 3
+			CALL CARD_CHOOSE_BASIC(듀얼리스트, "덱",ゾーン,場所)
+			IF RESULT != 9999
+				選択カード:0 = RESULT:0
+				選択カード:1 = RESULT:1
+				選択カード:2 = RESULT:2
+				IF 選択カード != 9999
+					ランダム = RAND:3
+					CALL CARD_ADD(듀얼리스트, "덱", "손패", 選択カード:ランダム)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93110)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 군관
+		효과条件複数 = 3
+		효과条件行先플래그 = 2
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ENDIF

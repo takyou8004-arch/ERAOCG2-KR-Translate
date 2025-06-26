@@ -1,0 +1,109 @@
+﻿@CARDNAME_24140,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 앤틱 기어 골렘
+	CASE "略称"
+RESULTS = 고대 기계 거인
+	CASE "カテゴリ"
+RESULTS:0 = 앤틱 기어
+RESULTS:1 = 고대 기계 거인
+ENDSELECT
+
+
+@CARD_24140(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24140(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환했을 때 발동할 수 있다.
+PRINTL "고대의 기계암흑거인"을 제외한, "앤틱 기어" 카드 2장까지 덱에서 패에 넣는다.
+PRINTL 그 후, 자신 패를 1장 고르고 버린다.
+;PRINTL こ의 효과의 발동後、ターン終了時まで자신은 카드를 セット할 수 없다。
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ②: 이 카드가 공격할 경우, 데미지 스텝 종료시까지 상대는 카드의 효과를 발동할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 이 카드가 수비 표시 몬스터를 공격했을 경우, 그 수비력을 공격력이 넘은 만큼만 상대에게 전투 데미지를 준다.
+
+@CARDCAN_24140(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24140)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,24140)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 앤틱 기어
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24140(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24140,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件固ID = 24140
+		효과条件カテゴリ = 앤틱 기어
+		효과条件複数 = 2
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"貫通")
+	SIF ターンプレイヤー == 듀얼리스트
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦阻")
+ENDIF
+

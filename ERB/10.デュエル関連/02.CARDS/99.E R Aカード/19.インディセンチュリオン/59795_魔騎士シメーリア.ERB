@@ -1,0 +1,177 @@
+﻿@CARDNAME_59795,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마기사 시메리아
+	CASE "略称"
+		RESULTS = 마기사 시메리아
+	CASE "カテゴリ"
+		RESULTS:0 = 인디센츄리온
+		RESULTS:1 = 센츄리온
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59795(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 1600
+	CASE "특수制限"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 2133
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_59795(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 「기사황 아크실라」１장
+PRINTL 자신은 「마기사 시메리아」를 1턴에 1번밖에 특수 소환할 수 없다。
+PRINTL 이 카드명의  ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.。
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 링크소환 했을 경우에 발동할 수 있다。
+PRINTL 자신 / 상대의 묘지 / 제외 상태에 "기사황 아크실라」１장을 특수 소환한다。
+PRINTL 이 효과로 특수소환 몬스터 발정 상태가 된다。
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：이 카드를 릴리스하고 발동할 수 있다。
+PRINTL 엑스트라 덱에서 "그림자 악마 와이번」１장을 특수 소환한다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드는 항상 발정 상태가 된다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDSUMMON_59795(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件名前 = 기사황 아크실라
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,59795) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDSUMMON_AA_59795
+
+
+@CARDCAN_59795(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59795)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,59795)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과範囲상대묘지 = 1
+	효과範囲상대제외 = 1
+	효과条件名前 = 기사황 아크실라
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,59795)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件名前 = 그림자 악마 와이번
+	효과条件소환可 = 2
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_59795(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59795,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과範囲상대묘지 = 1
+		효과範囲상대제외 = 1
+		효과条件名前 = 기사황 아크실라
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,場所)
+		IF RESULT == 1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"発情",2,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"接可",2,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59795,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件名前 = 그림자 악마 와이번
+		효과条件特不無視 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"発情",3)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"接可",3)
+ENDIF
+
+

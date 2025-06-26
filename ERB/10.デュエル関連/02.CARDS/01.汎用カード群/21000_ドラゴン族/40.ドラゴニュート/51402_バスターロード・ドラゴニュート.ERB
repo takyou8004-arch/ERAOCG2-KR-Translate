@@ -1,0 +1,178 @@
+﻿@CARDNAME_51402,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 바스터 로드 드래고뉴트
+	CASE "略称"
+RESULTS = 패자귀룡
+	CASE "カテゴリ"
+RESULTS:0 = 드래고뉴트
+RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_51402(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_51402(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 5
+素材条件종족 = 드래곤족
+
+지정素材名前 = ロ-ド 드라고뉴트
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51402) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_51402(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 드래곤족 레벨 5 몬스터 × 3
+PRINTL 「로드 드래고뉴트」를 소재로 특수 소환한 이 카드는 각성 상태가 된다.
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①: 자신 필드의 「드래고뉴트」 몬스터는 대상 내성을 얻는다.
+CALL CARD_ABLE(0,攻撃時誘発)
+PRINTL ②: 이 카드의 공격 선언 시에 발동할 수 있다.
+PRINTL 덱 / 묘지에서 「드래고뉴트」 몬스터 1장을 특수 소환한다.
+CALL CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ③: 자신 / 상대 턴에, 각성 상태의 이 카드의 X 소재 1개를 제거하고 발동할 수 있다.
+PRINTL 상대 필드의 모든 앞면 표시 몬스터의 효과를 턴 종료 시까지 무효로 한다.
+PRINTL 이 효과를 자신 배틀 페이즈에 발동했을 경우,
+PRINTL 「드래고뉴트」 몬스터 1장을 고르고, 그 몬스터의 공격 횟수를 1회 늘린다.
+
+@CARDCAN_51402(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51402)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲덱 = 1
+	효과条件종류 = 효과モン
+	효과条件カテゴリ = 드라고뉴트
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,51402)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,1095)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51402(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 드라고뉴트
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51402)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲덱 = 1
+		효과条件종류 = 효과モン
+		효과条件カテゴリ = 드라고뉴트
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51402,1,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"無効")
+		IF ターンプレイヤー == 듀얼리스트
+			IF バトルフェイズ == 1
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과条件カテゴリ = 드라고뉴트
+				CALL CARD_GRANT_ADV(듀얼리스트,ゾーン,場所,"戦",1)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

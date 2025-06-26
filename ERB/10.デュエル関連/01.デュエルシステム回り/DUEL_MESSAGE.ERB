@@ -1,0 +1,260 @@
+﻿@DUEL_MESSAGE(듀얼리스트,使用場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 実行者
+#DIM DYNAMIC 使用場所
+#DIM DYNAMIC スキップ횟수
+#DIM DYNAMIC スキップ場所,10
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カード종족
+#DIM DYNAMIC カード성별
+#DIM DYNAMIC 종족変化
+#DIM DYNAMIC 発情状態
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+VARSET スキップ場所,-1
+
+;取りあえずどっちにも対応できるようにした上でプレイヤーに固定
+実行者 = %듀얼리스트%
+
+;モンスター４体以上でランダムスキップ
+CALL FULLRESET
+효과範囲필드 = 1
+효과条件종류 = モン全般
+효과条件표시 = 10
+효과条件CNT = 1
+CALL CARD_CHECK_ADV(実行者,,"필드",)
+IF RESULT == 0
+	RETURN 0
+ELSEIF RESULT == 4
+	スキップ횟수 = 1
+ELSEIF RESULT == 5
+	スキップ횟수 = 2
+ENDIF
+
+$SKIP_LOOP1
+IF スキップ횟수 >= 1
+	スキップ場所:0 = RAND:5
+	IF GETVAR(@"%実行者%_필드:スキップ場所") == -1
+		スキップ場所:0 = -1
+		GOTO SKIP_LOOP1
+	ENDIF
+ENDIF
+
+$SKIP_LOOP2
+IF スキップ횟수 == 2
+	スキップ場所:1 = RAND:5
+	IF スキップ場所:1 == スキップ場所:0
+		スキップ場所:1 = -1
+		GOTO SKIP_LOOP2
+	ENDIF
+	IF GETVAR(@"%実行者%_필드:スキップ場所") == -1
+		スキップ場所:1 = -1
+		GOTO SKIP_LOOP2
+	ENDIF
+ENDIF
+
+
+
+SETCOLOR C_YELLOW
+PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+RESETCOLOR
+
+FOR カウンタ,0,5
+	SIF GETVAR(@"%実行者%_필드:カウンタ") == -1
+		CONTINUE
+	SIF カウンタ == スキップ場所:1
+		CONTINUE
+	SIF カウンタ == スキップ場所:0
+		CONTINUE
+
+	カードID = GETVAR(@"%実行者%_필드:カウンタ")
+	;後でこの辺に구상チェック
+	;효과에 의해 소속が変化してるかをチェック
+	IF GETVAR(@"%実行者%_MZ_一種:カウンタ") == 0
+		カード종족 = GETVAR(@"%実行者%_MZ_種:カウンタ")
+	ELSE
+		カード종족 = GETVAR(@"%実行者%_MZ_一種:カウンタ")
+		종족変化 = 1
+	ENDIF
+	発情状態 = GETVAR(@"%実行者%_MZ_発情:カウンタ")
+	カード성별 = GETVAR(@"%実行者%_MZ_性:カウンタ")
+	TRYCALLFORM DUEL_MESSAGE_GENERAL(듀얼리스트,カードID,カード종족,カード성별,종족変化,発情状態)
+NEXT
+RETURN 0
+
+
+@DUEL_MESSAGE_GENERAL(듀얼리스트,カードID,カード종족,カード성별,종족変化,発情状態)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC カード名前
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 캐릭터NO
+#DIM DYNAMIC カード종족
+#DIM DYNAMIC カード성별
+#DIM DYNAMIC 종족変化
+#DIM DYNAMIC 発情状態
+#DIM DYNAMIC カウンタ
+
+CALL CARD_EROTICS(カードID)
+캐릭터NO = RESULT
+IF 캐릭터NO >= 0
+	;PRINTFORML 캐릭터NO={캐릭터NO}
+	カード名前 = %CALLNAME:캐릭터NO%
+ELSEIF カードID >= 0
+	;PRINTFORML カードID={カードID}
+	TRYCALLFORM CARDNAME_{カードID},"名前"
+	カード名前 = %RESULTS%
+ELSE
+	RETURN
+ENDIF
+
+IF 発情状態 == 0
+	SELECTCASE カード종족
+		CASE 마법사족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%은 마력을 높이고 있다
+			ELSE
+				PRINTFORML 마법사족이 된%カード名前%는 신기한 힘이 흘러넘치고 있다……
+			ENDIF
+		CASE 드래곤족
+			IF 종족変化 == 0
+				IF RAND:2
+					PRINTFORML %カード名前%는 이빨을 갈고 적을 위협하고있다
+				ELSE
+					PRINTFORML %カード名前%은 날카로운 시선으로 적을 노려보고있다
+				ENDIF
+			ELSE
+				PRINTFORML 드래곤족이 된%カード名前%는 비늘이 신경쓰이는것 같다……
+			ENDIF
+		CASE 언데드족
+			IF 종족変化 == 0
+				IF RAND:2
+					PRINTFORML %カード名前%는 공허한 눈으로 적을 바라보고있다
+				ELSE
+					PRINTFORML %カード名前%는 딱딱한 움직임으로 전투태세를 취하고있다
+				ENDIF
+			ELSE
+				PRINTFORML 언데드족이 된%カード名前%는 몸에서 썩은내가 나지 않나 신경쓰이는것 같다……
+			ENDIF
+		CASE 전사족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%는 무기를 겨누고 적을 살펴보고있다
+			ELSE
+				PRINTFORML 전사족이 된%カード名前%는 익숙하지 않은 무기를 어색하게 짊어지고있다……
+			ENDIF
+		CASE 기계족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%에서 톱니바퀴가 맞물리는것같은 소리가 조용히 울려퍼지고있다
+			ELSE
+				PRINTFORML 기계족이 된 %カード名前%는 삐걱거리는 몸을 딱딱하게 움직이고있다……
+			ENDIF
+		CASE 야수족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%은 혀를 낼름거리며 사냥의 기회를 기다리고있다
+			ELSE
+				PRINTFORML 야수족이 된%カード名前%는 갑자기 생겨난 짐승귀를 신경쓰고있다……
+			ENDIF
+		CASE 비행야수족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%은 제멋대로 날개의 손질을 하고있다
+			ELSE
+				PRINTFORML 비행야수족이 된%カード名前%는 잘 날지 못하고 밸런스를 망가뜨리고 있다……
+			ENDIF
+		CASE 비늘야수족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%가 몸을 움직일때마다 비늘이 반짝반짝하고 호전적으로 빛난다
+			ELSE
+				PRINTFORML 비늘야수족이 된%カード名前%는 갑자기 생겨난 비늘을 신경쓰고있다……
+			ENDIF
+		CASE 악마족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%은 나쁜 꿍꿍이를 하는것처럼 사악한 미소를 보이고있다
+			ELSE
+				PRINTFORML 악마족이 된%カード名前%는 자신도 뭔가 나쁜짓을 해야하는가 생각하고있다……
+			ENDIF
+		CASE 천사족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%의 모습을 신성한 빛이 비추고있다
+			ELSE
+				PRINTFORML 천사족이 된%カード名前%는 자신도 무언가 좋은일을 해야하는가 생각하고있다……
+			ENDIF
+		CASE 곤충족
+			IF 종족変化 == 0
+				IF RAND:2
+					PRINTFORML %カード名前%는 딱딱 하고 턱을 울리고있다
+				ELSE
+					PRINTFORML %カード名前%는 감정을 읽을수 없는 눈동자로 사냥감을 보고있다
+				ENDIF
+			ELSE
+				PRINTFORML 곤충족이 된%カード名前%는 시야의 변화에 곤란해하고있다……
+			ENDIF
+		CASE 원소정령족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%의 몸에서 원소의 오라가 뿜어져나오고있다
+			ELSE
+				PRINTFORML 원소정령족이 된%カード名前%는 원래 몸에서 떨어져나온 몸에 곤란해하고있다……
+			ENDIF
+		CASE 식물족
+			IF 종족変化 == 0
+				IF RAND:2
+					PRINTFORML %カード名前%는 태양빛을 찾아서 몸을 뻗고있다
+				ELSE
+					PRINTFORML %カード名前%의 몸에서 어딘가 진정되는 냄새가 풍겨온다
+				ENDIF
+			ELSE
+				IF RAND:2
+					PRINTFORML 식물족이 된%カード名前%는 태양빛이 기분좋아서 졸려지고있다……
+				ELSE
+					PRINTFORML 식물족이 된%カード名前%는 자신에게서 풍겨오는 꽃냄새에 진정되지 않는것같다……
+				ENDIF
+			ENDIF
+		CASE 사이킥족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%는 힘을 해방할때를 기다리고있다
+			ELSE
+				PRINTFORML 사이킥족이 된%カード名前%는 이상한 힘이 흘러넘치고 있다……
+			ENDIF
+		CASE 사이버스족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%이 몸을 움직이니、홀로그램이 하늘에 그려졌다
+			ELSE
+				PRINTFORML 사이버스족이 된%カード名前%는 정보량에 압도되고있다……
+			ENDIF
+		CASE 바다생물족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%의 움직임에 연동하며 물방울이 튀고있다
+			ELSE
+				IF RAND:2
+					PRINTFORML 바다생물족이 된%カード名前%은 질척질척하게 젖은 몸을 신경쓰고있다……
+				ELSE
+					PRINTFORML 바다생물족이 된%カード名前%는 이 듀얼이 끝나면 바다로 갈까 생각하고있다……
+				ENDIF
+			ENDIF
+		CASE 미확인족
+			IF 종족変化 == 0
+				PRINTFORML %カード名前%는 무언가의 전파를 수신하고있다
+			ELSE
+				PRINTFORML 미확인족이 된%カード名前%는 미지의 지식으로 눈을 돌리고있다……
+			ENDIF
+		CASE 환신야수족
+			; IF 종족変化 == 0
+			 	PRINTFORML %カード名前%는 프레셔를 내뿜고있다！
+			; ELSE
+			; 	PRINTFORML 환신야수족 변화 %カード名前%
+			; ENDIF
+	ENDSELECT
+ELSEIF カード성별 == 牝性 && 発情状態 > 0
+	SETCOLOR C_PINK
+	PRINTFORML 발정한%カード名前%는 꼼지락거리고있다……
+	RESETCOLOR
+ELSEIF カード성별 == 雄性 && 発情状態 > 0
+	SETCOLOR C_PINK
+	PRINTFORML 발정한%カード名前%는 숨을 거칠게 내쉬고있다……
+	RESETCOLOR
+ELSEIF カード성별 == ふたなり && 発情状態 > 0
+	SETCOLOR C_PINK
+	PRINTFORML 발정한%カード名前%는 숨을 거칠게 내쉬고 있다……
+	RESETCOLOR
+ENDIF

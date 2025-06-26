@@ -1,0 +1,124 @@
+﻿@CARDNAME_54012,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스플래시 마법사
+	CASE "略称"
+RESULTS = 스플래시 마법사
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_54012(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1100
+	CASE "守備力"
+		RETURN 1100
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_54012(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件종족 = 사이버스족
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,54012) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_54012(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 사이버스족 몬스터 2체
+PRINTL 이 카드명의 효과는 1턴에 1회밖에 사용할 수 없다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①: 자신 묘지의 링크 몬스터 이외의 사이버스족 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 수비 표시로 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터의 효과는 무효화된다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 사이버스족 몬스터밖에 특수 소환할 수 없다.
+
+@CARDCAN_54012(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54012)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,54012)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 링크以外
+	효과条件종족 = 사이버스족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_54012(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID 
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54012,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 링크以外
+		효과条件종족 = 사이버스족
+		효과추가종류 = 効追無効
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		IF RESULT == 1
+			SS소환可能종족 = 사이버스족
+			CALL CARD_SS_RESTRICTION(듀얼리스트)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,133 @@
+﻿@CARDNAME_30804,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 가짜 이름 《코드네임》 스카라베오
+	CASE "略称"
+RESULTS = 스카라베오
+	CASE "カテゴリ"
+RESULTS:0 = 언노운
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_30804(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RESULT:1 = 드래곤족
+		RETURN 곤충족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2350
+	CASE "守備力"
+		RETURN 2600
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_30804(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時 ,특수소환時 ,ターン開始時)
+PRINTL ①: 자신 스탠바이 페이즈, 또는 이 카드가 소환 / 특수 소환에 성공했을 경우 발동할 수 있다.
+PRINTL 덱 위에서 1장을 자신의 마법 & 함정 존에 발동 불가 상태로 세트한다.
+
+CALLFORM CARD_ABLE(0,지속효과 ,攻守変動)
+PRINTL ②: 이 카드가 필드에 존재하는 한,
+PRINTL 자신의 「제니스」, 「언노운」 몬스터를 소환할 때의 레벨은 4개 줄어든다.
+PRINTL 자신 필드에 뒷면 표시 카드가 4장 이상 존재할 경우 추가로, 자신 필드의 몬스터는 완전 내성을 얻는다.
+
+
+@CARDCAN_30804(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,30804)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	RETURN 1
+
+ELSEIF 종류 == ターン開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_30804(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード_ID
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時 || 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,30804)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,"덱",0,마함行き,4)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件표시 = 20
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT >= 4
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"魔耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"함정耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"モ耐")
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ:0 = 제니스
+	효과条件カテゴリ:1 = 언노운
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"一星",4)
+ENDIF
+
+
+
+

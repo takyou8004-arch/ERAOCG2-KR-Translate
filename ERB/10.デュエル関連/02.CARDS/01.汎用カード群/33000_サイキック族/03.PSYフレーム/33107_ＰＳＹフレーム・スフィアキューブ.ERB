@@ -1,0 +1,170 @@
+﻿@CARDNAME_33107,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = PSI 프레임 스피어 큐브
+	CASE "略称"
+RESULTS = PF 스피어 Q
+	CASE "カテゴリ"
+RESULTS:0 = PSI 프레임
+RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_33107(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_33107(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,필드起動,フリー誘発)
+PRINTL ①: 자신, 상대 턴에 패 / 필드의 이 카드를 릴리스하고 발동할 수 있다.
+PRINTL 패 / 덱 / 묘지에서 「PSI 프레임 서킷」 1장을 자신 필드에 발동한다.
+PRINTL 그 후, 패 / 덱 / 묘지에서 「PSI 프레임 드라이버」 3장을 공개하고, 이하의 효과를 적용할 수 있다.
+PRINTL ● 덱에서 「PSI 프레임」 몬스터 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(2,묘지起動,フリー誘発)
+PRINTL ②: 자신, 상대 턴에 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL EX덱에서 「PSI 프레임」 L 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 몬스터는 특수 소환의 소재로 할 수 없다.
+PRINTL 그 후, 자신 필드에 레벨 6 이상의 「PSI 프레임」 몬스터가 존재할 경우, 이하의 효과를 적용할 수 있다.
+PRINTL ● 자신 필드의 몬스터를 소재로 하여 싱크로 소환을 실행한다.
+
+@CARDCAN_33107(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,33107)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 필드起動 || (종류 == フリー誘発 && GROUPMATCH(ゾーン,"손패","필드"))
+	SIF 발동済_1(듀얼리스트,33107)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+효과条件名前 = PSY 프레임 서킷
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	SIF 발동済_2(듀얼리스트,33107)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = PSY 프레임
+	효과条件종류 = 링크
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_33107(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 손패起動 || 종류 == 필드起動 || (종류 == フリー誘発 && GROUPMATCH(ゾーン,"손패","필드"))
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33107,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+효과条件名前 = PSY 프레임 서킷
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲덱 = 1
+			효과範囲묘지 = 1
+			효과条件カテゴリ = PSY 프레임 드라이버
+			효과条件複数 = 3
+			효과条件任意 = 1
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			SIF RESULT == 9999
+				RETURN 0
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = PSY 프레임
+			SIF 듀얼리스트 != "자신"
+				CALLFORM 효과条件レベル_ADV(4,"以下")
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33107,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = PSY 프레임
+		효과条件종류 = 링크
+		효과추가종류 = 24
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ = PSY 프레임
+			CALLFORM 효과条件レベル_ADV(6,"以上")
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 1
+				RETURN 0
+			CALL FULLRESET
+			효과条件종류 = 싱크로
+			효과条件소환可 = 1
+			효과条件任意 = 1
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+				CALL SYNSUMMON(듀얼리스트, 選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

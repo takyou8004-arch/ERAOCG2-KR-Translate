@@ -1,0 +1,144 @@
+﻿@CARDNAME_21020,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 해피의 애완 드래곤
+	CASE "略称"
+		RESULTS = 해피즈펫
+	CASE "カテゴリ"
+		RESULTS:0 = 해피
+ENDSELECT
+
+
+@CARD_21020(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21020(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의  ①③의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：자신 필드에 레벨 ６이하의 바람 속성 몬스터가 존재하는 경우에 발동할 수 있다。
+PRINTL 이 카드를 패에서 수비 표시로 특수 소환한다。
+CALLFORM CARD_ABLE(2,지속효과)
+PRINTL ②：자신 몬스터 존에 레벨 ６이하의 "해피" 몬스터가 존재하는 한、
+PRINTL 이 카드는 공격유도를 갖는다。
+CALLFORM CARD_ABLE(3,戦破壊→묘지)
+PRINTL ③：이 카드가 필드에서 묘지로 보내진 경우에 발동할 수 있다。
+PRINTL 덱에서 비행야수족 / 바람 속성 몬스터 １장을 묘지로 보낸다。
+
+
+@CARDCAN_21020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21020)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,21020)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,21020,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 바람속성
+	CALL 효과条件レベル_ADV(6, "以下")	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 해피
+	CALL 효과条件レベル_ADV(6, "以下")	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,21020)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 비행야수족
+	효과条件속성 = 바람속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_21020(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21020,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所,"守備표시")
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"攻誘")
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21020,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종족 = 비행야수족
+		효과条件속성 = 바람속성
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF

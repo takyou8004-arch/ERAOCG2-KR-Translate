@@ -1,0 +1,146 @@
+﻿@CARDNAME_28140,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 쌍극의 파계신
+	CASE "略称"
+RESULTS = 쌍극의 파계신
+	CASE "カテゴリ"
+RESULTS:0 = 파계
+ENDSELECT
+
+
+@CARD_28140(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 1500
+	CASE "특수制限"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28140(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신은 「쌍극의 파계신」을 1턴에 1번밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①：자신 필드의 카드가 전투 효과로 파계되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(0,특수소환時)
+PRINTL ②：이 카드가 특수소환했을 경우, 손패를 1장 버리고 발동할 수 있다.
+PRINTL 필드의 카드 1장을 파계한다.
+CALLFORM CARD_ABLE(0,破壊→묘지 ,戦闘→묘지)
+PRINTL ③：필드의 이 카드가 파계되어 묘지로 보내진 턴의 엔드 페이즈에 발동할 수 있다.
+PRINTL 「쌍극의 파계신」 1장을 묘지에서 특수 소환한다.
+PRINTL 이 효과로 특수소환한 카드는, 필드에서 벗어났을 경우에 제외된다.
+
+@CARDCAN_28140(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28140)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF !GROUPMATCH(ゾーン,"손패")
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,28140,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	SIF 손패数(듀얼리스트) == 0
+		RETURN 0
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28140(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28140)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28140)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)		
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場単体",場所,"묘지")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28140)
+	IF RESULT == 0
+		CALL CARD_RESERV(듀얼리스트,28140)
+	ENDIF
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件名前 = 쌍극의 파계신
+	효과추가종류 = 効追除処
+	CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+ENDIF
+
+
+

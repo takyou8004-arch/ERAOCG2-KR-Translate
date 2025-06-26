@@ -1,0 +1,132 @@
+﻿@CARDNAME_24059,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성휘병 펜로즈 게이트
+	CASE "略称"
+RESULTS = 펜로즈 게이트
+	CASE "カテゴリ"
+RESULTS:0 = 성휘병
+RESULTS:1 = 링크 조커
+RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_24059(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24059(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,제외時)
+PRINTL ①: 이 카드가 제외되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에 넣는다.
+PRINTL 그 후, 자신의 덱 위에서 카드 7장을 넘긴다. 그 중에서 빛 속성 「성휘병」 몬스터 1장을 선택하여 패에 넣을 수 있다.
+PRINTL 남은 카드는 덱으로 되돌린다.
+
+
+@CARDCAN_24059(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24059)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 제외時
+	SIF 발동済_1(듀얼리스트,24059)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_24059(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 条件カード数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件표시 = 3
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"攻避",3)
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 裏側표시
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	条件カード数 = RESULT
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT <= 0  && 条件カード数 >= 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直攻")
+		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ半化",1,1)
+	ENDIF
+ELSEIF 종류 == 제외時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24059,1)
+	IF RESULT == 0
+		CALL FULLRESET
+효과条件名前 = 성휘병 펜로즈
+		CALL CARD_ADD_BASIC(듀얼리스트,"제외",ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 성휘병
+		효과条件속성 = 빛속성
+		효과条件任意 = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,7)
+	ENDIF
+ENDIF
+
+
+

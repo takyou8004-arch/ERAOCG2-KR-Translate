@@ -1,0 +1,133 @@
+﻿@CARDNAME_24534,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초중무사 텐B-N
+	CASE "略称"
+RESULTS = 텐BN
+	CASE "カテゴリ"
+RESULTS:0 = 초중무사
+ENDSELECT
+
+
+@CARD_24534(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 효과モン
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 1800
+
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24534(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 상대 필드에 몬스터가 2장 이상 존재할 경우, 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ②: 이 카드가 소환 / 특수 소환했을 경우,
+PRINTL 「초중무사 텐B-N」 이외의 자신 묘지의 레벨 4 이하의 「초중무사」 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터를 수비 표시로 특수 소환한다.
+
+
+@CARDCAN_24534(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24534)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24534,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件CNT = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+    SIF 발동済_1(듀얼리스트,24534)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 초중무사
+	효과条件固名前 = 초중무사 텐B-N
+	CALL 효과条件レベル_ADV(4,"以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+
+ENDIF
+
+
+@CARDEFFECT_24534(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24534)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24534,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+	    효과条件カテゴリ = 초중무사
+	    효과条件固名前 = 초중무사 텐B-N
+		CALL 효과条件レベル_ADV(4,"以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+

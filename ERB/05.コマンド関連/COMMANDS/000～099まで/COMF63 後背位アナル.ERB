@@ -1,0 +1,314 @@
+﻿;-------------------------------------------------
+;후배위애널
+;식스계커맨드、レベル1
+;-------------------------------------------------
+@COM63
+;-------------------------------------------------
+;특수파생処理
+;-------------------------------------------------
+;前回の조교が3Pのとき3Pへ
+IF PREVCOM == 71
+	CALL COM_ABLE71
+	SIF RESULT
+		JUMP COM71
+ENDIF
+;침대がないと立位に
+SIF !BEDROOM(CFLAG:MASTER:현재위치)
+	TFLAG:SELECTCOM분기 = 1
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+TCVAR:MASTER:사정대상캐릭터_1 = TARGET
+TCVAR:MASTER:사정부위플래그 = 2
+TCVAR:MASTER:사정쾌락강도 = 2000
+
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 80
+DOWNBASE:기력 += 120
+
+CALL SOURCE_CALC_쾌Ａ(TARGET, MASTER, 400)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 80)
+SIF TFLAG:SELECTCOM분기
+	CALL SOURCE_CALC_노출(TARGET, MASTER, 100)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 100)
+
+;고통
+LOCAL = 800 * PAIN_CHECK_A(TARGET) / 1000
+CALL SOURCE_CALC_고통(TARGET, MASTER, LOCAL)
+
+;파과血、촉수の汚れ
+IF (STAIN:MASTER:0 & 32) || (STAIN:MASTER:0 & 64)
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 400)
+;愛液、정액汚れ
+ELSEIF (STAIN:MASTER:0 & 1) || (STAIN:MASTER:0 & 4)
+	CALL SOURCE_CALC_불결(TARGET, MASTER, 200)
+ENDIF
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;사정に관계なく行われる処理はここから
+;奴隷のＡ⇔조교者のＰの汚れが이동
+STAIN:MASTER:2 |= STAIN:4
+STAIN:MASTER:2 |= STAIN:7
+STAIN:4 |= STAIN:MASTER:2
+STAIN:7 |= STAIN:MASTER:2
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+EXP:Ａ경험 ++
+EXP:Ａ성교경험 ++
+CFLAG:TARGET:엉덩이성장 ++
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 4
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 4
+ENDIF
+
+
+;애정경험
+SIF !ASSIPLAY
+EXP:애정경험 += TALENT:연모
+
+RETURN 1
+
+@CAN_COM63(ARG)
+#DIM DYNAMIC 素質確認
+#DIM DYNAMIC 판정値
+#DIM DYNAMIC 汚れ値
+#DIM DYNAMIC 実行値
+;-------------------------------------------------
+;実行판정処理
+;-------------------------------------------------
+;밧줄で縛られている場合は無視（밧줄が無い時のみ実行판정を行う）
+IF !TEQUIP:19
+	SKIPDISP ARG
+	IF !BEDROOM(CFLAG:MASTER:현재위치)
+		PRINTL 배면입위 애널
+	ELSE
+		PRINTL 후배위 애널
+	ENDIF
+
+	;すべての命令に共通の要素を考慮
+	;(순종が高いと命令に従いやすいなど)
+	CALL COM_ORDER
+	素質確認 = RESULT:1
+	판정値 += RESULT
+	;ABL:욕망
+	IF ABL:욕망
+		SIF 素質確認
+			PRINT  + 
+		판정値 += ABL:욕망 * 3
+		PRINT 욕망
+		PRINTV 'LV,ABL:욕망,'(,ABL:욕망 * 3,')
+		素質確認 = 1
+	ENDIF
+	;ABL:Ａ감각
+	IF ABL:Ａ감각
+		SIF 素質確認
+			PRINT  + 
+		판정値 += ABL:Ａ감각 * 2
+		PRINT Ａ감각
+		PRINTV 'LV,ABL:Ａ감각,'(,ABL:Ｖ감각 * 2,')
+		素質確認 = 1
+	ENDIF
+	;쾌락각인
+	IF MARK:쾌락각인
+		SIF 素質確認
+			PRINT  + 
+		판정値 += MARK:쾌락각인 * 3
+		PRINT 쾌락각인
+		PRINTV 'LV,MARK:쾌락각인,'(,MARK:쾌락각인 * 3,')
+		素質確認 = 1
+	ENDIF
+	;PALAM:윤활（の不足）
+	IF PALAM:윤활 < PALAMLV:3
+		PRINT  - 
+		판정値 -= 5
+		PRINT 윤활부족
+		PRINTV '(,5,')
+		素質確認 = 1
+	ENDIF
+	;PALAM:욕정
+	IF GETPALAMLV(PALAM:욕정,5)
+		SIF 素質確認
+			PRINT  + 
+		판정値 += GETPALAMLV(PALAM:욕정,5) * 3
+		PRINT 욕정
+		PRINTV 'LV,GETPALAMLV(PALAM:욕정,5),'(,GETPALAMLV(PALAM:욕정,5) * 3,')
+		素質確認 = 1
+	ENDIF
+	;부끄럼쟁이
+	IF TALENT:수치심 > 0
+		PRINT  - 
+		판정値 -= 2
+		PRINT 부끄러움
+		PRINTV '(,2,')
+		素質確認 = 1
+	ENDIF
+	;쾌감의 부정
+	IF TALENT:쾌감반응 < 0 && !TALENT:음란
+		PRINT  - 
+		판정値 -= 5
+		PRINT 쾌감의 부정
+		PRINTV '(,5,')
+		素質確認 = 1
+	ENDIF
+	;男嫌い（연모、친애で無効）
+	IF TALENT:성별기호 & 1 && !(TALENT:MASTER:성별 & 1) && (!TALENT:연모 || MASTER != MASTER)
+		PRINT  - 
+		판정値 -= 12
+		PRINT 남성혐오
+		PRINTV '(,12,')
+		素質確認 = 1
+	ENDIF
+	;음란
+	IF TALENT:음란
+		SIF 素質確認
+			PRINT  + 
+		판정値 += 15
+		PRINT 음란
+		PRINTV '(,15,')
+		素質確認 = 1
+	ENDIF
+	;쾌락광
+	IF TALENT:음란 > 1
+		SIF 素質確認
+			PRINT  + 
+		판정値 += 20
+		PRINT 쾌락광
+		PRINTV '(,20,')
+		S = 20
+	ENDIF
+	;A경험
+	IF EXP:Ａ경험 < EXPLV:2
+		PRINT  - 
+		판정値 -= 30
+		PRINT Ａ경험부족
+		PRINTV '(,30,')
+		素質確認 = 1
+	ENDIF
+
+	;조교者が후타나리
+	IF (TALENT:MASTER:성별 & 3) == 3
+		SIF 素質確認
+			PRINT  + 
+		판정値 += 4
+		PRINT 후타나리
+		PRINTV '(,4,')
+		素質確認 = 1
+	ENDIF
+
+	;미약
+	IF TEQUIP:미약
+		SIF 素質確認
+			PRINT  + 
+		판정値 += 6
+		PRINT 미약
+		PRINTV '(,6,')
+		素質確認 = 1
+	ENDIF
+
+	
+	;愛液の汚れ
+	SIF STAIN:MASTER:2 & 1
+		汚れ値 += 1
+	;정액の汚れ
+	SIF STAIN:MASTER:2 & 4
+		汚れ値 += 3
+	;애널の汚れ
+	SIF STAIN:MASTER:2 & 8
+		汚れ値 += 7
+	SIF STAIN:MASTER:2 & 16
+		汚れ値 += 15
+	汚れ値 = 汚れ値 * (2 - TALENT:악취내성) / 2
+
+	;더러움있음
+	IF 汚れ値
+ 		PRINT  - 
+		판정値 -= 汚れ値
+		PRINT 더러움 있음
+		;악취둔감
+		IF TALENT:악취내성 > 0
+			PRINT 、악취둔감
+		ELSEIF TALENT:악취내성 < 0
+			PRINT 、악취민감
+		ENDIF
+		PRINTV '(,汚れ値,')
+		素質確認 = 1
+	ENDIF
+
+	;合計を표시(32以上で実行)
+	PRINT  = 
+	PRINTV 판정値
+
+	実行値 = 32
+	SIF 판정値 < 実行値
+		PRINT  < 
+	SIF 판정値 == 実行値
+		PRINT  = 
+	SIF 판정値 > 実行値
+		PRINT  > 
+	PRINT 실행치
+	PRINTV 実行値
+
+	WAIT
+	SKIPDISP 0
+	;実行できない
+	SIF 판정値 < 実行値
+		RETURN 0
+ENDIF
+RETURN 1
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+
+@COM_ABLE63
+;후배위애널実行판정
+SIF !TFLAG:100
+	RETURN 0
+SIF GLOBAL_COMABLE(63)
+	RETURN RESULT
+;조교者がオトコ、半人半妖、후타나리の場合はある程度발기してないとダメ
+SIF (TALENT:MASTER:성별 & 2) && BASE:MASTER:발기 < 1000
+	RETURN 0
+;애널바이브 삽입중はダメ
+SIF TEQUIP:14
+	RETURN 0
+;애널비즈사용중は불가
+SIF TEQUIP:15
+	RETURN 0
+;普通の관장사용중は불가
+SIF TEQUIP:21
+	RETURN 0
+;バルーン사용중は불가
+SIF TEQUIP:22
+	RETURN 0
+;電極사용중は불가
+SIF TEQUIP:23
+	RETURN 0
+;一定のＡ경험が必要
+SIF EXP:2 < EXPLV:3
+	RETURN 0
+;体格差がある場合は主人が금단의지식持ちじゃないとダメ
+SIF ABS(TALENT:체형 - TALENT:MASTER:체형) > 2 && !TALENT:MASTER:금단의지식
+	RETURN 0
+;조교者がオトコ、半人半妖、후타나리、もしくは페니스バンドがないとダメ
+SIF !(TALENT:MASTER:성별 & 2)  && ITEM:PBAND == 0
+	RETURN 0
+
+;하반신착의
+SIF TEQUIP:0 & 4
+	RETURN 0
+;목욕탕플레이 중は플레이매트が無いとダメ
+IF TEQUIP:목욕탕플레이
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ENDIF
+;대면좌위からはダメ
+SIF TEQUIP:체위 == 4
+	RETURN 0
+RETURN 1

@@ -1,0 +1,236 @@
+
+@IRAI_DUEL_INTRO_393
+#DIM DYNAMIC カウンタ
+;듀얼前に「詰め플래그」に1を설정し、最初の5ドローをスキップ
+;ターン跨いで処理したいので、듀얼が始まったら詰め플래그をリセット
+詰め플래그 = 0
+
+;詰め플래그でスキップしてしまった初期化
+CALL CARD_LOADUP
+
+;必要に応じて、ターンプレイヤーを변경(ここで자신にすると、상대のターンになる)
+;ターンプレイヤー = 자신
+
+;1以上の値を入れると、1한번만 ドローがスキップされる
+SETVAR @"자신_ドロースキップ", 1
+SETVAR @"상대_ドロースキップ", 1
+
+;SETVAR @"자신_バトルスキップ", 1
+SETVAR @"상대_メインスキップ", 1
+
+;필드의 情報を설정
+SETVAR @"자신_魔_所有:2", 1;자신의 カード
+SETVAR @"자신_魔_表:2", 1;表
+SETVAR @"자신_마함:2",279555;発情제어
+SETVAR @"자신_魔_個Ｃ:2",1 ;카운터を1個乗せる
+SETVAR @"자신_魔_破耐:2",2
+SETVAR @"자신_魔_対耐:2",2
+
+SETVAR @"상대_MZ_所有:2", 2;상대のカード
+SETVAR @"상대_MZ_表:2", 1;表
+SETVAR @"상대_필드:2",57830;ミュートリアス
+SETVAR @"상대_MZ_無効:2",57830;ミュートリアス
+
+;자신의 패
+SETVAR @"자신_손패:0", 99553;インポート
+SETVAR @"자신_손패:1", 1381;プティカ
+
+;자신의 덱
+SETVAR @"자신_덱:0", 79555;호루스타인ミルクファーム
+SETVAR @"자신_덱:1", 61371;蟲惑への誘い(호루스타인コスト用)
+SETVAR @"자신_덱:2", 79558;지유
+SETVAR @"자신_덱:3", 1372;トリオン
+SETVAR @"자신_덱:4", 1373;カズーラ
+SETVAR @"자신_덱:5", 1374;アトラ
+SETVAR @"자신_덱:6", 1375;ティオ
+SETVAR @"자신_덱:7", 1376;ランカ
+SETVAR @"자신_덱:8", 1378;リセ
+SETVAR @"자신_덱:9", 1379;ジーナ
+SETVAR @"자신_덱:10", 1382;キノ
+SETVAR @"자신_덱:11", 1383;ホールティア
+
+;자신의 묘지
+;SETVAR @"자신_묘지:0", 23063;混沌の使者(エンドフェイズ時、빛속성と어둠속성を제외하고 패에 加える)
+;SETVAR @"자신_묘지:1", 23962;어둠・サキュバスナイト
+;SETVAR @"자신_묘지:2", 11607;光・クイーズナイト
+
+;상대の덱：引いても使えない札
+SETVAR @"상대_덱:0", 41813;의식ガストクラーケ
+SETVAR @"상대_덱:1", 41813
+SETVAR @"상대_덱:2", 41813
+SETVAR @"상대_덱:3", 41813
+
+ライフ_상대 = 3000
+
+@IRAI_DECK_393(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+SIF 듀얼리스트 == "자신"
+	;ダミー덱
+	RETURN 20393
+SIF 듀얼리스트 == "상대"
+	;ダミー덱
+	RETURN 20393
+RETURN 0
+
+;ダミー덱
+@DUELDECK_20393(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+SETVAR @"%듀얼리스트%_덱:POOL_COUNT(1)", 24270
+;SETVAR @"%듀얼리스트%_덱:POOL_COUNT(0)", 24270
+
+;융합
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(1)", 41000;룡BMG
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 2055;ハスキー
+;싱크로
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 11870;신子イヴ
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 41390;ロ-ズマリー
+;엑시즈
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 41816;翠기사カーム
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 42103;엑소시스터ジブリーヌ
+;링크
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 2002;カメリア
+SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", 1631;アポロウーサ
+
+
+;勝利条件の설정、ここで詰めデュエルの勝利条件を설치할 수 있다。
+@IRAI_DUEL_CONDVIC_393
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+VARSET RESULT
+
+듀얼리스트 = 자신
+対面者 = 상대
+
+;상대のLPを0にしたらクリア
+
+SIF ライフ_상대 == 0
+	RETURN 1
+
+IF メインフェイズ == 1
+;패에 プティカとインポートあり
+	CALL FULLRESET
+	효과範囲손패 = 1
+	;효과条件ID:0 = 99553
+	;효과条件ID:1 = 1381
+	효과条件종류:0 = 효과モン
+	효과条件종류:1 = 通常함정
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 2
+		RETURN 2
+;필드에 プティカあり
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件ID = 1381
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 3
+;패에 지유登録あり
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件ID = 79558
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 5
+;場に지유암소あり
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과元カードID = 179558
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 6
+;패 / 필드에 ミルクファームあり
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲마함 = 1
+	효과条件ID = 79555
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 4
+ELSEIF バトルフェイズ == 1
+
+;バトルフェイズ(상대필드의 몬스터 あり)
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 7
+
+;상대 필드에 モンスターなし
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 0
+		RETURN 8
+ELSE
+	RETURN -1
+ENDIF
+
+RETURN 0
+
+;メッセージの설정
+@IRAI_DUEL_MESSAGE_393(存在確認)
+#DIM DYNAMIC 存在確認
+VARSET RESULT
+
+IF 存在確認 == 1
+	RETURN 1
+ENDIF
+
+;リアクション
+CALL IRAI_DUEL_CONDVIC_393
+
+SELECTCASE RESULT
+
+CASE 1
+	;デュエルクリア！
+	PRINTFORML お疲れ様！
+	PRINTFORML 「勝利条件달성」を押せば終了するよ！
+
+;1ターン目
+CASE 2
+	;패에 プティカとインポートがある
+	PRINTFORML 今回は상대のLPを0にするのが勝利条件だ。
+	PRINTFORML まずはプティカを소환し「蟲惑への誘い」を패에 加えよう。ここでサーチした 카드는 「ミルクファーム」のコストにするよ。
+CASE 3
+	;필드에 プティカあり
+	PRINTFORML 「インポート」でプティカを패로 되돌리고、「ミルクファーム」を패에 加えよう。
+	PRINTFORML 
+	PRINTFORML 「インポート」は 함정 카드 だが…「호루스타인」通常함정は마법함정존에 セット카드가 존재하지 않을 경우、패에서 발동することも할 수 있다。
+CASE 4
+	;패 / 필드에 ミルクファームあり
+	PRINTFORML 「ミルクファーム」を발동し、フィールドで更に효과를 발동しよう。
+	PRINTFORML 「ミルクファーム」は패에서 마법카드를 捨てれば、「호루스타인」通常마법を패에 加えることが할 수 있다。
+	PRINTFORML 
+	PRINTFORML 패의 「蟲惑への誘い」を버리고、호루스타인通常마법「암소등록【지유】」を패에 加えよう。
+CASE 5
+	;패에 지유登録あり
+	PRINTFORML さっそく「암소등록【지유】」を使ってみよう。
+	PRINTFORML 【지유】に登録されたモンスターは巨乳に…、元々巨乳以上の場合は更に一段階大きくなるよ。
+	PRINTFORML 
+	PRINTFORML 덱内の好きな몬스터를 대상으로 하고 みよう。
+CASE 6
+	;場に지유암소あり
+	PRINTFORML 【지유】に登録された몬스터의 攻守は1500に近いほど高くなるよ。원래의 공격력이 1000なら2000、1500なら3000、1600なら2800…って感じだね。
+	PRINTFORML 현재의 乳の大きさが気になるなら【지유】의 효과를 발동すれば確認できるよ。問題無ければ배틀 페이즈에 入ろう。
+CASE 7
+	;バトルフェイズ(상대の有無で판정)
+	PRINTFORML 효과를 발동し【지유】の乳を搾ろう。搾ったら攻撃だ！
+CASE 8
+	;상대 필드에 モンスターなし
+	PRINTFORML 【지유】は攻撃を中断した時、공격 대상의 몬스터의 コントロールを得ることが할 수 있다。
+	PRINTFORML 
+	PRINTFORML このまま奪ったモンスターで상대のLPを0にしよう！
+CASEELSE
+	PRINTFORML あっ、失敗したな？と思ったら「降参する」から、やり直しが出来るよ。…まぁ気軽にね。
+
+ENDSELECT

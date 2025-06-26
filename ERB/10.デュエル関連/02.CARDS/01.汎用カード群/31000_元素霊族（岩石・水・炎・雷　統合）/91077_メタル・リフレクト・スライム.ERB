@@ -1,0 +1,97 @@
+﻿@CARDNAME_91077,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 메탈 리플렉트 슬라임
+	CASE "略称"
+RESULTS = 메탈 R 슬라임
+	CASE "カテゴリ"
+RESULTS:0 = 슬라임
+ENDSELECT
+
+
+@CARD_91077(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 3000
+	CASE "分割"
+		RETURN 효과なし
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91077(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ①: 이 카드는 발동 후, 효과 몬스터(물족 물 속성 레벨 10 공격력 0 / 수비력 3000)가 되어,
+PRINTL 몬스터 존에 수비 표시로 특수 소환한다. 이 카드는 함정 카드로서도 취급한다.
+CALLFORM CARD_ABLE(0,지속효과)
+;PRINTL ②：이 카드의 효과で특수소환されたこのカードは攻撃할 수 없다。 
+PRINTL ②: 이 카드는 공격할 수 없다.
+
+
+@CARDCAN_91077(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91077)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,91077)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,91077,"마함")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_91077(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91077,1)
+	IF RESULT == 0
+		CALL FULLRESET		
+		CALL CARD_SP_SUMMON(듀얼리스트, "마함", 場所, "守備표시")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+ENDIF
+

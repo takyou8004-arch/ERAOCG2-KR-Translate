@@ -1,0 +1,209 @@
+﻿@CARDNAME_79635,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 봉사거래
+	CASE "略称"
+RESULTS = 봉사거래
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79635(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+	CASE "추가日"
+		RETURN 250429
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79635(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,발동誘発)
+PRINTFORML ①： %CALLNAME:MASTER%이 마법 / 함정 / 몬스터의 효과를 발동했을 때 발동할 수 있다。
+PRINTFORML %CALLNAME:MASTER%에게 봉사하는것으로、그 효과를 무효로하고 파괴하게 할 수 있다。
+;상대の♀の使用しか想定してない。他の使い方したい人は加筆修正して♡
+PRINTL (상대 전용)
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79635(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 使用率
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79635)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,79635)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_EROTICS(상대プレイヤー)
+	SIF RESULT == -1
+		RETURN 0
+	조교대상 = RESULT
+	;ABLで使用率アップ！
+	使用率 += ABL:(조교대상):욕망
+	使用率 += ABL:(조교대상):순종
+	使用率 += ABL:(조교대상):봉사정신
+	CALL 対面者판정(듀얼리스트)
+	対面者 = %RESULTS%
+	;不利だと使用率アップ！
+	SIF GETVAR(@"ライフ_%듀얼리스트%") < GETVAR(@"ライフ_%対面者%") 
+		使用率 += 4
+	SIF モンスター数(듀얼리스트) < モンスター数(対面者)
+		使用率 += 4
+	SIF 손패数(듀얼리스트) < 손패数(対面者)
+		使用率 += 4
+	SIF 마함数(듀얼리스트) < 마함数(対面者)
+		使用率 += 4
+	SIF RAND:20 > 使用率
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79635(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 속성数
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 承諾率
+#DIM DYNAMIC 절정数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79635,1)
+	IF RESULT == 0
+		CALL CARD_EROTICS(상대プレイヤー,対面者)
+		IF RESULT != -1 
+			조교대상 = RESULT
+			PRINTFORML 
+			SETCOLOR C_PINK 
+			IF TALENT:조교대상:성별 != 2
+				PRINTFORM %NAME:조교대상%는
+				IF TALENT:조교대상:연모 || TALENT:조교대상:음란 || TALENT:조교대상:즉시타락 == 2
+					SELECTCASE RAND:2
+						CASE 0
+							PRINT 얼굴을 붉게 물들이며
+						CASE 1
+							PRINT 눈을 치켜뜨고 이쪽을 바라보며
+					ENDSELECT
+				ELSE
+					SELECTCASE RAND:2
+						CASE 0
+							PRINT 분한듯이
+						CASE 1
+							PRINT 마지못해
+					ENDSELECT
+				ENDIF
+				PRINTFORMW 무릎을 꿇어、 %CALLNAME:MASTER%에게 효과를 무효로 해달라고 부탁했다。
+				SIF TALENT:조교대상:연모 || TALENT:조교대상:음란 || TALENT:조교대상:즉시타락 == 2
+					承諾率 += 20
+				;ABLで承諾率アップ！
+				承諾率 += ABL:(조교대상):욕망
+				承諾率 += ABL:(조교대상):순종
+				承諾率 += ABL:(조교대상):봉사정신
+				;不利だと承諾率アップ！
+				SIF GETVAR(@"ライフ_%듀얼리스트%") < GETVAR(@"ライフ_%対面者%") 
+					承諾率 += 4
+				SIF モンスター数(듀얼리스트) < モンスター数(対面者)
+					承諾率 += 4
+				SIF 손패数(듀얼리스트) < 손패数(対面者)
+					承諾率 += 4
+				SIF 마함数(듀얼리스트) < 마함数(対面者)
+					承諾率 += 4
+				$INPUT_LOOP
+				RESETCOLOR
+				PRINTFORML 무엇을 요구하시겠습니까？
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML [0] - 파이즈리를 요구
+				PRINTFORML [1] - 펠라치오를 요구
+				PRINTFORML [2] - 기승위를 요구
+				BINPUT
+				SETCOLOR C_PINK 
+				IF RESULT == 0
+					IF RAND:10 < 承諾率
+						PRINTFORML %NAME:조교대상%는 파이즈리로 봉사하는것을 승낙했다…
+						CALL EROTIC_MOVE("파이즈리",조교대상,MASTER,150)
+					ELSE
+						GOTO DENY
+					ENDIF
+				ELSEIF RESULT == 1
+					IF RAND:15 < 承諾率
+						PRINTFORML %NAME:조교대상%는 펠라치오로 봉사하는것을 승낙했다…
+						CALL EROTIC_MOVE("フェラチオ",조교대상,MASTER,150)
+					ELSE
+						GOTO DENY
+					ENDIF
+				ELSEIF RESULT == 2
+					IF RAND:20 < 承諾率
+						PRINTFORML %NAME:조교대상%는 기승위로 봉사하는거승ㄹ 승낙했다…
+						CALL EROTIC_MOVE("騎乗位",조교대상,MASTER,150)
+					ELSE
+						GOTO DENY
+					ENDIF
+				ELSE
+					GOTO INPUT_LOOP
+				ENDIF
+				절정数 = RESULT:2
+				IF 절정数 > 0
+					PRINTFORMW %CALLNAME:MASTER%를 봉사로 만족시킨것으로、계약에 의해 효과는 무효가 되었다。
+					CALL FULLRESET
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+				ELSE
+					PRINTFORMW 아직 만족하지 않은 %CALLNAME:MASTER%는、봉사를 지속시킨다…
+					承諾率 += 5
+					GOTO INPUT_LOOP
+				ENDIF
+				RESETCOLOR
+				
+				RETURN 1
+
+				$DENY
+				PRINTFORMW %NAME:조교대상%는 그런건 할수 없다며 거래를 그만두었다。
+				RESETCOLOR
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,101 @@
+﻿@CARDNAME_72134,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 빙고 머신 고! 고!
+	CASE "略称"
+RESULTS = 빙고 머신
+	CASE "カテゴリ"
+RESULTS:0 = 푸른 눈의 백룡
+ENDSELECT
+
+
+@CARD_72134(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_72134(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①: 덱에서 "푸른 눈의" 몬스터나 이 카드명 이외의 "푸른 눈의 백룡" 마법 / 함정 카드를
+PRINTL 합계 3장을 고르고 상대에게 보여준 후, 그 중에서 무작위로 1장을 고른다.
+PRINTL 그 1장을 자신의 패에 넣고, 나머지를 덱으로 되돌린다.
+
+
+@CARDCAN_72134(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72134)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,72134)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件スーパーカテゴリ = 푸른 눈의
+	효과条件スーパー종류 = モン全般
+	효과条件カテゴリ = 푸른 눈의 백룡
+	효과条件종류 = 마함全般
+	효과条件固名前 = 빙고 머신 고! 고!
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72134(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード,5
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72134,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件スーパーカテゴリ = 푸른 눈의
+		효과条件スーパー종류 = モン全般
+		효과条件カテゴリ = 푸른 눈의 백룡
+		효과条件종류 = 마함全般
+		효과条件固名前 = 빙고 머신 고! 고!
+		효과条件複数 = 3
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "덱",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード:0 = RESULT:0
+			選択カード:1 = RESULT:1
+			選択カード:2 = RESULT:2
+			IF 選択カード != 9999
+PRINTL 얼티밋 빙고 스타트!
+				CALL CARD_ADD(듀얼리스트, "덱", "손패", 選択カード:(RAND:3))
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

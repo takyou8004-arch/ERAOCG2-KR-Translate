@@ -1,0 +1,128 @@
+﻿@CARDNAME_61606,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 흔들리는 눈빛
+	CASE "略称"
+RESULTS = 흔들리는 눈빛
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_61606(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61606(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動 ,손패起動 ,フリー誘発)
+PRINTL ①: 서로의 마법 & 함정 존의 앞면 표시 카드 수에 따라 이하의 효과를 적용하고,
+PRINTL 그 후 서로의 마법 & 함정 존의 앞면 표시 카드를 전부 파괴한다.
+PRINTL ●1장 이상: 상대에게 500 데미지를 준다.
+PRINTL ●2장 이상: 덱에서 P 카드 1장을 패에 추가할 수 있다.
+PRINTL ●3장 이상: 상대 필드의 카드 1장을 선택하여 제외할 수 있다.
+PRINTL ●4장 이상: 덱에서 "흔들리는 눈빛" 1장을 패에 추가할 수 있다.
+
+@CARDCAN_61606(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61606)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_61606(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 全마법함정
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61606)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과範囲상대마함 = 1
+		효과条件표시 = 表側표시
+		효과条件CNT = 1		
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		全마법함정 = RESULT
+		IF 全마법함정 >= 1
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",800,1)
+		ENDIF
+		IF 全마법함정 >= 2
+			CALL FULLRESET
+			효과条件分割 = 펜듈럼
+			효과条件종류 = モン全般
+			효과条件任意 = 1
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+		IF 全마법함정 >= 3
+			CALL FULLRESET
+			효과条件任意 = 1
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"제외")
+		ENDIF
+		IF 全마법함정 >= 4
+			CALL FULLRESET
+효과条件名前 = 흔들리는 눈빛
+			효과条件任意 = 1
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両마함全体",場所,"묘지")
+	ENDIF
+ENDIF
+

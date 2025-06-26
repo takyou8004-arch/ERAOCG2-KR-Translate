@@ -1,0 +1,118 @@
+﻿@CARDNAME_71923,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 죄를 품은 모르가나이트
+	CASE "略称"
+		RESULTS = 죄를 쏟는 어둠
+	CASE "カテゴリ"
+		RESULTS:0 = 모르가나이트
+ENDSELECT
+
+
+@CARD_71923(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250427
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71923(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①：이 듀얼 중, 이하의 효과를 각각 적용한다.。
+PRINTL ●자신은 패의 몬스터의 효과를 발동할 수 없다。
+PRINTL ●자신은 레벨 5 이상의 몬스터를 일반 소환할 경우에 필요한 릴리스를 없앨 수 있다。
+PRINTL ●자신은 카드의 효과 지불하거나 잃는 LP는 0이 된다 。
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ②：묘지의 이 카드를 제외하고 발동할 수 있다。
+PRINTL 패의 "모르가나이트」 카드 1장을 덱의 맨 아래로 되돌린다 。
+PRINTL 그 후, 자신은 1장 드로우 한다。
+
+
+
+@CARDCAN_71923(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71923)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_D1(듀얼리스트,71923)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 永紋章起動
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 모르가나이트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71923(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71923,20)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL SET_PLAYER_INFO(듀얼리스트,"逆魔香효과",2)
+		CALL CARD_RESERV(듀얼리스트,71923,永紋章予約)
+		CALL SET_PLAYER_INFO(듀얼리스트,"コスト無効",2)
+		CALL CARD_EFFECT_D1USE(듀얼리스트,71923)
+	ENDIF
+ELSEIF 종류 == 永紋章起動
+	CALL FULLRESET
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"一星",99)
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71923)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 모르가나이트
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,258 @@
+﻿@CARDNAME_73902,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 천정과 정체와 수정의 결단
+	CASE "略称"
+RESULTS = 퍼펙트 제니스
+	CASE "カテゴリ"
+RESULTS:0 = 제니스
+RESULTS:1 = 세레스
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_73902(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73902(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장만 발동할 수 있다.
+PRINTL 자신의 메인 페이즈에 뒷면 표시의 카드를 1장 묘지로 보내거나, 자신의 「제니스」 몬스터의 공격 선언시에 발동할 수 있다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,攻撃時誘発)
+PRINTL ①: 다음 효과 중에서 1개를 선택하여 적용한다.
+PRINTL (자신 필드에 「제니스」 몬스터나 「언노운」 몬스터가 존재할 경우, 다음 효과 중에서 한 번 더 선택하여 적용한다. (동일한 것을 선택해도 좋다))
+PRINTL ●자신의 덱 위에서부터 3장을 앞면 표시로 한다. 그 중에서 「제니스」 카드, 「언노운」 카드,
+PRINTL 「세레스」 마법 / 함정 카드를 원하는 만큼 패에 넣고, 나머지를 덱으로 되돌리고 셔플한다.
+PRINTL ●상대 필드의 카드를 1장 선택하고, 주인의 덱으로 되돌린다.
+PRINTL ●자신의 덱 위에서부터 2장을 마법＆함정 존에 세트한다. 그 카드들은 발동할 수 없다.
+
+@CARDCAN_73902(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73902)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF ゾーン == "손패"
+		PRINT
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,73902)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲필드 = 1		
+	효과条件표시 = 裏側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	;とりあえずチェックだけ
+	CALL FULLRESET
+	효과範囲덱 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	IF ゾーン == "손패"
+		PRINT
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,73902)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:戦闘場所(듀얼리스트)")},"カテゴリ"
+	SIF !MATCH(RESULTS, "제니스")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73902(듀얼리스트,종류,ゾーン,場所)
+;大枠
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과使用불가,10
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == 攻撃時誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73902,1)
+	IF RESULT == 0
+		;通常마법汎用발동後묘지送り処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		SIF 종류 == 攻撃時誘発
+			GOTO ATK_EFFECT
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과範囲필드 = 1		
+		효과条件표시 = 裏側표시
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			$ATK_EFFECT
+			CALL CARDEFFECT_73902_0(듀얼리스트,종류,ゾーン,場所)
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ:0 = 제니스
+			효과条件カテゴリ:1 = 언노운
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				PRINTL
+PRINTL 수정이 다시 빛을 발한다!
+				PRINTL
+				CALL CARDEFFECT_73902_0(듀얼리스트,종류,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+@CARDEFFECT_73902_0(듀얼리스트,종류,ゾーン,場所)
+;결단選択処理
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과使用불가,10
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+
+CALL FULLRESET
+효과範囲상대필드 = 1
+효과範囲상대마함 = 1
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+SIF RESULT != 1
+	효과使用불가:1 = 1
+
+SIF 마함数(듀얼리스트) >= 4
+	효과使用불가:2 = 1
+
+SIF 現山札数(듀얼리스트) < 2
+	효과使用불가:2 = 1
+
+IF 듀얼리스트 == "자신"
+	PRINTL
+PRINTL 어떤 결단을 기동하시겠습니까?
+	PRINTL
+PRINTL [ 1] - 천정 - 「제니스」「언노운」「세레스」 회수
+	IF 효과使用불가:1 == 0
+PRINTL [ 2] - 정체 - 상대 필드의 카드를 덱 맨 아래로 보낸다
+	ELSE 
+PRINTL      - 정체 - 기동불가
+	ENDIF
+	IF 효과使用불가:2 == 0
+PRINTL [ 3] - 수정 - 덱 위의 카드를 발동불가 상태로 세트
+	ELSE
+PRINTL      - 수정 - 기동불가
+	ENDIF
+	BINPUT
+
+ELSEIF 듀얼리스트 == "상대"
+	RESULT = 1
+ENDIF
+
+IF RESULT == 1
+	CALL CARDEFFECT_73902_1(듀얼리스트,종류,ゾーン,場所)
+ELSEIF RESULT == 2
+	CALL CARDEFFECT_73902_2(듀얼리스트,종류,ゾーン,場所)
+ELSEIF RESULT == 3
+	CALL CARDEFFECT_73902_3(듀얼리스트,종류,ゾーン,場所)
+ENDIF
+
+RETURN
+
+@CARDEFFECT_73902_1(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL FULLRESET
+효과条件スーパーカテゴリ:0 = 제니스
+효과条件スーパーカテゴリ:1 = 언노운
+효과条件カテゴリ:0 = 세레스
+효과条件종류 = 마함全般
+효과条件任意 = 1
+효과条件複数 = 97
+CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,3)
+
+RETURN
+
+@CARDEFFECT_73902_2(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL FULLRESET
+CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"덱")
+
+RETURN
+
+@CARDEFFECT_73902_3(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+REPEAT 2
+	CALL CARD_DISPOSE(듀얼리스트,"덱",0,마함行き,4)
+REND
+RETURN

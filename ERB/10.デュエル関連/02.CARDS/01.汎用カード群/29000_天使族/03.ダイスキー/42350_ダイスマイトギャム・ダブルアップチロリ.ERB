@@ -1,0 +1,178 @@
+﻿@CARDNAME_42350,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 다이스 마이트 갬 더블업 치로리
+	CASE "略称"
+RESULTS = D 디유 치로리
+	CASE "カテゴリ"
+RESULTS:0 = 다이스
+ENDSELECT
+
+
+@CARD_42350(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 牝性
+	CASE "単一存在"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_42350(종류)
+#DIM DYNAMIC 종류
+
+PRINTL '다이스' 링크 몬스터를 포함한 몬스터 2장 이상
+PRINTL '다이스 마이트 갬 더블업 치로리'는 자신 필드에 1장밖에 앞면 표시로 존재할 수 없다.
+PRINTL 이 카드명의 ①의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 L(링크) 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 주사위를 2번 굴린다. 이 카드의 공격력은 나온 눈의 수× 300 올린다.
+CALL CARD_ABLE(0,효과後誘発)
+PRINTL ②: 이 카드가 필드에 존재할 경우, 주사위를 굴려 5 또는 6의 눈이 나왔을 경우에 발동할 수 있다.
+PRINTL 묘지에서 '다이스' 몬스터를 특수 소환한다.
+CALL CARD_ABLE(0,지속효과)
+PRINTL ③: 필드에 3장 이상의 천사족 몬스터가 존재할 경우.
+PRINTL 자신 필드의 천사족 L(링크) 몬스터는 파괴 내성을 얻는다.
+
+
+
+@CARDSUMMON_42350(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 4
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 다이스
+	素材条件종류 = 링크
+ELSE
+	PRINT
+ENDIF
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,42350) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_42350(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,42350)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,42350)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 천사족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"다이스目",5)
+	SIF RESULT == 1
+		条件달성 = 1
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"다이스目",6)
+	SIF RESULT == 1
+		条件달성 = 1
+	SIF 条件달성 != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_42350(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC サイコロ結果
+#DIM DYNAMIC 攻撃力修正,5
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC サイコロ횟수
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42350,1)
+	IF RESULT == 0
+		PRINTFORMW 2회 연속으로 다이스 롤!!
+		REPEAT 2
+			CALL DICE_ROLL(듀얼리스트,1)
+			サイコロ結果 = RESULT
+			PRINTFORMW 出た目は……{サイコロ結果}だ！
+			攻撃力修正 = サイコロ結果 * 300
+			PRINTFORMW チロリの攻撃力は{攻撃力修正}アップ！
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",攻撃力修正)
+		REND
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件종류 = 링크
+	효과条件종족 = 천사족
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,42350)
+	IF RESULT == 0
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 다이스
+		효과条件소환可 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+
+

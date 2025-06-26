@@ -1,0 +1,119 @@
+﻿@CARDNAME_75155,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = Recette de Viande ～고기 요리의 레시피～
+	CASE "略称"
+RESULTS = 고기 요리 레시피
+	CASE "カテゴリ"
+RESULTS:1 = 의식마법
+RESULTS:1 = 레시피
+ENDSELECT
+
+
+@CARD_75155(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_75155(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「누벨즈」의식 몬스터의 강림에 필요.
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①: 자신 손패 필드에서,
+PRINTL 레벨의 합계가 의식 소환하는 몬스터의 레벨 이상이 되도록 몬스터를 릴리스해야 한다.
+PRINTL 그 후, 자신 필드에 전사족의 의식 몬스터가 존재할 경우, 추가로 이하의 효과를 적용할 수 있다.
+PRINTL ●상대 필드의 수비 표시 몬스터를 전부 앞면 공격 표시로 한다.
+
+@CARDCAN_75155(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성,5
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,75155)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲손패 = 1
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = 의식
+	효과条件カテゴリ = 누벨즈
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_75155(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,75154)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)		
+		CALL RESETAREA_MAT
+		素材範囲손패 = 1
+		素材範囲필드 = 1
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종류 = 의식
+		효과条件カテゴリ = 누벨즈
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF INRANGE (選択カード , 100, 199)
+			選択カード -= 100
+			CALL RESETAREA_MAT
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_손패:{選択カード}")}(듀얼리스트,選択カード)
+			素材範囲필드 = 1
+			素材範囲손패 = 1
+			TRYCALLFORM RITSUMMON(듀얼리스트, 選択カード,"손패")
+		ENDIF
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 의식
+		효과条件종족 = 전사족
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT != 0
+			SIF 듀얼리스트 == "자신"
+PRINTL 상대 몬스터를 공격 표시로 하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+			SIF RESULT == いいえ
+				RETURN 0
+			CALL FULLRESET
+			CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"表",1)
+		ENDIF
+	ENDIF
+ENDIF

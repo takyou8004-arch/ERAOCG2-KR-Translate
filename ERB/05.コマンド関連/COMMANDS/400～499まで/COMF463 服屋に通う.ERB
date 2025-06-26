@@ -1,0 +1,165 @@
+﻿;-------------------------------------------------
+;服屋に通う
+;-------------------------------------------------
+@COM463
+#DIM DYNAMIC リスト開始
+#DIM DYNAMIC リスト終了
+#DIM DYNAMIC カウンタ,2
+#DIM DYNAMIC 衣服구입先
+#DIM DYNAMIC 服価格
+#DIM DYNAMIC 衣種
+#DIM DYNAMIC 구입衣服
+
+$INPUT_LOOP_START
+
+PRINTFORML 
+PRINTL [0] - 옷을 산다
+PRINTL [1] - 갈아입는다
+PRINTL 
+PRINTL [100] - 돌아간다
+BINPUT
+IF RESULT == 0
+	衣種 = 1
+	衣服구입先 = 1000
+	服価格 = 1200
+	$INPUT_LOOP
+	カウンタ:1 = 0
+	PRINTFORML (소지금:{MONEY}円)
+	CUSTOMDRAWLINE —
+	FOR カウンタ,1,100
+		SIF CLOTHNAME(衣種,カウンタ) == ""
+			CONTINUE
+		PRINTPLAIN 　	
+		IF 衣服구입:(衣服구입先 + カウンタ) == 0
+			PRINTFORM [{カウンタ + 100,3}] - %CLOTHNAME(衣種,カウンタ),20,LEFT%　（{服価格,6}円）
+		ELSE
+			SETCOLOR C_GRAY
+			PRINTFORM ({カウンタ + 100,3}) - %CLOTHNAME(衣種,カウンタ),20,LEFT%　（구입함）
+			RESETCOLOR
+		ENDIF
+		カウンタ:1 ++
+		IF カウンタ:1 == 3
+			カウンタ:1 = 0
+			PRINTL
+		ENDIF
+	NEXT
+
+	PRINTL
+	CUSTOMDRAWLINE —
+	PRINTL [ 1] - 모자　　　　[ 2] - 신발　　　　　[ 3] - 양말　　　　[ 4] - 팬티  　　　[ 5] - 바지  
+	PRINTL [ 6] - 치마    　　[ 7] - 브라자       　[ 8] - 외투    　　[ 9] - 이너    　　[10] - 원피스
+	PRINTL [11] - 악세사리
+	CUSTOMDRAWLINE —
+	PRINTBUTTON "[쇼핑을 끝낸다]", 0
+	BINPUT
+	IF RESULT == 0
+		GOTO INPUT_LOOP_START
+	ELSEIF RESULT == 1
+		衣種 = 1
+		衣服구입先 = 1000
+		服価格 = 1200
+	ELSEIF RESULT == 2
+		衣種 = 3
+		衣服구입先 = 3000
+		服価格 = 5400
+	ELSEIF RESULT == 3
+		衣種 = 4
+		衣服구입先 = 4000
+		服価格 = 500
+	ELSEIF RESULT == 4
+		衣種 = 6
+		衣服구입先 = 6000
+		服価格 = 500
+	ELSEIF RESULT == 5
+		衣種 = 7
+		衣服구입先 = 7000
+		服価格 = 1200
+	ELSEIF RESULT == 6
+		衣種 = 9
+		衣服구입先 = 9000
+		服価格 = 3400
+	ELSEIF RESULT == 7
+		衣種 = 10
+		衣服구입先 = 10000
+		服価格 = 3400
+	ELSEIF RESULT == 8
+		衣種 = 12
+		衣服구입先 = 12000
+		服価格 = 8400
+	ELSEIF RESULT == 9
+		衣種 = 13
+		衣服구입先 = 13000
+		服価格 = 3400
+	ELSEIF RESULT == 10
+		衣種 = 15
+		衣服구입先 = 15000
+		服価格 = 12000
+	ELSEIF RESULT == 11
+		衣種 = 16
+		衣服구입先 = 16000
+		服価格 = 500
+	ELSE
+		구입衣服 = (RESULT - 100)
+		PRINTFORML %CLOTHNAME(衣種,구입衣服)%를 구입하시겠습니까？
+		PRINTL [0] - 예
+		PRINTL [1] - 아니오
+		PRINTL 
+		BINPUT
+		IF RESULT == 0
+			IF MONEY >  服価格
+				PRINTFORML %CLOTHNAME(衣種,구입衣服)%를 구입했습니다！
+				CALL MONEY_GET(-服価格)
+				衣服구입:(衣服구입先 + 구입衣服) = 1
+			ELSE
+				PRINTW 돈이 부족합니다！
+			ENDIF
+		ENDIF
+	ENDIF
+	GOTO INPUT_LOOP
+ELSEIF RESULT == 1
+	CALL COM421
+	GOTO INPUT_LOOP_START
+ELSEIF RESULT == 100
+	RETURN 0
+ENDIF
+
+
+
+
+@CAN_COM463(ARG)
+#DIM DYNAMIC 時間外
+SKIPDISP ARG
+
+IF TIME_ZONE() == T_夜時間
+	PRINTFORML 　옷가게 【W&C 재봉소】
+	PRINTFORMW OPEN:9:00 AM ～ 20:00 PM。
+	PRINTFORMW 오늘은 이미 영업 종료한것 같다、내일 다시오자
+	時間外 = 1
+ELSEIF TIME_ZONE(1) != 1
+	PRINTFORML 　【W&C 재봉소】
+	PRINTFORMW OPEN:9:00 AM ～ 20:00 PM。
+	PRINTFORMW 아직 하고있지 않은 것 같다。
+	時間外 = 1
+
+ENDIF
+
+SKIPDISP 0
+
+SIF 時間外
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;服屋に通う
+@COM_ABLE463
+;一括관리
+SIF GLOBAL_COMABLE(463)
+	RETURN RESULT
+SIF CFLAG:MASTER:현재위치 != 場所_繁華街
+	RETURN 0
+;수면中
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

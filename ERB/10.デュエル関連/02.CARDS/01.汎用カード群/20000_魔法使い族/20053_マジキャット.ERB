@@ -1,0 +1,104 @@
+﻿@CARDNAME_20053,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 매직캣
+	CASE "略称"
+RESULTS = 매직캣
+	CASE "カテゴリ"
+RESULTS:0 = 캣
+ENDSELECT
+
+
+@CARD_20053(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 600
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_20053(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,S素材時효과)
+PRINTL ①: 이 카드가 마법사족 몬스터의 S 소재로 사용되었을 경우 발동할 수 있다.
+PRINTL 자신의 묘지의 마법 카드 1장을 덱의 맨 위로 되돌린다.
+PRINTL
+PRINTL
+
+
+@CARDCAN_20053(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20053)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == S素材時효과
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종족 = 마법사족
+	효과条件종류 = 싱크로
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_20053(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == S素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20053)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 마법全般
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			CALL CARD_ADD_DECK_SPC(듀얼리스트,"묘지",選択カード)
+		ENDIF
+	ENDIF
+ENDIF
+
+

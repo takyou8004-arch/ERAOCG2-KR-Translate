@@ -1,0 +1,123 @@
+﻿@CARDNAME_66010,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 미래로의 침묵
+	CASE "略称"
+RESULTS = 미래로의 침묵
+	CASE "カテゴリ"
+RESULTS:0 = 사일런트
+RESULTS:1 = 빛의 황금궤
+ENDSELECT
+
+
+@CARD_66010(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_66010(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장만 발동할 수 있다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①: 덱에서 '빛의 황금궤' 몬스터 1장을 패에 추가한다.
+PRINTL 자신 필드에 '빛의 황금궤' 및 '빛의 황금궤' 몬스터가 존재하는 상태에서,
+PRINTL 이 카드를 자신 / 상대의 배틀 페이즈에 발동했을 경우,
+PRINTL 추가로 서로는 각각 손패가 6장이 되도록 드로우한다.
+
+
+@CARDCAN_66010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,66010)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,66010)
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 빛의 황금궤
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_66010(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ドロー枚数
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,66010,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 빛의 황금궤
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 빛의 황금궤
+		효과条件표시 = 10
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件名前 = 빛의 황금궤
+			효과条件표시 = 10
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1 && バトルフェイズ == 1
+				IF 손패数(듀얼리스트) < 6
+					ドロー枚数 = 6 - 손패数(듀얼리스트)
+					CALL CARDDRAW_BASIC(듀얼리스트,ドロー枚数)
+				ENDIF
+				VARSET ドロー枚数
+				IF 손패数(対面者) < 6
+					ドロー枚数 = 6 - 손패数(対面者)
+					CALL CARDDRAW_BASIC(対面者,ドロー枚数)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

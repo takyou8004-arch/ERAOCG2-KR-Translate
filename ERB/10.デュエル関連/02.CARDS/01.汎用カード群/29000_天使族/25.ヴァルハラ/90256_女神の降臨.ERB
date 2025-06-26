@@ -1,0 +1,152 @@
+﻿@CARDNAME_92966,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 여신의 강림
+	CASE "略称"
+RESULTS = 여신의 강림
+	CASE "カテゴリ"
+RESULTS:0 = 발할라
+RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_92966(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92966(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,フリー誘発)
+PRINTL ①: 자신의 묘지에서 천사족 레벨 1 몬스터 4장 또는 「신의 거성－발할라」 1장을 제외하고,
+PRINTL 자신의 패 / 필드의 천사족 몬스터 1장을 릴리스하여 발동할 수 있다.
+PRINTL 자신의 패 / 묘지에서 천사족 몬스터 1장을 수비 표시로 특수 소환하고, 이 턴 파괴 내성을 부여한다.
+
+
+@CARDCAN_92966(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과先
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92966)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,92966)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+효과条件名前 = 신의 거성－발할라
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件달성 ++
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 천사족
+	효과条件レベル = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT >= 4
+		条件달성 ++
+	SIF 条件달성 == 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲손패 = 1
+	효과条件종족 = 천사족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_92966(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92966,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+효과条件名前 = 신의 거성－발할라
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+PRINTL 발할라를 제외하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트)
+		ELSE
+			RESULT = いいえ
+		ENDIF
+		IF RESULT == はい
+			CALL FULLRESET
+효과条件名前 = 신의 거성－발할라
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		ELSEIF RESULT == いいえ
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件종족 = 천사족
+			효과条件複数 = 4
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲손패 = 1
+			효과条件종족 = 천사족
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과範囲묘지 = 1
+				효과条件종족 = 천사족
+				효과추가종류 = 効追破耐
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

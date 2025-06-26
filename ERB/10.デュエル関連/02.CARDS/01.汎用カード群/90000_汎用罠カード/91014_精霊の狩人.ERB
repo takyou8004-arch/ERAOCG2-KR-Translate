@@ -1,0 +1,194 @@
+﻿@CARDNAME_91014,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스피릿 헌터
+	CASE "略称"
+RESULTS = 정령사냥꾼
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_91014(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250426
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91014(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,ターン開始時)
+PRINTL ①: 상대 턴 개시 시에 발동할 수 있다.
+PRINTL 자신의 덱 또는 마법 & 함정 존의 몬스터 카드를 골라, 이하의 효과를 적용한다.
+PRINTL ●덱: 고른 몬스터 1장을 자신의 마법 & 함정 존에 앞면 표시로 둔다.
+PRINTL ●마법 & 함정 존: 고른 몬스터 카드 1장을 상대 필드에 특수 소환한다.
+PRINTL 　그 경우, 추가로 상대는 그 원래 공격력만큼 LP를 잃는다.
+PRINTL 발동한 이 카드는 마법 & 함정 존에 앞면 표시로 남는다.
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②: 상대 필드에 원래 주인이 자신인 효과 몬스터가 특수 소환되었을 경우,
+PRINTL 마법 & 함정 존의 앞면 표시의 이 카드를 묘지로 보내고 발동할 수 있다.
+PRINTL 덱에서 레벨 4 이하의 몬스터 1장을 특수 소환한다.
+
+
+@CARDCAN_91014(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성A
+#DIM DYNAMIC 条件달성B
+#DIM DYNAMIC 효과先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91014)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン開始時
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲마함 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) < 5
+		条件달성A = 1
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(対面者,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件달성B = 1
+	SIF 条件달성A == 0 && 条件달성B == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF FINAL_SUMMON_TARGET(듀얼리스트,1) == 5
+		RETURN 0
+	효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+	IF 듀얼리스트 == "자신"
+	SIF GETVAR(@"상대_MZ_所有:효과先") == 2
+		RETURN 0
+	ELSEIF 듀얼리스트 == "상대"
+	SIF GETVAR(@"자신_MZ_所有:효과先") == 1
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲덱 = 1
+	CALLFORM 효과条件レベル_ADV(4,"以下")
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+; ELSEIF 종류 == 마함起動 || 종류 == フリー誘発
+; 	SIF ゾーン != "마함"
+; 		RETURN 0
+; 	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+; 		RETURN 0
+; 	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+; 		RETURN 0
+; 	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_91014(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성A
+#DIM DYNAMIC 条件달성B
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91014)
+	IF RESULT == 0
+		SIF 마함数(듀얼리스트) < 5
+			条件달성A = 1
+		CALL FULLRESET
+		효과範囲상대마함 = 1
+		효과条件종류 = モン全般
+		효과条件소환可 = 1
+		CALL CARD_CHECK_ADV(対面者,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성B = 1
+		
+		CALL FULLRESET
+		SIF 条件달성A == 1
+			효과範囲덱 = 1
+		SIF 条件달성B == 1
+			효과範囲마함 = 1
+		효과条件종류 = モン全般
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			選択カード = RESULT
+			IF 参照先（CS） == "덱"
+				CALL FULLRESET
+				CALL CARD_ADD(듀얼리스트,"덱","마함",選択カード,"表側표시")
+			ELSEIF 参照先（CS） == "마함"
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트,"마함",選択カード,,1)
+				IF RESULT == 1
+					TRYCALLFORM CARD_{GETVAR(@"%対面者%_필드:カード소환先")}("攻撃力")
+					カウンタ = RESULT / 2
+					SIF カウンタ > 0
+						CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",カウンタ,1)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91014)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		CALLFORM 효과条件レベル_ADV(4,"以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+; ELSEIF 종류 == 마함起動 || 종류 == フリー誘発
+; 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91014)
+; 	IF RESULT == 0
+; 	ENDIF
+ENDIF

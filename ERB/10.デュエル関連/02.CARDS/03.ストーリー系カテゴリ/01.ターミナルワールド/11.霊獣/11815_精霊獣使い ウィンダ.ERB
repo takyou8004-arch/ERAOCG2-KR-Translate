@@ -1,0 +1,103 @@
+﻿@CARDNAME_11815,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 정령수사 윈다
+	CASE "略称"
+		RESULTS = 수사 윈다
+	CASE "カテゴリ"
+		RESULTS:0 = 령수
+		RESULTS:1 = 령수사
+		RESULTS:2 = 윈다
+		RESULTS:3 = 정령수
+ENDSELECT
+
+
+@CARD_11815(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 牝性
+	CASE "특수制限"
+		RETURN 1
+	CASE "連動ID"
+		RETURN 1815
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_11815(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신은 「정령수사 윈다」を１턴에 １번밖에 특수 소환할 수 없다。
+CALLFORM CARD_ABLE(0,破壊→묘지,戦闘→묘지)
+PRINTL ①：이 카드가 파괴된 경우에 발동할 수 있다。
+PRINTL 덱 / EX덱에서 "령수" 몬스터 １장을 소환조건을 무시하고 특수 소환한다。
+PRINTL 
+
+@CARDCAN_11815(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,11815)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 령수
+	효과条件特不無視 = 1
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_11815(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,11815)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 령수
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

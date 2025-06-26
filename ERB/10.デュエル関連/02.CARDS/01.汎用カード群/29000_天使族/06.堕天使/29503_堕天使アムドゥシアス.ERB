@@ -1,0 +1,143 @@
+﻿@CARDNAME_29503,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 타락천사 암두시아스
+	CASE "略称"
+RESULTS = 암두시아스
+	CASE "カテゴリ"
+RESULTS:0 = 타락천사
+ENDSELECT
+
+
+@CARD_29503(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 2800
+	CASE "특수制限"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_29503(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 1턴에 1번밖에 특수 소환할 수 없으며, ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①: 패에서 이 카드와 "타락천사" 카드 1장을 버리고 발동할 수 있다.
+PRINTL 자신 묘지의 "타락천사" 카드 1장을 패에 넣는다.
+CALL CARD_ABLE(2,필드起動 ,フリー誘発)
+PRINTL ②: 자신 / 상대 턴에, 1000 LP를 지불하고, 자신 묘지의 "타락천사" 마법 / 함정 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 마법 / 함정 카드의 효과를 적용한다. 그 후, 묘지의 그 카드를 덱으로 되돌린다.
+PRINTL 
+
+@CARDCAN_29503(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29503)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,29503)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 손패数(듀얼리스트) <= 1
+			RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件他所 = 1
+	효과条件カテゴリ = 타락천사
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 타락천사
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,29503)
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 1000
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 마함全般
+	효과条件カテゴリ = 타락천사
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29503(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29503,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 타락천사
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+
+		CALL FULLRESET
+		효과条件カテゴリ = 타락천사
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29503,2)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1000)
+		CALL FULLRESET
+		효과条件종류 = 마함全般
+		효과条件カテゴリ =  타락천사
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			TRYCALLFORM CARDEFFECT_{選択カード_ID}(듀얼리스트,他효과起動,"효과処理",場所)
+		ENDIF
+	ENDIF
+ENDIF

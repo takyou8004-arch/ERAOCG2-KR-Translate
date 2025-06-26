@@ -1,0 +1,139 @@
+﻿@CARDNAME_24533,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초중무사 다이-8
+	CASE "略称"
+RESULTS = 다이-8
+	CASE "カテゴリ"
+RESULTS:0 = 초중무사
+ENDSELECT
+
+
+@CARD_24533(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 효과モン
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 1800
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24533(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환되었을 때 발동할 수 있다.
+PRINTL 이 카드를 수비 표시로 한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 앞면 수비 표시 상태로 공격할 수 있다.
+PRINTL 그 경우, 이 카드는 수비력을 공격력으로 취급하여 데미지 계산을 실행한다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ③: 자신 묘지에 마법 / 함정 카드가 존재하지 않을 경우에 발동할 수 있다.
+PRINTL 자신 필드의 앞면 수비 표시의 이 카드를 공격 표시로 하고,
+PRINTL 덱에서 "초중무사 소울" 몬스터 1장을 패에 넣는다.
+
+
+@CARDCAN_24533(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24533)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 && GETVAR(@"%듀얼리스트%_MZ_表:場所") == 2
+    SIF 발동済_1(듀얼리스트,24533)
+		RETURN 0
+    SIF メインフェイズ != 1
+        RETURN 0
+    SIF ターンプレイヤー != 듀얼리스트
+        RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+    효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+    CALL FULLRESET
+    효과範囲덱 = 1
+	효과条件カテゴリ = 초중무사 장착
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+
+@CARDEFFECT_24533(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24533)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",2,1)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"守戦")
+
+ELSEIF 종류 == 필드起動
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24533,1)
+	IF RESULT == 0
+	    CALL FULLRESET
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",1,1)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 초중무사 장착
+			효과条件종류 = モン全般
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ENDIF

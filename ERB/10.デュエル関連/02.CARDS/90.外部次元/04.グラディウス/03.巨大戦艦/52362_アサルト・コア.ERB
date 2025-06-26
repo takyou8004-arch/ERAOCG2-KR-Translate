@@ -1,0 +1,132 @@
+﻿@CARDNAME_52362,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 어썰트 코어
+	CASE "略称"
+RESULTS = ASSAULT CORE
+	CASE "カテゴリ"
+RESULTS:0 = 박테리안
+RESULTS:1 = 거대전함
+ENDSELECT
+
+
+@CARD_52362(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1300
+	CASE "守備力"
+		RETURN 2000
+	CASE "특수불가"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_52362(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 룰 상 "거대전함" 카드로도 취급한다.
+CALLFORM CARD_ABLE(1,EX덱起動)
+PRINTL ①: 이 카드가 EX덱에 존재하고, 자신 필드에 "전투주역　박테리안"이 전개되어 있을 경우에 발동할 수 있다.
+PRINTL 덱에서 "박테리안" 몬스터를 4장까지 묘지로 보낸다 (같은 이름의 카드는 1장까지).
+PRINTL "어썰트 코어"의 이 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②: 이 카드가 필드에서 EX덱으로 보내졌을 경우에 발동할 수 있다.
+PRINTL 덱에서 "박테리안" 카드를 4장까지 묘지로 보낸다 (같은 이름의 카드는 1장까지).
+PRINTL 그 후, 이 카드는 "스페이스 데브리"가 되고, 묘지로 보내진다.
+
+
+@CARDCAN_52362(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52362)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,52362)
+		RETURN 0
+	SIF GETVARS(@"%듀얼리스트%_フィールド名") != "전투주역　박테리안"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_52362(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52362,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 박테리안
+		효과条件종류 = モン全般
+		효과条件複数 = 4
+		효과条件固名前選択 = 1
+		효과条件任意 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52362)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 박테리안
+		효과条件複数 = 4
+		효과条件固名前選択 = 1
+		효과条件任意 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL CARD_RECONSTRUCT(듀얼리스트,"EX덱",場所,152360)
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+

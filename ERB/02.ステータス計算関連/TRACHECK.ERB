@@ -1,0 +1,833 @@
+;-------------------------------------------------
+;시간경과
+;-------------------------------------------------
+@TRACHECK_TIME
+;めんどくさいので5分刻み
+SIF SELECTCOM < 200 && 듀얼モード != 1
+	TIME += 5
+;-------------------------------------------------
+;처녀喪失時の処理
+;ARG		처녀喪失대상
+;ARG:1	처녀喪失させる人
+;ARG:2	처녀喪失手段(=1 チンコ	=2 바이브	=3 손가락)
+;-------------------------------------------------
+@LOST_VIRGIN(喪失대상, 喪失상대, 喪失手段)
+#DIM DYNAMIC 喪失대상
+#DIM DYNAMIC 喪失상대
+#DIM DYNAMIC 喪失手段
+
+;非처녀はスルー
+SIF !TALENT:喪失대상:처녀
+	RETURN 0
+
+IF 喪失手段 == 1 && 喪失상대 >= 0
+	CFLAG:喪失대상:처녀버린상대 = 喪失상대
+ENDIF
+TCVAR:喪失대상:파과 = 1
+
+;追記部分
+;シチュエーション기록
+IF CFLAG:喪失대상:접촉조교중 == 1
+	IF CFLAG:喪失대상:최면상태 == 1
+		CFLAG:喪失대상:처녀버린시츄 = 1
+	ELSEIF CFLAG:喪失대상:발정중 == 1
+		CFLAG:喪失대상:처녀버린시츄 = 6
+	ELSE
+		CFLAG:喪失대상:처녀버린시츄 = 2
+	ENDIF
+ELSEIF TCVAR:喪失대상:듀얼패배섹스 == 1
+	CFLAG:喪失대상:처녀버린시츄 = 3
+ELSEIF TFLAG:COMABLE관리 == 3
+;상대에게 押し倒された
+	CFLAG:喪失대상:처녀버린시츄 = 4
+ELSEIF CFLAG:喪失대상:최면상태 == 1
+;コマンド정신조작の影響下
+	CFLAG:喪失대상:처녀버린시츄 = 5
+ENDIF
+
+VARSET LOCAL
+;비디오촬영処理
+IF TEQUIP:喪失대상:28
+	;성교
+	IF 喪失手段 == 1
+		LOCALS = LV1/
+	;바이브
+	ELSEIF 喪失手段 == 2
+		LOCALS = LV3/
+	;その他
+	ELSE
+		LOCALS = LV4/
+	ENDIF
+	TSTR:1 += LOCALS
+ENDIF
+
+
+;SOURCE추가
+IF TALENT:喪失대상:처녀 == 1
+	PRINTW 처녀상실
+	;고통
+	;チンコ
+	IF 喪失手段 == 1
+		LOCAL = 2000
+	;바이브
+	ELSEIF 喪失手段 == 2
+		LOCAL = 1500
+	;손가락
+	ELSEIF 喪失手段 == 3
+		LOCAL = 1000
+	ENDIF
+	IF CFLAG:우후후 != 2
+		LOCAL = LOCAL * PAIN_CHECK_V(喪失대상) / 1000
+		CALL SOURCE_CALC_고통(喪失대상, 喪失상대, LOCAL)
+	ENDIF
+	;불결
+	;정조観念
+	IF TALENT:喪失대상:정조 > 0
+		;非연모
+		IF !TALENT:喪失대상:연모
+			CALL SOURCE_CALC_불결(喪失대상, 喪失상대, 1000)
+		;연애대상 이외의 상대
+		ELSEIF 喪失상대 != MASTER
+			CALL SOURCE_CALC_불결(喪失대상, 喪失상대, 2000)
+		;チンコじゃない
+		ELSEIF 喪失手段 != 1
+			CALL SOURCE_CALC_불결(喪失대상, 喪失상대, 500)
+		ENDIF
+	ELSEIF TALENT:喪失대상:정조 == 0
+		;非연모
+		IF !TALENT:喪失대상:연모
+			CALL SOURCE_CALC_불결(喪失대상, 喪失상대, 500)
+		;연애대상 이외의 상대
+		ELSEIF 喪失상대 != MASTER
+			CALL SOURCE_CALC_불결(喪失대상, 喪失상대, 1000)
+		;チンコじゃない
+		ELSEIF 喪失手段 != 1
+			CALL SOURCE_CALC_불결(喪失대상, 喪失상대, 250)
+		ENDIF
+	ENDIF
+	;함락素質による処理
+	;MASTERがTARGETの질に삽입している
+	IF 喪失상대 == MASTER && 喪失手段 == 1
+		;친애かつ상대가 主人
+		IF TALENT:喪失대상:연모 > 1
+			PRINTFORML %CALLNAME:喪失대상%는 %CALLNAME:MASTER%가 첫 상대라는 것에 더없는 행복을 느끼고 있는 것 같다……
+			CALL SOURCE_CALC_환락(喪失대상, MASTER, 5000)
+			CFLAG:喪失대상:처녀버린시연모 = 3
+		;연모かつ상대가 主人
+		ELSEIF TALENT:喪失대상:연모
+			PRINTFORML %CALLNAME:喪失대상%는 %CALLNAME:MASTER%에게 처녀를 바쳐진 것에 행복을 느끼고 있는 것 같다……
+			CALL SOURCE_CALC_환락(喪失대상, MASTER, 2000)
+			CFLAG:喪失대상:처녀버린시연모 = 2
+		ELSE
+			;うさみの追記
+			IF TCVAR:TARGET:듀얼패배섹스
+				PRINTFORML %CALLNAME:喪失대상%는 패배의 대가로서、승자인 %CALLNAME:MASTER%에게 처녀를 빼앗기고 말았다……
+				PRINTFORML %CALLNAME:MASTER%에 흩어진 처녀막은、 %CALLNAME:TARGET%의 몸에 평생 지워지지 않는 패배의 증거로 새겨지게 되었다……
+			ELSE
+				PRINTFORM %CALLNAME:喪失대상%는 추세로 %CALLNAME:MASTER%에게 처녀를 바쳐 버린 일에
+				IF CFLAG:喪失대상:호감도 >= 1500
+					PRINTFORM 이상하게 나쁜 생각은 들지 않았다。
+				ELSEIF CFLAG:喪失대상:호감도 >= 500
+					PRINTFORM 이럴까봐 조금 아쉬운 듯이 했다。
+				ELSE
+					PRINTFORM 후회를 끌게 되었다。
+				ENDIF
+				PRINTL
+			ENDIF
+			CFLAG:喪失대상:처녀버린시연모 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+@SET_FIRSTKISS(대상者,実行者,シチュ)
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC シチュ
+
+PRINTFORMW 키스 미경험 상실( %CALLNAME:대상者%)
+CFLAG:대상者:키스상실기념일 = DAY
+CFLAG:대상者:키스상실상대 = 実行者
+TALENT:대상者:키스미경험 = 0
+
+;追記部分
+;シチュエーション기록
+IF CFLAG:대상者:접촉조교중 == 1
+	IF CFLAG:대상者:최면상태 == 1
+		CFLAG:대상者:첫키스시츄 = 1
+	ELSEIF CFLAG:대상者:발정중 == 1
+		CFLAG:대상者:첫키스시츄 = 6
+	ELSE
+		CFLAG:대상者:첫키스시츄 = 2
+	ENDIF
+ELSEIF TCVAR:대상者:듀얼패배섹스 == 1
+	CFLAG:대상者:첫키스시츄 = 3
+ELSEIF TFLAG:COMABLE관리 == 3
+;상대에게 押し倒された
+	CFLAG:대상者:첫키스시츄 = 4
+ELSEIF CFLAG:대상者:최면상태 == 1
+;コマンド정신조작の影響下
+	CFLAG:대상者:첫키스시츄 = 5
+ENDIF
+
+SELECTCASE シチュ
+CASE 1
+	;普通の키스
+	CFLAG:대상者:키스상실장소 = 1
+CASE 2
+	;チン키스
+	CFLAG:대상者:키스상실장소 = 2
+CASE 3
+	;マン키스
+	CFLAG:대상者:키스상실장소 = 2
+CASE 4
+	;애널키스
+	CFLAG:대상者:키스상실장소 = 2
+ENDSELECT
+
+;-------------------------------------------------
+;EXP취득
+;-------------------------------------------------
+@SOURCE_EXP(ARG)
+VARSET LOCAL
+SIF CUP:ARG:쾌Ｃ
+	EXP:ARG:Ｃ경험 ++
+SIF CUP:ARG:쾌Ｖ && !TALENT:ARG:처녀
+	EXP:ARG:Ｖ경험 ++
+SIF CUP:ARG:쾌Ａ
+	EXP:ARG:Ａ경험 ++
+IF CUP:ARG:쾌Ｂ
+	EXP:ARG:Ｂ경험 ++
+	CFLAG:ARG:가슴성장 ++
+ENDIF
+SIF CUP:ARG:쾌Ｍ
+	EXP:ARG:Ｍ경험 ++
+SIF CUP:ARG:쾌Ｅ
+	EXP:ARG:Ｅ경험 ++
+
+;-------------------------------------------------
+;체력、기력減少
+;-------------------------------------------------
+@SOURCE_DOWNBASE(ARG)
+
+IF TALENT:ARG:절정익숙함 >= 1
+;IF LOCAL == 0
+	TIMES DOWNBASE:ARG:체력, 0.50
+	BASE:ARG:체력 = MAX(0,BASE:ARG:체력 - DOWNBASE:ARG:체력)
+	TIMES DOWNBASE:ARG:기력, 0.50
+	BASE:ARG:기력 = MAX(0,BASE:ARG:기력 - DOWNBASE:ARG:기력)
+ELSE
+	BASE:ARG:체력 = MAX(0,BASE:ARG:체력 - DOWNBASE:ARG:체력)
+	BASE:ARG:기력 = MAX(0,BASE:ARG:기력 - DOWNBASE:ARG:기력)
+ENDIF
+
+;-------------------------------------------------
+;각인취득のチェック
+;-------------------------------------------------
+@MARK_GOT_CHECK(ARG)
+#DIM DYNAMIC 굴복설정
+#DIM DYNAMIC 반발설정
+
+;MASTERは제외
+SIF ARG == MASTER
+	RETURN 0
+;-------------------------------------------------
+;고통각인
+;-------------------------------------------------
+IF CUP:ARG:고통 >= 2000 && CUP:ARG:고통 < 4000 && MARK:ARG:고통각인 <= 0
+	MARK:ARG:고통각인 = 1
+	TFLAG:22 = 1
+ELSEIF CUP:ARG:고통 >= 4000 && CUP:ARG:고통 < 8000 && MARK:ARG:고통각인 <= 1
+	MARK:ARG:고통각인 = 2
+	TFLAG:22 = 2
+	;気丈・감정부족함の場合は고통각인による순종アップはなし
+	IF !ABL:ARG:순종 && TALENT:ARG:배짱 > 0 && !TALENT:ARG:감정부족함
+		ABL:ARG:순종 = 1
+		TFLAG:25 = 1
+	ENDIF
+ELSEIF CUP:ARG:고통 >= 8000 && MARK:ARG:고통각인 <= 2
+	MARK:ARG:고통각인 = 3
+	TFLAG:22 = 3
+	;気丈・감정부족함の場合は고통각인による순종アップはなし
+	IF !ABL:ARG:순종 && TALENT:ARG:배짱 > 0 && !TALENT:ARG:감정부족함
+		ABL:ARG:순종 = 1
+		TFLAG:25 = 1
+	ENDIF
+	IF TALENT:MASTER:새드
+		EXP:ARG:이상경험 += 2
+	ELSEIF TALENT:MASTER:바느질솜씨 && SELECTCOM == 103
+		EXP:ARG:이상경험 += 2
+	ELSE
+		EXP:ARG:이상경험 += 1
+	ENDIF
+ENDIF
+
+
+;-------------------------------------------------
+;쾌락각인
+;-------------------------------------------------
+IF TCVAR:ARG:쾌락강도 == 1 && MARK:ARG:쾌락각인 <= 0
+	MARK:ARG:쾌락각인 = 1
+	TFLAG:23 = 1
+ELSEIF TCVAR:ARG:쾌락강도 == 2 && MARK:ARG:쾌락각인 <= 1
+	MARK:ARG:쾌락각인 = 2
+	TFLAG:23 = 2
+ELSEIF TCVAR:ARG:쾌락강도 == 3 && MARK:ARG:쾌락각인 <= 2
+	MARK:ARG:쾌락각인 = 3
+	TFLAG:23 = 3
+	;자제심・감정부족함の場合は쾌락각인による순종アップはなし
+	IF !ABL:ARG:순종 && !TALENT:ARG:자제심 && !TALENT:ARG:감정부족함
+		ABL:ARG:순종 = 1
+		TFLAG:25 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;굴복각인
+;-------------------------------------------------
+굴복설정 = (CUP:ARG:굴복) * 4
+;CUP:ARG:굴복 + CUP:ARG:굴복 + CUP:ARG:굴복 + CUP:ARG:굴복
+
+;쾌락によるLvUPは10番+취득した굴복각인の레벨의 TFLAGを与える
+IF 굴복설정 >= 1000 && 굴복설정 < 2400 && MARK:ARG:쾌락각인 > MARK:ARG:굴복각인 && MARK:ARG:굴복각인 <= 0
+	MARK:ARG:굴복각인 = 1
+	TFLAG:24 = 11
+ELSEIF 굴복설정 >= 2400 && 굴복설정 < 6000 && MARK:ARG:쾌락각인 > MARK:ARG:굴복각인 && MARK:ARG:굴복각인 <= 1
+	MARK:ARG:굴복각인 = 2
+	TFLAG:24 = 12
+	;감정부족함の場合は굴복각인による순종アップはなし
+	IF !ABL:ARG:순종 && !TALENT:ARG:감정부족함
+		ABL:ARG:순종 = 1
+		TFLAG:25 = 1
+	ENDIF
+ELSEIF 굴복설정 >= 6000 && MARK:ARG:쾌락각인 > MARK:ARG:굴복각인 && MARK:ARG:굴복각인 <= 2
+	MARK:ARG:굴복각인 = 3
+	TFLAG:24 = 13
+	;감정부족함の場合は굴복각인による순종アップはなし
+	IF ABL:ARG:순종 <= 1 && !TALENT:ARG:감정부족함
+		ABL:ARG:순종 = 2
+		TFLAG:25 = 1
+	ENDIF
+ENDIF
+
+
+굴복설정 = CUP:ARG:고통 + CUP:ARG:공포
+
+;고통と공포によるLvUPは20番+취득した굴복각인の레벨의 TFLAGを与える
+IF 굴복설정 >= 1000 && 굴복설정 < 2400 && MARK:ARG:굴복각인 <= 0
+	MARK:ARG:굴복각인 = 1
+	TFLAG:24 = 21
+ELSEIF 굴복설정 >= 2400 && 굴복설정 < 6000 && MARK:ARG:굴복각인 <= 1
+	MARK:ARG:굴복각인 = 2
+	TFLAG:24 = 22
+	;감정부족함の場合は굴복각인による순종アップはなし
+	IF !ABL:ARG:순종 && !TALENT:ARG:감정부족함
+		ABL:ARG:순종 = 1
+		TFLAG:25 = 1
+	ENDIF
+ELSEIF 굴복설정 >= 6000 && MARK:ARG:굴복각인 <= 2
+	MARK:ARG:굴복각인 = 3
+	TFLAG:24 = 23
+	;감정부족함の場合は굴복각인による순종アップはなし
+	IF ABL:ARG:순종 <= 1 && !TALENT:ARG:감정부족함
+		ABL:ARG:순종 = 2
+		TFLAG:25 = 1
+	ENDIF
+ENDIF
+
+
+굴복설정 = CUP:ARG:공순 + CUP:ARG:굴복
+
+;공순と굴복によるLvUPは30番+취득した굴복각인の레벨의 TFLAGを与える
+IF 굴복설정 >= 1000 && 굴복설정 < 2400 && MARK:ARG:굴복각인 <= 0
+	MARK:ARG:굴복각인 = 1
+	TFLAG:24 = 31
+ELSEIF 굴복설정 >= 2400 && 굴복설정 < 6000 && MARK:ARG:굴복각인 <= 1
+	MARK:ARG:굴복각인 = 2
+	TFLAG:24 = 32
+	;감정부족함の場合は굴복각인による순종アップはなし
+	IF !ABL:ARG:순종 && !TALENT:ARG:감정부족함
+		ABL:ARG:순종 = 1
+		TFLAG:25 = 1
+	ENDIF
+ELSEIF 굴복설정 >= 6000 && MARK:ARG:굴복각인 <= 2
+	MARK:ARG:굴복각인 = 3
+	TFLAG:24 = 33
+	;감정부족함の場合は굴복각인による순종アップはなし
+	IF ABL:ARG:순종 <= 1 && !TALENT:ARG:감정부족함
+		ABL:ARG:순종 = 2
+		TFLAG:25 = 1
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;반발각인
+;-------------------------------------------------
+
+
+SIF CFLAG:우후후 == 2
+	RETURN 0
+SIF CFLAG:최면상태 == 1
+	RETURN 0
+
+
+반발설정 = CUP:ARG:반감+CUP:ARG:불쾌
+SIF TALENT:ARG:감정부족함
+	반발설정 = 반발설정 / 10
+IF 반발설정 >= 500 && 반발설정 < 1000 && TFLAG:150 == 0 && MARK:ARG:반발각인 <= 0
+	MARK:ARG:반발각인 = 1
+	SIF MARK:ARG:4 < 1
+		MARK:ARG:4 = 1
+	TFLAG:21 = 1
+	CFLAG:ARG:기분나쁨 = 1
+	CFLAG:ARG:극대노 = 1
+	TCVAR:ARG:기분나쁨 = 1
+ELSEIF 반발설정 >= 1000 && 반발설정 < 2000 && TFLAG:150 == 0 && MARK:ARG:반발각인 <= 1
+	MARK:ARG:반발각인 = 2
+	TFLAG:21 = 2
+	IF MARK:ARG:4 < 2
+		;감정부족함の場合は반발각인による순종ダウンはなし
+		IF ABL:ARG:순종 == 1 && !TALENT:ARG:감정부족함
+			ABL:ARG:순종 = 0
+			TFLAG:25 = 1
+		ELSEIF ABL:ARG:순종 == 2 && !TALENT:ARG:감정부족함
+			ABL:ARG:순종 = 1
+			TFLAG:25 = 2
+		ENDIF
+	ENDIF
+	SIF MARK:ARG:4 < 2
+		MARK:ARG:4 = 2
+	CFLAG:ARG:기분나쁨 = 2
+	CFLAG:ARG:극대노 = 1
+	TCVAR:ARG:기분나쁨 = 1
+ELSEIF 반발설정 >= 2000 && TFLAG:150 == 0 && MARK:ARG:반발각인 <= 2
+	MARK:ARG:반발각인 = 3
+	TFLAG:21 = 3
+	IF MARK:ARG:4 < 3
+		IF ABL:ARG:순종 > 0 && ABL:ARG:순종 <= 2 && !TALENT:ARG:감정부족함
+			ABL:순종 = 0
+			TFLAG:25 = 1
+		ELSEIF ABL:ARG:순종 == 3 && !TALENT:ARG:감정부족함
+			ABL:ARG:순종 = 2
+			TFLAG:25 = 2
+		ENDIF
+	ENDIF
+	SIF MARK:ARG:4 < 3
+		MARK:ARG:4 = 3
+	CFLAG:ARG:기분나쁨 = 3
+	CFLAG:ARG:극대노 = 1
+	TCVAR:ARG:기분나쁨 = 1
+ENDIF
+TFLAG:150 = 0
+;-------------------------------------------------
+;순종の상승による[저항]の消滅をチェック
+;-------------------------------------------------
+@JUJUN_UP_CHECK(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+IF ABL:캐릭터_ID:순종 >= 3 && TALENT:캐릭터_ID:저항
+	PRINTFORM %NAME:캐릭터_ID%는[저항]을 잃었다
+	TALENT:캐릭터_ID:저항 = 0
+	PRINTL 부정의 보주가 절반이 됬다
+	JUEL:캐릭터_ID:100 /= 2
+ENDIF
+
+;-------------------------------------------------
+;욕망の상승による[抑圧]の消滅をチェック
+;-------------------------------------------------
+@YOKUBO_UP_CHECK
+IF ABL:욕망 >= 3 && TALENT:자기애 < 0
+	PRINTFORM %NAME:TARGET%[억압]을 잃었다
+	TALENT:자기애 = 0
+	PRINTL 부정의 보주가 절반이 됬다
+	JUEL:100 /= 2
+ENDIF
+
+;-------------------------------------------------
+;고통쾌락경험、봉사쾌락경험のチェック
+;-------------------------------------------------
+@EXP_GOT_CHECK(ARG)
+;봉사系である、봉사쾌락のチェック
+LOCAL = CUP:ARG:쾌Ｃ + CUP:ARG:쾌Ｖ + CUP:ARG:쾌Ａ + CUP:ARG:쾌Ｂ
+LOCAL:1 = 0
+
+IF CUP:ARG:욕정 < 100
+	LOCAL = 0
+ELSEIF CUP:ARG:욕정 < 300
+	LOCAL *= 2
+ELSEIF CUP:ARG:욕정 < 700
+	LOCAL *= 3
+ELSEIF CUP:ARG:욕정 < 1500
+	LOCAL *= 4
+ELSE
+	LOCAL *= 5
+ENDIF
+
+IF TFLAG:봉사쾌락플래그
+	IF LOCAL >= 12000
+		LOCAL:1 = 16
+		TIMES CUP:ARG:공포 , 0.65
+		TIMES CUP:ARG:반감 , 0.30
+	ELSEIF LOCAL >= 8000
+		LOCAL:1 = 12
+		TIMES CUP:ARG:공포 , 0.70
+		TIMES CUP:ARG:반감 , 0.40
+	ELSEIF LOCAL >= 5000
+		LOCAL:1 = 8
+		TIMES CUP:ARG:공포 , 0.75
+		TIMES CUP:ARG:반감 , 0.50
+	ELSEIF LOCAL >= 3000
+		LOCAL:1 = 4
+		TIMES CUP:ARG:공포 , 0.80
+		TIMES CUP:ARG:반감 , 0.60
+	ELSEIF LOCAL >= 2000
+		LOCAL:1 = 2
+		TIMES CUP:ARG:공포 , 0.85
+		TIMES CUP:ARG:반감 , 0.70
+	ELSEIF LOCAL >= 1000
+		LOCAL:1 = 1
+		TIMES CUP:ARG:공포 , 0.90
+		TIMES CUP:ARG:반감 , 0.80
+	ENDIF
+	EXP:ARG:봉사쾌락경험 += LOCAL:1
+ENDIF
+
+;고통쾌락のチェック
+LOCAL = 0
+IF CUP:ARG:욕정 >= 3000 && CUP:ARG:고통 >= 2000
+	LOCAL = 16
+	TIMES CUP:ARG:공포 , 0.65
+ELSEIF CUP:ARG:욕정 >= 2500 && CUP:ARG:고통 >= 1500
+	LOCAL = 12
+	TIMES CUP:ARG:공포 , 0.70
+ELSEIF CUP:ARG:욕정 >= 1500 && CUP:ARG:고통 >= 1000
+	LOCAL = 8
+	TIMES CUP:ARG:공포 , 0.75
+ELSEIF CUP:ARG:욕정 >= 1000 && CUP:ARG:고통 >= 700
+	LOCAL = 4
+	TIMES CUP:ARG:공포 , 0.80
+ELSEIF CUP:ARG:욕정 >= 600 && CUP:ARG:고통 >= 500
+	LOCAL = 2
+	TIMES CUP:ARG:공포 , 0.85
+ELSEIF CUP:ARG:욕정 >= 300 && CUP:ARG:고통 >= 300
+	LOCAL = 1
+	TIMES CUP:ARG:공포 , 0.90
+ENDIF
+IF LOCAL > 0 && ARG > 0
+	EXP:ARG:고통쾌락경험 += LOCAL
+
+	;가학쾌락경험
+	LOCAL = ABL:MASTER:새드끼 + ABL:ARG:마조끼 - 1
+	SIF LOCAL > 0
+		EXP:MASTER:가학쾌락경험 += LOCAL
+ENDIF
+
+@FAVOR_CALC(캐릭터_ID,迂回)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 迂回
+#DIM DYNAMIC 이성보존
+#DIM DYNAMIC 상승보존
+IF !TFLAG:COMABLE관리 && 迂回 == 0
+	RETURN 0
+ENDIF
+SIF !캐릭터_ID
+	RETURN 0
+;主人(あなた)と대상의 能力を計算
+;ABL:순종をみる
+TFLAG:호감도관리 += (ABL:캐릭터_ID:순종 + ABL:캐릭터_ID:친밀) / 2
+
+;主人と대상が同性
+IF HETEROSEX(캐릭터_ID,MASTER)
+	;男なら호모끼、女なら레즈끼を見る
+	IF ABL:캐릭터_ID:(HETEROSEX(캐릭터_ID,MASTER) + 16) == 0
+		TFLAG:호감도관리 -= 1
+	ELSEIF ABL:캐릭터_ID:(HETEROSEX(캐릭터_ID,MASTER) + 16) < 3
+		TFLAG:호감도관리 += 0
+	ELSEIF ABL:캐릭터_ID:(HETEROSEX(캐릭터_ID,MASTER) + 16) < 5
+		TFLAG:호감도관리 += 1
+	ELSE
+		TFLAG:호감도관리 += 2
+	ENDIF
+	;男ならＢＬ중독、女なら레즈중독を見る
+	IF ABL:캐릭터_ID:(HETEROSEX(캐릭터_ID,MASTER) + 31) > 4
+		TFLAG:호감도관리 += 2
+	ELSEIF ABL:캐릭터_ID:(HETEROSEX(캐릭터_ID,MASTER) + 31) > 2
+		TFLAG:호감도관리 += 1
+	ENDIF
+	;両刀
+	SIF TALENT:캐릭터_ID:성별기호 == -1
+		TFLAG:호감도관리 += 1
+ENDIF
+;素質による増減
+;反抗的
+SIF TALENT:캐릭터_ID:태도 > 0
+	TFLAG:호감도관리 -= 1
+;素直
+SIF TALENT:캐릭터_ID:태도 < 0 && TFLAG:호감도관리 > 0
+	TFLAG:호감도관리 += 1
+;자제심
+SIF TALENT:캐릭터_ID:자제심
+	TFLAG:호감도관리 -= 1
+;감정부족함
+SIF TALENT:캐릭터_ID:감정부족함
+	TFLAG:호감도관리 -= 1
+;저항
+SIF TALENT:캐릭터_ID:저항
+	TFLAG:호감도관리 -= 1
+;헌신적
+SIF TALENT:캐릭터_ID:헌신적 && TFLAG:호감도관리 > 0
+	TFLAG:호감도관리 += 1
+;쾌락に素直
+IF TALENT:캐릭터_ID:쾌감반응 > 0
+	TFLAG:호감도관리 += 1
+;쾌락の부정
+ELSEIF TALENT:캐릭터_ID:쾌감반응 < 0
+	TFLAG:호감도관리 -= 1
+ENDIF
+;男嫌い
+IF TALENT:캐릭터_ID:성별기호 & 1 && !(TALENT:MASTER:성별 & 1) && TALENT:MASTER:낭자애 == 0
+	TFLAG:호감도관리 -= 1
+;女嫌い
+ELSEIF TALENT:캐릭터_ID:성별기호 & 2 && TALENT:MASTER:성별 & 1
+	TFLAG:호감도관리 -= 1
+ENDIF
+;연모
+SIF TALENT:캐릭터_ID:연모
+	TFLAG:호감도관리 += 2
+
+;主人の매력
+SIF TALENT:MASTER:매력
+	TFLAG:호감도관리 += 1
+;主人の매혹
+SIF TALENT:MASTER:매혹
+	TFLAG:호감도관리 += 1
+;主人の謎の매력
+SIF TALENT:MASTER:수수께끼의매력
+	TFLAG:호감도관리 += 1
+;主人の인기
+SIF TALENT:MASTER:인기
+	TFLAG:호감도관리 += 1
+
+;オンラインレート Anonym추가
+SIF オンラインレート >= 100
+	TFLAG:호감도관리 += (オンラインレート / 10)
+SIF BASE:캐릭터_ID:술기운 >= 100
+	TFLAG:호감도관리 += BASE:캐릭터_ID:술기운 / 100
+
+상승보존 = 0
+이성보존 = 0
+;各種쾌락
+상승보존 += (100 - 30000 / (CUP:캐릭터_ID:쾌Ｃ + CUP:캐릭터_ID:쾌Ｖ + CUP:캐릭터_ID:쾌Ａ + CUP:캐릭터_ID:쾌Ｂ + 300)) * (1 + TALENT:캐릭터_ID:쾌감반응)
+;정애
+상승보존 += (100 - 200000 / (CUP:캐릭터_ID:공순 + 2000))
+;욕정
+상승보존 += (20 - 20000 / (CUP:캐릭터_ID:욕정 + 1000))
+;치정Ｍ
+상승보존 += (30 - 30000 / (CUP:캐릭터_ID:치정 + 1000)) * (ABL:캐릭터_ID:노출증 - 3) / 3
+;공포
+상승보존 += (50 - 20000 / (CUP:캐릭터_ID:공포 + 400)) * (ABL:캐릭터_ID:순종 - 3) / 3
+;고통
+상승보존 += (50 - 20000 / (CUP:캐릭터_ID:고통 + 400)) * (ABL:캐릭터_ID:마조끼 - 3) / 3
+;호의
+상승보존 += (50 - 100000 / (CUP:캐릭터_ID:호의 + 2000))
+;우월
+상승보존 += (30 - 30000 / (CUP:캐릭터_ID:우월 + 1000)) * (ABL:캐릭터_ID:새드끼 - 3) / 3
+이성보존 += 상승보존
+
+
+;불쾌
+상승보존 -= (50 - 25000 / (CUP:캐릭터_ID:불쾌 + 500))
+;억울
+상승보존 -= (50 - 15000 / (CUP:캐릭터_ID:억울 + 300))
+;반발
+상승보존 -= (50 - 10000 / (CUP:캐릭터_ID:반감 + 200))
+
+BASE:캐릭터_ID:만족 += MAXBASE:캐릭터_ID:만족 * ((NOWEX:캐릭터_ID:Ｃ절정 + NOWEX:캐릭터_ID:Ｖ절정 + NOWEX:캐릭터_ID:Ａ절정 + NOWEX:캐릭터_ID:Ｂ절정 + 2 * NOWEX:캐릭터_ID:사정) + 2 * (NOWEX:MASTER:Ｃ절정 + NOWEX:MASTER:Ｖ절정 + NOWEX:MASTER:Ａ절정 + NOWEX:MASTER:Ｂ절정 + 2 * NOWEX:MASTER:사정)) / (5 + ABL:캐릭터_ID:욕망)
+BASE:캐릭터_ID:만족 = MIN(MAXBASE:캐릭터_ID:만족, BASE:캐릭터_ID:만족 - 5 * MAX(0, 상승보존) / (1 + ABL:캐릭터_ID:욕망))
+SIF BASE:캐릭터_ID:만족 >=  1000 - CFLAG:캐릭터_ID:축적
+	BASE:캐릭터_ID:만족 = 1000 - CFLAG:캐릭터_ID:축적
+
+
+TFLAG:호감도관리 += 상승보존 / 10
+;ついでに무드と이성
+IF TFLAG:COMABLE관리 != 2
+	BASE:캐릭터_ID:무드 += MIN(ABL:캐릭터_ID:친밀 + 1,10) * 상승보존 / 2
+	SIF BASE:캐릭터_ID:술기운 >= 100
+		BASE:캐릭터_ID:무드 += (BASE:캐릭터_ID:술기운 / 100) * 상승보존
+	
+	BASE:캐릭터_ID:무드 = MIN(BASE:캐릭터_ID:무드 , MAXBASE:캐릭터_ID:무드 )
+	BASE:캐릭터_ID:이성 -= 이성보존 * (GETPALAMLV(PALAM:캐릭터_ID:욕정,5) + 1)
+	;PRINTFORMW BASE:캐릭터_ID:이성 {BASE:캐릭터_ID:이성}
+	BASE:캐릭터_ID:이성 = MAX(BASE:캐릭터_ID:이성 , 0 )
+	IF SOURCE:캐릭터_ID:반감 > 0 && TFLAG:COMABLE관리 == 1
+		SIF TALENT:캐릭터_ID:감정부족함 == 0
+			BASE:캐릭터_ID:분노 += SOURCE:캐릭터_ID:반감 * 3 * (2000 - BASE:캐릭터_ID:무드) * (500 + BASE:캐릭터_ID:이성) / ((2000 + BASE:캐릭터_ID:무드) * (500 + MAXBASE:캐릭터_ID:이성))
+	ENDIF
+	SIF BASE:캐릭터_ID:분노 > MAXBASE:캐릭터_ID:분노
+		CFLAG:캐릭터_ID:극대노 = 1
+	
+	BASE:캐릭터_ID:분노 = MIN(BASE:캐릭터_ID:분노 , MAXBASE:캐릭터_ID:분노 )
+	SIF BASE:캐릭터_ID:분노 == MAXBASE:캐릭터_ID:분노
+		TCVAR:캐릭터_ID:기분나쁨 = 1
+	IF CFLAG:캐릭터_ID:기분나쁨
+		BASE:캐릭터_ID:분노 = MAXBASE:캐릭터_ID:분노
+		CFLAG:캐릭터_ID:극대노 = 1
+	ENDIF
+ENDIF
+
+;반발각인보정
+TFLAG:호감도관리 -= (FLAG:4 + 1) * MARK:반발각인
+
+;結果が一定数未満の場合
+IF MARK:반발각인 >= 3 && TFLAG:호감도관리 < -3
+	TFLAG:호감도관리 = -3
+ELSEIF MARK:반발각인 == 2 && TFLAG:호감도관리 < -2
+	TFLAG:호감도관리 = -2
+ELSEIF MARK:반발각인 == 1 && TFLAG:호감도관리 < -1
+	TFLAG:호감도관리 = -1
+ELSEIF TFLAG:호감도관리 < 0
+	TFLAG:호감도관리 = 0
+ENDIF
+
+;무관심の경우、연모がないと호감도が上がりにくい
+IF TALENT:캐릭터_ID:무관심 && !TALENT:캐릭터_ID:연모
+	IF TFLAG:호감도관리 > 1
+		TFLAG:호감도관리 /= 2
+	ELSEIF TFLAG:호감도관리 > 0
+		TFLAG:호감도관리 = 1
+	ENDIF
+	SIF ABL:캐릭터_ID:새드끼 >= 4
+		TFLAG:호감도관리 += 1
+ENDIF
+
+;아무것도 안한다を使用した場合は上限を0にする
+SIF TFLAG:호감도관리 > 0 && SELECTCOM == 21
+	TFLAG:호감도관리 = 0
+;TCVARによる호감도計算に仕様した상승보존を用いる
+SIF !상승보존
+	TFLAG:호감도관리 = 0
+
+;PRINTFORML (TFLAG:호감도관리:{TFLAG:호감도관리})
+CFLAG:캐릭터_ID:호감도 += TFLAG:호감도관리
+;호감도は0以下にも100万以上にもならない
+CFLAG:캐릭터_ID:호감도 = LIMIT(CFLAG:캐릭터_ID:호감도, 0, 999999)
+
+;호감도표시
+SIF TFLAG:호감도관리
+SETCOLOR C_PINK
+PRINTFORM %CALLNAME:캐릭터_ID% 
+PRINTFORML \@(TFLAG:호감도관리 >= 0) ? 호감도＋{TFLAG:호감도관리} # 호감도－{-TFLAG:호감도관리}\@
+RESETCOLOR
+FLAG:누계호감도상승 += TFLAG:호감도관리
+
+
+
+;V조교の고통、반발보정(フィストなど激しいものは別処理)(実際には1000倍されてるので使用時は1/1000に)
+@PAIN_CHECK_V(ARG)
+#FUNCTION
+VARSET LOCAL
+;EXP:Ｖ경험をみる
+IF EXP:ARG:Ｖ경험 < EXPLV:1
+	LOCAL = 20
+ELSEIF EXP:ARG:Ｖ경험 < EXPLV:2
+	LOCAL = 12
+ELSEIF EXP:ARG:Ｖ경험 < EXPLV:3
+	LOCAL = 10
+ELSEIF EXP:ARG:Ｖ경험 < EXPLV:4
+	LOCAL = 8
+ELSEIF EXP:ARG:Ｖ경험 < EXPLV:5
+	LOCAL = 6
+ELSEIF EXP:ARG:Ｖ경험 >= EXPLV:5
+	LOCAL = 4
+ELSE
+	LOCAL = 2
+ENDIF
+
+;PALAM:Ｖ감각をみる
+IF PALAM:ARG:쾌Ｖ < PALAMLV:1
+	LOCAL:1 = 15
+ELSEIF PALAM:ARG:쾌Ｖ < EXPLV:2
+	LOCAL:1 = 12
+ELSEIF PALAM:ARG:쾌Ｖ < EXPLV:3
+	LOCAL:1 = 8
+ELSEIF PALAM:ARG:쾌Ｖ < EXPLV:4
+	LOCAL:1 = 5
+ELSEIF PALAM:ARG:쾌Ｖ < EXPLV:5
+	LOCAL:1 = 2
+ELSEIF PALAM:ARG:쾌Ｖ >= EXPLV:5
+	LOCAL:1 = 1
+ELSE
+	LOCAL:1 = 0
+ENDIF
+
+;PALAM:윤활をみる
+IF PALAM:ARG:윤활 < PALAMLV:1
+	LOCAL:2 = 15
+ELSEIF PALAM:ARG:윤활 < PALAMLV:2
+	LOCAL:2 = 12
+ELSEIF PALAM:ARG:윤활 < PALAMLV:3
+	LOCAL:2 = 10
+ELSEIF PALAM:ARG:윤활 < PALAMLV:4
+	LOCAL:2 = 8
+ELSEIF PALAM:ARG:윤활 >= PALAMLV:4
+	LOCAL:2 = 5
+ELSE
+	LOCAL:2 = 2
+ENDIF
+
+RETURNF LOCAL * LOCAL:1 * LOCAL:2
+
+;애널조교の고통보정(実際には1000倍されてるので使用時は1/1000に)
+@PAIN_CHECK_A(ARG)
+#FUNCTION
+VARSET LOCAL
+;EXP:Ａ경험をみる
+IF EXP:ARG:Ａ경험 < EXPLV:1
+	LOCAL = 20
+ELSEIF EXP:ARG:Ａ경험 < EXPLV:2
+	LOCAL = 12
+ELSEIF EXP:ARG:Ａ경험 < EXPLV:3
+	LOCAL = 10
+ELSEIF EXP:ARG:Ａ경험 < EXPLV:4
+	LOCAL = 8
+ELSEIF EXP:ARG:Ａ경험 < EXPLV:5
+	LOCAL = 6
+ELSEIF EXP:ARG:Ａ경험 >= EXPLV:5
+	LOCAL = 4
+ELSE
+	LOCAL = 2
+ENDIF
+
+;PALAM:Ａ감각をみる
+IF PALAM:ARG:쾌Ａ < PALAMLV:1
+	LOCAL:1 = 20
+ELSEIF PALAM:ARG:쾌Ａ < EXPLV:2
+	LOCAL:1 = 15
+ELSEIF PALAM:ARG:쾌Ａ < EXPLV:3
+	LOCAL:1 = 10
+ELSEIF PALAM:ARG:쾌Ａ < EXPLV:4
+	LOCAL:1 = 6
+ELSEIF PALAM:ARG:쾌Ａ < EXPLV:5
+	LOCAL:1 = 2
+ELSEIF PALAM:ARG:쾌Ａ >= EXPLV:5
+	LOCAL:1 = 1
+ELSE
+	LOCAL:1 = 0
+ENDIF
+
+;PALAM:윤활をみる
+IF PALAM:ARG:윤활 < PALAMLV:1
+	LOCAL:2 = 15
+ELSEIF PALAM:ARG:윤활 < PALAMLV:2
+	LOCAL:2 = 12
+ELSEIF PALAM:ARG:윤활 < PALAMLV:3
+	LOCAL:2 = 10
+ELSEIF PALAM:ARG:윤활 < PALAMLV:4
+	LOCAL:2 = 8
+ELSEIF PALAM:ARG:윤활 >= PALAMLV:4
+	LOCAL:2 = 5
+ELSE
+	LOCAL:2 = 2
+ENDIF
+
+RETURNF LOCAL * LOCAL:1 * LOCAL:2

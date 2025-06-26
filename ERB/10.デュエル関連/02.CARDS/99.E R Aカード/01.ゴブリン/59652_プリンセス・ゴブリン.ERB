@@ -1,0 +1,281 @@
+﻿@CARDNAME_59652,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 고블린 프린세스
+	CASE "略称"
+		RESULTS = 고블린 프린세스
+	CASE "カテゴリ"
+		RESULTS:0 = 고블린
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59652(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2100
+	CASE "守備力"
+		RETURN 1700
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_59652(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+RETURN 0
+
+@CARD_EXPLANATION_59652(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,EX덱起動)
+PRINTL 이 카드는 자신의 필드에 존재하는 레벨 4 이하의 수컷 「고블린」 1장을 묘지로 보내고,
+PRINTL 상대 묘지에 존재하는 암컷 몬스터 1장을 제외한 경우에만 EX덱에서 엑시즈 소환 할 수 있다。
+PRINTL 이 카드의 이름은, 이 방법으로 소환 시 제외한 암컷 몬스터와 같다。
+PRINTL 이 방법으로 인한 엑시즈 소환은 1턴에 1번밖에 사용할 수 없다。
+CALL CARD_ABLE(0,필드起動)
+PRINTL ①：자신의 메인 페이즈에 이카드의 엑시즈 소재를 1개 제거하는 것으로 발동 할 수 있다。
+PRINTL 자신 덱 / 묘지에서 "고블린」 몬스터 1장을 패에 넣는다。
+CALL CARD_ABLE(0,バトル開始時)
+PRINTL ②：배틀 페이즈 개시시에 발동할 수 있다。
+PRINTL 상대 필드에 존재하는 수컷 몬스터 1장을 파괴하고 、이 Ｘ소재를１늘린다。
+CALL CARD_ABLE(0,ターン終了時強制)
+PRINTL ③：엔드 페이즈에 자신 필드에 수컷  「고블린」 몬스터가 존재할 경우에 발동한다 。
+PRINTL 이 카드의 １소재를 1개늘려、「고블린」 몬스터의 공격력을 300 올린다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_59652(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59652)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,59652)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,59652)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 고블린
+	효과条件レベル = 4
+	효과条件성별 = 雄性
+	효과条件종류 = レベル持ち
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과条件성별 = 牝性
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 고블린
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == バトル開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 雄性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 고블린
+	효과条件성별 = 雄性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_59652(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 取込カードID
+#DIM DYNAMIC カードID
+#DIMS DYNAMIC カード名
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59652,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 고블린
+		효과条件レベル = 4
+		효과条件성별 = 雄性
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			カウンタ ++
+			CALL FULLRESET
+			효과範囲상대묘지 = 1
+			효과条件성별 = 牝性
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			選択カードB = RESULT
+			IF 選択カードB != 9999
+				カウンタ ++
+				CALL CARD_SELECT(듀얼리스트,選択カードB)
+				取込カードID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:{選択カード（CS）}")
+			ENDIF
+		ENDIF
+		IF カウンタ >= 2
+			CALL FULLRESET
+			CALL CARD_DISPOSE(듀얼리스트,"필드",選択カード)
+			選択カードB = 選択カードB - 2200
+			CALL CARD_DISPOSE(対面者,"묘지",選択カードB)
+			CALL FULLRESET
+			;효과範囲EX덱 = 1
+			;효과条件名前 = 고블린 프린세스
+			효과추가종류:0 = 40000
+			효과추가종류:1 = 1000000 + 取込カードID
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+			;CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL CARD_EROTICS(取込カードID)
+				IF RESULT != -1
+					PRINTFORMW 고블린에게 범해지고、마음이 꺽인 %NAME:RESULT%은 고블린들의 임신 주머니가 되는 운명을 받아들였다。
+					CALL EROTIC_MOVE("全身凌辱", RESULT, -1, 800)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59652,2,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 고블린
+		효과条件종류 = モン全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		
+		CALL CARD_EROTICS(GETVAR(@"%듀얼리스트%_MZ_変化元ID:場所"))
+		IF RESULT != -1
+			取込カードID = RESULT
+			PRINTFORMW %NAME:取込カードID%가 새로운 고블린을 낳았습니다。
+			CALL EROTIC_MOVE("疑似출산", 取込カードID, -1, 1000)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == バトル開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59652,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件성별 = 雄性
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+		SIF RESULT != 1
+			RETURN 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+
+		CALL CARD_EROTICS(GETVAR(@"%듀얼리스트%_MZ_変化元ID:場所"))
+		IF RESULT != -1
+			取込カードID = RESULT
+			PRINTFORMW 고블린 프린세스  %CALLNAME:取込カードID%는 상대 몬스터의 정기를 짜내, 아기씨를 축적했다！
+			CALL EROTIC_MOVE("前穴凌辱", 取込カードID, -1, 400)
+		ELSE
+			PRINTFORMW 고블린 프린세스는 상대 몬스터의 정기를 다 짜냈다！
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ターン終了時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+			CONTINUE
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:{カウンタ}")}, "カテゴリ"
+		SIF RESULTS != "고블린"
+			CONTINUE
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"永攻",300)
+	NEXT
+
+	CALL CARD_EROTICS(GETVAR(@"%듀얼리스트%_MZ_変化元ID:場所"))
+	IF RESULT != -1
+		取込カードID = RESULT
+		PRINTFORML 고블린 프린세스  %CALLNAME:取込カードID%는 고블린의 씨앗을 받아들였습니다！
+		PRINTFORMW 고블린의 사기가 상승했습니다！
+		CALL EROTIC_MOVE("前穴凌辱", 取込カードID, -1, 400)
+	ELSE
+		PRINTFORML 고블린 프린세스는 고블린의 씨앗을 받아들였습니다！
+		PRINTFORMW 고블린들의 의욕이 상승했습니다！
+	ENDIF
+
+ENDIF
+
+
+
+

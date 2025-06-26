@@ -1,0 +1,159 @@
+﻿@CARDNAME_1048,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 묘지기의 사도
+	CASE "略称"
+RESULTS = 묘지기의 사도
+	CASE "カテゴリ"
+RESULTS:0 = 묘지기
+ENDSELECT
+
+
+@CARD_1048(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250409
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1048(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 어느 한쪽밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 이 카드를 포함한 손패 2장을 묘지로 보내고 발동할 수 있다.
+PRINTL 덱에서 '묘지기의 사도' 이외의 '묘지기' 몬스터 1장을 패에 넣는다. 그 후, 자신은 1장 드로우한다.
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ②: '묘지기' 몬스터와 '왕가의 잠자는 골짜기-네크로밸리'가 자신 필드에 존재하고,
+PRINTL 상대가 몬스터의 효과를 발동했을 때 발동할 수 있다.
+PRINTL 패 / 필드의 이 카드를 묘지로 보내고, 그 발동을 무효로 한다.
+
+;「묘지기」の低ステータスのモンスター。네크로벨리の強化が入っても1500/1500なので戦闘での頼りにはならない。
+;ただ、손패に存在していると相当便利で、패에서 切って덱の他の「묘지기」モンスターに変換できるので、
+;巫女＋영술사の初動が、使徒＋（巫女または영술사）でも成立するようになる。
+;また、巫女が泡ヴェ-ラ-で止められても손패に영술사が居れば、使徒を司令官に変換して네크로벨리を供給할 수 있다。
+;묘지기마법はフィールドが貼ってあれば덱에서 のサーチ효과になって初動パ-ツにできるので、
+;これらを加味するとかなり多彩な２장初動パターンになる、余った使徒は손패誘発（メルク-リエ相当）としても利用할 수 있다。
+
+
+@CARDCAN_1048(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1048)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,1048)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,1048)
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 2
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 現山札数(듀얼리스트) < 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 묘지기
+	효과条件固名前 = 묘지기의 사도
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,61331)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,26893)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,1048)
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"손패","필드")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 묘지기
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+효과条件名前 = 왕가의 골짜기-네크로밸리
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1048(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1048,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = モン全般
+			효과条件カテゴリ = 묘지기
+			효과条件固名前 = 묘지기의 사도
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			SIF RESULT == 1
+				CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1048,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+	ENDIF
+ENDIF

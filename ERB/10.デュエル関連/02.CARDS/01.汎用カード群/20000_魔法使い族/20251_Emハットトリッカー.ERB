@@ -1,0 +1,122 @@
+﻿@CARDNAME_20251,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = Em 해트트리커-
+	CASE "略称"
+RESULTS = Em 핫토리
+	CASE "カテゴリ"
+RESULTS:0 = 엔터메이지
+RESULTS:1 = 마력 카운터
+ENDSELECT
+
+
+@CARD_20251(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1100
+	CASE "守備力"
+		RETURN 1100
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_20251(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①: 필드에 몬스터가 2장 이상 존재할 경우에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②: 자신에게 데미지를 주는 마법 / 함정 / 몬스터의 효과가 발동했을 경우에 발동할 수 있다.
+PRINTL 이 카드에 마력 카운터를 1개 놓는다.
+
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ③: 이 카드에 마력 카운터가 3개 이상 놓여 있는 경우,
+PRINTL 이 카드의 공격력 / 수비력은 2200 상승한다.
+
+@CARDCAN_20251(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20251)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,20251,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"被弾種",3)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_魔Ｃ:場所") <= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_20251(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM サーチカード 
+
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20251)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20251)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"魔Ｃ",1)
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,2200,2200)	
+ENDIF

@@ -1,0 +1,133 @@
+﻿@CARDNAME_24535,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초중무사 빅 벤-K
+	CASE "略称"
+RESULTS = 빅 벤K
+	CASE "カテゴリ"
+RESULTS:0 = 초중무사
+ENDSELECT
+
+
+@CARD_24535(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 효과モン
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 3500
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24535(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ①: 이 카드가 묘지에 존재하고, 자신 필드에 「초중무사」 몬스터가 존재할 경우, 발동할 수 있다.
+PRINTL (이 효과는 자신 묘지에 마법 / 함정 카드가 존재하지 않을 경우에 발동과 처리를 할 수 있다.)
+PRINTL 이 카드를 특수 소환한다. 이 효과로 특수소환한 이 카드는, 필드에서 벗어났을 때 제외된다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 「초중무사」 몬스터밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(0,소환時,특수소환時)
+PRINTL ②: 이 카드가 소환 특수소환했을 때 발동할 수 있다.
+PRINTL 이 카드를 수비표시로 한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 이 카드는 앞면 수비표시인 채로 공격할 수 있다.
+PRINTL 그 경우, 이 카드는 수비력을 공격력으로 취급하여 데미지 계산을 실행한다.
+
+@CARDCAN_24535(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24535)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,24535)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24535,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 초중무사
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ENDIF	
+
+@CARDEFFECT_24535(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24535,1)
+	IF RESULT == 0
+	    CALL FULLRESET
+		효과추가종류 = 2
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		CALL CARD_SS_RESTRICTION(듀얼리스트,"초중무사")
+	ENDIF
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24535)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",2,1)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"守戦")
+
+ENDIF

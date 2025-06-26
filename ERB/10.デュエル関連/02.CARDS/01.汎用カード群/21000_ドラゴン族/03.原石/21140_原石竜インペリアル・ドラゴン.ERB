@@ -1,0 +1,186 @@
+﻿@CARDNAME_21140,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 원석룡 임페리얼 드래곤
+	CASE "略称"
+RESULTS = 임페리얼 D
+	CASE "カテゴリ"
+RESULTS:0 = 원석
+ENDSELECT
+
+
+@CARD_21140(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21140(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,フリー誘発)
+PRINTL ①: 상대 메인 페이즈에, 패의 이 카드를 상대에게 보여주고 발동할 수 있다. 「원석」 몬스터 1장을 소환한다.
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ②: 이 카드가 소환되었을 경우에 발동할 수 있다. 이하의 효과를 각각 적용한다.
+PRINTL ●상대 필드의 모든 앞면 표시 몬스터의 효과는 무효화된다.
+PRINTL ●속성이, 자신 묘지의 일반 몬스터 중 어느 하나와 같은 상대 필드의 몬스터를 전부 제외한다.
+
+
+@CARDCAN_21140(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21140)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,21140)
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21140(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 光可能
+#DIM DYNAMIC 어둠可能
+#DIM DYNAMIC 화염可能
+#DIM DYNAMIC 바람可能
+#DIM DYNAMIC 땅可能
+#DIM DYNAMIC 물可能
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21140,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 원석
+		효과条件종류 = モン全般
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			소환権 ++
+			CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21140)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"無効")
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 通常モン
+		효과条件속성 = 빛속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			光可能 = 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 通常モン
+		효과条件속성 = 어둠속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			어둠可能 = 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 通常モン
+		효과条件속성 = 화염속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			화염可能 = 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 通常モン
+		효과条件속성 = 물속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			물可能 = 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 通常モン
+		효과条件속성 = 땅속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			땅可能 = 1
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 通常モン
+		효과条件속성 = 바람속성
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			바람可能 = 1
+		CALL FULLRESET
+		효과条件속성:0 = 0
+		SIF 光可能 == 1
+			효과条件속성:0 = 빛속성
+		SIF 어둠可能 == 1
+			효과条件속성:1 = 어둠속성
+		SIF 화염可能 == 1
+			효과条件속성:2 = 화염속성
+		SIF 바람可能 == 1
+			효과条件속성:3 = 바람속성
+		SIF 땅可能 == 1
+			효과条件속성:4 = 땅속성
+		SIF 물可能 == 1
+			효과条件속성:5 = 물속성
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"제외")
+	ENDIF
+ENDIF
+

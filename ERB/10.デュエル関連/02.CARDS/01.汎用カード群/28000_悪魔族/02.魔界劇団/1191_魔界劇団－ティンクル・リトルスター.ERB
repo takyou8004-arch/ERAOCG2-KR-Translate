@@ -1,0 +1,177 @@
+﻿@CARDNAME_1191,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마계극단－트윙클 리틀 스타
+	CASE "略称"
+RESULTS = 리틀 스타
+	CASE "カテゴリ"
+RESULTS:0 = 마계극단
+ENDSELECT
+
+
+@CARD_1191(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1191(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드 이름의 ②의 펜듈럼 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 자신은 「마계극단」 몬스터밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ②: 자신 필드의 「마계극단」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 이 턴에, 그 몬스터는 1번의 배틀 페이즈 중에 3회까지 몬스터에게 공격할 수 있고, 직접 공격할 수 없고,
+PRINTL 대상의 몬스터 이외의 자신의 몬스터는 공격할 수 없다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드는 자신 턴에는 전투로는 파괴되지 않고,
+PRINTL 1번의 배틀 페이즈 중에 3회까지 공격할 수 있다.
+
+
+@CARDSUMMON_AA_1191
+
+
+@CARDCAN_1191(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1191)
+SIF RESULT == 1
+	RETURN 0
+
+;P
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	IF 듀얼리스트 != "자신"
+		CALL FULLRESET
+		효과範囲마함 = 1
+효과条件名前 = 마계극단－트윙클 리틀 스타
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,1191)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 마계극단
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+
+;M&P
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함" && ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+
+@CARDEFFECT_1191(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名前
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;P
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1191)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1191,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 마계극단
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARD_{RESULT:1},"名前"
+			選択カード名前 = %RESULTS%
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"戦",2)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"直無",1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"単攻",1)
+			PRINTL 
+			SETCOLOR C_YELLOW
+			PRINTFORMW %選択カード名前%にスポットライトが当てられた！
+			RESETCOLOR
+		ENDIF
+	ENDIF
+
+;モンスター효과-------------------------
+;M&P
+ELSEIF 종류 == 지속효과
+	IF ゾーン == "마함"
+		CALL CARD_SS_RESTRICTION(듀얼리스트,"마계극단")
+
+	ELSEIF ゾーン == "필드"
+		IF ターンプレイヤー == 듀얼리스트
+			CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",2)
+			CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+		ENDIF
+	ENDIF
+ENDIF
+
+

@@ -1,0 +1,159 @@
+﻿@CARDNAME_21712,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 수룡성-비시키
+	CASE "略称"
+RESULTS = 수룡성-비시키
+	CASE "カテゴリ"
+RESULTS:0 = 룡성
+ENDSELECT
+
+
+@CARD_21712(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+@CARD_EXPLANATION_21712(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ① 효과는 1턴에 1번만 사용할 수 있다.
+CALLFORM CARD_ABLE(1,破壊→묘지 ,戦闘→묘지)
+PRINTL ①: 자신 필드의 이 카드가 전투 / 효과로 파괴되었을 때 발동할 수 있다.
+PRINTL 덱에서 이 카드명 이외의 "룡성" 몬스터 1장을 공격 표시로 특수 소환한다.
+CALLFORM CARD_ABLE(10,필드起動 ,フリー誘発)
+PRINTL ②: 1턴에 1번, 상대의 메인 페이즈 및 배틀 페이즈에 발동할 수 있다.
+PRINTL 자신 필드의 "룡성" 몬스터만을 소재로 하여 S 소환을 실행한다.
+CALLFORM CARD_ABLE(0,S素材時효과)
+PRINTL ③: 이 카드가 S 소재가 되었을 경우, 자신 필드의 S 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터는 함정 내성을 얻는다.
+
+
+@CARDCAN_21712(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21712)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_1(듀얼리스트,21712)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 룡성
+	효과条件固名前 = 수룡성-비시키
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1 && バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 싱크로
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == S素材時효과
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 싱크로
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_21712(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21712,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 룡성
+		효과条件固名前 = 수룡성-비시키
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"攻撃표시")
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21712,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件固カテゴリ = 룡성
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"不材",3)
+		CALL FULLRESET
+		효과条件종류 = 싱크로
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL SYNSUMMON(듀얼리스트, 選択カード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == S素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21712)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 싱크로
+		CALL CARD_GRANT_ADV(듀얼리스트,ゾーン,場所,"함정耐",2)
+	ENDIF
+ENDIF

@@ -1,0 +1,153 @@
+﻿@CARDNAME_33335,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 스케어클로 크샤트리라
+	CASE "略称"
+RESULTS = 스케어 크샤
+	CASE "カテゴリ"
+RESULTS:0 = 스케어클로
+RESULTS:1 = 크샤트리라
+ENDSELECT
+
+
+@CARD_33335(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 2600
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_33335(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 자신 / 상대의 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환하고,
+PRINTL 자신의 패 / 묘지에서 "크샤트리라" 카드 또는 "스케어클로" 카드 1장을 고르고 제외한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 앞면 수비 표시인 채로 공격할 수 있다(수비력을 공격력으로 취급하여 데미지 계산을 실행한다).
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ③: 자신의 "크샤트리라" 몬스터 또는 "스케어클로" 몬스터가 전투를 실행할 경우,
+PRINTL 턴 종료 시까지 그 몬스터의 효과는 무효화된다.
+
+
+@CARDSUMMON_AA_33335
+
+@CARDCAN_33335(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,33335)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,33335)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,33335,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ:0 = 스케어클로
+	효과条件カテゴリ:1 = 크샤트리라
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	PRINTW OK0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	PRINTW OK1
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	PRINTW OK2
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF !GROUPMATCH(RESULTS,"스케어클로","크샤트리라")
+		RETURN 0
+	PRINTW fuck
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_33335(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,33335,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件カテゴリ:0 = 스케어클로
+			효과条件カテゴリ:1 = 크샤트리라
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL FULLRESET
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘場所(듀얼리스트,1),"無効")
+	SETCOLOR C_RED
+	PRINTW 스케어클로 크샤트리라の支援포격！
+	RESETCOLOR
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"守戦")
+ENDIF

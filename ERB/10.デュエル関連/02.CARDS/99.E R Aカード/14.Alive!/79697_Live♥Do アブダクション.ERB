@@ -1,0 +1,207 @@
+﻿@CARDNAME_79697,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = Live♥Do 애브덕션
+	CASE "略称"
+		RESULTS = L♥D 애브덕션
+	CASE "カテゴリ"
+		RESULTS:0 = Live♥Do
+		RESULTS:1 = AliVe♡Twin
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79697(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79697(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는 1턴에 1번, 어느 1개 밖에 사용할 수 없다.。
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신 / 상대의 배틀 페이즈에 자신 필드에 몬스터가 존재하지 않을 경우에 발동할 수 있다。
+PRINTL 상대의 여성 몬스터 1장을 자신 마법 & 함정 존에 앞면 표시로 둔다。
+PRINTL 이 효과를 발동한 턴, 자신은 「Live☆Twin" 몬스터 밖에 특수 소환할수 없다。
+CALL CARD_ABLE(2,ターン終了時)
+PRINTL ②：자신 엔드 페이즈에 묘지에 존재하는 이 카드를 덱 아래로 되돌리고 발동할 수 있다。
+PRINTL 마법&함정 존에 앞면 표시로 존재하는 「Live☆Twin」이외의 여성몬스터 1장을 제외하고,
+PRINTL 그 몬스터의 수비력만큼 라이프를 회복한다。
+CALL CARD_ABLE(3,攻撃時強制誘発)
+PRINTL ③：이 카드가 묘지에 존재하며 상대 몬스터의 직접 공격 선언 시에 발동한다。
+PRINTL 상대는 ２００ＬＰ잃고, 자신은 ２００ＬＰ회복한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79697(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79697)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		SIF 마함数(듀얼리스트) >= 5
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,79697)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79697)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+
+	CALL FULLRESET
+	효과条件固カテゴリ = ライブツイン
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"SS履歴")
+	SIF RESULT != 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時
+	SIF 발동済_1(듀얼리스트,79697)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79697)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件성별 = 牝性
+	효과条件固カテゴリ = Live☆Twin
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79697(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 回復量
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79697,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"選択")
+		IF RESULT == 1
+			選択カード = RESULT:1
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = RESULT
+			CALL CARD_EROTICS(他参照選択カードID)
+			조교대상 = RESULT
+			CALL CARD_ADD(듀얼리스트,"상대필드","마함",選択カード)
+			IF 조교대상 != -1
+				PRINTFORML
+				PRINTFORMW %CALLNAME:조교대상%가 화면 속으로 끌려 들어가 버렸다！
+				CALL EROTIC_MOVE("拘束晒し",조교대상,-1,100)
+			ENDIF
+			CALL CARD_SS_RESTRICTION(듀얼리스트,"Live☆Twin")
+			CALL CARD_EX_RESTRICTION(듀얼리스트,"Live☆Twin")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79697,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件성별 = 牝性
+		효과条件固カテゴリ = Live☆Twin
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		選択カード_ID = RESULT:1
+		TRYCALLFORM CARD_{選択カード_ID},"守備力"
+		回復量 = RESULT
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",回復量)
+
+		CALL CARD_EROTICS(選択カード_ID)
+		조교대상 = RESULT
+		IF 조교대상 != -1
+			PRINTFORML
+			PRINTFORML %CALLNAME:조교대상%은 질려서 마지막까지 쓰이고 화면 밖으로 버려졌다！
+			PRINTFORMW 처음보는 시청자에게 후원금이 입금되었다。
+			CALL EROTIC_MOVE("全身凌辱",조교대상,-1,回復量)
+			SELECTCASE 듀얼리스트
+				CASE "자신"
+				CALL MONEY_GET(回復量)
+			ENDSELECT
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	PRINTL 
+	PRINTL AliVe♡Twin 채널의 시청료를 징수！
+	CALL LIFE_CHANGE(対面者,"減少","コスト",200)
+	CALL LIFE_CHANGE(듀얼리스트,"増加","효과",200)
+	SELECTCASE 듀얼리스트
+		CASE "자신"
+		CALL MONEY_GET(200)
+		CASE "상대"
+		CALL MONEY_GET(-200)
+	ENDSELECT
+ENDIF
+

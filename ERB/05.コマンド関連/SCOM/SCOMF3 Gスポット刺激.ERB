@@ -1,0 +1,70 @@
+﻿;-------------------------------------------------
+;G스팟 자극
+;애무系파생コマンド
+;-------------------------------------------------
+@SCOM3
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 50
+DOWNBASE:기력 += 100
+
+IF !TALENT:처녀
+	CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER, 180)
+ELSE
+	CALL SOURCE_CALC_쾌Ｖ(TARGET, MASTER, 30)
+ENDIF
+CALL SOURCE_CALC_노출(TARGET, MASTER, 80)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 180)
+
+;고통
+LOCAL = 60 * PAIN_CHECK_V(TARGET) / 1000
+
+;처녀喪失
+CALL LOST_VIRGIN(TARGET, MASTER, 3)
+;-------------------------------------------------
+;汚れの処理
+;-------------------------------------------------
+;질내に파과の血の汚れを付加
+SIF TALENT:처녀
+	STAIN:6 |= 64
+;奴隷の질내⇔조교者の손가락の汚れが이동
+	STAIN:6 |= STAIN:MASTER:1
+	STAIN:MASTER:1 |= STAIN:6
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;V경험
+EXP:Ｖ경험 += 1
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 3
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 3
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+@COM_ABLE903
+;G스팟 자극
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(903)
+	RETURN RESULT
+;オトコだとダメ
+SIF  !(TALENT:2 & 1)
+	RETURN 0
+
+
+;하반신착의
+SIF TEQUIP:0 & 4
+	RETURN 0
+;主人の기교が3以下はだめ
+SIF ABL:MASTER:기교 < 3
+	RETURN 0
+RETURN 1

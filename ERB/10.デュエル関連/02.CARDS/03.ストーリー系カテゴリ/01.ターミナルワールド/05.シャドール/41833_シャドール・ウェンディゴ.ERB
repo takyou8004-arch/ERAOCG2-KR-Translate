@@ -1,0 +1,215 @@
+@CARDNAME_41833, 参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 섀도르 웬디고
+	CASE "略称"
+		RESULTS = 섀도르 웬디고
+	CASE "カテゴリ"
+		RESULTS:0 = 섀도르
+		RESULTS:2 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_41833(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 링크
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 200
+	CASE "守備力"
+		RETURN 0
+	CASE "튜너"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+	CASE "특수制限"
+		RETURN 1
+	CASE "連動ID"
+		RETURN 1833
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_41833(듀얼리스트, 소환カード, EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件カテゴリ = 섀도르
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트, 소환カード, 41833) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_41833(종류)
+#DIM DYNAMIC 종류
+PRINTL 「섀도르" 몬스터 １장
+;PRINTL 리버스 몬스터 1장
+;PRINTL 이 카드를 링크 소환할 경우, 자신 필드의 뒷면 표시의 "섀도르" 몬스터도 링크 소재로 할 수 있다。
+PRINTL 자신은 「섀도르 웬디고」를 1턴에 1번밖에 특수 소환할 수 없다。
+PRINTL 이 카드명의  ①②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1, EX덱起動)
+PRINTL ①：자신 필드의 뒷면 표시의「섀도르" 몬스터 1장을 대상으로 하여 발동할 수 있다。
+PRINTL 그 몬스터를 릴리스하고, 이 카드를 엑스트라 덱에서 특수 소환한다。
+CALL CARD_ABLE(2, EX소환時, 특수소환時)
+PRINTL ②：이 카드가 특수 소환했을 경우에 발동할 수 있다。
+PRINTL 덱에서 "섀도르」마법 / 함정 카드 1장을 자신 필드에 세트한다。
+CALL CARD_ABLE(3, 필드起動)
+PRINTL ③：자신의 묘지의 카드 1장을 대상으로 하여 발동할 수 있다 그 카드를 제외한다。
+PRINTL 그 후, 자신의 제외 상태의 "섀도르" 몬스터 1장을 패에 넣을 수 있다。
+PRINTL 이 효과로 제외 상태의 "섀도르" 몬스터 1장 패에 넣었을 경우 추가로 자신의 패를 1장 선택해 묘지로 보낸다 。
+
+
+@CARDCAN_41833(듀얼리스트, 종류, ゾーン, 場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트, 종류, ゾーン, 場所, 41833)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트, 41833)
+		RETURN 0
+	SIF ゾーン != "EX덱"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트, 0, "EX덱", 1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 섀도르
+	효과条件표시 = 裏側표시
+	CALL CARD_CHECK_ADV(듀얼리스트, 종류, ゾーン, 場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트, 41833)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_3(듀얼리스트, 41833)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트, 종류, ゾーン, 場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_41833(듀얼리스트, 종류, ゾーン, 場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 손패枚数＿前
+#DIM DYNAMIC 손패枚数＿後
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트, 종류, ゾーン, 場所, 41833, 1)
+	IF RESULT == 0
+		CALL FULLRESET
+		;필드의 뒷면 표시인 「섀도르" 몬스터 １장을 リリースする
+		;下の処理は묘지送りで「リリース」じゃないけど、섀도르にリリース時誘発持ちは無いので妥協
+		;カード텍스트側を「묘지送り」にしないのは、マクロコスモスなど묘지제외送り状態でも起動させたい意図
+		효과範囲필드 = 1
+		효과条件カテゴリ = 섀도르
+		효과条件표시 = 裏側표시
+		CALL CARD_ADD_GY_ADV(듀얼리스트, ゾーン, 場所)
+		IF RESULT == 1
+			;リリースしたら後続処理としてEX덱에서 특수소환
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "EX덱", 場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트, 종류, ゾーン, 場所, 41833, 2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 섀도르
+		효과条件종류 = 마함全般
+		CALL CARD_SET_BASIC(듀얼리스트, "덱", ゾーン, 場所, "裏側표시")
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트, 종류, ゾーン, 場所, 41833, 3)
+	IF RESULT == 0
+		CALL FULLRESET
+		;묘지의  카드를 제외한다
+		CALL CARD_ADD_GY_BASIC(듀얼리스트, "묘지", ゾーン, 場所)
+		IF RESULT != 0
+			;묘지에서 の제외に成功했을 경우에 추가효과で제외 상태인 「섀도르」 카드를 패에 넣는다（できる효과）
+			;後続処理のために加える前の손패枚数を見て、패가 増えてない＝EXに戻った場合で処理を変える
+			손패枚数＿前 = 손패数(듀얼리스트)
+			CALL FULLRESET
+			효과条件カテゴリ = 섀도르
+			효과条件任意 = 1
+			CALL CARD_ADD_BASIC(듀얼리스트, "제외", ゾーン, 場所)
+			IF RESULT != 0
+				;손패回収にも成功した場合は패를 1枚고르고 묘지로 보る（する효과）
+				;回収대상がEXモンスターでEX덱에 戻った경우、後続処理は実行されない（OCG MDでの動作）
+				손패枚数＿後 = 손패数(듀얼리스트)
+				IF 손패枚数＿前 == 손패枚数＿後
+					;アプカロ-ネ「EX덱에 帰らせていただきます」
+				ELSE
+					CALL FULLRESET
+					CALL CARD_ADD_GY_BASIC(듀얼리스트, "손패", ゾーン, 場所)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

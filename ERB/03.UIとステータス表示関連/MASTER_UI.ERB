@@ -1,0 +1,283 @@
+﻿@MASTER_PORTRAIT(표시타입)
+#DIM 체력_マスタ
+#DIM 기력_マスタ
+#DIM 발기_マスタ
+
+#DIM 표시타입
+#DIM 표시サイズ
+#DIM PLV, 1
+#DIM 服装타입
+#DIMS DYNAMIC 任意の文字列変数
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 画像コード
+#DIM DYNAMIC GDI値
+#DIM GDI보존
+
+GDI値 = 1200 + GDI보존
+GDI보존 ++
+IF GDI보존 >= 20
+	GDI보존 = 0
+ENDIF
+
+; show room
+IF MASTER_표시状態 == 0
+	;部屋グラの설정
+	GDISPOSE 3
+	SPRITEDISPOSE @"{CFLAG:MASTER:현재위치}_ROOM"
+	IF ENUMFILES("RESOURCES/ROOMS", @"{CFLAG:MASTER:현재위치}_*", 0)
+		SPLIT RESULTS, "\\", RESULTS
+		GCREATEFROMFILE 3, "ROOMS/"+RESULTS:(RESULT-1)
+	ENDIF
+	SPRITECREATE @"{CFLAG:MASTER:현재위치}_ROOM", 3
+	IF SPRITECREATED(@"{CFLAG:MASTER:현재위치}_ROOM")
+		画像コード '= @"<shape type='space' param='{1200}'>"
+		画像コード += @"<img src='{CFLAG:MASTER:현재위치}_ROOM' srcb='' height='{GETCONFIG("一行の高さ")*11}px' width='{CLIENTWIDTH()-GETCONFIG("フォントサイズ")*13}px' ypos='{GETCONFIG("一行の高さ")*7/2}px' >"
+		HTML_PRINT 画像コード,1
+		画像コード '= @"<shape type='space' param='{1200}'>"
+		画像コード += @"<img src='半透明黒' srcb='' height='{GETCONFIG("一行の高さ")*11}px' width='{CLIENTWIDTH()-GETCONFIG("フォントサイズ")*13}px' ypos='{GETCONFIG("一行の高さ")*5/2}px' >"
+		HTML_PRINT 画像コード,1
+	ENDIF
+	PRINTL
+ENDIF
+
+SIF CFLAG:MASTER:우후후 >= 1
+	SETCOLOR  C_Ne_PINK
+PRINT ——
+IF MASTER_표시状態 == 1
+	PRINTBUTTON "▽[＋][MASTER]", 2004
+ELSEIF MASTER_표시状態 == 0
+	PRINTBUTTON "▼[－][MASTER]", 2004
+ENDIF
+PRINTFORM 【화상표시】
+IF MAS_PORTRAIT_画像표시 == 1
+	PRINTBUTTON "[×]", 2009
+ELSE
+	PRINTBUTTON "[□]", 2009
+ENDIF
+PRINTFORM ——【%GET_MONTH()% {DAY:3,2,RIGHT}일째(%GET_DAY()%)
+PRINTFORM {(TIME / 60),2,RIGHT}시{TIME % 60,2,RIGHT}분 
+PRINTFORM 날씨(%GET_WEATHER(천후설정)%)
+
+IF DAY * 1440 + TIME - CFLAG:MASTER:314 >= 960
+	SETCOLOR C_BLUE
+	PRINT [수면필요]
+	RESETCOLOR
+ELSEIF DAY * 1440 + TIME - CFLAG:MASTER:314 >= 720
+	SETCOLOR C_L_BLUE
+	PRINT [수면가능]
+	RESETCOLOR
+ENDIF
+IF TIME_PROGRESS(TCVAR:MASTER:식사가능여부) >= 240
+	SETCOLOR C_YELLOW
+	PRINT [식사가능]
+	RESETCOLOR
+ENDIF
+PRINT 】
+
+;-------------------------------------------------
+;현재위치情報
+;-------------------------------------------------
+PRINTFORM %GETPLACENAME(CFLAG:MASTER:현재위치)%
+;ウフフ中は気が散るので표시させない
+IF CFLAG:MASTER:우후후 != 1 && !FLAG:2002
+	PRINT 　
+	IF CFLAG:MASTER:현재위치 >= 自宅部屋最大値
+		SELECTCASE FLAG:(1000 + CFLAG:MASTER:현재위치)
+			CASE IS < 100
+				SETCOLOR C_GREEN
+				PRINTFORM %"[청결도:최고]",10,LEFT%
+			CASE IS < 500
+				SETCOLOR C_L_GREEN
+				PRINTFORM %"[청결도:고]",10,LEFT%
+			CASE IS < 2000
+				SETCOLOR C_YELLOW_2
+				PRINTFORM %"[청결도:중]",10,LEFT%
+			CASE IS < 5000
+				SETCOLOR C_P_PURPLE
+				PRINTFORM %"[청결도:저]",10,LEFT%
+			CASEELSE
+				SETCOLOR C_PINK
+				PRINTFORM %"[청결도:쓰레기더미]",10,LEFT%
+		ENDSELECT
+	ELSE
+		SELECTCASE FLAG:(1000 + CFLAG:MASTER:현재위치)
+			CASE IS < 100
+				SETCOLOR C_GREEN
+				PRINTFORM %"[청결도:최고]",10,LEFT%
+			CASE IS < 500
+				SETCOLOR C_L_GREEN
+				PRINTFORM %"[청결도:고]",10,LEFT%
+			CASE IS < 2000
+				SETCOLOR C_YELLOW_2
+				PRINTFORM %"[청결도:중]",10,LEFT%
+			CASE IS < 5000
+				SETCOLOR C_P_PURPLE
+				PRINTFORM %"[청결도:저]",10,LEFT%
+			CASEELSE
+				SETCOLOR C_PINK
+				PRINTFORM %"[청결도:더러운방]",10,LEFT%
+		ENDSELECT
+	ENDIF
+	RESETCOLOR
+ENDIF
+
+PRINT  선의：
+SELECTCASE FLAG:악랄치
+CASE 35 TO 65
+	PRINT 【보통】
+CASE 1 TO 34
+	SETCOLOR C_GOLD
+	PRINT 【선량】
+CASE -20 TO 0
+	SETCOLOR C_GOLD
+	PRINT 【최선】
+CASE 66 TO 99
+	SETCOLOR C_RED
+	PRINT 【악인】
+CASE 100 TO 120
+	SETCOLOR C_RED
+	PRINT 【극악인】
+ENDSELECT
+RESETCOLOR
+
+SIF CFLAG:MASTER:우후후 >= 1
+	SETCOLOR  C_Ne_PINK
+
+;PRINTFORM %HTML_POPPRINTINGSTR()%%GETLINESTR("—")%
+;PRINTSINGLEFORM %GETLINESTR("—")%
+;PRINTL ———————————————————————————————————————————————————————————————————————
+
+任意の文字列変数 = %HTML_POPPRINTINGSTR()%
+HTML_PRINT 任意の文字列変数, 1
+FOR カウンタ, 0, STRLENS(GETLINESTR("-"))-STRLENS(HTML_TOPLAINTEXT(任意の文字列変数))
+    PRINT —
+NEXT
+RESETCOLOR
+PRINTL
+
+SIF MASTER_표시状態 == 1
+	RETURN
+
+표시サイズ = 20
+MAS_PORTRAIT_표시サイズ = 10
+IF MAS_PORTRAIT_画像표시 == 1
+	PRINT ┏━━━━━━━━━━┓
+ENDIF
+
+PRINTL
+IF MAS_PORTRAIT_画像표시 == 1
+	PRINT ┃
+	CALL SHOW_GRAPHICS(MASTER,GDI値,2)
+
+	PRINT ┃
+ENDIF
+LOCALS = 【%NAME:MASTER%】
+PRINTBUTTON @"%LOCALS,40,LEFT%",804
+
+
+
+IF CFLAG:MASTER:감기플래그 >= 1
+	SETCOLOR C_BLUE
+	PRINT 【감기기운】
+	RESETCOLOR
+ENDIF
+
+IF BASE:MASTER:술기운 > 2
+	SELECTCASE BASE:MASTER:술기운
+		CASE IS > 1000
+			SETCOLOR C_D_PINK
+		CASE IS > 500
+			SETCOLOR C_H_PINK
+		CASEELSE 
+			SETCOLOR C_PINK
+	ENDSELECT
+	PRINTFORM 【%ALCOHOL_FACE(MASTER)%】
+	RESETCOLOR
+ENDIF
+
+
+
+
+PRINTL
+
+SIF MAS_PORTRAIT_画像표시 == 1
+	PRINTFORM ┃%"",표시サイズ,LEFT%┃
+
+
+체력_マスタ = BASE:MASTER:체력
+SIF BASE:MASTER:체력 < 0
+	체력_マスタ = 0
+PRINT 【 체력 】
+CALL PRINT_COLORBAR, 체력_マスタ, MAXBASE:MASTER:체력, 30, UNICODE(0x2585), UNICODE(0x2585),  BARCOLORSET("赤"), RESULT:1
+PRINTFORM  ({체력_マスタ,5}/{MAXBASE:MASTER:체력,5})
+
+PRINTFORM %"",3,LEFT%
+PRINTFORML 【소지금】({MONEY,10,RIGHT}円)
+
+
+PRINTL
+
+
+SIF MAS_PORTRAIT_画像표시 == 1
+	PRINTFORM ┃%"",표시サイズ,LEFT%┃
+
+기력_マスタ = BASE:MASTER:기력
+SIF BASE:MASTER:기력 < 0
+	기력_マスタ = 0
+PRINT 【 기력 】
+CALL PRINT_COLORBAR, 기력_マスタ, MAXBASE:MASTER:기력, 30, UNICODE(0x2585), UNICODE(0x2585),  BARCOLORSET("緑"), RESULT:1
+PRINTFORM  ({기력_マスタ,5}/{MAXBASE:MASTER:기력,5})
+
+IF TALENT:MASTER:성별 & 2
+	PRINTFORM %"",3,LEFT%
+	발기_マスタ = BASE:MASTER:발기
+	SIF BASE:MASTER:발기 < 0
+		발기_マスタ = 0
+	PRINT 【발기】
+	CALL PRINT_COLORBAR, 발기_マスタ, MAXBASE:MASTER:발기, 15, UNICODE(0x2585), UNICODE(0x2585),  BARCOLORSET("白"), RESULT:1
+	PRINTFORML  ({발기_マスタ,5}/{MAXBASE:MASTER:발기,5})
+ELSE	
+	PRINTL
+ENDIF
+
+
+;衣装
+SIF MAS_PORTRAIT_画像표시 == 1
+	PRINTFORM ┃%"",표시サイズ,LEFT%┃
+
+PRINT □ 복장 □—————————————————————————————————————————————————————————————————————————————————————————————————
+PRINTL
+
+SIF MAS_PORTRAIT_画像표시 == 1
+	PRINTFORM ┃%"",표시サイズ,LEFT%┃
+IF !EQUIP:MASTER:0
+	PRINT 【전라】
+ELSE
+	FOR 服装타입,1,20
+		IF STRLENS(CLOTHNAME(服装타입,EQUIP:MASTER:服装타입))
+			PRINTFORM 【%CLOTHNAME(服装타입,EQUIP:MASTER:服装타입)%】
+		ENDIF
+	NEXT
+
+ENDIF
+PRINTL 
+
+SIF MAS_PORTRAIT_画像표시 == 1
+	PRINTFORM ┃%"",표시サイズ,LEFT%┃
+
+CALL SHOW_EQUIP_2
+
+SIF MAS_PORTRAIT_画像표시 == 1
+	PRINTFORM ┃%"",표시サイズ,LEFT%┃
+PRINTL
+
+REPEAT 3
+	SIF MAS_PORTRAIT_画像표시 == 1
+		PRINTFORM ┃%"",표시サイズ,LEFT%┃
+	PRINTL 
+REND
+IF MAS_PORTRAIT_画像표시 == 1
+	PRINTL ┗━━━━━━━━━━┛
+ELSE
+	PRINTL 
+ENDIF

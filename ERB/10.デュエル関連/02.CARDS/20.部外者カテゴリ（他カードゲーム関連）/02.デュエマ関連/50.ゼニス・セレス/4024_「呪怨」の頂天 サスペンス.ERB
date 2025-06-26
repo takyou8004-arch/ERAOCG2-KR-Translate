@@ -1,0 +1,207 @@
+﻿@CARDNAME_4024,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 「주온」의 정점 서스펜스
+	CASE "略称"
+RESULTS = 서스펜스
+	CASE "カテゴリ"
+RESULTS:0 = 제니스
+RESULTS:1 = 셀레스
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_4024(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2700
+	CASE "특수불가"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4024(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없으며, 이 카드는 특수 소환할 수 없다.
+PRINTL 이 카드를 소환할 때, 몬스터의 릴리스 대신 이 몬스터의 레벨 3마다,
+PRINTL 자신 필드의 뒷면 표시의 카드를 1장 릴리스할 수 있다.
+CALLFORM CARD_ABLE(1,소환時)
+PRINTL ①: 이 카드가 소환에 성공했을 경우 발동할 수 있다. (이 효과는 선공 1턴째에는 사용할 수 없다.)
+PRINTL 상대는 자신의 손패를 전부 버린다.
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ②: 이 카드의 공격 선언 시에, 서로의 묘지의 일반 마법 / 일반 함정 카드를 3장까지 덱으로 되돌리고 발동할 수 있다.
+PRINTL 이 효과는, 그 마법 / 함정 카드 발동 시의 효과와 같게 된다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ③: 이 카드가 필드를 벗어날 경우,
+PRINTL 대신 자신의 마법 & 함정 존에 세트된 카드 2장을 묘지에 놓을 수 있다.
+PRINTL 
+
+@CARDCAN_4024(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 必要リリース
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 효과소환
+	IF GETVAR(@"%듀얼리스트%_手_一星:場所") >= 7
+		必要リリース = 0
+	ELSEIF GETVAR(@"%듀얼리스트%_手_一星:場所") >= 5
+		必要リリース = 1
+	ELSEIF GETVAR(@"%듀얼리스트%_手_一星:場所") >= 3
+		必要リリース = 2
+	ELSE
+		必要リリース = 3
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件표시 = 20
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 必要リリース
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時
+	SIF 발동済_1(듀얼리스트,4024)
+		RETURN 0
+	SIF ターン数 <= 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件표시 = 20
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 1
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_4024(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 必要リリース
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과소환
+	IF GETVAR(@"%듀얼리스트%_手_一星:場所") >= 6
+		必要リリース = 0
+	ELSEIF GETVAR(@"%듀얼리스트%_手_一星:場所") >= 4
+		必要リリース = 1
+	ELSE
+		必要リリース = 2
+	ENDIF
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲필드 = 1		
+	효과条件複数 = 必要リリース
+	효과条件표시 = 20
+	CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4024,1)
+	IF RESULT == 0
+		FOR カウンタ,0,99
+			SIF GETVAR(@"%対面者%_손패:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(対面者,"손패",カウンタ)
+		NEXT
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4024)
+	IF RESULT == 0
+		REPEAT 3
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲상대묘지 = 1
+			효과条件종류:0 = 通常마법
+			효과条件종류:1 = 通常함정
+			효과条件任意 = 1
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL CARD_SELECT(듀얼리스트,選択カード)
+				選択カード_ID = GETVAR(@"%대상者（CS）%_묘지:選択カード（CS）")
+				CALL CARD_DISPOSE(대상者（CS）,"묘지",選択カード（CS）,2)
+				TRYCALLFORM CARDEFFECT_{選択カード_ID}(듀얼리스트,마함起動,"효과処理")
+			ELSE
+				BREAK
+			ENDIF
+		REND
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4024)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 20
+		효과条件複数 = 2
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"마함",ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+

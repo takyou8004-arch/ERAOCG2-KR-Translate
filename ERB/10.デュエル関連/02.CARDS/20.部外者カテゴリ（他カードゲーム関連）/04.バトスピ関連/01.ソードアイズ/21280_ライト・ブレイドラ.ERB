@@ -1,0 +1,147 @@
+@CARDNAME_21280,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 라이트 블레이드라
+	CASE "略称"
+RESULTS = 광 블레이드라
+	CASE "カテゴリ"
+RESULTS:0 = 성룡
+		RESULTS:1 = 강화
+		RESULTS:4 = 배틀 스피릿
+ENDSELECT
+
+
+@CARD_21280(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 900
+	CASE "守備力"
+		RETURN 600
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21280(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과,攻守変動)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한, 일반 소환에 더하여 1번만,
+PRINTL 드래곤족 몬스터 1장을 소환할 수 있고, 패에서 소환되는 '샤이닝 드래곤' 몬스터의 레벨은 2 내린다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신 메인 페이즈 1에, 이 카드를 파괴하고 발동할 수 있다.
+PRINTL 소환권을 1개 얻는다. 이 턴 동안, 패의 '샤이닝 드래곤' 몬스터 전체는 레벨이 4 내린다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 화염 속성 몬스터밖에 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(3,破壊→묘지)
+PRINTL ③: 이 카드가 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 덱에서 '샤이닝 드래곤' 몬스터 1장을 패에 넣는다.
+
+@CARDCAN_21280(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21280)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,21280)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF メインフェイズ２ == 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻紋章起動
+	RETURN 1
+ELSEIF 종류 == 破壊→묘지
+	SIF 발동済_3(듀얼리스트,21280)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+효과条件カテゴリ = 샤이닝 드래곤
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_21280(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件종족 = 드래곤족
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+효과条件カテゴリ = 샤이닝 드래곤
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"一星",2)
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21280,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+		IF RESULT == 1
+			소환権 ++
+			CALL CARD_RESERV(듀얼리스트,21280,攻紋章予約)
+
+			SS소환可能속성 = 화염속성		
+			CALL CARD_SS_RESTRICTION(듀얼리스트)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻紋章起動
+	CALL FULLRESET
+효과条件カテゴリ = 샤이닝 드래곤
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"一星",4)
+ELSEIF 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,27350,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+효과条件カテゴリ = 샤이닝 드래곤
+		효과条件종류 = モン全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

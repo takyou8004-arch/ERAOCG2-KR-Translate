@@ -1,0 +1,138 @@
+﻿@CARDNAME_1872,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 몽환붕괴- 데스트로이메어- 이블리스
+	CASE "略称"
+RESULTS = 이블리스
+	CASE "カテゴリ"
+RESULTS:0 = 트로이메어
+RESULTS:1 = 이브
+RESULTS:4 = 용자
+ENDSELECT
+
+
+@CARD_1872(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1872(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①：이 카드가 소환에 성공했을 때, 자신 묘지의 링크 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 공격력을 0으로 하고, 효과를 무효로 하고, 특수 소환한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드가 몬스터 존에 존재하는 한,
+PRINTL 이 카드의 컨트롤러는 링크 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(1,戦破壊→묘지)
+PRINTL ③：이 카드가 자신 필드에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 이 카드를 상대 필드에 수비 표시로 특수 소환한다.
+
+
+@CARDCAN_1872(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1872)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 링크
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF 발동済_1(듀얼리스트,1872)
+		RETURN 0
+	IF 듀얼리스트 == "자신"
+		SIF GETVAR(@"%듀얼리스트%_MZ_所有:場所") == 2
+			RETURN 0
+	ELSEIF 듀얼리스트 == "상대"
+		SIF GETVAR(@"%듀얼리스트%_MZ_所有:場所") == 1
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1872(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1872)
+	IF RESULT == 0
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 링크
+		효과추가종류:0 = 1
+		효과추가종류:1 = 4
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1872,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前 = 몽환붕괴- 데스트로이메어- 이블리스
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所, "守備표시",0,1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_TMP_EX_RST(듀얼리스트,"종류",링크)
+ENDIF

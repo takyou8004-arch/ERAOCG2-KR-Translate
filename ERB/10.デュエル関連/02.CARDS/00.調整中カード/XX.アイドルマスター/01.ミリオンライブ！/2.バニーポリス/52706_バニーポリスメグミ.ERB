@@ -1,0 +1,291 @@
+@CARDNAME_52706,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 바니 폴리스 부대장 메구미
+	CASE "略称"
+RESULTS = 바니 P 메구미
+	CASE "カテゴリ"
+RESULTS:0 = 바니 폴리스
+		RESULTS:1 = 래빗시티
+		RESULTS:2 = 밀리언 라이브!
+		; RESULTS:2 = THE IDOLM@STER
+		; RESULTS:4 = MILLION LIVE!
+		RESULTS:4 = 토코로 메구미
+ENDSELECT
+
+@CARD_52706(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2800
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 4651
+	CASE "추가日"
+		RETURN 250601
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_52706(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 8
+素材条件カテゴリ = 래빗 걸
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,52706) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_52706(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 8 "래빗 걸" 몬스터 2장
+CALL CARD_ABLE(1,EX덱起動)
+PRINTL "바니 폴리스 대장 카렌"은 1턴에 1번, 자신 필드의 뒷면 표시로 발동 불가능 또는 표시 고정 상태의 카드 1장을 제외하고,
+PRINTL 필드의 레벨 8의 "래빗 걸" 몬스터 1장 위에 겹쳐 엑시즈 소환할 수 있다.
+PRINTL 이 방법으로 엑시즈 소환한 이 카드는 각성 상태가 된다.
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(2,EX소환時)
+PRINTL ①: 이 카드가 엑시즈 소환했을 경우에, 이 카드가 각성 상태라면 발동할 수 있다.
+PRINTL 상대 필드의 몬스터 전부를 앞면 수비 표시로 하고, 수비력을 0으로 한다.
+CALL CARD_ABLE(3,필드起動)
+PRINTL ②: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드의 엑시즈 소재를 1개 제거하거나, 자신 필드의 뒷면 표시의 카드 1장을 제외하고,
+PRINTL 턴 종료 시까지, 자신 필드의 "래빗 걸" / "바니 폴리스" 몬스터 전부는 관통 공격을 얻고,
+PRINTL 공격력이 자신 / 상대의 마법 & 함정 존의 뒷면 표시의 카드와 "래빗 걸" 펜듈럼 몬스터 카드의 수× 300 올린다.
+CALL CARD_ABLE(0,ターン終了時強制)
+PRINTL ③: 자신 / 상대의 엔드 페이즈에 발동한다.
+PRINTL 이 카드를 엑스트라 덱으로 되돌린다.
+PRINTL 그 후, 묘지 / 엑스트라 덱에서 레벨 8의 "래빗 걸" 펜듈럼 몬스터 카드 1장을 상대의 마법 & 함정 존에 놓을 수 있다.
+
+
+@CARDCAN_52706(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52706)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,52706)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件レベル = 8
+효과条件カテゴリ = 래빗 걸
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	CALL CARDCHECKADV_BUNNYPOLICE_EVIDENCE(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時
+	SIF 발동済_2(듀얼리스트,52706)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_3(듀얼리스트,52706)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") > -1
+		条件달성++
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件표시 = 裏側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1 && GETVAR(@"%듀얼리스트%_제외NG置換") < 1
+		条件달성++
+	SIF 条件달성 < 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_52706(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+#DIM DYNAMIC 選択효과
+#DIM DYNAMIC コスト消費
+#DIM DYNAMIC 修正値
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52706,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件行先플래그 = 제외行き
+		CALL CARDADDGYADV_BUNNYPOLICE_EVIDENCE(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL RESETCONDITION_MAT
+			必要素材数 = 1
+			素材条件カテゴリ = 래빗 걸
+			素材条件レベル = 8
+			효과추가종류 = 効追条達
+			重ねてＸ = 1
+			TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52706,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 守備표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"표시변경")
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"永守DOWN",99999)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52706,3)
+	IF RESULT == 0
+		SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") > -1
+			条件Ａ = 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件표시 = 裏側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1 && GETVAR(@"%듀얼리스트%_제외NG置換") < 1
+			条件Ｂ = 1
+		IF 条件Ａ == 1 && 条件Ｂ == 1
+PRINTL 코스트를 선택해 주세요
+			CALL YN_CHOICE(듀얼리스트,"이 카드의 Ｘ소재를 １개 제거한다","자신 필드의 뒷면 표시인 카드１장을 제외한다")
+			選択효과 = RESULT
+		ELSEIF 条件Ａ == 1 && 条件Ｂ == 0
+			選択효과 = はい
+		ELSEIF 条件Ａ == 0 && 条件Ｂ == 1
+			選択효과 = いいえ
+		ENDIF
+		IF 選択효과 == はい
+			SETVAR @"%듀얼리스트%_MZ_Ｘ:場所", GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") - 1
+			コスト消費 = 1
+		ELSEIF 選択효과 == いいえ
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과条件표시 = 裏側표시
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			SIF RESULT == 1
+				コスト消費 = 1
+		ELSE
+			RETURN
+		ENDIF
+		IF コスト消費 == 1
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과範囲상대마함 = 1
+			효과条件종류 = モン全般
+효과条件カテゴリ = 래빗 걸
+			효과条件分割 = 펜듈럼
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			修正値 += RESULT
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과範囲상대마함 = 1
+			효과条件표시 = 裏側표시
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			修正値 += RESULT
+			修正値 *= 300
+			CALL FULLRESET
+			효과条件カテゴリ:0 = 래빗 걸
+			효과条件カテゴリ:1 = 바니 폴리스
+			SIF 修正値 > 0
+				CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"一攻",修正値)
+			CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"貫通",1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52706)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,EX덱行き)
+		IF RESULT == 1 && 마함数(対面者) < 5
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲EX덱 = 1
+			효과条件종류 = モン全般
+			효과条件レベル = 8
+효과条件カテゴリ = 래빗 걸
+			효과条件分割 = 펜듈럼
+			효과条件任意 = 1
+			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시",2)
+		ENDIF
+	ENDIF
+ENDIF

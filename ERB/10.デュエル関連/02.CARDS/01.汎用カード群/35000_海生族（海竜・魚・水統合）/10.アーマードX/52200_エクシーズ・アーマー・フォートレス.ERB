@@ -1,0 +1,207 @@
+﻿@CARDNAME_52200,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 엑시즈 아머 포트리스
+	CASE "略称"
+RESULTS = XA 포트
+	CASE "カテゴリ"
+RESULTS:0 = 엑시즈
+ENDSELECT
+
+
+@CARD_52200(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 1800
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52200(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 5
+;추가효과用
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,52200) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52200(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 5 몬스터 2장
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX덱起動)
+PRINTL ①: 「엑시즈 아머 포트리스」는 1턴에 1번,
+PRINTL 자신 필드의 랭크 3 4의 X 몬스터 위에 겹쳐서 X 소환할 수도 있다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드의 X 소재를 전부 제거하고, 제거한 수만큼,
+PRINTL 덱에서 「아머드 엑시즈」 카드를 패에 넣는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: X 소재를 가지고 있는 이 카드는 특수 소환의 소재로 할 수 없다.
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ④: 이 카드를 장착한 몬스터가 몬스터와의 전투로 상대에게 주는 전투 데미지는 배가 된다.
+
+@CARDCAN_52200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52200)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,52200)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,52200)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 엑시즈
+	효과条件レベル:0 = 3
+	효과条件レベル:1 = 4
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,52200)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 아머드 엑시즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%装備者%_戦闘カード") != 装備先
+		RETURN 0
+
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52200(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+#DIM DYNAMIC 加カード数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52200,1)
+	IF RESULT == 0
+		CALL RESETCONDITION_MAT
+		必要素材数 = 1
+		素材条件종류 = 엑시즈
+		素材条件レベル:0 = 3
+		素材条件レベル:1 = 4
+		重ねてＸ = 1
+		TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52200,2)
+	IF RESULT == 0
+		加カード数 = GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") + 1
+		CALL FULLRESET
+		효과条件カテゴリ = 아머드 엑시즈
+		IF 加カード数 >= 2
+			IF 加カード数 < 10
+				효과条件複数 = 100 - 加カード数
+			ELSE
+				효과条件複数 = 90
+			ENDIF
+		ENDIF
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",-1,1)
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ倍化", 3 ,1)
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"不材")
+ENDIF

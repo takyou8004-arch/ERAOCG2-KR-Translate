@@ -1,0 +1,196 @@
+@CARDNAME_51471,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신성기사왕 알토리우스
+	CASE "略称"
+RESULTS = 신성 알토리우스
+	CASE "カテゴリ"
+RESULTS:0 = 알토리우스
+RESULTS:1 = 성기사
+ENDSELECT
+
+
+@CARD_51471(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 2200
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_51471(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 5
+素材条件カテゴリ = 성기사
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51471) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_51471(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 5 「성기사」 몬스터 × 2
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①: 이 카드가 X 소환했을 경우에 발동할 수 있다. 자신의 패 / 덱 / 묘지에서
+PRINTL 「성검」 장착 마법 카드를 3장까지 고르고, 이 카드에 장착한다.
+CALLFORM CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ②: 자신 / 상대 턴에 1번, 발동할 수 있다. 상대 필드의 카드 1장을 고르고 파괴한다.
+PRINTL 그 후, 자신의 마법 & 함정 존에 「성검」 카드가 존재하지 않을 경우, 이 카드의 X 소재를 1개 제거한다.
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ③: 이 카드가 필드에서 묘지로 보내졌을 경우,
+PRINTL 자신의 묘지의 레벨 4 이상의 「성기사」 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 특수 소환한다.
+
+@CARDCAN_51471(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51471)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX소환時
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = 装備마법
+	효과条件カテゴリ = 성검
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件カテゴリ = 성검
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1 && GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 성기사
+	효과条件종류 = レベル持ち
+	CALL 효과条件レベル_ADV(4, "以上")
+	효과条件소환可 = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51471(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51471)
+	IF RESULT == 0
+		REPEAT 3
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲덱 = 1
+			효과範囲묘지 = 1
+			효과条件종류 = 装備마법
+			효과条件カテゴリ = 성검
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL CARD_SELECT(듀얼리스트,選択カード)
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과条件固定 = 場所
+				CALLFORM CARD_EQUIP_ADV(듀얼리스트,選択カード（CS）,参照先（CS）)
+			ENDIF
+		REND
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51471,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件カテゴリ = 성검
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 1
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",-1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51471)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 성기사
+		효과条件종류 = レベル持ち
+		CALL 효과条件レベル_ADV(4, "以上")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

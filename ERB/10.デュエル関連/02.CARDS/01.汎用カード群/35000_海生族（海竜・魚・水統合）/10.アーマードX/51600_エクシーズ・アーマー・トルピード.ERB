@@ -1,0 +1,173 @@
+﻿@CARDNAME_51600,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 엑시즈 아머 어뢰
+	CASE "略称"
+RESULTS = 엑스에이 어뢰
+	CASE "カテゴリ"
+RESULTS:0 = 엑시즈
+ENDSELECT
+
+
+@CARD_51600(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 800
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_51600(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 3
+;추가효과用
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,51600) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_51600(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 3 몬스터 × 2
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번만 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: X 소재가 없는 이 카드는 공격할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ②: 이 카드의 X 소재를 2개 제거하고 발동할 수 있다.
+PRINTL 자신은 1장 드로우한다.
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 이 카드가 장착되어 있는 한, 이하의 효과를 적용한다.
+PRINTL ● 장착 몬스터가 전투를 실행할 경우, 상대는 카드의 효과를 발동할 수 없으며, 상대 필드의 몬스터 효과는 무효화된다.
+PRINTL ● 장착 몬스터가 X 몬스터일 경우, 그 몬스터는 대상 내성을 얻는다.
+
+
+@CARDCAN_51600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51600)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,51600)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	IF ゾーン == "필드"
+		SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") >= 0
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%装備者%_필드:装備先") == -1
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 常在無効
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%装備者%_필드:装備先") == -1
+		RETURN 0
+	SIF 装備先 != 戦闘場所(듀얼리스트)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51600,1,X消費2)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	IF ゾーン == "필드"
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+	ELSEIF ゾーン == "마함"
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"戦阻")
+		TRYCALLFORM CARD_{GETVAR(@"%装備者%_필드:装備先")}, "종류"
+		IF RESULT == 엑시즈
+			CALL FULLRESET
+			CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"対耐")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 常在無効
+	CALL FULLRESET
+;	효과元カードID = 51600
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効",0,51600)
+ENDIF

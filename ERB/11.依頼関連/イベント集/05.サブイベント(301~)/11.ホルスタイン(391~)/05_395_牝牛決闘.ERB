@@ -1,0 +1,190 @@
+
+@IRAI_DUEL_INTRO_395
+#DIM DYNAMIC カウンタ
+;듀얼前に「詰め플래그」に1を설정し、最初の5ドローをスキップ
+;ターン跨いで処理したいので、듀얼が始まったら詰め플래그をリセット
+詰め플래그 = 0
+
+;詰め플래그でスキップしてしまった初期化
+CALL CARD_LOADUP
+
+;必要に応じて、ターンプレイヤーを변경(ここで자신にすると、상대のターンになる)
+;ターンプレイヤー = 자신
+
+;1以上の値を入れると、1한번만 ドローがスキップされる
+SETVAR @"자신_ドロースキップ", 1
+SETVAR @"상대_ドロースキップ", 1
+
+;SETVAR @"자신_バトルスキップ", 1
+SETVAR @"상대_メインスキップ", 1
+
+;필드의 情報を설정
+SETVAR @"자신_魔_所有:2", 1;자신의 カード
+SETVAR @"자신_魔_表:2", 1;表
+SETVAR @"자신_마함:2",279555;発情제어
+SETVAR @"자신_魔_個Ｃ:2",2 ;카운터を2個乗せる
+SETVAR @"자신_魔_破耐:2",2
+SETVAR @"자신_魔_対耐:2",2
+
+SETVAR @"상대_MZ_所有:2", 2;상대のカード
+SETVAR @"상대_MZ_表:2", 1;表
+SETVAR @"상대_필드:2",21000;푸른 눈
+
+;자신의 패
+SETVAR @"자신_손패:0", 79557;애유
+
+;자신의 덱
+SETVAR @"자신_덱:0", 79555;호루스타인ミルクファーム
+SETVAR @"자신_덱:1", 2121;ニニ
+SETVAR @"자신_덱:2", 2120;ハレ
+SETVAR @"자신_덱:3", 2122;フゥリ
+SETVAR @"자신_덱:4", 79556;미유登録
+
+;자신의 묘지
+;SETVAR @"자신_묘지:0", 23063;混沌の使者(エンドフェイズ時、빛속성と어둠속성を제외하고 패에 加える)
+;SETVAR @"자신_묘지:1", 23962;어둠・サキュバスナイト
+;SETVAR @"자신_묘지:2", 11607;光・クイーズナイト
+
+;상대の덱：引いても使えない札
+SETVAR @"상대_덱:0", 41813;의식ガストクラーケ
+SETVAR @"상대_덱:1", 41813
+SETVAR @"상대_덱:2", 41813
+SETVAR @"상대_덱:3", 41813
+
+ライフ_상대 = 3000
+
+;勝利条件の설정、ここで詰めデュエルの勝利条件を설치할 수 있다。
+@IRAI_DUEL_CONDVIC_395
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+VARSET RESULT
+
+듀얼리스트 = 자신
+対面者 = 상대
+
+;상대のLPを0にしたらクリア
+
+SIF ライフ_상대 == 0
+	RETURN 1
+
+IF メインフェイズ == 1
+
+;패에 애유あり
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件ID = 79557
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 2
+
+;패에 암소あり
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件ID = 179557
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 3
+
+;패에 ミルクファームあり
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件ID = 79555
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 5
+
+;場にミルクファームあり
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件ID = 79555
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 6
+
+;場に암소あり
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과元カードID = 179557
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 4
+ELSEIF バトルフェイズ == 1
+
+;バトルフェイズ(상대필드의 몬스터 あり)
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 1
+		RETURN 7
+
+;상대 필드에 モンスターなし
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV("자신")
+	SIF RESULT == 0
+		RETURN 8
+ELSE
+	RETURN -1
+ENDIF
+
+RETURN 0
+
+;メッセージの설정
+@IRAI_DUEL_MESSAGE_395(存在確認)
+#DIM DYNAMIC 存在確認
+VARSET RESULT
+
+IF 存在確認 == 1
+	RETURN 1
+ENDIF
+
+;リアクション
+CALL IRAI_DUEL_CONDVIC_395
+
+SELECTCASE RESULT
+
+CASE 1
+	;デュエルクリア！
+	PRINTFORML お疲れ様！
+	PRINTFORML 「勝利条件달성」を押せば終了するよ！
+
+;1ターン目
+CASE 2
+	;패에 애유あり
+	PRINTFORML 今回は상대のLPを0にするのが勝利条件だ。
+	PRINTFORML まずは애유登録で「미유登録」を패에 加えよう。途中で変な選択肢が出ると思うけど…そこはお好みで。
+CASE 3
+	;패에 암소あり
+	PRINTFORML 애유登録で패에 加えた카드를 소환しよう。
+	PRINTFORML 元々の레벨은 3だから、リリースも不要で소환できるよ。
+CASE 4
+	;場に암소あり
+	PRINTFORML 思いのほかステータスが高くて驚いたかな？「【애유】암소」の攻守は「3000 - 元々の攻守」になっているんだ。
+	PRINTFORML 元々の攻守が低いほどステータスが上がるけど…このままだと상대のモンスターは倒せてもLPを削り切れないね…
+	PRINTFORML さっきサーチした「미유登録」で「ミルクファーム」を패에 加えよう。
+CASE 5
+	;패에 ミルクファームあり
+	PRINTFORML フィールド마법「ミルクファーム」を발동しよう
+CASE 6
+	;場にミルクファームあり
+	PRINTFORML これで배틀 페이즈에 「애유」の乳が搾れるようになったね。問題なければ배틀 페이즈에 移行しよう。
+CASE 7
+	;バトルフェイズ
+	PRINTFORML 효과를 발동し「애유」の乳を搾ろう。搾ったら攻撃だ！
+CASE 8
+	;상대 필드에 モンスターなし
+	PRINTFORML 애유は搾られた경우、一한번만 묘지から「호루스타인」몬스터를 특수 소환할 수 있다。
+	PRINTFORML 蘇生したモンスターは発情していないので必要に応じて搾ろう。
+	PRINTFORML 今回は発情していないのが逆に都合が良いね。このまま直接攻撃で상대のLPを0にしよう！
+CASEELSE
+	PRINTFORML あっ、失敗したな？と思ったら「降参する」から、やり直しが出来るよ。…まぁ気軽にね。
+
+ENDSELECT

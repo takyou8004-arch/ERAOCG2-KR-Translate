@@ -1,0 +1,472 @@
+﻿@CARDNAME_79500,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;효과대상に御巫を지정するが、フレ-バ-重点で御巫カテゴリには属さない
+SELECTCASE 参照先
+	CASE "名前"
+		;読みは「いわとかくしのいんしゃでん」
+		RESULTS = 미캉코 봉인의 음신전
+	CASE "略称"
+		RESULTS = 미캉코 음신전
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+ENDSELECT
+
+@CARD_79500(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79500(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 자신 필드는 "미캉코 봉인의 음신전"이 된다.
+PRINTL 이 카드명의 ①②③의 효과는 각각 1턴에 1번 밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：이 카드의 발동시의 효과 처리로서 패 / 덱 / 묘지의 "미캉코" 의식 몬스터를 모두 제외한다.
+PRINTL 그 후, 패 / 덱 / 묘지로 부터 "미캉코" 몬스터 1장을 특수 소환한다.
+PRINTL 그리고 패에서 카드를 제외했었을 경우, 덱으로 부터 "미캉코" 마법 카드 1장을 패에 넣을 수 있다.
+CALLFORM CARD_ABLE(2,마함起動)
+PRINTL ②：자신 필드의 "미캉코" 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL LP를 절반 지불하고, 대상으로 한 몬스터의 공격력을 지불한 수치 만큼 올린다.
+CALLFORM CARD_ABLE(3,攻撃後誘発)
+PRINTL ③："미캉코" 몬스터가 전투로 상대 몬스터를 파괴하고 묘지로 보냈을 때에 발동할 수 있다.
+PRINTL 그 몬스터를 수비 표시로 자신 필드에 특수 소환한다.
+PRINTL 그것이 암컷 몬스터였을 경우, 그 몬스터는 "미캉코" 몬스터로 취급이 되어
+PRINTL 자신은 그 몬스터의 원래의 공격력의 수치 만큼의 LP를 회복한다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79500(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 残り횟수
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79500)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,79500)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 미캉코
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,79500)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件종류 = 효과モン
+	효과条件カテゴリ = 미캉코
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF 발동済_3(듀얼리스트,79500)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	CALL GET_FIGHT_CAT(듀얼리스트,"미캉코")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과条件ID = 直前戦闘破壊ID(듀얼리스트,1)
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_79500(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 御巫モンスター
+#DIMS DYNAMIC 奪ってきた女ァ！
+#DIMS DYNAMIC オオヒメorアラヒメ
+#DIM DYNAMIC オオヒメ플래그
+#DIM DYNAMIC アラヒメ플래그
+#DIM DYNAMIC レイプ횟수
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 조교담당
+#DIM DYNAMIC 消費ライフ
+#DIM DYNAMIC フィールドに御巫がいる場合
+#DIM DYNAMIC 손패通過플래그
+#DIM DYNAMIC 설치場所
+#DIM DYNAMIC 残り횟수
+;コンセプトは「信仰のすり替え」と「教化洗脳」。オオヒメ(天照)を岩戸に隠し、信仰대상을 あなたにすり替えさせる、あなたのための社。
+;①의 효과で御巫達を呼びだして、조교에 의해 彼女たちにオオヒメ アラヒメを捨てさせ、真に仕えるべき存在はあなたであるとわからせる。
+;②의 효과는 あなたによる의식。あなたに捧げられる「御巫신楽」。
+;御巫の少女たちを犯し、その無垢な子宮にあなたの「신力」を注ぎこむことで「あなたの御巫」となった少女たちに力を分け与える。
+;これ에 의해 、御巫達がこれまで磨いてきた舞の技術や力は그대로 に、オオヒメを信仰していた時とはまったく別の戦い方を強いることが할 수 있다。
+;③의 효과는 御巫達による新たなあなたの信徒候補の拉致と、상대 몬스터의 強制改宗。
+;御巫ちゃんが戦闘で倒した몬스터를 捕らえ、あなたへの「捧げもの」となった그 몬스터に、あなたこそが真に崇拝すべき存在であることを知らしめる。
+;御巫達に献上された見目麗しい女を犯し、その信仰を奪い去ることで、あなたは新たな「신力」を得ることができ、
+;それを再び②의 효과에 의해 御巫達に注ぐことで、彼女たちはより強く美しい獲物をあなたに献上してくれるだろう。
+
+;テ-マとしては従来の御巫よりもコントロール奪取系装備마법の価値が高くなる感じ。「誘い輪舞」とか「強奪」とか。
+;装備でコントロール奪取→ライフ回復→ライフ를 지불하고 御巫と一つに→攻撃！ができるようになる。
+;余談だけど、이 카드의 名前を「淫社殿」じゃなくて「デ-モン신殿」とかにすれば「堕落」もイケる。邪教なのは疑いようもないのである。
+
+;효과발동時の서술문
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79500,2)
+	IF RESULT == 0
+		消費ライフ = GETVAR(@"ライフ_%듀얼리스트%")  / 2
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",(GETVAR(@"ライフ_%듀얼리스트%")  / 2))
+		
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 미캉코
+		효과条件표시 = 表側표시
+		CALL CARD_GRANT_ADV(듀얼리스트,ゾーン,場所,"永攻",消費ライフ)
+		IF 듀얼리스트 == "자신"
+			選択カード_ID = RESULT:1
+			CALL CARD_EROTICS(選択カード_ID)
+			조교대상 = RESULT
+			IF 조교대상 != -1
+				PRINTFORMW %CALLNAME:MASTER%는 필드상의 %CALLNAME:조교대상%를 불러들여, 『의식』을 거행한다......
+				FOR カウンタ,0,4
+					CALL EROTIC_MOVE("憑依騎乗位",조교대상,MASTER,500)
+				NEXT
+				;こんだけやれば一度くらい사정してるでしょの構え
+				PRINTFORML 『의식』에 따라 %CALLNAME:조교대상%는 %CALLNAME:MASTER%의『신력』을 충분히%TEXTR("아가방/자궁/여자의 제일 소중한 장소")%%TEXTR("에 부어 넣어졌다/에 채워졌다/에 받아 들였다")%그러자,
+				PRINTFORMW %CALLNAME:조교대상%의 몸에 힘이%TEXTR("넘쳐나기/솟아나기")% 시작했다！
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79500,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		FOR カウンタ, 98, -1, -1
+			CALL FULLRESET
+			효과条件종류 = 의식
+			효과条件カテゴリ = 미캉코
+			CALL CARD_FILTER_SET(듀얼리스트,"덱",カウンタ,듀얼리스트)
+			SIF RESULT != 1
+				CONTINUE
+
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_덱:カウンタ")}, "名前"
+			SIF RESULTS == "오오히메의 미캉코"
+				オオヒメ플래그 = 1
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_덱:カウンタ")}, "名前"
+			SIF RESULTS == "아라히메의 미캉코"
+				アラヒメ플래그 = 1
+			CALL CARD_DISPOSE(듀얼리스트,"덱",カウンタ,제외行き)
+		NEXT
+
+		FOR カウンタ, 98, -1, -1
+			CALL FULLRESET
+			효과条件종류 = 의식
+			효과条件カテゴリ = 미캉코
+			CALL CARD_FILTER_SET(듀얼리스트,"묘지",カウンタ,듀얼리스트)
+			SIF RESULT != 1
+				CONTINUE
+
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}, "名前"
+			SIF RESULTS == "오오히메의 미캉코"
+				オオヒメ플래그 = 1
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}, "名前"
+			SIF RESULTS == "아라히메의 미캉코"
+				アラヒメ플래그 = 1
+			CALL CARD_DISPOSE(듀얼리스트,"묘지",カウンタ,제외行き)
+		NEXT
+
+		FOR カウンタ, 98, -1, -1
+			CALL FULLRESET
+			효과条件종류 = 의식
+			효과条件カテゴリ = 미캉코
+			CALL CARD_FILTER_SET(듀얼리스트,"손패",カウンタ,듀얼리스트)
+			SIF RESULT != 1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_손패:カウンタ")}, "名前"
+			SIF RESULTS == "오오히메의 미캉코"
+				オオヒメ플래그 = 1
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_손패:カウンタ")}, "名前"
+			SIF RESULTS == "아라히메의 미캉코"
+				アラヒメ플래그 = 1
+			손패通過플래그 = 1
+			CALL CARD_DISPOSE(듀얼리스트,"손패",カウンタ,제외行き)
+		NEXT
+
+
+		IF オオヒメ플래그 == 1 && アラヒメ플래그 == 1
+			オオヒメorアラヒメ = 믿었던 신과 기적이
+		ELSEIF オオヒメ플래그 == 1
+			オオヒメorアラヒメ = 믿었던 신이
+		ELSEIF アラヒメ플래그 == 1
+			オオヒメorアラヒメ = 믿었던 기적이
+		ENDIF
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件종류 = 효과モン
+		효과条件カテゴリ = 미캉코
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF 듀얼리스트 == "자신"
+			CALL CARD_EROTICS(RESULT:1)
+			조교대상 = RESULT
+			IF 듀얼리스트 == "자신" && 조교대상 != -1
+				PRINTFORMW %듀얼리스트%는 %CALLNAME:조교대상%를 불러, 그녀 앞에서 %オオヒメorアラヒメ% 음신전에 봉인 되어 버렸다.
+				PRINTFORML 신앙하던 존재들이 눈앞에서 사라져버리자
+				PRINTFORMW 당황한 감정이 물씬 느껴지는 %CALLNAME:조교대상%에게 %듀얼리스트%는 그녀가 정말로 숭배해야 하는 대상이 누구인지 가르쳐 주기로 했다......
+				CALL EROTIC_MOVE("Ｍ単発",조교대상,MASTER,200)
+				PRINTFORMW %듀얼리스트%는 이것이『의식』이라고 말하며 %CALLNAME:조교대상%를 밀어 쓰러트려, %CALLNAME:조교대상%의 저항을 억누르고 억지로 입술을 빼앗는다......
+				CALL EROTIC_MOVE("バスト조교",조교대상,MASTER,300)
+				PRINTFORMW 저항하는 %CALLNAME:조교대상%를 억누르면서 무녀옷의 가슴팍을 풀어헤쳐, %TEXTR("성장의 여지가 있는/성숙하지 않은/자랄 여지가 있는")% %CALLNAME:조교대상%의 가슴을 만져대며 감촉을 즐긴다......
+				CALL EROTIC_MOVE("全身애무",조교대상,MASTER,500)
+				PRINTFORMW 전신을 철저하게 애무해주며, 저항하는 %CALLNAME:조교대상%의 몸을 쾌락%TEXTR("으로 의지를 무너트린다/에 빠지도록 가르쳐준다")%……
+				PRINTFORMW ──그리고……
+				CALL EROTIC_MOVE("前穴凌辱",조교대상,MASTER,500)
+				PRINTFORM %듀얼리스트%는 흠뻑 젖은 비처를 육봉으로 관철하여, 소중히 지켜야할 %CALLNAME:조교대상%의
+				IF TALENT:조교대상:처녀
+					PRINTFORMW %TEXTR("순결/처녀")%를 영원히 빼앗아 갔다……！
+				ELSE
+					PRINTFORMW 정조를 빼앗아 갔다……！
+				ENDIF
+				FOR カウンタ,0,3
+					CALL EROTIC_MOVE("前穴凌辱",조교대상,MASTER,500)
+				NEXT
+				;『의식』の最終段階。ついに屈して、今までレイプだった処理が合意のものを参照するようになる
+				CALL EROTIC_MOVE("憑依騎乗位",조교대상,MASTER,500)
+				PRINTFORML …………거듭되는『의식』에, 처음에는 필사적으로 %TEXTR("저항/거절")%하던 %CALLNAME:조교대상%의 %TEXTR("목/입")%으로 부터는, 달콤한 %TEXTR("교성/신음")% 밖에 나오지 않는다.
+				PRINTFORMW %CALLNAME:MASTER%에 의해 새로운 신앙을 쾌락과 함께 육체에 새겨진 %CALLNAME:조교대상%는, 마침내 %CALLNAME:MASTER%이야 말로 숭배할 대상이라고 이해한 것 같다.
+				PRINTFORMW %CALLNAME:조교대상%는 완전히 쾌락에 빠진 표정으로, 오오히메에 대한 신앙심을 버리고, %CALLNAME:MASTER%에게 숭배와 충성을 다할 것을 입맞춤과 함께 맹세했다......
+				CALL EROTIC_MOVE("Ｍ単発",조교대상,MASTER,300)
+				IF MARK:조교대상:반발각인 >= 1
+					PRINTFORML 쾌락에 빠진 %CALLNAME:조교대상%는 반항심이 사라져 반발 각인이 0이 되었다！
+					MARK:조교대상:반발각인 = 0
+				ENDIF
+			ENDIF
+		ENDIF
+		IF 손패通過플래그 == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 미캉코
+			효과条件종류 = 마법全般
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79500,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 미캉코
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			フィールドに御巫がいる場合 = 1
+
+		CALL CARD_EROTICS(戦闘カードID(듀얼리스트))
+		조교담당 = RESULT
+		IF 듀얼리스트 == "자신" && 조교담당 != -1
+			PRINTFORML %CALLNAME:조교담당%는, %CALLNAME:MASTER%에게 주어진 힘을 사용하여 쓰러트린 상대 몬스터를 잡은채,
+			IF NO:조교담당 == 2120
+				PRINTFORM 희희낙락하며
+			ELSEIF NO:조교담당 == 2121
+				PRINTFORM 자랑스러운 듯이
+			ELSEIF NO:조교담당 == 2122
+				PRINTFORM 숭배와 애정으로 가득찬 표정으로
+			ELSE
+				PRINTFORM 마음에 따라
+			ENDIF
+			PRINTFORMW %CALLNAME:MASTER%에게 %TEXTR("내밀었다/헌상 했다/봉납했다/공희로서 바쳤다")%......
+		ENDIF
+;		PRINTFORMW カードID:{直前戦闘破壊ID(듀얼리스트,1)}
+
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		CALLFORM CARDNAME_{直前戦闘破壊ID(듀얼리스트,1)}("名前")
+		효과条件名前 = %RESULTS%
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		選択カード_ID = RESULT:1
+		IF RESULT == 1
+			설치場所 = カード소환先
+			CALLFORM CARD_{選択カード_ID}("攻撃力")
+			CALL LIFE_CHANGE(듀얼리스트,"増加","효과",RESULT)
+
+			SIF GETVAR(@"%듀얼리스트%_MZ_性:カード소환先") != 2
+				CALL CARD_SET_CATEGORY(듀얼리스트,"필드",カード소환先,"미캉코")
+
+			CALL CARD_EROTICS(選択カード_ID)
+			조교대상 = RESULT
+			IF 듀얼리스트 == "자신" && 조교대상 != -1 && 조교담당 != -1
+				IF TALENT:조교대상:성별 != 2
+					PRINTFORML %CALLNAME:조교대상%는 %CALLNAME:조교담당%에게 저항을 봉쇄당하면서도, 눈물을 머금은 눈동자로 다부지게도 %CALLNAME:MASTER%를 노려보고 있다......
+					PRINTFORML ……오오, 숭배를 통한 쾌락을 모르는 너무나 불쌍한 아가씨이지 않은가.
+					PRINTFORMW %CALLNAME:MASTER%는 이, %CALLNAME:MASTER%에 대한 숭배를 모르는 %TEXTR("어리숙한/가련한")% %CALLNAME:조교대상%에게『의식』을 행해, 그녀를 %TEXTR("교화해/구원해/올바른 신앙에 눈을 뜨게 해")%주지 않으면 안될 것이다.
+					PRINTFORML %CALLNAME:MASTER%는 %CALLNAME:조교담당%에게 아직도 저항하는 어리석은 %CALLNAME:조교대상%를 억누르게 하며
+					PRINTFORM %TEXTR("이것을『의식』이라고 부르면서/『의식』이라는 이름을 빌린 강간으로/『의식』이라는 이름뿐인 능욕으로")%
+					PRINTFORMW %CALLNAME:조교대상%%TEXTR("에게『예의 범절』을 가르쳐주기 시작했다/의 몸을 탐하기 시작했다/에게 여자로서의 본연의 모습을 알려주기로 했다/의 여자의 맛을 구석구석 까지 맛봐 주기로 했다/의 신앙도 존엄도, 모든것을 빼앗아 주기로 했다")%……。
+					PRINTFORMW 「──그럼, %CALLNAME:MASTER%님 %TEXTR("『암컷 구멍 봉납의 의식』 /이쪽의『헌상품』")%을 받으시고 마음껏 즐겨주세요……♥」
+					;複数回の凌辱。횟수が多すぎてもダレちゃうので4回固定
+					CALL IWATO_HASEI(選択カード_ID,조교대상)
+					残り횟수 = RESULT
+					FOR カウンタ,0,残り횟수
+						CALL EROTIC_MOVE("全身凌辱",조교대상,MASTER,500)
+						IF フィールドに御巫がいる場合
+						;レイプ共犯者の御巫ちゃんからのコメント
+							SELECTCASE RAND:24
+								CASE 0
+									PRINTFORML 「아아, %TEXTR("기분 좋아 보이는 모습 보기/이렇게 격렬하게 하는 모습 보기/목까지 매어 받는게 보기/ 목 안까지 사용해주시는게 보기")%……좋군요……」
+								CASE 1
+									PRINTFORML 「킥킥……%TEXTR("참혹하/애처롭/귀여우시")%군요？이렇게%TEXTR("울고있는/날뛰는/저항하는")%모습♥전부 쓸데 없는데 말이죠~♥」
+								CASE 2
+									PRINTFORML 「이런 이런~ 빨리 맹세해 버리는 편이 좋아요? 지금까지 %TEXTR("의 신앙은/소중히 하고 있던 것, 전부")%사라져 버릴테니까요~♥」
+								CASE 3
+									PRINTFORML 「고맙게 생각하셔야되는거에요？ %CALLNAME:MASTER%님 에게 %TEXTR(범해져서 사랑을/여자로서의 기쁨을 가르침")% 받고 있으니까요♥」
+								CASE 4
+								;邪悪な祝詞？
+									PRINTFORML 「자, 말하시는거에요？『%TEXTR("범해주셔서 감ㄴ사합니다/자비에 감사드리겠습니다/여자로서의 기쁨을 주시는 관대한마음에 감사드립니다/일생을 당신에게 바치겠습니다/몸도 마음도, 모두 바치겠습니다/부디 시중들게 해주세요/여자로서의 기쁨을 알지못한 제가 어리석었습니다/암캐로서 사용해주셔서 감사합니다")%』라고♥ ……말하시는거에요！♥」
+								CASE 5
+									PRINTFORML 「아하핫♥ 여기, 보실래요~？ 모처럼 예쁜 %TEXTR("가슴/몸")%이신데, 이렇게~ 선명하게 잇자국이 생겨버렸어요~♥」
+								CASE 6
+									PRINTFORML 「후후♥ 어떠신가요? 이 아이의 보지%TEXTR("의 조임/의 상태/")%는~♪ 몇 점 정도 주실건가요？」
+								CASE 7
+									PRINTFORML 「앗, 여기 봐주세요！ 여기 이렇게 유두가 딱딱 서있어요！후후, %TEXTR("좀 더/앞으로 조금")%, 남았네요~♥」
+								CASE 8
+									PRINTFORML 「당신 아직 받아들이지 못했군요～？『올바른 신앙』을 받아들이지 못했어요……후후♥ 그렇지만, 그것도 오늘까지에요~？앞으로 쭉 좋아질거에요~」
+								CASE 9
+									PRINTFORML 「앗♥ 지금 그곳 반응이 좋으신 것 같네요！킥킥……아무튼～약점, 들켜버리셧네요？정말 저항할 생각, 있으신 건가요 몸은 솔직한데 말이에요？♥」
+								CASE 10
+									PRINTFORML 「읏아……응, 읏♥ ……에헤♥ 저도 %TEXTR("키스/자비")%를 받을 수 있다니……♥」
+									PRINTFORML 「……읏, 아, 저……좀 더, 좋으신가요？ %TEXTR("『의식』을 행하면서도/그 『구멍』을 사용하시면서도/그대로, 허리를 흔들어셔도")%, 상관없으니까요……♥」
+								CASE 11
+									IF TALENT:조교대상:처녀
+										PRINTFORML 「후후♥ 이렇게 빼앗겨지기 위해서, 처녀, 계속 지켜오신 거네요♥ 훌룡하네요♥」
+									ELSE
+										PRINTFORML 「후후♥ 좋았어요？이렇게 몸으로 직접 가르침을 받을 수 있다니♥ 여자로 태어난 덕분이구나♥」
+									ENDIF
+								CASE 12
+									PRINTFORML 「……저기, 조금 전부터 몇 번이나 부르고 있는 그 이름, 누구？ ……앗！혹시~, 좋아하는 사람？」
+									PRINTFORML 「후후♥ 말해볼까요~? "미안해요 이『의식』이 아니면 만족할 수 없는 몸이 되어버렸어요" 라고♥ 말하시는거에요~！♥」
+								CASE 13
+									PRINTFORML 「후후♥ 가슴을 꽈악 쥐어볼까~?……아핫♥ 좋은 소리네♪」
+								CASE 14
+									PRINTFORML 「후후♥ 슬슬 깨달았겠지？여자아이가 자지님에게 %TEXTR("당해낼 수 없다/거역할 수 없다")%는 것을♥」
+								CASE 15
+									PRINTFORML 「후후, 그렇게 싫어했으면서, 벌써 주륵주륵 준비되어있네?♥ 그래도 부끄러워하는 것은 똑같구나～？」
+									PRINTFORML 「왜냐하면 여자아이는 모~두 %TEXTR("이렇게 남자답게 강간해 주시는 대장부님을 사랑하도록 되어있으/이렇게 자지님에게 지배되는 것에 행복을 느끼게 만들어진 생물이/마음 깊은 곳에는 이렇게 힘으로 꺽어서 자신을 암캐로 만들어달라는 마조의 본능이 있으")%니까♥」
+								CASE 16
+									PRINTFORML 「아~, 엉덩이를 맞아서 갈것 같아？♥ 후후, 맞는다는 것은 기분이 좋아요♥ 이대로 %TEXTR("맞는/굴복 절정")%버릇이 생겨 버려요～♥」
+								CASE 17
+									PRINTFORML 「자~ 제대로 냄새를 맡는거야♥ 이 냄새 잘 기억해♥ 후후♥지금부터 혼자서 자위할 때도, 이 냄새를 생각하면서 자위하는거야 알겠지？♥♥」
+								CASE 18
+									PRINTFORML 「후후♥ 열심히 앙앙 허덕이며 좋아하는 모습 좋아보이네, 아니면 좋아보이는 걸까나～？ 안에 싸버린다고？♥」
+									PRINTFORML 「아핫♥ 이제와서 날뛰어도 늦었어～♥ 자, 아무쪼록 안에 가득 사정하셔주세요~♥」
+								CASE 19
+									PRINTFORML 「와♥ 강간당하고 있는데 넣어진 것만으로도 가버리다니……%TEXTR("너무 약하시네요？/이런 건 이제, 단순한 러브러브 엣치이시겠죠?")%♥」
+								CASE 20
+									PRINTFORML 「천천히, 즈부즈부웃~~~~♥♥ 후후♥ 확실하게 안속까지, 주인님의 모양, 각인하자♥」
+								CASE 21
+									PRINTFORML 「후후♥ 저기 저기, 최대한 저항하지 않으면 마마가 되어 버려요？」
+									PRINTFORML 「『싫다 싫어어~♥ 아기 만들기 싫어어~♥ 뭐든지 할테니 그것만은♥』는……앗♥ 아~아, 유감이네요~♥♥」
+								CASE 22
+									PRINTFORML 「후후♥ 부끄러운 일이 아니에요♥ 당연한거랍니다~?♥ 이 자지님에게 자궁이 츠큥츠큥 배란될 수 밖에 없다고요~? 이걸 견딜 수 있는 여자아이는 없으니까요♥」
+								CASE 23
+									IF TALENT:조교대상:뿔이남
+										PRINTFORML 「후후♥ 뿔을 난폭하게 잡아되면서 보지를 쑤셔주면은, 곧 솔직해질것 같네요♥」
+										PRINTFORML 「역시 이 뿔은, 이렇게 자신이『아래』의 입장이라는 것을 가르쳐 받기 위해서 붙어있는 마조 기관이라고요 분명히♥」
+									ELSE
+										PRINTFORML 「후후♥ 목을 물리면서 보지를 쑤셔주면은, 곧 솔직해질것 같네요♥」
+										SIF TALENT:조교대상:동물귀
+											PRINTFORML 「동물 귀를 가진 아이는 모두 이렇게♥ 자신이『아래』의 입장이라는 것을 가르쳐 받고 싶어 하겠죠♥」
+									ENDIF
+							ENDSELECT
+						ENDIF
+					NEXT
+					;『의식』の最終段階。ついに屈して、今までレイプだった処理が合意のものを参照するようになる
+					CALL EROTIC_MOVE("憑依騎乗位",조교대상,MASTER,500)
+					PRINTFORMW 「후후♥ 겨우 솔직해졌네요♥ 지금부터는 당신도『미캉코』로서, 함께 이분%TEXTR("에게 시중을 들면서/에게 봉사하면서/에게 전부, 바쳐서/의『올바른 가르침』을 넓혀")% 살아가는 거에요……♥」
+					PRINTFORML …………거듭되는『의식』에 보다, 굴복과 쾌락을 몸과 마음에 박아 넣어진 %CALLNAME:조교대상%에게, 새로운 신앙이 싹튼 것 같다.
+					PRINTFORMW %CALLNAME:조교대상%로 부터 숭배를 받게된 것으로, %CALLNAME:MASTER%는 새로운 『신력』이 넘쳐난다！
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",설치場所,"所有",1,1)
+					;ここでLPを回復する処理を入れる
+					;こっからはおまけ
+					IF RAND:4 == 0
+						PRINTFORML %CALLNAME:조교대상%를 억누르면서, 『의식』을%TEXTR("상냥하게/흐뭇하게/자애롭게/부러운 표정으로")%지켜보고 있던 %CALLNAME:조교담당%는,
+						PRINTFORMW %CALLNAME:MASTER%가 %CALLNAME:조교대상%로 부터 페니스를 뽑자, %CALLNAME:MASTER%가 말하지 않아도 페니스를 물어, 자발적으로『%TEXTR("의식의 뒷처리를/")% %TEXTR("청소/정화")%』하기 시작했다.
+						;お掃除だから刺激弱め
+						CALL EROTIC_MOVE("憑依フェラ",조교담당,MASTER,100)
+						PRINTFORML 그녀의 미캉코로서의 %TEXTR("신앙심/충성심/진심")%은, 실로 기분 좋게 %CALLNAME:MASTER%를 채운다...... 이것에 대한 포상이 필요할 것이다.
+						PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:조교담당%를 껴안아, 포상으로『의식』과 관계 없이 %TEXTR("안아/사랑을 담아 포옹해/귀여워해")%줬다......
+						FOR カウンタ,0,2
+							CALL EROTIC_MOVE("憑依騎乗位",조교담당,MASTER,500)
+						NEXT
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트,"미캉코 음신전")
+	CALL FULLRESET
+	효과条件성별 = 牝性
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"接可",3)
+ENDIF
+
+

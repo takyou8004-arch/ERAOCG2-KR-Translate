@@ -1,0 +1,162 @@
+﻿@CARDNAME_28060,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 만력마신 바이서- 데스
+	CASE "略称"
+RESULTS = 바이서- D
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_28060(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 1200
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28060(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時 ,특수소환時)
+PRINTL ①: 이 카드가 소환 특수소환에 성공했을 경우,
+PRINTL 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 이 카드가 앞면 표시로 존재하는 한, 대상의 앞면 표시 몬스터는 공격할 수 없고, 효과는 무효화된다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드의 ①의 효과의 대상인 몬스터가 필드에 존재하고 있는 한, 이 카드는 효과로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 이 카드는 전투로는 파괴되지 않고,
+PRINTL 이 카드의 공격으로는 상대 몬스터의 공격력 수비력을 무시하고 상대 라이프에 데미지를 준다.
+
+
+@CARDCAN_28060(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28060)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+
+	IF 戦闘場所(듀얼리스트,1) != 5
+	
+	ELSEIF 듀얼리스트 == "자신"
+		SIF OPPOSER == -1
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28060(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상 = -1
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28060)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = RESULT
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",選択カード,,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28060)
+	IF RESULT == 0
+		CALL EVADE_ATTACK(듀얼리스트)
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",GETVAR(@"%듀얼리스트%_MZ_攻:場所"),1)
+		IF 戦闘場所(듀얼리스트,1) != 5
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",戦闘場所(듀얼리스트,1),1)
+			IF RESULT != -1
+				조교대상 = RESULT
+			ENDIF
+		ELSE
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+			ENDIF
+		ENDIF
+		IF 조교대상 >= 0
+			PRINTFORML %CALLNAME:조교대상%는상반신を固定され、強力な拷問電撃を流された。
+			CALL EROTIC_MOVE("拷問処理",조교대상)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	IF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") < 5
+		IF	GETVAR(@"%対面者%_필드:(%듀얼리스트%_MZ_汎数:場所)") == -1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",5)
+		ELSE
+			CALL SET_FIELD_INFO(対面者,"필드",場所,"戦無",3)
+			CALL SET_FIELD_INFO(対面者,"필드",場所,"無効",3)
+		ENDIF
+	ENDIF
+	IF GETVAR(@"%듀얼리스트%_필드:(%듀얼리스트%_MZ_汎数:場所)") == -1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	ENDIF
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+ENDIF

@@ -1,0 +1,124 @@
+﻿@CARDNAME_38012,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = E•HERO 플리즈마
+	CASE "略称"
+RESULTS = 플리즈마
+	CASE "カテゴリ"
+RESULTS:0 = HERO
+RESULTS:1 = E•HERO
+ENDSELECT
+
+
+@CARD_38012(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 1100
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_38012(종류)
+#DIM DYNAMIC 종류
+
+CALL CARD_ABLE(10,필드起動)
+PRINTL ①: 1턴에 1번, 엑스트라 덱의 융합 몬스터 1장을 상대에게 보여주고,
+PRINTL 그 몬스터에 카드명이 기재되어 있는 융합 소재 몬스터 1장을 덱에서 묘지로 보내 발동할 수 있다.
+PRINTL 엔드 페이즈까지, 이 카드는 이 효과를 발동하기 위해 묘지로 보낸 몬스터와 같은 이름의 카드로서도 취급한다.
+
+
+@CARDSUMMON_AA_38012
+
+
+@CARDCAN_38012(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38012)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_38012(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,10)
+	IF RESULT == 0
+
+		CALL FULLRESET
+		효과条件종류 = 융합
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		選択カード_ID = RESULT:99
+		IF 選択カード != 9999
+			CALL FULLRESET
+			효과条件名前:0 = ダミ-
+			TRYCALLFORM CARDSUMMON_{選択カード_ID}(듀얼리스트,選択カード,0)
+			효과条件名前:1 = %素材条件名前:0%
+			효과条件名前:2 = %素材条件名前:1%
+			효과条件名前:3 = %素材条件名前:2%
+			TRYCALLFORM CARDSUMMON_{選択カード_ID}(듀얼리스트,選択カード,10)
+			효과条件名前:4 = %素材条件名前:0%
+			효과条件名前:5 = %素材条件名前:1%
+			효과条件名前:6 = %素材条件名前:2%
+			TRYCALLFORM CARDSUMMON_{選択カード_ID}(듀얼리스트,選択カード,11)
+			효과条件名前:7 = %素材条件名前:0%
+			효과条件名前:8 = %素材条件名前:1%
+			효과条件名前:9 = %素材条件名前:2%
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)	
+			IF RESULT == 1
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",RESULT:1,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

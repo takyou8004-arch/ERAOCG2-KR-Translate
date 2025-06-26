@@ -1,0 +1,238 @@
+﻿@CARDNAME_52534,参照先
+;ココで지정카드의 名前、略称を返す予定
+;#FUNCTIONS
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 무신희－아하시마
+	CASE "略称"
+RESULTS = 무신희아하시마
+	CASE "カテゴリ"
+RESULTS:0 = 무신
+ENDSELECT
+
+
+@CARD_52534(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52534(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+素材条件종류 = レベル持ち
+素材条件同レベル起動 = 2
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,52534) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52534(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 같은 레벨의 몬스터 2체
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+PRINTL 필드의 이 카드는 소재로 할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 L 소환했을 경우에 발동할 수 있다.
+PRINTL 같은 레벨로 카드명이 다른 몬스터 2장을, 자신의 패/묘지에서 효과를 무효로 하여 특수 소환한다.
+;PRINTL その後、자신 필드의 몬스터를 素材として、X소환を行う。
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 자신 필드의 X 몬스터가 효과를 발동했을 경우,
+PRINTL 상대 필드의 마법 / 함정 카드 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+
+
+@CARDCAN_52534(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 발동불가,13
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52534)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,52534)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 4
+		RETURN 0
+	CALL AHASHIMA_CHECK(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,52534)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 엑시즈
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_52534(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードレベル
+#DIMS DYNAMIC 選択カード名前A
+#DIMS DYNAMIC 選択カード名前B
+#DIM DYNAMIC 選択カードA
+#DIM DYNAMIC 選択カードB
+#DIM DYNAMIC 条件달성,13
+#DIMS DYNAMIC 出処A
+#DIMS DYNAMIC 出処B
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52534,1)
+	IF RESULT == 0
+		;FULLRESET入ってるから大丈夫と信じたい…
+		CALL AHASHIMA_CHECK(듀얼리스트,종류,ゾーン,場所,1)
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件종류 = レベル持ち
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			選択カードA = RESULT
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_%参照先（CS）%:選択カードA")},"レベル"
+			選択カードレベル = RESULT
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%参照先（CS）%:選択カードA")},"名前"
+			選択カード名前A = %RESULTS%
+			出処A = %参照先（CS）%
+
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件종류 = レベル持ち
+			효과条件固名前 = %選択カード名前A%
+			효과条件レベル = 選択カードレベル
+			효과条件소환可 = 1
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_SELECT(듀얼리스트,RESULT)
+				選択カードB = RESULT
+				出処B = %参照先（CS）%
+				TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%参照先（CS）%:選択カードB")},"名前"
+				選択カード名前B = %RESULTS%
+
+				CALL FULLRESET
+효과条件名前 = %選択カード名前A%
+				효과추가종류 = 効追無効
+				CALL CARD_SP_SUMMON(듀얼리스트,出処A,選択カードA)
+
+				CALL FULLRESET
+효과条件名前 = %選択カード名前B%
+				효과추가종류 = 効追無効
+				CALL CARD_SP_SUMMON(듀얼리스트,出処B,選択カードB)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52534,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"不材",3,1)
+ENDIF
+
+;共通にしようかと思ったけどこれ使うのアハシマくらいじゃん
+@AHASHIMA_CHECK(듀얼리스트,종류,ゾーン,場所,モード選択)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC モード選択
+#DIM DYNAMIC 효과条件レベル설정,99
+
+;FORには人類の英知が詰まっているよ！
+FOR カウンタ,1,12
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = レベル持ち
+	;重要なのはここ！
+	효과条件レベル = カウンタ
+	;レベルを카운터で囲もう！
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT >= 2
+		IF モード選択 == 0
+				RETURN 1
+		ELSEIF モード選択 == 1
+			효과条件レベル설정:カウンタ = カウンタ
+		ENDIF
+	ENDIF
+NEXT
+
+;ここでめんどくさい処理飛ばして一気に효과条件レベルを설정している
+IF モード選択 == 1
+	CALL FULLRESET
+	효과条件レベル:0 = 99
+	FOR カウンタ,1,12
+		SIF 효과条件レベル설정:カウンタ >= 1
+			효과条件レベル:カウンタ = 효과条件レベル설정:カウンタ
+	NEXT
+ENDIF
+
+RETURN 0

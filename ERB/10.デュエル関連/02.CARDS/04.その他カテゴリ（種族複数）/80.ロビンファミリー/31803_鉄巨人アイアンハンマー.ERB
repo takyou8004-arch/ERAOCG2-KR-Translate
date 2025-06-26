@@ -1,0 +1,123 @@
+﻿@CARDNAME_31803,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 쇠 거인 아이언 해머
+	CASE "略称"
+RESULTS = 아이언 해머
+	CASE "カテゴリ"
+RESULTS:0 = 로빈 패밀리
+ENDSELECT
+
+
+@CARD_31803(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 900
+	CASE "守備力"
+		RETURN 3500
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_31803(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①：「이차원 에스퍼 스타 로빈」「야수전사 퓨맨」「봉황수 가이루다」의
+PRINTL 어느 하나가 자신 필드에 존재할 경우, 이 카드는 패에서 수비 표시로 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②：1턴에 1번, 자신 필드의 레벨 4 이하의 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터는 이 턴 직접 공격할 수 있다.
+
+@CARDCAN_31803(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,31803)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 손패起動
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0	
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,31803,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前:0 = 이차원 에스퍼 스타 로빈
+	효과条件名前:1 = 야수 전사 퓨먼
+	효과条件名前:2 = 봉황수 가루다
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0	
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL 효과条件レベル_ADV(4,"以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31803(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31803)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所,"守備표시")
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,31803,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		CALL 효과条件レベル_ADV(4,"以下")
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL STATCHANGE_EFFECT(대상者（CS）,"필드",選択カード（CS）,"直攻",1)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,148 @@
+@CARDNAME_21902,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 승리 선언 오니마루「패」
+	CASE "略称"
+RESULTS = 오니마루「패」
+	CASE "カテゴリ"
+RESULTS:0 = 헌터
+RESULTS:1 = 커맨드
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_21902(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21902(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ① 이 카드의 공격 선언 시에 발동할 수 있다.
+PRINTL 서로의 플레이어는 덱의 위에서부터 첫 번째 카드를 공개하고, 덱으로 되돌려 셔플한다.
+PRINTL 자신이 공개한 카드의 레벨이 상대가 공개한 카드의 레벨 이상이면,
+PRINTL 다음 상대 턴, 상대 메인 페이즈 2까지 스킵한다.
+PRINTL (마법 / 함정 카드는 레벨 0으로 취급한다)
+
+
+@CARDCAN_21902(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 속성数
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21902)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21902(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 듀얼리스트レベル
+#DIM DYNAMIC 対面者レベル
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21902)
+	IF RESULT == 0
+PRINTL 가칭코 저지!
+		TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_덱:0"))
+		PRINTW
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_덱:0")}, "レベル"
+		듀얼리스트レベル = RESULT
+		TRYCALLFORM CARD_UI(GETVAR(@"%対面者%_덱:0"))
+		PRINTW
+		TRYCALLFORM CARD_{GETVAR(@"%対面者%_덱:0")}, "レベル"
+		対面者レベル = RESULT
+
+		CALL SHUFFLE(듀얼리스트)
+		CALL SHUFFLE(対面者)
+		SETCOLOR C_YELLOW
+		PRINTL
+		PRINTFORMW {듀얼리스트レベル} VS {対面者レベル}
+		PRINTL
+		IF 듀얼리스트レベル >= 対面者レベル
+			IF 듀얼리스트 == "자신"
+				PRINTW VICTORY！ 
+			ELSE
+				PRINTW LOSE…
+			ENDIF
+		ELSE
+			IF 듀얼리스트 == "자신"
+				PRINTW LOSE… 
+			ELSE
+				PRINTW VICTORY！ 
+			ENDIF
+		ENDIF
+		RESETCOLOR
+
+		IF 듀얼리스트レベル >= 対面者レベル
+			CALL SET_PLAYER_INFO(対面者,"ドロースキップ", 1)
+			CALL SET_PLAYER_INFO(対面者,"メインスキップ", 1)
+			CALL SET_PLAYER_INFO(対面者,"バトルスキップ２", 1)
+			PRINTL
+			SETCOLOR C_RED
+			IF RAND:2 == 0
+				PRINTW 『ビクトリ-ラッシュゥ！！』
+			ELSE
+				PRINTW 『デュエルは頭脳の격투技！ 覇ァ！！』
+			ENDIF
+			RESETCOLOR
+		ENDIF
+
+	ENDIF
+ENDIF
+

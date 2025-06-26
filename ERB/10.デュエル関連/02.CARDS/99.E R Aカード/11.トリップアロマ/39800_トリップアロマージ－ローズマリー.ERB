@@ -1,0 +1,223 @@
+@CARDNAME_39800,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 트립아로마지-로즈마리-
+	CASE "略称"
+		RESULTS = TA-로즈마리-
+	CASE "カテゴリ"
+		RESULTS:0 = 트립아로마
+		RESULTS:1 = 아로마
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39800(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 700
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 1390
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39800(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ①②의 효과는각각 1턴에 1번 밖에 사용 할 수 없다.
+CALL CARD_ABLE(1,필드起動)
+PRINTL ①：자신의 메인 페이즈에 발동할 수 있다.
+PRINTL 묘지 또는 제외 상태의「트립아로마지-로즈마리-」의외의 레벨 4 이하의 식물족 몬스터 1 장을 특수 소환한다.
+PRINTL 그 후、상대 필드의 몬스터 1체에 미약 카운터를 1개 두고, 발정시킨다.
+PRINTL 이 효과의 발동 후, 자신의 턴 종료시 까지 자신은 식물족 몬스터 밖에 특수소환 할 수 없다.
+CALL CARD_ABLE(2,묘지起動)
+PRINTL ②：이 카드가 묘지에 존재하고, 상대의 마법 & 함정 존에「트립아로마지-로즈마리-」가 존재하지 않을 경우、800LP를 지불하고 발동할 수 있다.
+PRINTL 이 카드를 상대의 마법 & 함정 존에 둔다.
+CALL CARD_ABLE(3,ターン終了時強制)
+PRINTL ③：서로의 엔드 페이즈에, 이 카드가 마법 & 함정 존에 존재할 경우에 발동한다.
+PRINTL 자신 필드의 몬스터 모두에게 미약 카운터를 1개 두고, 발정시킨다.
+PRINTL 그 후、상대는 자신 필드의 미약 카운터X400LP를 회복한다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_39800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39800)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,39800)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件固名前 = 트립아로마지-로즈마리-
+	효과条件종족 = 식물족
+	효과条件종류 = レベル持ち
+	CALL 효과条件レベル_ADV(4, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,39800)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(対面者) >= 5
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 800
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	효과条件名前 = 트립아로마지-로즈마리-
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39800(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 合計攻撃力
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 回復量
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39800,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件固名前 = 트립아로마지-로즈마리-
+		효과条件종족 = 식물족
+		효과条件종류:0 = 링크以外
+		효과条件종류:1 = 엑시즈以外
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			IF モンスター数(対面者) > 0
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"選択")
+				IF RESULT == 1
+					選択カード = RESULT:1
+					CALL CARD_SELECT(듀얼리스트,選択カード)
+					選択カード = RESULT
+					CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",選択カード,1)
+					IF RESULT != -1
+						조교대상 = RESULT
+						PRINTFORML 
+						SETCOLOR C_PINK 
+						PRINTFORML %NAME:조교대상%은 로즈마리가 피우는 미향에 의해 발정했다!
+						RESETCOLOR
+						CALL EROTIC_MOVE("媚毒汚染",조교대상,NO_TO_CHARANUM(1390),400)
+					ENDIF
+					CALL STATCHANGE_EFFECT(対面者,"자신",選択カード,"発情",2)
+					CALL SET_FIELD_INFO(対面者,"필드",選択カード,"薬Ｃ",1)
+				ENDIF
+			ENDIF
+			SS소환可能종족 = 식물족
+			CALL CARD_SS_RESTRICTION(듀얼리스트)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39800,2)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",800)
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML
+			SETCOLOR C_PINK 
+			PRINTFORML %NAME:조교대상%의 몸에 로즈마리의 꽃이 피었다!
+			RESETCOLOR
+			CALL EROTIC_MOVE("淫紋の疼き",조교대상,NO_TO_CHARANUM(1390),400)
+		ENDIF
+		CALL CARD_ADD(対面者,"상대묘지","마함",場所)
+	ENDIF
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_EROTICS(상대プレイヤー,対面者)
+	IF RESULT != -1
+		조교대상 = RESULT
+		PRINTFORML
+		SETCOLOR C_PINK 
+		PRINTFORMW %NAME:조교대상%의 몸에 피어난 로즈마리의 꽃으로부터 미향이 감돈다.
+		RESETCOLOR
+	ENDIF
+	
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+			CONTINUE
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+		IF RESULT != -1
+			조교대상 = RESULT
+			CALL EROTIC_MOVE("媚毒汚染",조교대상,NO_TO_CHARANUM(1390),400)
+		ENDIF
+		CALL STATCHANGE_EFFECT(듀얼리스트,"자신",カウンタ,"発情",2)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"薬Ｃ",1)
+	NEXT
+	CALL FIELD_INFO_COUNT(듀얼리스트,"薬Ｃ",1)
+	回復量 = RESULT * 400
+	CALL LIFE_CHANGE(対面者,"増加","효과", 回復量)
+ENDIF

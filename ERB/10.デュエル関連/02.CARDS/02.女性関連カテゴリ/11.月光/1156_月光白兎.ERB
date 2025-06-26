@@ -1,0 +1,146 @@
+﻿@CARDNAME_1156,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 문라이트 화이트 래빗
+	CASE "略称"
+RESULTS = 문라이트 백토
+	CASE "カテゴリ"
+RESULTS:0 = 문라이트
+ENDSELECT
+
+
+@CARD_1156(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1156(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환에 성공했을 때,
+PRINTL "문라이트백토" 이외의 자신 묘지의 "문라이트" 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터를 수비 표시로 특수 소환한다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 이 카드 이외의 자신 필드의 "문라이트" 카드 수만큼,
+PRINTL 상대 필드의 마법 / 함정 카드를 대상으로 하여 발동할 수 있다.
+PRINTL 그 카드를 주인의 패로 되돌린다.
+
+
+@CARDCAN_1156(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1156)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 문라이트
+	효과条件종류 = モン全般
+	효과条件固名前 = 문라이트 화이트 래빗
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件他所 = 1
+	효과条件カテゴリ = 문라이트
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1156(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC リピート数
+
+
+IF 종류 == 소환時 
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1156)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件固名前 = 문라이트 화이트 래빗
+		효과条件カテゴリ = 문라이트
+		효과条件종류 = モン全般
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1156,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件他所 = 1
+		효과条件カテゴリ = 문라이트
+		효과条件표시 = 表側표시
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		リピート数 = RESULT
+		CALL FULLRESET
+		효과条件複数 = 100 - リピート数
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,"손패")
+	ENDIF	
+ENDIF

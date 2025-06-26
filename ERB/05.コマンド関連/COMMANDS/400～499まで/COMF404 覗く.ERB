@@ -1,0 +1,91 @@
+﻿;-------------------------------------------------
+;엿본다
+;-------------------------------------------------
+@COM404
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 자위中
+#DIM DYNAMIC 確認先
+#DIM DYNAMIC 寝室人数
+
+VARSET LOCAL
+FOR 캐릭터_ID,1,CHARANUM
+	IF CFLAG:캐릭터_ID:현재위치 == 場所_寝室
+		寝室人数 ++
+		IF CFLAG:캐릭터_ID:시작위치 == 場所_寝室
+			IF RAND:200 >= BASE:캐릭터_ID:만족 
+				자위中 = 캐릭터_ID
+			ENDIF
+		ENDIF
+	ENDIF
+NEXT
+SIF 寝室人数 >= 2
+	VARSET 자위中
+
+CUSTOMDRAWLINE —
+PRINTFORML 어느 방을 훔쳐보시겠습니까？
+PRINTL [0] - 그만둔다
+FOR LOCAL,0,20
+	SIF CAN_MOVE(CFLAG:MASTER:현재위치, LOCAL)
+		PRINTFORML [{LOCAL}] - %GETPLACENAME(LOCAL)%
+NEXT
+PRINTL
+PRINTL [1000] - 돌아간다
+BINPUT
+SIF RESULT == 1000
+	RETURN 0
+確認先 = RESULT
+
+IF CAN_MOVE(CFLAG:MASTER:현재위치, 確認先)
+	IF CAN_MOVE(CFLAG:MASTER:현재위치, 確認先) == 1
+		PRINTFORM %CALLNAME:MASTER%는
+		IF FLAG:(300 + 確認先)
+			PRINTFORM 문\@ HAS_DUPLICATE_KEY(確認先) ? 을 복제열쇠로 살짝 열어서 # 의 위에 채광창에서 \@
+		ELSE
+			PRINT 슬쩍 문을 열어서
+		ENDIF
+		PRINTFORMW %GETPLACENAME(確認先)%의 모습을 살펴보았다
+	ENDIF
+	IF 確認先 == 場所_寝室 && 자위中 >= 1
+		CALLFORM ONANII_EVENT(자위中,1)
+		RETURN 0
+	ENDIF
+	PRINTFORM %GETPLACENAME(確認先)%에겐
+	FOR 캐릭터_ID,1,CHARANUM
+		IF CFLAG:캐릭터_ID:현재위치 == 確認先
+			SIF LOCAL:1
+				PRINT 과
+			PRINTFORM %CALLNAME:캐릭터_ID%
+			LOCAL:1 ++
+		ENDIF
+	NEXT
+	IF LOCAL:1 >= 1
+		PRINTL 가 있다
+		SIF BATHROOM(確認先)
+			CUP:MASTER:욕정 += 10
+	ELSE
+		PRINTL 아무도 없었다
+	ENDIF
+	WAIT
+ELSE
+	RETURN 0
+ENDIF
+TIME += 3
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;엿본다
+@COM_ABLE404
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(404)
+	RETURN RESULT
+;외출時불가
+SIF CFLAG:MASTER:현재위치 >= 自宅部屋最大値
+	RETURN 0
+SIF TARGET > 0
+	RETURN 0
+RETURN 1

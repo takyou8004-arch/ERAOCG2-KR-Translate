@@ -1,0 +1,153 @@
+﻿@CARDNAME_57140,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 샐러맨그레이트 레이징 피닉스
+	CASE "略称"
+RESULTS = 전생 레이징 P
+	CASE "カテゴリ"
+RESULTS:0 = 샐러맨그레이트
+ENDSELECT
+
+
+@CARD_57140(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_57140(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要링크数 = 4
+素材条件속성 = 화염속성
+素材条件종류 = 효과全般
+지정素材名前 = 샐러맨그레이트レイジング 피닉스
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,57140) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_57140(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 화염 속성 효과 몬스터 2체 이상
+PRINTL 이 카드 명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 "샐러맨그레이트 레이징 피닉스"를 소재로서 링크 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 덱에서 "샐러맨그레이트" 카드 1장을 패에 넣는다.
+
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 이 카드가 묘지에 존재하는 상태로, 자신 필드의 앞면 표시 화염 속성 몬스터가 전투 / 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 이 카드 이외의 묘지의 화염 속성 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 이 카드를 특수 소환하고, 이 카드의 공격력을 대상 몬스터의 공격력만큼 올린다.
+
+@CARDCAN_57140(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57140)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 샐러맨그레이트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,57140)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과条件속성 = 화염속성
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般",2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件他所 = 1
+	효과条件속성 = 화염속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_57140(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択レベル
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 속성セット
+#DIM DYNAMIC 속성セットビット
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57140,1)
+	IF RESULT == 0	
+		CALL FULLRESET
+		효과条件カテゴリ = 샐러맨그레이트
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57140,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件속성 = 화염속성
+		효과条件他所 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "묘지",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARD_{選択カード_ID},"攻撃力"
+			攻撃力修正 = RESULT
+			CALL FULLRESET
+			효과추가종류 = 100000 + 攻撃力修正
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

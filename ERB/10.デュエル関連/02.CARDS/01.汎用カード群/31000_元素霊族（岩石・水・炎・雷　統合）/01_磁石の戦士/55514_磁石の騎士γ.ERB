@@ -1,0 +1,184 @@
+﻿@CARDNAME_55514,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 자석의 기사γ
+	CASE "略称"
+		RESULTS = 자석의 기사γ
+	CASE "カテゴリ"
+		RESULTS:0 = 마그넷 워리어
+		RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_55514(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 원소정령족 
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 2200
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_55514(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「마그넷 워리어γ」＋레벨４이하의 땅 속성 몬스터
+PRINTL 이 카드명의 ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,특수소환時,EX덱起動)
+PRINTL ①：이 카드의 특수 소환에 성공했을 경우에、자신 필드의 레벨４이하의 원소정령족 몬스터를 릴리스하고 발동할 수 있다。
+PRINTL 자신 묘지의 레벨７ 이상의 원소정령족 땅 속성 몬스터 １장을 특수 소환한다。
+PRINTL 그 후、필드의 카드 １장을 고르고 파괴할 수 있다。
+CALLFORM CARD_ABLE(0,破壊→묘지 ,戦闘→묘지)
+PRINTL ②：이 카드가 전투 / 효과로 파괴된 경우에 발동할 수 있다。
+PRINTL 묘지 / 제외 상태인 「마그넷 워리어γ" 몬스터를 포함하는 레벨４이하의 땅 속성 몬스터 ２장을 특수 소환한다。
+
+@CARDSUMMON_55514(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件名前 = 마그넷 ウォリア-γ
+ELSEIF EX参照 >= 10
+	CALLFORM 素材条件レベル_ADV(4, "以下")
+	素材条件속성 = 땅속성
+ENDIF
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,55514) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_55514(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 특수소환時 || 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,55514)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 원소정령족
+	CALL 효과条件レベル_ADV(4, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 땅속성
+	효과条件종족 = 원소정령족
+	CALL 효과条件レベル_ADV(7, "以上")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF モンスター数(듀얼리스트) >= 4
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 마그넷 워리어γ	
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件속성 = 땅속성
+	CALL 효과条件レベル_ADV(4, "以下")
+	효과条件CNT = 1
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1	
+ENDIF
+
+@CARDEFFECT_55514(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 특수소환時 || 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55514,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 원소정령족
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件속성 = 땅속성
+			효과条件종족 = 원소정령족
+			CALL 효과条件レベル_ADV(7, "以上")
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+			PRINTL 필드의  카드를 破壊しますか？
+			CALL YN_CHOICE(듀얼리스트)
+			IF RESULT == はい
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"両全場単体",場所,"묘지")
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55514)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 마그넷 워리어γ	
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件속성 = 땅속성
+		CALL 효과条件レベル_ADV(4, "以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

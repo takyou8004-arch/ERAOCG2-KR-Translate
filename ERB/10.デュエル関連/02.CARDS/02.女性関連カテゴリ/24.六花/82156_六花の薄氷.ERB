@@ -1,0 +1,111 @@
+﻿@CARDNAME_82156,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 육화의 박빙
+	CASE "略称"
+RESULTS = 육화 박빙
+	CASE "カテゴリ"
+RESULTS:0 = 육화
+ENDSELECT
+
+
+@CARD_82156(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_82156(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장만 발동할 수 없다.
+PRINTL 이 카드는 자신 필드의 식물족 몬스터 1장을 릴리스하고 발동할 수도 있다.
+CALL CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①: 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 효과를 턴 종료시까지 무효로 한다.
+PRINTL 몬스터를 릴리스하고 이 카드를 발동했을 경우,
+PRINTL 추가로 그 몬스터의 컨트롤을 엔드 페이즈까지 얻는다.
+PRINTL 이 효과로 컨트롤을 얻은 몬스터는 식물족이 된다.
+
+@CARDCAN_82156(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,82156)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,82156)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,82156)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_82156(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 효과使用不可,3
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,82156,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		IF GETVARS(@"%듀얼리스트%_フィールド名") == "六花콩콩" && モンスター数(듀얼리스트) < 4
+			효과範囲상대필드 = 1
+			효과条件상대モン = 1
+		ENDIF
+		효과条件종족 = 식물족
+		효과条件任意 = 1
+PRINTL 릴리스할 몬스터를 선택해 주세요.
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		SIF RESULT
+			条件달성 = 1
+		
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"無効")
+		IF 条件달성
+			CALL FULLRESET
+			효과추가종류:1 = 効追永種 + 식물족
+			CALL CARD_GET_CONTROL(듀얼리스트,他参照選択カード,5)		
+		ENDIF
+	ENDIF
+ENDIF

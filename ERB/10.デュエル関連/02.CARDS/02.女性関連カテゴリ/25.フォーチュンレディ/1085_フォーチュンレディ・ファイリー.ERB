@@ -1,0 +1,113 @@
+﻿@CARDNAME_1085,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 포츈 레이디 파이어
+	CASE "略称"
+RESULTS = 파이어
+	CASE "カテゴリ"
+RESULTS:0 = 포츈 레이디
+ENDSELECT
+
+
+@CARD_1085(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1085(종류)
+#DIM DYNAMIC 종류
+CALL CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 공격력 / 수비력은 이 카드의 레벨 × 200이 된다.
+CALL CARD_ABLE(10,필드起動)
+PRINTL ②: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드의 레벨을 1 올린다.
+CALL CARD_ABLE(0,특수소환時)
+PRINTL ③: 이 카드가 특수 소환에 성공했을 때 발동할 수 있다.
+PRINTL 상대 필드 위에 앞면 표시로 존재하는 몬스터 1장을 선택하고 파괴하며,
+PRINTL 파괴한 몬스터의 공격력만큼의 데미지를 상대 라이프에 준다.
+PRINTL 
+
+@CARDCAN_1085(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1085)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1085(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC レベル修正
+IF 종류 == 攻守変動
+	CALL FULLRESET
+	攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_星:場所") * 200
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正,攻撃力修正)
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1085,10)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永星",1)
+	ENDIF
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1085)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 1
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+ENDIF

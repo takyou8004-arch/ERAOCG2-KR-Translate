@@ -1,0 +1,152 @@
+﻿@CARDNAME_50722,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 바렐엔드 드래곤
+	CASE "略称"
+RESULTS = B.E. 드래곤
+	CASE "カテゴリ"
+RESULTS:0 = 바렐
+ENDSELECT
+
+
+@CARD_50722(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 3500
+	CASE "守備力"
+		RETURN 2500
+	CASE "C불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50722(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 5
+素材条件종류 = 효과全般
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,50722) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50722(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 효과 몬스터 2장 이상
+PRINTL 이 카드의 효과 발동에 대하여 상대는 효과를 발동할 수 없다.
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 필드의 이 카드는 전투 파괴 대상 내성을 가진다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 상대 몬스터 전부에 1번씩 공격할 수 있다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ③: 자신 / 상대 턴에, 필드의 효과 몬스터 1장과,
+PRINTL 자신 묘지의 "바렐" 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 필드의 몬스터의 효과를 턴 종료시까지 무효로 하고, 그 묘지의 몬스터를 특수 소환한다.
+
+
+@CARDCAN_50722(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50722)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,50722)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,50722,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	SIF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件종류 = 효과全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 바렐
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_50722(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50722,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 효과全般
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"無効")
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 바렐
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+ENDIF
+

@@ -1,0 +1,152 @@
+﻿@CARDNAME_35661,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 용장 참격 마하 아머
+	CASE "略称"
+RESULTS = 마하 아머
+	CASE "カテゴリ"
+RESULTS:0 = 사무라이
+RESULTS:1 = 크로스 기어
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_35661(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 지속마법
+	CASE "分割"
+		RETURN 크로스기어
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_35661(종류)
+#DIM DYNAMIC 종류
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+PRINTL 이 카드는 자신의 묘지에 화염속성의 카드가 2종류 이상 존재할 경우에만 발동할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과,攻守変動)
+PRINTL ①: 이 카드가 마법&함정 존에 존재하는 한,
+PRINTL 패에서 소환되는 "사무라이" 몬스터의 레벨은 1 내린다.
+PRINTL 통상 소환에 더해 1번만, "사무라이" 몬스터 1장을 소환할 수 있다.
+CALLFORM CARD_ABLE(10,마함起動)
+PRINTL ②: 1턴에 1번, 자신 메인 페이즈에 발동할 수 있다.
+PRINTL 이 카드를 자신의 "사무라이" 몬스터 1장에 장착한다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ③: 이 카드가 장착되어 있는 한, 자신 필드의 "사무라이" 몬스터의 공격력 / 수비력은 500 올린다.
+
+
+@CARDCAN_35661(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,35661)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件표시 = 表側표시
+	효과条件カテゴリ = 사무라이
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,35661)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 화염속성
+	효과条件CNT = 1
+	효과条件固名前起動 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_35661(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35661,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 사무라이
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35661,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 사무라이
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ = 사무라이
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"一星",1)
+	IF GETVAR(@"%装備者%_필드:装備先") != -1
+		CALL FULLRESET
+		효과条件カテゴリ = 사무라이
+		CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,500,500)
+	ENDIF
+ENDIF

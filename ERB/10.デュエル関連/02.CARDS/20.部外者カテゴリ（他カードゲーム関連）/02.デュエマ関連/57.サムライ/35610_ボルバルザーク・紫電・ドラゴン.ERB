@@ -1,0 +1,123 @@
+﻿@CARDNAME_35610,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 볼바르자크 시덴 드래곤
+	CASE "略称"
+RESULTS = 볼바르 시덴
+	CASE "カテゴリ"
+RESULTS:0 = 사무라이
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_35610(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_35610(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時 ,특수소환時)
+PRINTL ①: 『사무라이류 제너레이트』
+PRINTL 이 카드가 소환 / 특수 소환에 성공했을 경우 발동할 수 있다.
+PRINTL 자신의 패 / 묘지에서 「크로스 기어」 카드 1장을 고르고, 이 카드에 장착한다.
+PRINTL 그렇게 했을 경우, 그 카드의 패에서 발동했을 때의 능력을 발동할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 1번의 배틀 페이즈 중에 2회 공격할 수 있다.
+PRINTL 
+
+@CARDCAN_35610(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,35610)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 크로스기어
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_35610(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,35610,10)
+	IF RESULT == 0
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 크로스기어
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)	
+			選択カード = RESULT
+			IF 選択カード != 9999
+				選択カード_ID = RESULT:99
+				CALL CARD_SELECT(듀얼리스트,選択カード)
+				CALL FULLRESET
+				효과範囲필드 = 1
+효과条件名前 = 보루바루자
+				CALLFORM CARD_EQUIP_ADV(듀얼리스트,選択カード（CS）,参照先（CS）)
+
+				CALLFORM CARDEFFECT_{選択カード_ID}(듀얼리스트,손패起動,"효과処理")
+			ENDIF
+		ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",1)
+ENDIF

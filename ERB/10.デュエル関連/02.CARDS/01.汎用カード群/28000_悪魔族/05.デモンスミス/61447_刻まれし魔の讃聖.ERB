@@ -1,0 +1,206 @@
+﻿@CARDNAME_61447,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 데먼스미스 산크투스
+	CASE "略称"
+RESULTS = 새겨진 마의 찬성
+	CASE "カテゴリ"
+RESULTS:0 = 데먼스미스
+ENDSELECT
+
+
+@CARD_61447(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61447(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신 필드의 앞면 표시 몬스터가 존재하지 않을 경우, 또는 악마족 빛 속성 몬스터만일 경우에 발동할 수 있다.
+PRINTL 자신 필드에 「데먼스미스 토큰」 1장을 특수 소환한다.
+PRINTL 이 턴, 자신은 악마족 몬스터로밖에 공격 선언할 수 없다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②：이 카드가 묘지에 존재하는 상태에서,
+PRINTL 자신 필드의 「데먼스미스」 몬스터가 상대의 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 자신 필드에 세트한다.
+
+
+@CARDCAN_61447(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61447)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL CARD_SS_CHECK(듀얼리스트,161447,"")
+	SIF RESULT == 1
+		RETURN 0
+
+	IF モンスター数(듀얼리스트) == 0
+		RETURN 1
+	ELSE
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 빛속성
+		효과条件종족 = 악마족
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件속성:0 = 2
+			효과条件속성:1 = 3
+			효과条件속성:2 = 4
+			효과条件속성:3 = 5
+			효과条件속성:4 = 6
+			효과条件속성:5 = 7
+			효과条件종족:0 = 1
+			효과条件종족:1 = 2
+			효과条件종족:2 = 3
+			효과条件종족:3 = 4
+			효과条件종족:4 = 5
+			효과条件종족:5 = 6
+			효과条件종족:6 = 7
+			효과条件종족:7 = 8
+			효과条件종족:8 = 10
+			효과条件종족:9 = 11
+			효과条件종족:10 = 12
+			효과条件종족:11 = 13
+			효과条件종족:12 = 14
+			효과条件종족:13 = 15
+			효과条件종족:14 = 16
+			효과条件종족:15 = 17
+			효과条件종족:16 = 20
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				RETURN 0
+			ELSE
+				RETURN 1
+			ENDIF
+		ELSE
+			RETURN 0
+		ENDIF
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 데먼스미스
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과破壊",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_61447(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61447,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_GENERATE(듀얼리스트,161447)
+
+		CALL FULLRESET
+		攻撃可能종족 = 악마족
+		CALL CARD_ATK_RESTRICTION(듀얼리스트)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61447,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,"묘지",場所,마함行き,1)
+	ENDIF
+ENDIF
+
+
+
+@CARDNAME_161447,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 데먼스미스 토큰
+	CASE "略称"
+RESULTS = 데먼스미스 T
+	CASE "カテゴリ"
+RESULTS:0 = 데먼스미스
+ENDSELECT
+
+@CARD_161447(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+
+@CARDCAN_161447(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+RETURN 0
+

@@ -1,0 +1,212 @@
+@CARDNAME_99730,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마인드컨트롤러 - 에너미
+	CASE "略称"
+		RESULTS = MC 에너미
+		CASE "カテゴリ"
+		RESULTS:0 = MC
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99730(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99730(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 필드에「마인드컨트롤러 - 어댑터」가 존재할 경우, 이 카드의 발동은 패에서도 발동할 수 있다.
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번 밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①：이하의 효과를 1개 선택해 발동할 수 있다.
+PRINTL ●자신 필드의 몬스터 1장을 릴리스하고, 상대 필드의 앞면 표시 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터의 컨트롤을 얻는다.	
+PRINTL ●상대 필드의 앞면 표시 몬스터 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터를 뒷면 수비 표시로 한다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신 메인 페이즈에 묘지의 이 카드를 제외하고, 자신 마법 / 함정 존의 『MC』몬스터 카드 1장을 대상으로 하고 발동 할 수 있다.
+PRINTL 그 몬스터를 특수 소환한다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99730(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99730)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,99730)
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF GETVARS(@"%듀얼리스트%_フィールド名") !=  "MC - 어댑터"
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,99730)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件표시 = 表側표시
+	효과条件カテゴリ = MC 
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99730(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99730,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = モン全般
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			CALL YN_CHOICE(듀얼리스트,"●자신モンスター1장을 릴리스하고、상대 몬스터의 컨트롤을 얻는다。","●상대 몬스터를 뒷면 수비 표시로한다。")
+		ELSE
+			RESULT = いいえ
+		ENDIF
+		IF RESULT == はい
+			CALL FULLRESET
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과条件표시 = 表側표시
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+				選択カード = GETVAR(@"%듀얼리스트%_필드:コントロール先")
+				IF 듀얼리스트 == "자신"
+					CALL CARD_EROTICS(選択カード)
+					IF RESULT != -1
+						조교대상 = RESULT
+						PRINTFORML 
+						SETCOLOR C_PINK 
+						IF TALENT:조교대상:성별 != 2
+							PRINTFORMW %NAME:조교대상%는 컨트롤러에 조종되어 공허한 눈동자인 채 %CALLNAME:MASTER%의 아래에 가까워진다.
+							PRINTFORM 그리고, %CALLNAME:MASTER%의 바지를 벗게 하고,
+							SIF HAS_PENIS(MASTER)
+								PRINTFORM 노출한 육봉에
+							SELECTCASE RAND:3
+							CASE 0
+								PRINTFORMW 달라붙어, 입으로 봉사하기 시작했다.
+								CALL EROTIC_MOVE("憑依フェラ",조교대상,MASTER,300)
+							CASE 1
+								IF BUST_SIZE(조교대상) == -2
+									PRINTFORM 궁상스러운 가슴을 어떻게든 대어
+								ELSEIF BUST_SIZE(조교대상) == -1
+									PRINTFORM 조신한 가슴을 대어
+								ELSEIF BUST_SIZE(조교대상) == 0
+									PRINTFORM 보기 좋은 가슴으로
+								ELSEIF BUST_SIZE(조교대상) == 1
+									PRINTFORM 감쌀 수 있는 거유로
+								ELSEIF BUST_SIZE(조교대상) == 2
+									PRINTFORM 흘러넘칠 것 같은 폭유로
+								ELSEIF BUST_SIZE(조교대상) == 3
+									PRINTFORM 소와 같이 부풀어 오른 젖유로
+								ELSEIF BUST_SIZE(조교대상) >= 4
+									PRINTFORM 규격외의 초유로
+								ENDIF
+								PRINTFORMW 파이즈리 봉사를 시작했다.
+								CALL EROTIC_MOVE("憑依파이즈리",조교대상,MASTER,300)
+							CASE 2
+								PRINTFORMW 걸쳐 허리를 흔들기 시작했다.
+								CALL EROTIC_MOVE("憑依騎乗位",조교대상,MASTER,300)
+							ENDSELECT
+							PRINTFORMW 봉사를 끝낸 %NAME:조교대상%는『주인』이 명령한대로 전투 태세를 갖춘다......
+							CALL SET_FIELD_INFO(듀얼리스트,"필드",コントロール先,"接可",2,1)
+						ENDIF
+						RESETCOLOR
+					ENDIF
+				ENDIF
+			ENDIF
+		ELSEIF RESULT == いいえ
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				選択カードID = RESULT:99
+				CALL CARD_EROTICS(選択カードID)
+				IF RESULT != -1
+					조교대상 = RESULT
+					PRINTFORML 
+					SETCOLOR C_PINK 
+					IF TALENT:조교대상:성별 != 2
+						PRINTFORMW %NAME:조교대상%는 컨트롤러에게 조종되는 대로, 스커트를 걷어올려 팬티를 과시했다.
+						CALL EROTIC_MOVE("팬티晒し",조교대상,MASTER,300)
+						PRINTFORMW 깜짝 제정신이 된 %NAME:조교대상%는 수치심에 얼굴을 붉게 물들이고, 숙여버렸다......
+					ENDIF
+					RESETCOLOR
+				ENDIF
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"표시변경")
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99730,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件カテゴリ = MC
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

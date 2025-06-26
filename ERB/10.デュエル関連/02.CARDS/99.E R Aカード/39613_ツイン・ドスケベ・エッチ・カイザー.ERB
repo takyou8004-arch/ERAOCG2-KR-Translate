@@ -1,0 +1,313 @@
+﻿@CARDNAME_39613,参照先
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 트윈 도스케베 H 카이저
+	CASE "略称"
+RESULTS = T·D·H·K
+	CASE "カテゴリ"
+RESULTS:0 = 없음
+RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39613(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250421
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39613(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 효과 ①②는 각각 1턴에 1번밖에 사용할 수 없다.
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：패의 이 카드를 상대에게 보여주고 발동할 수 있다.
+PRINTL 　각 플레이어는 덱의 맨 위의 카드를 공개하고, 덱으로 되돌리고 셔플한다.
+PRINTL 　자신이 공개한 카드의 레벨이 상대가 공개한 카드의 레벨 이상일 경우,
+PRINTL 　그 카드를 릴리스 없이 일반 소환하고, 자신은 1장 드로우한다.
+PRINTL 　아닐 경우, 그 카드는 묘지로 보내진다.
+PRINTL 　(마법 / 함정 카드는 레벨 0으로 취급한다.)
+CALL CARD_ABLE(2,バトル開始時)
+PRINTL ②：자신 배틀 페이즈 개시시에 발동할 수 있다.
+PRINTL 　이 턴, 이 카드 이외의 몬스터는 공격할 수 없으며,
+PRINTL 　이 카드의 공격력은 턴 종료시까지, 이 카드 이외의 자신 필드의 몬스터의 공격력 합계의 절반만큼 올린다.
+CALL CARD_ABLE(3,攻撃後強制誘発)
+PRINTL ③：이 카드가 전투로 몬스터를 파괴했을 경우에 발동한다.
+PRINTL 　이 카드의 공격력은 파괴한 몬스터의 원래 공격력의 절반만큼 올린다.
+PRINTL 　이 효과가 이 턴의 첫 효과로서 발동일 경우, 추가로 이 카드는 1번 더 이어서 공격할 수 있다.
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39613(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39613)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,39613)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == バトル開始時
+	SIF 발동済_2(듀얼리스트,39613)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF GETVAR(@"%対面者%_直前戦闘破壊") == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39613(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 듀얼리스트レベル
+#DIM DYNAMIC 対面者レベル
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 조교강도
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 조교대상名前
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39613,1)
+	IF RESULT == 0
+PRINTL 가친코 저지!
+		TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_덱:0"))
+		PRINTW
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_덱:0")}, "レベル"
+		듀얼리스트レベル = RESULT
+		TRYCALLFORM CARD_UI(GETVAR(@"%対面者%_덱:0"))
+		PRINTW
+		TRYCALLFORM CARD_{GETVAR(@"%対面者%_덱:0")}, "レベル"
+		対面者レベル = RESULT
+
+		CALL SHUFFLE(듀얼리스트)
+		CALL SHUFFLE(対面者)
+		SETCOLOR C_YELLOW
+		PRINTL
+		PRINTFORMW {듀얼리스트レベル} VS {対面者レベル}
+		PRINTL
+		IF 듀얼리스트レベル >= 対面者レベル
+			IF 듀얼리스트 == "자신"
+				PRINTW VICTORY！ 
+			ELSE
+				RESETCOLOR
+				PRINTW LOSE…
+			ENDIF
+		ELSE
+			IF 듀얼리스트 == "자신"
+				RESETCOLOR
+				PRINTW LOSE… 
+			ELSE
+				PRINTW VICTORY！ 
+			ENDIF
+		ENDIF
+		RESETCOLOR
+		IF 듀얼리스트レベル >= 対面者レベル
+			CALL FULLRESET
+			CALL CARD_SUMMON_SHORI(듀얼리스트,場所,"攻撃표시",1)
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ELSE
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == バトル開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39613,2)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF カウンタ == 場所
+				CONTINUE
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") < 0
+				CONTINUE
+			SIF GETVAR(@"%듀얼리스트%_MZ_表:カウンタ") == 3
+				CONTINUE
+			攻撃力修正 += GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ")
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+			IF RESULT != -1
+				조교강도 = GETVAR(@"%듀얼리스트%_MZ_攻:場所") / 10
+				조교대상 = RESULT
+				PRINTFORMW 도스케베 H 카이저는 %CALLNAME:조교대상%와 개변태 섹스를 했다!
+				IF TALENT:조교대상:성별 == 2
+					IF ABL:조교대상:Ａ감각 >= 4
+						PRINTFORMW %CALLNAME:조교대상%는 전립선을 미친듯이 희롱당해 헐떡이고 있다!
+					ELSE
+						PRINTFORMW %CALLNAME:조교대상%는 전립선 자극에서 오는 고통과 기묘한 감각에 이를 악 물고 있다!
+					ENDIF
+				ELSE
+					IF ABL:조교대상:Ａ감각 >= 4 && ABL:조교대상:Ｖ감각 >= 4
+						PRINTFORMW %CALLNAME:조교대상%는 앞뒤 구멍을 동시에 범해져 성대히 가버리는 소리를 내고 있다!
+					ELSEIF ABL:조교대상:Ａ감각 >= 4 || ABL:조교대상:Ｖ감각 >= 4
+						PRINTFORMW %CALLNAME:조교대상%는 앞뒤 구멍을 동시에 범해져 고통 섞인 교성을 지르고 있다!
+					ELSE
+						PRINTFORMW %CALLNAME:조교대상%는 앞뒤 구멍을 내달리는 감각에 당황하고 있다!
+					ENDIF
+				ENDIF
+				CALL EROTIC_MOVE("両穴凌辱",조교대상,-1,조교강도)
+			ELSE
+				TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}("名前")
+				조교대상名前 = %RESULTS%
+				PRINTFORMW 도스케베 H 카이저는 %CALLNAME:조교대상%와 개변태 섹스를 했다!
+
+				IF GETVAR(@"%듀얼리스트%_MZ_性:カウンタ") == 雄性
+					PRINTFORMW %조교대상名前%는 아날을 헤집혀져 괴로운 소리를 흘리고 있다!
+				ELSEIF GROUPMATCH(GETVAR(@"%듀얼리스트%_MZ_性:カウンタ"),牝性,ふたなり)
+					PRINTFORMW %조교대상名前%는 양 구멍을 범해져 고통 섞인 교성을 지르고 있다!
+				ELSE
+					PRINTFORML %조교대상名前%는 구멍 같은 곳에 페니스가 억지로 파고들고 있다!
+					PRINTFORMW 성별 따위 알 게 뭐냐!　개변태 섹스하면 모두 동료고 개변태다!
+				ENDIF
+				REPEAT 3
+					PRINTL
+				REND
+			ENDIF
+		NEXT
+
+		CALL FULLRESET
+		효과条件他所 = 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦無",1)
+		攻撃力修正 = 攻撃力修正 / 2
+		CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"一攻",攻撃力修正)
+		PRINTL
+		PRINTW 도스케베 H 카이저는 회수한 개변태 섹스 파워로 파워 업 했다!
+		PRINTL
+		CALL CARD_EROTICS(상대プレイヤー,対面者)
+		IF RESULT != -1 && GETVAR(@"%듀얼리스트%_MZ_攻:場所") >= 5000
+			조교대상 = RESULT
+			PRINTFORM %CALLNAME:조교대상%는 사나이답고 크며 아름다운 한 쌍의 페니스
+			IF TALENT:조교대상:성별 == 2
+				IF ABL:조교대상:Ａ감각 >= 4
+					PRINTFORMW 에, 애널이 큥하고 떨리는 것을 느꼈다.
+				ELSE
+					PRINTFORMW 에, 저도 모르게 감탄사를 질렀다.
+				ENDIF
+			ELSE
+				IF ABL:조교대상:욕망 >= 6 || TALENT:조교대상:음란
+					PRINTFORMW 를 보면서, 스스로의 몸을 더듬기 시작했다.
+					CALL EROTIC_MOVE("자위",조교대상,-1,200)
+				ELSEIF ABL:조교대상:욕망 >= 4
+					PRINTFORMW 에 눈이 떨어지지 않고 있다.
+				ELSE
+					PRINTFORMW 를 보며, 작은 비명을 흘렸다.
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻撃後強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39613)
+	IF RESULT == 0
+		CALL CARD_EROTICS(GETVAR(@"%対面者%_直前戦闘破壊"),듀얼리스트)
+		IF RESULT != -1
+			조교강도 = GETVAR(@"%듀얼리스트%_MZ_攻:場所") / 10
+			조교대상 = RESULT
+			PRINTFORMW 도스케베 H 카이저는 %CALLNAME:조교대상%와 개변태 섹스를 했다!
+			IF TALENT:조교대상:성별 == 2
+				IF ABL:조교대상:Ａ감각 >= 4
+					PRINTFORMW %CALLNAME:조교대상%는 전립선을 미친듯이 희롱당해 헐떡이고 있다!
+				ELSE
+					PRINTFORMW %CALLNAME:조교대상%는 전립선 자극에서 오는 고통과 기묘한 감각에 이를 악 물고 있다!
+				ENDIF
+			ELSE
+				IF ABL:조교대상:Ａ감각 >= 4 && ABL:조교대상:Ｖ감각 >= 4
+					PRINTFORMW %CALLNAME:조교대상%는 앞뒤 구멍을 동시에 범해져 성대히 가버리는 소리를 내고 있다!
+				ELSEIF ABL:조교대상:Ａ감각 >= 4 || ABL:조교대상:Ｖ감각 >= 4
+					PRINTFORMW %CALLNAME:조교대상%는 앞뒤 구멍을 동시에 범해져 고통 섞인 교성을 지르고 있다!
+				ELSE
+					PRINTFORMW %CALLNAME:조교대상%는 앞뒤 구멍을 동시에 범해져 괴로운 소리를 내면서도, 양 구멍에서 오는 쾌감에 당황하고 있다!
+				ENDIF
+			ENDIF
+			CALL EROTIC_MOVE("両穴凌辱",조교대상,-1,조교강도)
+			PRINTL
+			PRINTFORMW 도스케베 H 카이저는 %CALLNAME:조교대상%에게서 흡수한 개변태 섹스 파워로 파워 업 했다!
+		ELSE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_直前戦闘破壊")}("名前")
+			조교대상名前 = %RESULTS%
+			PRINTFORMW 도스케베 H 카이저는 %조교대상名前%와 개변태 섹스를 했다!
+
+			TRYCALLFORM CARD_{GETVAR(@"%対面者%_直前戦闘破壊")}("성별")
+			IF RESULT == 雄性
+				PRINTFORMW %조교대상名前%는 아날을 헤집혀져 괴로운 소리를 흘리고 있다!
+			ELSEIF GROUPMATCH(RESULT,牝性,ふたなり)
+				PRINTFORMW %조교대상名前%는 양 구멍을 범해져 고통 섞인 교성을 지르고 있다!
+			ELSE
+				PRINTFORML %조교대상名前%는 구멍 같은 곳에 페니스가 억지로 파고들고 있다!
+				PRINTFORMW 성별 따위 알 게 뭐냐!　개변태 섹스하면 모두 동료고 개변태다!
+			ENDIF
+			PRINTL
+			PRINTFORMW 도스케베 H 카이저는 %조교대상名前%에게서 흡수한 개변태 섹스 파워로 파워 업 했다!
+		ENDIF
+
+		CALLFORM CARD_{GETVAR(@"%対面者%_直前戦闘破壊")}("攻撃力")
+		攻撃力修正 = RESULT / 2
+		CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"永攻",攻撃力修正)
+		SIF 발동済_3(듀얼리스트,39613) == 0
+			CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"戦",1)
+		CALL CARD_EFFECT_USE(듀얼리스트,39613,3)
+	ENDIF
+ENDIF

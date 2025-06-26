@@ -1,0 +1,262 @@
+﻿@CARDNAME_28162,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 벨즈 켈키온
+	CASE "略称"
+RESULTS = 베 켈키온
+	CASE "カテゴリ"
+RESULTS:0 = 벨즈
+
+ENDSELECT
+
+
+@CARD_28162(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 전사족 
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1750
+	CASE "守備力"
+		RETURN 550
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28162(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 자신의 묘지의 「벨즈」 몬스터 1장을 제외하고,
+PRINTL 자신의 묘지의 「벨즈」 몬스터 1장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터를 패로 더한다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 이 카드명의 ①의 효과를 사용한 턴의 메인 페이즈에 발동할 수 있다.
+PRINTL 패에서 「벨즈」 몬스터 1장을 소환한다. (이 소환에는 릴리스를 필요로 하지 않는다)
+CALLFORM CARD_ABLE(3,필드→묘지 ,손패→묘지 ,덱→묘지 ,破壊→묘지 ,戦闘→묘지)
+PRINTL ③: 이 카드가 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 「창성의 잔재」 1장을 수비 표시로 특수 소환한다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 엑시즈 몬스터밖에 엑스트라 덱에서 특수 소환할 수 없다.
+
+@CARDCAN_28162(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과使用불가,3
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28162)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	IF 발동済_1(듀얼리스트,28162)
+		효과使用불가:0 = 1
+	ELSE
+		효과使用불가:1 = 1
+	ENDIF
+	SIF 발동済_2(듀얼리스트,28162)
+		효과使用불가:1 = 1
+	
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		효과使用불가:0 = 1
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 벨즈
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 1
+		효과使用불가:0 = 1
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 벨즈
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1 && モンスター数(듀얼리스트) >= 5
+		효과使用불가:1 = 1
+
+	SIF 효과使用불가:0 == 1 && 효과使用불가:1 == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_3(듀얼리스트,28162)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,128162,"")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28162(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 설정レベル
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 필드起動
+	IF 발동済_1(듀얼리스트,28162)
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28162,2)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과条件종류 = モン全般
+			효과条件カテゴリ = 벨즈
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",1)
+			ENDIF
+		ENDIF
+	ELSE
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28162,1)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과条件종류 = モン全般
+			효과条件カテゴリ = 벨즈
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과条件종류 = モン全般
+				효과条件カテゴリ = 벨즈
+				CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28162,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_GENERATE(듀얼리스트,128162,"守備표시")
+		CALL FULLRESET
+		EX소환可能종류 = 엑시즈
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+	ENDIF
+ENDIF
+
+@CARDNAME_128162,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 창성의 잔재
+	CASE "略称"
+RESULTS = 창성의 잔재
+	CASE "カテゴリ"
+RESULTS:0 = 세이크리드
+RESULTS:1 = 벨즈
+ENDSELECT
+
+
+@CARD_128162(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RESULT:1 = 어둠속성
+		RETURN 빛속성
+	CASE "종족"
+		RESULT:1 = 악마족
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+
+@CARD_EXPLANATION_128162(종류)
+#DIM DYNAMIC 종류
+
+PRINTL ①: 자신 필드에 「벨즈」 엑시즈 몬스터 또는 「세이크리드」 엑시즈 몬스터가 존재할 경우,
+PRINTL 이 카드의 레벨은 4가 된다.
+
+@CARDCAN_128162(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,128162)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ:0 = 벨즈
+	효과条件カテゴリ:1 = 세이크리드
+	효과条件종류 = 엑시즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_128162(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 破壊カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻守変動
+	CALL STATCHANGE_OTHER(듀얼리스트,"自身",場所,"星",3)
+ENDIF

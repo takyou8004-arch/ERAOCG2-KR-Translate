@@ -1,0 +1,169 @@
+﻿@CARDNAME_72666,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = RUM－팬텀 포스
+	CASE "略称"
+RESULTS = RUM 팬텀
+	CASE "カテゴリ"
+RESULTS:0 = RUM
+RESULTS:1 = 팬텀
+ENDSELECT
+
+
+@CARD_72666(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72666(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動,フリー誘発)
+PRINTL ①: 자신 / 상대 메인 페이즈에, 자신 묘지에서 어둠 속성 몬스터를 임의의 수만큼 제외하고,
+PRINTL 자신 필드의 어둠 속성 X 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터보다 랭크가 제외한 수만큼 높은,
+PRINTL 「팬텀」「RR」「엑시즈 드래곤」X 몬스터 중 어느 한 장을,
+PRINTL 대상 몬스터 위에 겹쳐 X 소환 취급으로 EX덱에서 특수 소환한다.
+PRINTL 이 카드의 발동 후, 턴 종료시까지 자신은 X 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+
+
+@CARDCAN_72666(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72666)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 어둠속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 어둠속성
+	효과条件종류 = 엑시즈
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_72666(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 제외枚数
+#DIM DYNAMIC 제외上限
+#DIM DYNAMIC ランクアップ数値
+#DIM DYNAMIC 설정レベル
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72666)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;通常마법汎用処理
+		CALL FULLRESET
+		효과条件속성 = 어둠속성
+		효과条件종류 = 엑시즈
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			제외上限 = 13 - GETVAR(@"%듀얼리스트%_MZ_星:選択カード")
+
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件속성 = 어둠속성
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT < 제외上限
+				제외上限 = RESULT
+
+			REPEAT 제외上限
+				CALL FULLRESET
+				효과条件속성 = 어둠속성
+				효과条件任意 = 1
+				CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+				IF RESULT == 1
+					제외枚数 ++
+				ELSE
+					BREAK
+				ENDIF
+			REND
+			ランクアップ数値 = 제외枚数
+
+			설정レベル = GETVAR(@"%듀얼리스트%_MZ_星:選択カード") + ランクアップ数値
+			CALL FULLRESET
+			효과条件レベル = 설정レベル
+			효과条件종류 = 엑시즈
+			효과条件カテゴリ:0 = 팬텀
+			효과条件カテゴリ:1 = 레이드 랩터즈
+			효과条件カテゴリ:2 = 엑시즈 드래곤
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カードB = RESULT
+			;戻る
+			IF 選択カードB != 9999
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カードB}")}(듀얼리스트,選択カードB)
+				CALL RESETCONDITION_MAT(1)
+				代替素材数 = 1
+				重ねてＸ = 1
+				素材条件固定 = 選択カード
+				TRYCALLFORM XYZSUMMON(듀얼리스트,選択カードB)
+				CALL FULLRESET
+				EX소환可能종류 = 엑시즈
+				CALL CARD_EX_RESTRICTION(듀얼리스트)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

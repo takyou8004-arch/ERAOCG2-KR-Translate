@@ -1,0 +1,185 @@
+﻿@CARDNAME_54071,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 인페르니티 데스 드래곤
+	CASE "略称"
+RESULTS = 만족 데스 Ｄ
+	CASE "カテゴリ"
+RESULTS:0 = 인페르니티
+ENDSELECT
+
+
+@CARD_54071(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족 
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2400
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_54071(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 어둠속성 튜너 ＋ 튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ①: 자신의 손패가 0장일 경우, 1턴에 1번, 상대 필드의 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 선택한 상대 몬스터를 파괴하고, 파괴한 몬스터의 공격력의 절반의 데미지를 상대 라이프에 준다.
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 자신 필드의 어둠속성 튜너와 튜너 이외의 몬스터를 1장씩 릴리스하고 발동할 수 있다.
+PRINTL 묘지의 이 카드를 특수 소환한다.
+PRINTL 이 효과는 자신의 손패가 0장일 경우에만 발동 및 처리가 가능하다.
+
+@CARDSUMMON_54071(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件속성 = 어둠속성
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,54071) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_54071(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54071)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 손패数(듀얼리스트) != 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,54071)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 손패数(듀얼리스트) != 0
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,54071,"묘지",1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 어둠속성
+	효과条件튜너 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件튜너 = -1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54071(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54071,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 2
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54071,2)
+	IF RESULT == 0
+		SIF 손패数(듀얼리스트) != 0
+			RETURN 0
+		CALL FULLRESET
+		효과条件속성 = 어둠속성
+		효과条件튜너 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード:0 = RESULT
+			CALL FULLRESET
+			효과条件튜너 = -1
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			IF RESULT != 9999
+				選択カード:1 = RESULT
+
+				CALL CARD_DISPOSE(듀얼리스트,"필드",選択カード:0)
+				CALL CARD_DISPOSE(듀얼리스트,"필드",選択カード:1)
+
+				CALL FULLRESET
+				효과範囲묘지 = 1
+효과条件名前 = 인페르니티 죽음 드래곤
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

@@ -1,0 +1,212 @@
+﻿@CARDNAME_73352,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성유물이 새기는 상흔
+	CASE "略称"
+RESULTS = 성유물이새긴상흔
+	CASE "カテゴリ"
+RESULTS:0 = 성유물
+ENDSELECT
+
+
+@CARD_73352(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73352(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신 필드는 「성유물이 새기는 상흔」가 된다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 필드의 「잭나이츠」 몬스터의 공격력 / 수비력은 300 올린다.
+CALLFORM CARD_ABLE(10,마함起動)
+PRINTL ②: 1턴에 1번, 패에서 「잭나이츠」 몬스터 1장 또는 「성유물」 카드 1장을 버리고 발동할 수 있다.
+PRINTL 자신은 덱에서 1장 드로우한다.
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ③: 자신의 필드 / 묘지에 「잭나이츠」 몬스터가 8종류 이상 존재할 경우에 발동할 수 있다.
+PRINTL 자신의 필드 / 묘지에서 「잭나이츠」 몬스터를 8종류 제외하고,
+PRINTL 상대의 패 / EX덱의 카드를 전부 묘지로 보낸다.
+PRINTL 
+
+@CARDCAN_73352(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 효과使用불가,3
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73352)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ:0 = 잭나이츠
+	효과条件カテゴリ:1 = 성유물
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1 
+		효과使用불가:0 = 1
+	
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		효과使用불가:0 = 1
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		효과使用불가:1 = 1
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	효과条件固名前起動 = 1
+	효과条件カテゴリ = 잭나이츠
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 8
+		효과使用불가:1 = 1
+
+	SIF 효과使用불가:0 == 1 && 효과使用불가:1 == 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73352(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 효과使用불가,3
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ:0 = 잭나이츠
+	효과条件カテゴリ:1 = 성유물
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1 
+		효과使用불가:0 = 1
+	
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		효과使用불가:0 = 1
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	효과条件固名前起動 = 1
+	효과条件カテゴリ = 잭나이츠
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 8
+		효과使用불가:1 = 1
+
+
+	IF 효과使用불가:0 == 0 && 효과使用불가:1 == 0
+		SETCOLOR C_RED
+		CUSTOMDRAWLINE —
+PRINTL ＞반란 분자의 억제를 개시합니까?
+		CUSTOMDRAWLINE —
+		RESETCOLOR
+		CALL YN_CHOICE(듀얼리스트)
+	ELSEIF 효과使用불가:0 == 1
+		SETCOLOR C_RED
+		CUSTOMDRAWLINE —
+PRINTL ＞반란 분자의 억제를 개시합니다.
+		CUSTOMDRAWLINE —
+		RESETCOLOR
+		WAIT
+		RESULT = はい
+	ELSEIF 효과使用불가:1 == 1
+		RESULT = いいえ
+	ENDIF
+
+	IF RESULT == いいえ
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73352,10)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과条件カテゴリ:0 = 잭나이츠
+			효과条件カテゴリ:1 = 성유물
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			IF RESULT == 1
+				CALL CARDDRAW_BASIC(듀얼리스트,1)
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == はい
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73352)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 잭나이츠
+			효과条件固名前選択 = 1
+			효과条件複数 = 8
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				FOR カウンタ,98,-1, -1
+					IF GETVAR(@"%対面者%_EX덱:{カウンタ}") == -1
+						CONTINUE
+					ENDIF
+					CALL CARD_DISPOSE(対面者,"EX덱",カウンタ)
+				NEXT
+				FOR カウンタ,98,-1, -1
+					IF GETVAR(@"%対面者%_손패:{カウンタ}") == -1
+						CONTINUE
+					ENDIF
+					CALL CARD_DISPOSE(対面者,"손패",カウンタ)
+				NEXT
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73352)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件カテゴリ = 잭나이츠
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,300,300)
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "성유물が眠る廃墟")
+ENDIF

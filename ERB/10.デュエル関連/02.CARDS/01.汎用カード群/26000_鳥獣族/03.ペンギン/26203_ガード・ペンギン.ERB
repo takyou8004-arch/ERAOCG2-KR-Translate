@@ -1,0 +1,97 @@
+@CARDNAME_26203,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 가드 펭귄
+	CASE "略称"
+RESULTS = 가드 펭귄
+	CASE "カテゴリ"
+RESULTS:0 = 펭귄
+ENDSELECT
+
+
+@CARD_26203(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 1200
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26203(종류)
+#DIM DYNAMIC 종류
+
+SIF 종류 == 효과後誘発
+	SETCOLOR C_YELLOW
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①：자신이 데미지를 받았을 때 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수소환하고, 받은 데미지의 수치만큼 자신의 라이프 포인트를 회복한다.
+	RESETCOLOR
+
+@CARDCAN_26203(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26203)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(듀얼리스트,"被弾者")
+	SIF RESULT != 1
+		RETURN 0
+	;특수소환できないなら침묵
+	CALL CARD_SS_CHECK(듀얼리스트,26203,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	SIF ダメージ受者 != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26203(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 増減
+#DIM DYNAMIC ダメージ量
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26203)
+	IF RESULT == 0
+		ダメージ量 = GETVAR(@"%듀얼리스트%_変動値")
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",ダメージ受値)
+	ENDIF
+ENDIF
+

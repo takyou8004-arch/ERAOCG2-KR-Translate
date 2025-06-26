@@ -1,0 +1,248 @@
+@CARDNAME_99584,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 「영겁의 재액」
+	CASE "略称"
+		RESULTS = 「영겁의 재액」
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+ENDSELECT
+
+
+@CARD_99584(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+	CASE "추가日"
+		RETURN 250415
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99584(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ①③의 효과는 각각 １턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①：이하의 효과에서 １개를 선택해서 발동할 수 있다。
+PRINTL ●자신의 묘지 / 제외 상태인 "판도라 매지션 걸" 몬스터 １장을 특수 소환한다。
+PRINTL ●덱에서 "기술" 마법 / 함정 카드 １장을 패에 넣는다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드가 마법＆함정 존에 존재하는 한、자신은 Ｘ몬스터밖에 ＥＸ덱에서 특수 소환할 수 없으며、
+PRINTL 자신 필드의 "판도라 매지션 걸" 몬스터는 몬스터 효과내성 / 마법내성을 얻고、
+PRINTL 공격력 / 수비력이 묘지 / 제외 상태인 "기술" 카드의 종류×３００ 올린다。
+CALLFORM CARD_ABLE(3,ターン終了時強制)
+PRINTL ③：이 카드가 묘지 / 제외 상태로 존재하는 경우、엔드 페이즈에 발동한다。
+PRINTL 이 카드를 자신 필드에 앞면 표시로 둔다。（이 효과는 무효화 할 수 없다）
+;마법함정ゾーンが塞がっている경우、病みすぎて마법함정を全てを大嵐でぶっとばして貼り付いてきます。
+CALL TEXT_DECORATION("ROGUE")
+
+;판도라 매지션 걸版の「永遠の魂」であり、完全耐性とまではいかず함정耐性だけつかないものの、
+;殆どの対面でまず押し切れる程度の強固な耐性と攻守상승を獲得할 수 있다。先攻でもフィールド마법経由で表側で貼れるのが優秀。
+;패에서 出せない대신에 제외からも呼べたり、永遠の魂と比べて色々強い。ただし엑시즈縛りがほぼ常に付く形にはなる。
+;ア-ゼウスで押し流そうとも、제외효과で吹っ飛ばしても、「ターン終了時強制」で발동する誘発효과で
+;何度でも필드에 貼り付いてくるのは、一度使ったらもう逃がさんという執念深さが漏れ出ている部分である。
+;패 / 덱へのバウンスでないと逃げるのは難しいが、"기술"カテゴリに含まれない이 카드를 戻すのは大変。
+;テ-マで使うには超有能だし強いけど、PMGを使うことを強いてくる카드 효과なので、別の意味で使うのに"覚悟"が要求される。
+;   でもまあ、そういう「무거움」があるのも良いんじゃないかな。本家BMGとの差別化もできるし。
+
+@CARDCAN_99584(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件플래그 = 0
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99584)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,99584)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 기술
+	효과条件종류 = 엑시즈
+	효과条件スーパー名前 = 마술쇼의 조수：판도라 매지션 걸
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		条件플래그 |= 1
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 기술
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		条件플래그 |= 2
+	SIF 条件플래그 & 1 && 条件플래그 & 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "묘지" && ゾーン != "제외"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_99584(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択結果
+#DIM DYNAMIC 条件플래그 = 0
+#DIM DYNAMIC 攻守修正値
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99584,1)
+	IF RESULT == 0
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 기술
+		효과条件종류 = 엑시즈
+		효과条件スーパー名前 = 마술쇼의 조수：판도라 매지션 걸
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件플래그 |= 1
+		
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 기술
+		효과条件종류 = 마함全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件플래그 |= 2
+		
+		IF 条件플래그 & 1 && 条件플래그 & 2
+			IF 듀얼리스트 == "상대"
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과条件カテゴリ = 기술
+				효과条件종류 = 엑시즈
+				효과条件スーパー名前 = 마술쇼의 조수：판도라 매지션 걸
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF RESULT != 1
+					;CPUは발동時に필드에 PMG不在なら특수소환を使用、それ以外はサーチ
+					選択結果 = はい
+				ELSE
+					選択結果 = いいえ
+				ENDIF
+			ELSE
+				;両方の条件を満たしている場合は패 / 필드의 몬스터를 릴리스하고 특수 소환하거나 選択
+				PRINTL 「영겁의 재액」의、어느쪽 효과를 사용하시겠습니까？
+				CALL YN_CHOICE(듀얼리스트,"●자신의 묘지 / 제외 상태인 「판도라 매지션 걸」 몬스터 １장을 특수 소환한다。","●덱에서 「기술」 마법 / 함정 카드 １장을 패에 넣는다。")
+				選択結果 = RESULT
+			ENDIF
+		ELSEIF 条件플래그 & 1
+			選択結果 = はい
+		ELSE
+			選択結果 = いいえ
+		ENDIF
+		
+		IF RESULT == はい
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과範囲제외 = 1
+			효과条件カテゴリ = 기술
+			효과条件종류 = 엑시즈
+			효과条件スーパー名前 = 마술쇼의 조수：판도라 매지션 걸
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)	
+		ELSE
+			CALL FULLRESET
+			효과条件カテゴリ = 기술
+			효과条件종류 = 마함全般
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99584)
+	IF RESULT == 0
+	ENDIF
+ELSEIF 종류 == 지속효과
+	
+	CALL SET_TMP_EX_RST(듀얼리스트,"종류",엑시즈)
+	
+	CALL FULLRESET
+	효과条件カテゴリ = 기술
+	효과条件종류 = 엑시즈
+	효과条件スーパー名前 = 마술쇼의 조수：판도라 매지션 걸
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"魔耐")
+ELSEIF 종류 == 攻守変動
+	
+	;カード枚数をカウント
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 기술
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻守修正値 =  RESULT * 300
+
+	CALL FULLRESET
+	효과条件カテゴリ = 기술
+	효과条件종류 = 엑시즈
+	효과条件スーパー名前 = 마술쇼의 조수：판도라 매지션 걸
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻守修正値,攻守修正値)
+
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99584,3)
+	IF RESULT == 0
+		;자신 필드의 마법함정を確認
+		IF 마함数(듀얼리스트) >= 5
+			;마함が全部塞がっている경우에 は、ぜんぶ吹っ飛ばします。
+			;필드의 마법함정を全て破壊する処理(大嵐相当)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"両마함全体",場所,"묘지")
+		ENDIF
+		
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件名前 = 「영겁의 재액」
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+	ENDIF
+ENDIF

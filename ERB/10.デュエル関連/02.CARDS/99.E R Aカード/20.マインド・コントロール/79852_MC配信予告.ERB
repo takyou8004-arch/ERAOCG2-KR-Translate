@@ -1,0 +1,148 @@
+@CARDNAME_79852,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마인드컨트롤러 - 치태의 전달 예고
+	CASE "略称"
+		RESULTS = MC 전달예고
+	CASE "カテゴリ"
+		RESULTS:0 = MC
+		RESULTS:1 = E.R.A
+		RESULTS:2 = AliVe♡Twin
+ENDSELECT
+
+
+@CARD_79852(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79852(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：자신의 마법 / 함정 존에「AliVe♡Twin 채널」가 존재할 경우, 발동할 수 있다.
+PRINTL 자신 묘지의「어라이브트윈」카드,「MC」카드의 수 만큼, 치태의 전달 예고를 한다.
+PRINTL 
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79852(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79852)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = AliVe♡Twin 채널
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79852(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 횟수
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79852)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		SETCOLOR C_PINK 
+		PRINTFORMW %CALLNAME:MASTER%는 지금부터 행해지는 전달 스케줄을 읽어 내려간다.
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 어라이브트윈
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			횟수 = RESULT
+			;이 카드는 アライブツインかつMCなので２장扱い。
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = MC
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			횟수 = RESULT
+			;마함に配信者が揃っていれば効率up
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件名前:0 = AliVe♡Twin 키스킬
+			효과条件名前:1 = AliVe♡Twin 리일라
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT >= 2
+				PRINTFORMW AliVe♡Twin이 스케줄을 조정해 전달을 늘려 주었다.
+				PRINTFORMW 『지금부터 상대가 특정 카드를 사용하면 AliVe♡Twin 채널로 전달하겠어』
+				PRINTFORMW 『채널이 BAN 되어 버리면 수익화가 멈춰 버리기 때문에 조심해』
+				횟수 = 횟수 * RESULT
+			ENDIF
+
+			REPEAT 횟수
+				SELECTCASE RAND:3
+					CASE 0
+						CALL CARD_GENERATE_HAND(対面者,79840)
+					CASE 1
+						CALL CARD_GENERATE_HAND(対面者,79841)
+					CASE 2
+						CALL CARD_GENERATE_HAND(対面者,79842)
+					CASE 3
+						CALL CARD_GENERATE_HAND(対面者,79843)
+					CASE 4
+						CALL CARD_GENERATE_HAND(対面者,79844)
+					CASE 5
+						CALL CARD_GENERATE_HAND(対面者,79845)
+					CASE 6
+						CALL CARD_GENERATE_HAND(対面者,79846)
+					CASE 7
+						CALL CARD_GENERATE_HAND(対面者,79847)
+					CASE 8
+						CALL CARD_GENERATE_HAND(対面者,79848)
+				ENDSELECT
+			REND
+
+		PRINTFORMW 상대의 패에 최면 카드가 {횟수}장 생성되었다.
+		RESETCOLOR
+	ENDIF
+ENDIF

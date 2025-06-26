@@ -1,0 +1,58 @@
+﻿;-------------------------------------------------
+;가슴애무
+;애무계커맨드、レベル2
+;-------------------------------------------------
+@COM6
+;-------------------------------------------------
+;COM別FLAGの설정
+;-------------------------------------------------
+;ボディタッチで발기UP
+IF BASE:MASTER:발기 <= 1000
+	TCVAR:MASTER:사정쾌락강도 = 500
+	TCVAR:MASTER:사정대상캐릭터_1 = TARGET
+	TCVAR:MASTER:사정부위플래그 = 8
+ENDIF
+;-------------------------------------------------
+;ソース추가処理
+;-------------------------------------------------
+;消費체력、기력
+DOWNBASE:체력 += 5
+DOWNBASE:기력 += 50
+
+CALL SOURCE_CALC_노출(TARGET, MASTER, 50)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 80)
+;奴隷の가슴の汚れがなければ口をつかう（愛液と모유よごれはＯＫ、汚れ無視か助手조교時は問題なし）
+IF STAIN:5 < 2 || STAIN:5 == 16 || STAIN:5 == 17 || TALENT:MASTER:악취내성 == 2
+	CALL SOURCE_CALC_쾌Ｂ(TARGET, MASTER, 140)
+	STAIN:5 |= STAIN:MASTER:0
+	STAIN:MASTER:0 |= STAIN:5
+ELSE
+	CALL SOURCE_CALC_쾌Ｂ(TARGET, MASTER, 100)
+ENDIF
+;奴隷のＢ⇔조교者の손가락の汚れが이동
+STAIN:5 |= STAIN:MASTER:1
+STAIN:MASTER:1 |= STAIN:5
+
+;-------------------------------------------------
+;경험の処理
+;-------------------------------------------------
+;同性愛　레즈なら戻り値1게이なら戻り値2
+IF HETEROSEX(TARGET,MASTER)
+	EXP:(50 + HETEROSEX(TARGET,MASTER)) += 5
+	EXP:MASTER:(50 + HETEROSEX(TARGET,MASTER)) += 5
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+
+@COM_ABLE6
+;가슴애무実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(6)
+	RETURN RESULT
+RETURN 1

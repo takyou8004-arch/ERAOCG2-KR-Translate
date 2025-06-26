@@ -1,0 +1,115 @@
+﻿@CARDNAME_50134,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 소환수 푸르가토리오
+	CASE "略称"
+RESULTS = 푸르가토리오
+	CASE "カテゴリ"
+RESULTS:0 = 소환수
+ENDSELECT
+
+
+@CARD_50134(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 2000
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_50134(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「소환사 알레이스터」＋화염 속성 몬스터
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 공격력은, 상대 필드의 카드 수× 200만큼 증가한다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②: 이 카드는 상대 몬스터 전체에게 공격할 수 있으며, 관통 공격을 가진다.
+
+
+
+@CARDSUMMON_50134(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+素材条件名前 = 소환사 알레이스터
+ELSEIF EX参照 >= 10
+	素材条件속성 = 화염속성
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,50134) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_50134(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50134)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50134(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 200
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"貫通")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"連戦")
+ENDIF

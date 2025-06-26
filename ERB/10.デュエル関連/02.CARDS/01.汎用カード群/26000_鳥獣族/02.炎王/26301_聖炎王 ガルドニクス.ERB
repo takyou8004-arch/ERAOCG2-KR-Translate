@@ -1,0 +1,141 @@
+﻿@CARDNAME_26301,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 성염왕 가르도닉스
+	CASE "略称"
+RESULTS = 성염왕 가르도
+	CASE "カテゴリ"
+RESULTS:0 = 염왕
+ENDSELECT
+
+
+@CARD_26301(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2700
+	CASE "守備力"
+		RETURN 1700
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_26301(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①: 이 카드가 패 / 묘지에 존재하고, 원래 속성이 화염 속성인 자신의 몬스터가 전투 / 효과로 파괴되었을 경우에 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+CALLFORM CARD_ABLE(2,소환時,특수소환時)
+PRINTL ②: 이 카드가 소환 / 특수 소환했을 경우에 발동할 수 있다.
+PRINTL "성염왕 가르도닉스" 이외의 자신의 패 / 덱/필드(앞면 표시)의 야수족/비행야수족 화염 속성 몬스터 1장을 파괴한다.
+PRINTL 이 카드의 공격력은 턴 종료시까지, 이 효과로 파괴한 몬스터의 공격력 절반만큼 업한다.
+
+
+@CARDSUMMON_AA_26301
+
+
+@CARDCAN_26301(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26301)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,26301)
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"손패","묘지")
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,26301,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件속성 = 화염속성
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,26301)
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件속성 = 화염속성
+	효과条件固名前 = 성염왕 가르도닉스
+	효과条件종족:0 = 야수족
+	효과条件종족:1 = 비행야수족
+	효과条件속성 = 화염속성
+	효과条件표시 = 表側표시
+
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_26301(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26301,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26301,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과条件固名前 = 성염왕 가르도닉스
+		효과条件종족:0 = 야수족
+		효과条件종족:1 = 비행야수족
+		효과条件속성 = 화염속성
+		효과条件표시 = 表側표시
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			TRYCALLFORM CARD_{RESULT:1}("攻撃力")
+			攻撃力修正 = RESULT / 2
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",攻撃力修正)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,104 @@
+﻿@CARDNAME_21255,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 룡마왕 벡터 피스
+	CASE "略称"
+RESULTS = 벡터 P
+	CASE "カテゴリ"
+RESULTS:0 = 룡마왕
+ENDSELECT
+
+
+@CARD_21255(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1850
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+	CASE "分割"
+		RETURN 펜듈럼
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_21255(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+CALLFORM CARD_ABLE(0,常在無効)
+PRINTL ①: 이 카드가 마법 & 함정 존에 존재하는 한, 상대의 마법 & 함정 존의 몬스터 카드의 효과는 무효화된다.
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 세계에 갑자기 나타나 순식간에 세계를 유린해버린 룡마족의 대군을 이끄는 마왕.
+PRINTL "룡화의 비법"에 의해 만물을 사악한 드래곤의 모습으로 바꿔버린다고 알려져 있지만, 그 힘의 정체는 잘 알려져 있지 않다.
+PRINTL 강대한 마력의 원천은 이 차원의 것이 아니라고까지 소문나 있다.
+
+@CARDSUMMON_AA_21255
+
+@CARDCAN_21255(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21255)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 常在無効
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_21255(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カード名前
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21255)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 常在無効
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대마함",場所,"無効",0,21255)
+ENDIF
+

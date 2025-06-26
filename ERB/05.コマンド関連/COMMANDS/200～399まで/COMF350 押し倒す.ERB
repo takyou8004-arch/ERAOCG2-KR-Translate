@@ -1,0 +1,81 @@
+﻿@COM350
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 설정우후후
+;밀어넘어뜨린다
+
+;공수반전！
+IF CFLAG:MASTER:우후후 == 1
+	설정우후후 = 2
+	TFLAG:SELECTCOM분기 = 1
+ELSE
+	IF CFLAG:MASTER:우후후 == 1 && オプション_押し倒され拒否 == 0
+		IF TCVAR:TARGET:절정여운 == 0 && RAND:5 == 0
+			TFLAG:SELECTCOM분기 = -2
+			RETURN 0
+		ENDIF
+	ENDIF
+	설정우후후 = 1
+	TFLAG:SELECTCOM분기 = 0
+ENDIF
+
+FOR カウンタ,1,CHARANUM
+	SIF TARGET:カウンタ <= 0
+		CONTINUE
+	CFLAG:(TARGET:カウンタ):우후후 = 설정우후후
+NEXT
+CFLAG:MASTER:우후후 = 설정우후후
+
+SIF !GETBIT(CFLAG:(TARGET:LOCAL):기정사실 , 0) && TCVAR:TARGET:만취 == 1
+	CFLAG:TARGET:만취강간 = 1
+
+TIME += 5
+
+RETURN 1
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;밀어넘어뜨린다
+@COM_ABLE350
+;밀어넘어뜨린다実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+;SIF GLOBAL_COMABLE(350)
+;	RETURN RESULT
+
+SIF TARGET <= 0
+	RETURN 0
+SIF BASE:TARGET:체력 < 300
+	RETURN 0
+;수면中
+SIF CFLAG:수면
+	RETURN 0
+;기력0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+
+IF CFLAG:MASTER:현재위치 >= 50 && !GROUPMATCH(CFLAG:MASTER:현재위치, 場所_ラブホ, 場所_裏通り)
+	SIF 人祓いモード != 1
+		RETURN 0
+ENDIF
+;특수な상황いろいろ
+SIF TALENT:MASTER:매지컬자지 >= 1
+	RETURN 1
+SIF TALENT:TARGET:굴복됨 >= 1 && GET_TARGETNUM() == 1
+	RETURN 1
+SIF TCVAR:TARGET:만취 == 1 && GET_TARGETNUM() == 1
+	RETURN 1
+SIF GET_TARGETNUM() > 1 && TCVAR:MASTER:친밀감 < 3
+	RETURN 0
+;친밀감강도2
+SIF TCVAR:MASTER:친밀감 < 2
+	RETURN 0
+;合意がないとダメ
+FOR LOCAL,1,CHARANUM
+	SIF TARGET:LOCAL <= 0
+		CONTINUE
+	SIF !GETBIT(CFLAG:(TARGET:LOCAL):기정사실 , 0)
+		RETURN 0
+NEXT
+RETURN 1

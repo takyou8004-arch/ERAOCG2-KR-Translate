@@ -1,0 +1,126 @@
+﻿@CARDNAME_73361,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 어메이징 타임 티켓
+	CASE "略称"
+RESULTS = 에이 티 씨
+	CASE "カテゴリ"
+RESULTS:0 = 어메이즈먼트
+ENDSELECT
+
+
+@CARD_73361(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "추가日"
+		RETURN 250505
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73361(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 룰 상 "어메이즈먼트" 카드로서 취급한다.
+PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①: 800 LP를 지불하고 발동할 수 있다.
+PRINTL 발동 턴에 따라 이하의 효과를 적용한다.
+PRINTL ●자신 턴: 덱에서 이 카드명 이외의 "어메이즈먼트" 카드 1장을 패에 넣는다.
+PRINTL ●상대 턴: 덱에서 "어트랙션" 함정 카드 1장을 고르고 자신의 마법 & 함정 존에 세트한다.
+PRINTL 　　　　　　　이 효과로 세트한 카드는 세트한 턴에도 발동할 수 있다.
+
+
+@CARDCAN_73361(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73361)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,73361)
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") < 800
+		RETURN 0
+	IF ターンプレイヤー == 듀얼리스트
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 어메이즈먼트
+		효과条件固名前 = 어메이징 타임 티켓
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+
+	ELSE
+		SIF 마함数(듀얼리스트) >= 5
+			RETURN 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 어트랙션
+		효과条件종류 = 함정全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		CALL CARD_DRAW_CHECK(1)
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73361(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC リリースレベル
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73361,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",800)
+
+		IF ターンプレイヤー == 듀얼리스트
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 어메이즈먼트
+			효과条件固名前 = 어메이징 타임 티켓
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ELSE
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 어트랙션
+			효과条件종류 = 함정全般
+			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"使化裏側표시")
+		ENDIF
+	ENDIF
+ENDIF

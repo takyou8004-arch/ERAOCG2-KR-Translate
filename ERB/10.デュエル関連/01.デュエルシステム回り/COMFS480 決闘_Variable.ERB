@@ -1,0 +1,1539 @@
+@CHOICE_DUEL_TYPE(이벤트起動,連戦플래그,先攻설정)
+#DIM DYNAMIC 이벤트起動
+#DIM DYNAMIC ターゲット보존,9999
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 連戦플래그
+#DIM DYNAMIC 先攻설정
+#DIM DYNAMIC デュエル結果
+FOR カウンタ,0,TARGETNUM
+	ターゲット보존:カウンタ = TARGET:カウンタ
+NEXT
+$INPUT_RETURN
+CUSTOMDRAWLINE —
+PRINTL 　　[0] - 듀얼개시！
+PRINTL 
+PRINTL 
+CUSTOMDRAWLINE —
+IF 連戦플래그 == 0
+	PRINTL [90] - 덱을 편집한다
+	CUSTOMDRAWLINE —
+ENDIF
+PRINT [99] - 듀얼타입 설정
+SELECTCASE デュエル타입
+CASE 0
+	PRINTL [스탠다드 룰]
+CASE 1
+	PRINTL [스피드 룰:LP 4000]
+CASE 2
+	PRINTL [간이 듀얼：가위바위보]
+ENDSELECT
+PRINTL 
+PRINTL 
+BINPUT
+IF RESULT == 0
+	IF TARGET >= 1
+		BASE:TARGET:체력 = MAXBASE:TARGET:체력
+		BASE:TARGET:기력 = MAXBASE:TARGET:기력
+	ENDIF
+	IF デュエル타입 == 2
+		CALL DUEL_KANNI
+	ELSE
+		CALL DUEL_SYSTEM(1,이벤트起動,連戦플래그,先攻설정)
+		
+;CALL RESET_SEXCON(캐릭터_ID)
+	ENDIF
+
+	デュエル結果 = RESULT
+ELSEIF RESULT == 90
+	CALL EDIT_DECK_EX
+	GOTO INPUT_RETURN
+
+ELSEIF RESULT == 99
+	PRINTL 듀얼타입의 설정
+	PRINTL [0] - OCG에 가까운 룰（LP8000스타트）
+	PRINTL [1] - 스피드 듀얼에 가까운 룰（LP4000스타트）
+	PRINTL [2] - 간이 룰（가위바위보 듀얼）
+	BINPUT
+	デュエル타입 = RESULT
+	GOTO INPUT_RETURN
+
+ENDIF
+
+VARSET OPPOSER名
+
+FOR カウンタ,0,TARGETNUM
+	TARGET:カウンタ = ターゲット보존:カウンタ
+NEXT
+RETURN デュエル結果
+
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@DUEL_STANDBY(選択モード)
+#DIM DYNAMIC デュエル結果
+#DIM DYNAMIC ターゲット보존,9999
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択モード
+#DIM DYNAMIC LTARGET,1000
+#DIM DYNAMIC LTARGETNUM
+#DIM DYNAMIC 事後カード化
+#DIM DYNAMIC 패배のロストバージン
+#DIM DYNAMIC 先攻플래그
+#DIM DYNAMIC ランダム値
+SELECTCASE 選択モード
+;TARGETと듀얼
+CASE 0
+	TFLAG:SELECTCOM분기 = 10
+	CALL KOJO_MESSAGE_SEND("COMMAND")
+;レート戦/練習戦
+CASE 2,4
+	TARGET = 0 
+;その他
+CASE 3
+	;モンスターであり、所有をしていない場合。
+	PRINTFORML 
+	PRINTFORML 무엇을 거시겠습니까？
+	PRINTFORML 
+	PRINTFORML [1] - 팩을 받는다
+	;동행者が居ない場合
+	IF CFLAG:TARGET:동행 <= 0
+		PRINTFORML [2] - 강제적으로 데이트 하게 한다
+		SIF CFLAG:TARGET:패배함 >= 1
+			PRINTFORML [3] - 팬티를 받는다
+		SIF CFLAG:TARGET:패배함 >= 2 && CFLAG:MASTER:현재위치 >= 20
+			PRINTFORML [4] - 방에 데리고 간다
+		IF TALENT:TARGET:듀얼리스트 == 0 && CFLAG:TARGET:소유함 == 0 && CFLAG:MASTER:현재위치 < 500
+			PRINTFORML [5] - 이 세계의 주민이 아니지 않나？라고 몰아붙인다
+		;Anonym추가
+		ELSEIF ITEM:천년카메라 != 0 && CFLAG:TARGET:소유함 == 0
+			PRINTFORML [10] - 어둠의 게임
+		ENDIF
+		IF CFLAG:MASTER:현재위치 >= 20
+			;勝ったら賞金、負けたらホテルのハイリスクハイリターンなバトル。所持金一定以上が条件。お金をちらつかせて女の子の判断を鈍らせよう！
+			;ゆくゆくは大会優勝とかで手に入るレア카드 라던가を賭けたり、자신의 悪辣度が高いと상대から「討伐」しようとしてきたりする……みたいな感じに변경予定？
+			;子供 まだ幼いので10万円でも乗っちゃう
+			IF TALENT:TARGET:연령 == -2 && MONEY >= 100000
+				PRINTFORML [6] - 몸을 요구한다
+			;学生 10万じゃリスクに釣り合わないけど50万なら渋々飲みそう
+			ELSEIF TALENT:TARGET:연령 == -1 && MONEY >= 500000
+				PRINTFORML [6] - 몸을 요구한다
+			;それ以上 一括で100万。実家が太かったり金持ちだったりする캐릭터を素質で判別する手段がなさそうなので。
+			;弱みを握った상대
+			ELSEIF (TALENT:TARGET:연령 >= 0 && MONEY >= 1000000) || CFLAG:TARGET:약점장악 == 1
+				PRINTFORML [6] - 몸을 요구한다
+			ENDIF
+		ENDIF
+	ENDIF
+	PRINTFORML 
+	PRINTFORML [100] - 돌아간다
+	BINPUT
+	SIF RESULT == 100
+		RETURN 0
+
+	賭け内容 = RESULT
+	SIF 賭け内容 >= 1
+		CFLAG:TARGET:내기플래그 = 1
+	SELECTCASE 賭け内容
+	CASE 1 TO 4
+		IF RAND:1000 > CFLAG:TARGET:호감도 && CFLAG:TARGET:약점장악 == 0
+			$INPUT_LOOP
+			PRINTFORML 거절당했습니다……
+			PRINTFORML [0] - 끈질기게 말해본다
+			PRINTFORML [1] - 포기한다
+			BINPUT
+			IF RESULT == 1
+				TFLAG:SELECTCOM분기 = 0
+				RETURN 0
+			ENDIF
+			ランダム値 = RAND:100
+			SELECTCASE ランダム値
+			CASE 0 TO 4
+				CALL EVENT_FAVUP(TARGET,-500)
+				PRINTFORMW %CALLNAME:TARGET%은 엄청난 끈질김에、디스크를 준비했다。
+				PRINTFORMW 응해준모양입니다……어째선지 선공을 잡을수 있을것같지가 않아……。
+				先攻플래그 = 1
+			CASE 5 TO 24
+				CALL EVENT_FAVUP(TARGET,-30)
+				PRINTFORMW %CALLNAME:TARGET%는 어쩔수 없이 내기에 반응해주었습니다。
+			CASE 25 TO 44
+				CALL EVENT_FAVUP(TARGET,-100)
+				PRINTFORMW %CALLNAME:TARGET%는 화나서 돌아가버렸습니다……。
+				CFLAG:TARGET:현재위치 = 100
+				TFLAG:SELECTCOM분기 = 0
+				RETURN 0
+			CASEELSE
+				PRINTFORML 거절당했습니다……
+				CALL EVENT_FAVUP(TARGET,-30)
+				GOTO INPUT_LOOP
+			ENDSELECT
+		ELSE
+			PRINTFORML 내기에 응해주었습니다。
+		ENDIF
+	CASE 5
+		PRINTFORML   ！？！？
+		PRINTFORMW 몰아붙여진 %CALLNAME:TARGET%는 디스크를 빼고、듀얼의 체제를 잡는다。
+		PRINTFORMW 그냥 카드가 될 생각은 없는것같다……。이쪽도 준비를 시작하자！
+	CASE 6
+		IF TALENT:TARGET:패배버릇 == 1
+			PRINTFORML %CALLNAME:MASTER%가『언제나의 내기』를 갖고 거니、지금까지 몇번이나 몸에 패배가 새겨넣어진 %CALLNAME:TARGET%은
+			PRINTFORMW 다시 패배와 쾌락의 예감에 볼을 빨갛게 물들이며、표면상으론 멀쩡한 척을 하고 디스크를 준비했다……！俯きがちに
+		ELSEIF CFLAG:TARGET:약점장악 == 1
+			IF EXP:TARGET:패배조교경험 >= 1
+				IF RAND:2 == 0
+					PRINTFORMW %CALLNAME:MASTER%은 천천히 핸드폰을 만지며、 %CALLNAME:TARGET%에게 핸드폰을 확인하라고 말한다。
+					PRINTFORMW 의심하면서도 핸드폰을 확인하며、메시지 어플의 새로운 알람에 눈치챈 %CALLNAME:TARGET%은 어플을 열어──
+					CALLFORM IMAGE_PRODUCTION(TARGET,9999)
+					PRINTFORML ──그리고 그것이 %CALLNAME:MASTER%가 보낸 언젠가의『기념사진』이었다는걸 알아낸 %CALLNAME:TARGET%은
+					PRINTFORMW 얼굴을 빨갛게 물들이며 디스크를 준비해、필사적인 형태로「사진의 삭제」와「다시 섹스」를 건 싸움에 도전한다……！
+				ELSE
+					PRINTFORML %CALLNAME:MASTER%이 이전에 %CALLNAME:TARGET%과 찍은『기념사진』을 슬쩍 보이게하고 승부를 거니、
+					PRINTFORMW %CALLNAME:TARGET%는 분해하면서 입술을 깨물며、얼굴을 붉히면서 디스크를 준비했다……！
+				ENDIF
+			ELSE
+				PRINTFORML %CALLNAME:MASTER%가 이전에 찍은 %CALLNAME:TARGET%의『약점』을 슬쩍 보여주며 승부를 거니、
+				PRINTFORMW %CALLNAME:TARGET%는 분해하면서 입술을 깨물며、얼굴을 붉히면서 디스크를 준비한다……！
+			ENDIF
+		ELSE
+			;最終的には「レア카드를 ちらつかせた」とかに변경予定
+			PRINTFORML 높은 상금을 보여준 %CALLNAME:MASTER%가、진다면 몸으로 지불하도록 하는 하이레이트한 승부를 제시하니
+			PRINTFORMW %CALLNAME:TARGET%는 잠시%TEXTR("골똘히 생각했/고개를 숙이며 망설이는 모습을 보였")%지만、이윽고%TEXTR("떨떠름하게/")%끄덕이며、조건을 받아들이고 디스크를 준비한다……！
+		ENDIF
+	;Anonym추가
+	CASE 10
+		CALL EVILTY_POINT(10)
+		PRINTFORMW   ！？！？
+		PRINTL
+		CALL FLASH(3)
+		FOR LOCAL, 0, 70
+			PRINTL
+		NEXT
+		PRINTFORMW %CALLNAME:MASTER%가 어둠의 게임을 선언한 순간、주위 일대가 어둠에 휩싸였다。
+		PRINTFORMW 서로 지는것이 용서되지 않는 듀얼이 시작된다……！
+	ENDSELECT
+ENDSELECT
+
+;ターゲットの보존
+FOR カウンタ,0,CHARANUM
+	IF TARGET >= 1
+		LTARGET:カウンタ = TARGET:カウンタ
+		LTARGETNUM ++
+	ENDIF
+NEXT
+SELECTCASE デュエル타입
+CASE 2
+	CALL DUEL_KANNI
+CASEELSE
+	;オンライン練習
+	IF 選択モード == 2
+		CALL DUEL_SYSTEM(2,,,先攻플래그설정)
+	;オンラインレートマッチ
+	ELSEIF 選択モード == 4
+		CALL DUEL_SYSTEM(3)
+	;公式デュエル
+	ELSE
+		CALL DUEL_SYSTEM(,,,先攻플래그)
+	ENDIF
+ENDSELECT
+デュエル結果 = RESULT
+
+;ターゲットの開放
+FOR カウンタ,0,LTARGETNUM
+	TARGET:カウンタ = LTARGET:カウンタ
+NEXT
+
+CALL DUEL_KAKE(デュエル結果,選択モード)
+RETURN デュエル結果
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@DUEL_KAKE(デュエル結果,選択モード)
+#DIM DYNAMIC デュエル結果
+#DIM DYNAMIC ターゲット보존,9999
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択モード
+#DIM DYNAMIC LTARGET,1000
+#DIM DYNAMIC LTARGETNUM
+#DIM DYNAMIC 先攻플래그
+#DIM DYNAMIC 事後カード化
+#DIM DYNAMIC 패배のロストバージン
+#DIM DYNAMIC ラブホ以外
+#DIM DYNAMIC ＢＳＳ
+
+ラブホ以外 = 0
+
+IF 選択モード == 0
+	IF デュエル結果 == 結果_勝利
+		IF CFLAG:TARGET:전화번호 == 0 && TALENT:TARGET:듀얼리스트 && TARGET != 0
+			CFLAG:TARGET:전화번호 = 1
+			PRINTFORMW 듀얼에 승리한것으로 %CALLNAME:TARGET%에게서 전화번호를 받았다！
+		ENDIF
+		CALL SOURCE_CALC_환락(TARGET, MASTER, 500)
+		CALL SOURCE_CALC_정복(TARGET, MASTER, 100)
+	ELSEIF デュエル結果 == 結果_패배
+		CALL SOURCE_CALC_환락(TARGET, MASTER, 200)
+		CALL SOURCE_CALC_정복(TARGET, MASTER, 50)
+	ELSEIF デュエル結果 == 結果_引分
+		CALL SOURCE_CALC_환락(TARGET, MASTER, 200)
+	ENDIF
+ELSEIF 選択モード == 4
+	IF デュエル結果 == 結果_勝利
+		PRINTFORML 승리해서 레이트가 올랐다！
+		PRINTFORMW 현재 온라인 레이트:{オンラインレート} + {レート増減}
+		オンラインレート += レート増減
+	ELSEIF デュエル結果 == 結果_패배
+		PRINTFORML 패배해서 레이트가 내려갔다…
+		PRINTFORMW 현재 온라인 레이트:{オンラインレート} - {レート増減}
+		オンラインレート -= レート増減
+	ENDIF
+ENDIF
+SIF 賭け内容 == 0
+	GOTO SKIP_KAKE
+IF デュエル結果 == 結果_勝利
+	SELECTCASE 賭け内容
+	CASE 1
+		CALL EVILTY_POINT(1)
+		PRINTFORMW 건 만큼의 카드팩을 받았다！
+		CALL CARD_PACK_SHORI(3)
+	CASE 2
+		CALL EVILTY_POINT(5)
+		PRINTFORMW 듀얼에 승리한것으로 %CALLNAME:TARGET%를 데이트에 유도하는것에 성공했다。
+		PRINTFORMW 내기에 진 %CALLNAME:TARGET%은、얼굴을 붉히며 손을 뻗어주었다。
+		SIF CFLAG:TARGET:패배함 <= 1
+			CFLAG:TARGET:패배함 = 1
+		SIF CFLAG:TARGET:데이트중 != 1
+			CFLAG:TARGET:데이트중 = 1
+		CFLAG:TARGET:동행 = 1400
+	CASE 3
+		CALL EVILTY_POINT(10)
+		PRINTFORML 듀얼에 패배한 %CALLNAME:TARGET%은、%TEXTR("분해보이는 얼굴을 하면서/부끄러운듯이 얼굴이 빨개지며")%그 장소에서 치마속에 손을 넣어、
+		PRINTFORMW %CALLNAME:MASTER%가 보고있는 앞에서 스르륵하고 속옷을 내려간다……。
+		PRINTL
+		PRINTFORMW 수치를 버티면서도 팬티를 다 벗은 %CALLNAME:TARGET%은、아직%TEXTR("온기/체온")%이 남은 막 벗은 속옷을 %CALLNAME:MASTER%에게 넘겨주었다！
+		PRINTL
+		PRINTFORML %TEXTR("히죽히죽 웃는다/촉감을 만끽한다/따뜻함을 만끽한다/그 자리에서 냄새를 맡기 시작한다")% %CALLNAME:MASTER%그런 모습을 보고 역시 돌려줘！라며 매달리지만、내기는 절대적이다。
+		PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:TARGET%의 속옷 컬렉션에 추가했다……。
+		TSTR:3 = %CALLNAME:TARGET%{EQUIP:TARGET:10}/
+		SAVESTR:10 += CSTR:MASTER:모은팬티
+		CSTR:MASTER:모은팬티 =
+		EQUIP:TARGET:하반신속옷２ = 0
+		CFLAG:TARGET:(200 + 6) = 0
+		SIF CFLAG:TARGET:패배함 <= 2
+			CFLAG:TARGET:패배함 = 2
+	CASE 4
+		CALL EVILTY_POINT(10)
+		PRINTFORMW 듀얼에 승리한것으로 %CALLNAME:TARGET%을 정성스럽게 갖고 돌아가게 되었다……。
+		PRINTFORMW 납득할수 없어보이지만、듀얼리스트가 건 내기에 말을 바꾸진 않았다。
+		CFLAG:MASTER:현재위치 = 1
+		CFLAG:TARGET:현재위치 = 1
+		TIME += 30
+		SIF CFLAG:TARGET:패배함 <= 3
+			CFLAG:TARGET:패배함 = 3
+		SETBIT CFLAG:TARGET:기정사실, 0
+		人祓いモード = 0
+	CASE 5
+		IF TALENT:TARGET:성별 == 1
+			PRINTFORML 패자가 된 %CALLNAME:TARGET%에게 %CALLNAME:MASTER%가 가까이 가니、 %CALLNAME:TARGET%는 특히나 겁에 질려、
+			;캐릭터によっては露骨に性をアピールして命乞いをするかもしれない。ブリーチでそんな感じの見たぞオイラ！
+			;非처녀、포식자、あとは無様な命乞い姿が似合う메스가키と즉시타락でとりあえずGO!
+			IF TALENT:TARGET:포식자 == 1 || TALENT:TARGET:처녀 == 0 || TALENT:TARGET:메스가키 == 1 || TALENT:TARGET:즉시타락 >= 1
+				;……치마参照、いるかな？(めんどいので雑にTEXTRに치마言及も突っ込んだ)
+				PRINTFORML 울상이 되면서도 굳은 미소를 띄우며 아양을 떨며、스스로%TEXTR("옷을 흐뜨리며/옷을 벗으며/치마를 올리며")%속옷을 비추어、
+				PRINTFORMW 「%TEXTR("범해도 돼/야한일 해도 돼/야한일 뭐든지 해도 돼/하게 해줄게")%부터%TEXTR("바줬으면 해/용서해줘")%」라며 %CALLNAME:MASTER%에게 목숨구걸을 시작했다。
+			ELSE
+				PRINTFORMW 「무엇이든지 할테니까 카드로 하는것만은 용서해줘」라고 목숨구걸같은 부탁을 한다。
+			ENDIF
+			PRINTL
+			PRINTFORMW 어떻게 할까……？
+			PRINTFORML [0] - 봐준다
+			PRINTFORML [1] - 무섭지 않으니까 안심하고 カード化를 받아들이라고 말한다
+			IF TALENT:TARGET:포식자 == 1 || TALENT:TARGET:처녀 == 0 || TALENT:TARGET:메스가키 == 1 || TALENT:TARGET:즉시타락 >= 1
+				PRINTFORML [2] - 그렇게까지 말한다면 몸으로 용서해준다
+			ELSE
+				PRINTFORML [2] - 뭐든지 한다고 말한다면……
+			ENDIF
+			BINPUT
+			IF RESULT == 0
+				CALL EVILTY_POINT(-30)
+				PRINTFORMW %CALLNAME:MASTER%가 어쩔수 없으니 봐주기로 했다、 %CALLNAME:TARGET%은 감사하며 그 자리에서 벗어났다。
+				PRINTFORMW 발견되지 않게 하라고ー！
+				CFLAG:TARGET:현재위치 = 100
+				CFLAG:TARGET:호감도 += 100
+			;他にも「뒷골목あたりで手っ取り早く抜いてもらう」とかがあってもいい。中身はリゾートの性処理業務の手コキだの펠라だの식스だのの서술문그대로 引っぱってきてもよい。あれ書いたの俺だもん。byうさみの
+			ELSEIF RESULT == 1
+				PRINTFORMW %CALLNAME:MASTER%가 상냥하게 안된다고 말하니、 %CALLNAME:TARGET%는 눈물을 지으며 덤덤하게 %CALLNAME:MASTER%의 손을 받아들였다。
+				PRINTL
+				PRINTFORML %CALLNAME:MASTER%가%TEXTR("슬쩍 떨리는 손을 잡으/슬쩍 머리를 쓰다듬어주/상냥하게 볼을 쓰다듬어주")%니、
+				PRINTFORMW %CALLNAME:TARGET%는 조금은 안심한것인지 살짝 볼이 풀리고、몸이 눈부신 빛으로 빛나니、이윽고 카드로서 %CALLNAME:MASTER%의 손에 들어왔다……。
+				CALL CARD_GET_CHARA(TARGET,1)
+				CFLAG:TARGET:현재위치 = 100
+				CFLAG:TARGET:호감도 += 10
+			ELSEIF RESULT == 2
+				CALL EVILTY_POINT(30)
+				;↓のラブホ連れ込みの流れを그대로 流用
+				PRINTFORMW 필사적으로 목숨구걸을 하는 불쌍한 %CALLNAME:TARGET%의 모습에、 %CALLNAME:MASTER%는 자비를 배풀어주기로 했다。
+				PRINTL
+				PRINTFORMW 한발자국 가까이 갈때마다 두려움에 몸을 숙이는 %CALLNAME:TARGET%에게 %CALLNAME:MASTER%는 손을 뻗어、말랑 하고 그 가슴을 비빈다。
+				PRINTL
+				PRINTFORML 「아……」하며 작게 절망의 목소리를 올린 %CALLNAME:TARGET%는、말랑말랑 하고 가슴을 비벼지면서도 カード化의 징후가 나타나지 않은것을 눈치채니、
+				PRINTFORMW 목숨구걸이 결실을 맺었다는 안도에 굳어딘 미소를 띄우며、 %CALLNAME:MASTER%에게 가슴을%TEXTR("만지게하/뒤적거리게하/내놓으")%면서「감사합니다」라며 감사를 입에 담았다。
+				PRINTL
+				PRINTFORML 물론、그저 이것만으로 용서할 생각은 없다。
+				PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:TARGET%의 어깨를 안고、%TEXTR("손장난으로 가슴을 만지면서/가슴의 감촉을 즐기면서")%데리고 걸어、근처의 러브호텔로 데리고갔다……。
+				CFLAG:MASTER:현재위치 = 場所_ラブホ
+				CFLAG:TARGET:현재위치 = 場所_ラブホ
+				TIME += 10
+				SIF CFLAG:TARGET:패배함 <= 3
+					CFLAG:TARGET:패배함 = 3
+				SETBIT CFLAG:TARGET:기정사실, 0
+				人祓いモード = 0
+				PRINTFORMW ────
+				PRINTL
+				PRINTFORMW 방에 들어가자마자、 %CALLNAME:MASTER%는 %CALLNAME:TARGET%를 침대로 밀어넘어뜨렸다。
+				PRINTL
+				;レディース！エーン！ジェントルメーン！
+				PRINTFORMW 즐거움은、지금부터다。 %CALLNAME:TARGET%자신이 내밀어준 그녀의 몸、%TEXTR("천천히/구석구석/마음가는대로/충분히/사양없이/내킬때까지")%%TEXTR("관능하도록/빨아주도록/맛보도록/범해주도록/사용해주도록/사용해 최고로 기분좋아지도록")%해주지……。
+				PRINTL
+				PRINTFORMW %CALLNAME:MASTER%는 깔고앉은 %CALLNAME:TARGET%의 옷에 손을 대、딱딱한 미소를 안주로 그 몸에 욕망을 향했다……。
+				IF TALENT:TARGET:처녀
+					패배のロストバージン = 1
+					CALL EVILTY_POINT(30)
+				ENDIF
+				TCVAR:TARGET:말하는대로 = 1
+				BASE:MASTER:발기 = 800
+				TCVAR:TARGET:듀얼패배섹스 = 1
+				EXP:TARGET:패배조교경험 += 1
+
+				CALL RESET_TARINCON
+				依頼조교대상 = TARGET
+				CALL EVENT_TRAIN
+				PRINTFORMW ────
+				PRINTL
+				PRINTFORM 침대에 나른하게 누워、
+				IF TCVAR:TARGET:질내사정횟수
+					PRINTFORM 고간에서
+					SIF 패배のロストバージン == 1
+						PRINTFORM 파과혈과
+					PRINTFORM 가득 싸넣은 정액을 흘러넘치게 하며
+				ENDIF
+				PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+				PRINTFORML %CALLNAME:MASTER%는 한 숨을 쉬었다。
+				PRINTFORMW 꽤나 만족한 한때였다……。
+				PRINTL
+				PRINTFORML ──그럼……
+				PRINTFORML [1] - 카드화 한다
+				PRINTFORML [2] - 카드화 하지 않는다
+				BINPUT
+				事後カード化 = RESULT
+				IF 事後カード化 == 1
+					PRINTFORMW 침대에 앉아、손장난으로 %CALLNAME:TARGET%の%TEXTR("가슴/엉덩이")%를 만지면서、개운한 마음으로 %CALLNAME:MASTER%는 마지막 처리를 한다。
+					PRINTL
+					PRINTFORML 만지고있던 손 안에서 빛이 흘러넘쳐、그 빛은 눈 깜짝할 사이에 %CALLNAME:TARGET%의 몸을 감싸간다……。
+					PRINTFORMW 안겨 쓰러진 여운으로 제대로된 저항도 하지 못하는 채로、 %CALLNAME:TARGET%는 필사의 목숨구걸도 허무하게 카드의 모습이 되어버렸다……。
+					CALL CARD_GET_CHARA(TARGET,1)
+					CFLAG:TARGET:현재위치 = 100
+					CFLAG:TARGET:호감도 -= 300
+						;PRINTFORMW ……拾い上げた카드를 よく見てみると、事後を그대로 カードにしたからか、イラストが裸だ。
+						;PRINTFORMW えっちな絵違いだ！やったね！
+				ELSE
+					IF TCVAR:TARGET:질내사정횟수 >= 1
+						;用意した画像が질내사정ありきの事後なので
+						CALLFORM IMAGE_PRODUCTION(TARGET,9999)
+						SIF RESULT == 1
+							PRINTFORMW ────찰칵、하고。
+					ENDIF
+					PRINTFORMW 오늘이라는 날을 기념으로、마지막으로 한장、가득 범해준 %CALLNAME:TARGET%의 있을수없는 사후사진을 찍고、 %CALLNAME:MASTER%는 호텔방을 뒤로했다……。
+					PRINTL
+					PRINTFORMW ────
+					PRINTL
+					PRINTFORML 듀얼에 패배해、원치않은 섹스에 몸을 바쳐。
+					PRINTFORMW 가슴도、엉덩이도、입술도、여자아이가%TEXTR("비밀로 해애할/특별한 상대에게만 허락해야하는")%장소는 전부、%TEXTR("마치 장난감처럼/원치않은 상대의 욕망 그대로/승자를 대접하는 상품으로서")%%TEXTR("농락되어/장난당해/능욕당해")%……。
+					PRINTL
+					IF 패배のロストバージン == 1 || TCVAR:TARGET:질내사정횟수 >= 1
+						SIF 패배のロストバージン == 1
+							PRINTFORM 사랑하는 사람에게 바쳐야 할 터인 처녀는 빼앗겨、
+						SELECTCASE RAND:10
+						CASE 0 TO 5
+							PRINTFORM 범해지면서%TEXTR("원하지도 않은『조르기』를 말해지며/「감사합니다」같은 감사의 말까지 말하게하며/자신의 성편력을 적나라하게 고백하게하며/「좋아해」「너무좋아해」같은 사랑의 말을 강요받으며/자신도 몰랐던『약점』을 이래도말이냐 하고 교육받으며/『사용감』을 평가받으며")%
+						CASE 6 TO 8
+							PRINTFORM %TEXTR("난폭하게 머리를 잡히며/굴욕을 새겨지듯이 눌러지며/반응을 즐기는듯이 비웃으며")%범해져
+						CASEELSE
+							PRINTFORM 싫은데도、몇번이나 몇번이나 무리하게 기분좋게 당해서
+						ENDSELECT
+						SIF TCVAR:TARGET:질내사정횟수 >= 1
+							PRINTFORM 、%TEXTR("저항/애원")%도 허무하게 자궁%TEXTR("을 정액으로 끈적하게 마킹당해/을 끈적끈적한 정액으로 더럽혀져/을 『승자』의 유전자에게 정복되어/에 정액을 버려져/에 가득 정액이 쏟아부어져")%
+						PRINTFORMW …………
+					ENDIF
+					PRINTL
+					PRINTFORMW 듀얼리스트로서의 프라이드도、여자로서의 순정도 존엄도、전부 다 %CALLNAME:MASTER%%TEXTR("에세 짓밟혀/에게 빼앗겨/에게 바쳐버려/에게 건네어/의 것이 되어")%버렸다는것을 나타내는『기념사진』。
+					PRINTL
+					SIF 패배のロストバージン == 1
+						PRINTFORM %TEXTR("평생 잊을수 없는/인생에 새겨진")%、%TEXTR("굴욕적인/치욕을 느낀")%%TEXTR("처음/로스트 버진/처녀상실")%의 기억。
+					PRINTFORMW 누구에게도 보여줄수 없는、진 암컷으로서의 등급을 매긴 증거。누구에게도 보여줄수 없는、지울수 없는 패배의 낙인。
+					PRINTL
+					PRINTFORMW 이것이 %CALLNAME:MASTER%의 손에 있는 한、 %CALLNAME:TARGET%은 %CALLNAME:MASTER%에게서 요구를 거절할수는 없겠지……。
+					PRINTL
+					PRINTFORMW %CALLNAME:TARGET%의 약점을 잡았다！
+					CFLAG:TARGET:약점장악 = 1
+					IF EXP:TARGET:패배조교경험 >= 3 && TALENT:TARGET:패배버릇 == 0
+						PRINTL 
+						PRINTFORML 몇번이나 %CALLNAME:MASTER%에게 패배를 당하며、그 때마다 범해져 원치않는 쾌락을 두들김당한 %CALLNAME:TARGET%는
+						PRINTFORMW %CALLNAME:MASTER%에게 져서 범해지는것이 완전히 버릇이 되어버린것 같다……。
+						PRINTL
+						PRINTFORMW %CALLNAME:TARGET%의 몸에【패배버릇】이 새겨져버렸다……！
+						TALENT:TARGET:패배버릇 = 1
+					ENDIF
+				ENDIF
+			ENDIF
+		ELSE
+			PRINTFORMW %CALLNAME:TARGET%은 몸이 빛에 휩싸여、카드의 모습이 되어버렸다！
+			CALL CARD_GET_CHARA(TARGET,1)
+			CFLAG:TARGET:현재위치 = 100
+		ENDIF
+
+	CASE 6
+		CALL EVILTY_POINT(30)
+		PRINTL
+		PRINTFORMW 듀얼에 승리한 %CALLNAME:MASTER%은、패배해 머리를 숙인 %CALLNAME:TARGET%에게 가까이 다가가 어깨를 감싼다。
+		PRINTL
+		PRINTFORMW 친한듯이 어깨를 쓰다듬은 손에 깜짝놀라 몸을 떠는 %CALLNAME:TARGET%는、이 뒤에 기다리고있을 터인%TEXTR("자신의 운명/행위")%로 생각을 돌린다……
+		PRINTL
+		PRINTFORMW ……하지만 결코、저항은 하지 않는다。분해하는듯이 입술을 깨물지만、듀얼리스트가 건 내기는 절대적。그 프라이드를 걸고、두말없이%TEXTR("가능/허락")%은 한것이다。
+		PRINTL
+		PRINTFORMW %CALLNAME:TARGET%의 소극적 합의를 받고、어깨를 야릇하게 쓰다듬으며 %CALLNAME:MASTER%의 입이 히죽하며 비틀린다。
+		PRINTL
+		;0418改
+		;特定の場所で있는 경우、ホテル以外にも行ける。ただし画像の관계で弱みは握れない。用意してくれても……いいのよ？
+		;서술문の書きやすさの관계で女のみ。성별のIF外す場合は、서술문の齟齬を無視してね♥
+		IF TALENT:TARGET:성별 == 1 && (CFLAG:MASTER:현재위치 == 場所_カドショ || CFLAG:MASTER:현재위치 == 場所_カフェ || CFLAG:MASTER:현재위치 == 場所_公園 || CFLAG:MASTER:현재위치 == 場所_教会 || CFLAG:MASTER:현재위치 == 場所_学校内 || CFLAG:MASTER:현재위치 == 場所_裏通り)
+			PRINTFORML [1] - 호텔로 데리고간다
+			IF CFLAG:MASTER:현재위치 == 場所_カドショ || CFLAG:MASTER:현재위치 == 場所_カフェ || CFLAG:MASTER:현재위치 == 場所_公園
+				PRINTFORML [2] - 화장실로 데리고 간다
+			ELSEIF CFLAG:MASTER:현재위치 == 場所_教会
+				PRINTFORML [3] - 참회실로 데리고 간다
+			ELSEIF CFLAG:MASTER:현재위치 == 場所_学校内
+				IF (RAND:5 == 0 && TALENT:TARGET:소속 == 1) || (RAND:5 == 0 && TALENT:TARGET:듀얼리스트 == 1 && TALENT:TARGET:연령 <= -1)
+				;だが俺は……レアだぜ
+				;상대가 デュエルアカデミアの学生である場合低確率で発生
+					PRINTFORML [90] - 어딘가 할수 있을만한 장소로 안내를……응？
+				ELSE
+					PRINTFORML [4] - 어딘가 할수 있을만한 장소를 안내시킨다
+				ENDIF
+			ELSEIF CFLAG:MASTER:현재위치 == 場所_裏通り
+				PRINTFORML [5] - 뒷골목로 데리고 간다
+			ELSEIF CFLAG:MASTER:현재위치 == 場所_마법都市 || CFLAG:MASTER:현재위치 == 場所_王宮都市
+				PRINTFORML [6] - 어딘가 할수 있을만한 장소로 안내시킨다
+			ENDIF 
+			BINPUT
+			IF RESULT == 1
+				;既存のラブホ連れ込み
+				PRINTFORML %CALLNAME:MASTER%는 %CALLNAME:TARGET%の%TEXTR("어깨를 감싸、주위에 과시하듯이 가슴을 만지면서/허리를 감싸、주위에 과시하는듯이 엉덩이를 주무르면서")%데리고 걸으며、
+				PRINTFORMW 완전히 온순해진 이『전리품』을 근처의 러브호텔로 데리고 갔다……。
+				PRINTL
+				CFLAG:MASTER:현재위치 = 場所_ラブホ
+				CFLAG:TARGET:현재위치 = 場所_ラブホ
+				TIME += 10
+				SIF CFLAG:TARGET:패배함 <= 3
+					CFLAG:TARGET:패배함 = 3
+				SETBIT CFLAG:TARGET:기정사실, 0
+				人祓いモード = 0
+				PRINTFORMW ────
+				PRINTL
+				PRINTFORMW 방에 들어가자마자、 %CALLNAME:MASTER%는 %CALLNAME:TARGET%를 침대로 밀어넘어뜨린다。
+				PRINTL
+				PRINTFORM 즐거움은、지금부터다。
+				SELECTCASE RAND:7
+				CASE 0
+					PRINTFORMW 「승자의 특권」이라는 녀석을、충분히 행사해주도록 하자……。
+				CASE 1
+					PRINTFORMW 이 비참한「패자」의 몸에、 %CALLNAME:MASTER%의 %TEXTR("강함/모양")%을 듬뿍%TEXTR("알려 주도록/새겨주도록")%하지……。
+				CASE 2
+					PRINTFORMW 이겨서 얻은 %CALLNAME:TARGET%의 몸으로、「승리의 유열」을 충분히 맛보도록 하지……。
+				CASE 3
+					PRINTFORMW %CALLNAME:TARGET%의 몸과 마음에、지울수 없는「패배의 추억」을 새겨넣어주기로 했다……。
+				CASE 4
+					PRINTFORMW 이번엔 침대 위에서、 %CALLNAME:TARGET%의 몸조차도「패배」시켜주지……。
+				CASE 5
+					PRINTFORMW %CALLNAME:MASTER%를 유혹해 마지않는 %CALLNAME:TARGET%의 몸에、「패자의 말로」를 알려주도록 하지……。
+				CASE 6
+					PRINTFORMW 「전리품」으로서 이겨서 얻은 이 몸、%TEXTR("천천히/구석구석/마음가는대로/충분히/사양없이/마음내킬때까지")%%TEXTR("관능해/핥아/맛봐주/범해주/써주/사용해 최고로 기분좋아지")%도록 하지……。
+				ENDSELECT
+				PRINTL
+				PRINTFORMW %CALLNAME:MASTER%는 깔아뭉갠 %CALLNAME:TARGET%의 옷에 손을 대、겁먹은 표정을 반찬삼아 욕망의 한계를 다하기 시작했다……。
+			ELSEIF RESULT == 2
+				;トイレに連れ込み
+				IF CFLAG:MASTER:현재위치 == 場所_カドショ
+					ラブホ以外 = 1
+					依頼用エリア１名称 = カドショの男子トイレ
+				ELSEIF CFLAG:MASTER:현재위치 == 場所_カフェ
+					ラブホ以外 = 2
+					依頼用エリア１名称 = カフェの男子トイレ
+				ELSEIF CFLAG:MASTER:현재위치 == 場所_公園
+					ラブホ以外 = 3
+					依頼用エリア１名称 = 公園の公衆便所
+				ENDIF
+				PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:TARGET%의 %TEXTR("허리/어깨")%를 감싸고 그 장소를 떠나、주위의 눈을 피해 근처 화장실로 데리고 갔다……。
+				PRINTL
+				CFLAG:MASTER:현재위치 = 場所_依頼用エリア１
+				CFLAG:TARGET:현재위치 = 場所_依頼用エリア１
+				TIME += 5
+				SIF CFLAG:TARGET:패배함 <= 3
+					CFLAG:TARGET:패배함 = 3
+				SETBIT CFLAG:TARGET:기정사실, 0
+				人祓いモード = 0
+				PRINTFORMW ────
+				PRINTL
+				PRINTFORMW 개인실에 들어가 철컥 하고 자물쇠를 잠그니、 %CALLNAME:TARGET%는 움찔하며 몸을 떨었다。
+				PRINTL
+				PRINTFORML 이런 장소에서 범해져버리는%TEXTR("굴욕/치욕")%에 입술을 깨물%TEXTR("뿐인/수밖에 없는")% %CALLNAME:TARGET%의 몸을 끌어안아、
+				PRINTFORMW 그 부드러움과 체온을 전신으로 느끼면서、옷 위에서부터 가슴을、엉덩이를、고간을 만지작거리며 겁먹은 숨결을 관능한다。
+				PRINTL
+				PRINTFORML ──자、즐거움의 시간이다。
+				PRINTFORMW 팔 안에서 떨고있는 이 %TEXTR("귀여운/아름다운")%『변기』에、쌓인것을 뿜어내 상쾌%TEXTR("해지/하게하")%도록 하지……。
+			ELSEIF RESULT == 3
+				;懺悔室。ひらめいちゃったから「懺悔질」って書いたけど、過剰に面白くなっちゃうのもアレだし消してもいい気もする。
+				ラブホ以外 = 4
+				PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:TARGET%의 %TEXTR("허리/어깨")%를 감싸고 그 장소를 떠나、참회실로 데리고 갔다……。
+				PRINTL
+				依頼用エリア１名称 = 懺悔室
+				CFLAG:MASTER:현재위치 = 場所_依頼用エリア１
+				CFLAG:TARGET:현재위치 = 場所_依頼用エリア１
+				TIME += 5
+				SIF CFLAG:TARGET:패배함 <= 3
+					CFLAG:TARGET:패배함 = 3
+				SETBIT CFLAG:TARGET:기정사실, 0
+				人祓いモード = 0
+				PRINTFORMW ────
+				PRINTL
+				PRINTFORMW 사제쪽 방에 둘이 들어가 철컥하고 자물쇠를 잠그니、 %CALLNAME:TARGET%는 움찔하며 몸을 떨었다。
+				PRINTL
+				PRINTFORML 둘이서 들어가는것은 상정되지 않은 좁은 방。
+				PRINTFORML 고해성사를 해야할 신성한 장소에서 지금부터 범해지려하는 %TEXTR("굴욕/치욕")%에、입술을 깨물%TEXTR("뿐인/수밖에 없는")% %CALLNAME:TARGET%의 몸을 끌어안아、
+				PRINTFORMW 그 부드러움과 체온을 전신으로 느끼면서、옷 위에서부터 가슴을、엉덩이를、고간을 만지작거리며 겁먹은 숨결을 관능한다。
+				PRINTL
+				;汚いカイト
+				PRINTFORMW ──자、『참회』의 준비는 되었다。
+				;暴論
+				PRINTL
+				PRINTFORML 여긴 죄를 용서받는 방。여기서라면 분명 얼마나『범해』도、그 죄는 용서받음에 틀림없다。
+				PRINTFORMW %CALLNAME:TARGET%의 %TEXTR("안/가장 안쪽의 신성한 장소/참회질")%%TEXTR("에 듬뿍『죄』를 뿜어내/를 『죄』투성이로 만들어주/에 최고로 기분좋은『죄를 범하』/에 『죄의 맛』을 알려주")%기 위해、 %CALLNAME:MASTER%는 슬쩍 옷에 손을 댔다……。
+			ELSEIF RESULT == 4
+				;学校
+				PRINTFORML %CALLNAME:MASTER%는 %CALLNAME:TARGET%の%TEXTR("어깨를 감싸、주위에 과시하는듯이 가슴을 만지면서/허리를 감싸、주위에 과시하는듯이 엉덩이를 만지면서")% 교내를 천천히 걸어、
+				PRINTFORMW 어딘가 둘만이 될 장소를 안내받았다……。
+				PRINTL
+				SELECTCASE RAND:2
+				CASE 0
+					依頼用エリア１名称 = 体育倉庫
+					CFLAG:MASTER:현재위치 = 場所_依頼用エリア１
+					CFLAG:TARGET:현재위치 = 場所_依頼用エリア１
+					TIME += 10
+					SIF CFLAG:TARGET:패배함 <= 3
+						CFLAG:TARGET:패배함 = 3
+					SETBIT CFLAG:TARGET:기정사실, 0
+					人祓いモード = 0
+					PRINTFORMW ────
+					PRINTL
+					PRINTFORMW 새로운 장비가 많은 아카데미아라고는 해도、체육창고는 어딘지 먼지가 많고 케케묵은 독특한 냄새가 났다。
+					PRINTL
+					PRINTFORMW %CALLNAME:MASTER%가 드르륵 하고 금속문을 닫으니、 %CALLNAME:TARGET%의 어깨가 움찔하며 떨렸다。
+					PRINTL
+					PRINTFORML 수많은 공이 들어간 상자、그물을 펼치는 금속제 기둥、스코어보드、쌓아올려진 뜀틀、매트……。
+					PRINTFORML 수업에서 본 익숙한 것으로 흘러넘치는 이 공간은、지금은「두사람만의 밀실」이 되어、
+					PRINTFORM 그리고 지금부터
+					IF TALENT:TARGET:처녀
+						PRINTFORM 「%TEXTR("처음을 맞이한/처녀를 흐뜨리게한")% 추억의 장소」
+					ELSE
+						PRINTFORM 「몸과 마음에 굴욕을 새겨넣어진 추억의 장소」
+					ENDIF
+					PRINTFORMW 가 되는것이다。
+					PRINTL
+					PRINTFORMW ──귀에익은 종소리가 울린다。대망의、혹은 절망의 시간이 왔을음 전하듯이。
+					PRINTL
+					PRINTFORML %CALLNAME:MASTER%는 이 장소에 따라、보건체육을 실기로 듬뿍 알려주기위해
+					PRINTFORMW 싫어하며 겁먹은 %CALLNAME:TARGET%를 매트로 밀어넘어뜨렸다……。
+					ラブホ以外 = 5
+				CASE 1
+					依頼用エリア１名称 = 体育館裏
+					CFLAG:MASTER:현재위치 = 場所_依頼用エリア１
+					CFLAG:TARGET:현재위치 = 場所_依頼用エリア１
+					TIME += 10
+					SIF CFLAG:TARGET:패배함 <= 3
+						CFLAG:TARGET:패배함 = 3
+					SETBIT CFLAG:TARGET:기정사실, 0
+					人祓いモード = 0
+					PRINTFORMW ────
+					PRINTL
+					PRINTFORMW 학교의 소란스러움에서 조금 떨어진 체육관 뒤쪽은、드문드문 나있는 잡초가 사람이 오지않는것을 말해주고 있다。
+					PRINTL
+					PRINTFORML 소설이나 만화에선 자주 보이는 장소다。고백스팟으로서──혹은、자주 있는 왕따의 현장으로서。
+					PRINTFORMW 모처럼 여기로 안내받은것이다。장소에 맞는 플레이를 즐기는것도 좋겠지。
+					PRINTL
+					PRINTFORMW ──귀에익은 종소리가 울린다。대망의、혹은 절망의 시간이 왔음을 전하듯이。
+					PRINTL
+					SELECTCASE RAND:2
+					CASE 0
+						PRINTFORML %CALLNAME:MASTER%는 이 장소에 따라、「이전부터 %CALLNAME:TARGET%에게 관심이 있던 %TEXTR("선배/동급생/교사")%」처럼 가장해、
+						PRINTFORMW %CALLNAME:TARGET%를 성적 왕따시키기로 했다……。
+					CASE 1
+					;齟齬を無視していくスタイル。구상ない캐릭터がほとんどだからこそできること。不要になったら消してよし。
+						PRINTFORML %CALLNAME:MASTER%는 이 장소에 따라、싫어하는 %CALLNAME:TARGET%에게 사랑의 말을 강요하여、
+						PRINTFORM 「%TEXTR("겉/말")%뿐인 러브러브에로」로
+						IF RAND:2 == 1
+							PRINTFORMW 한때의 청춘 기분을 맛보기로 했다……。
+						ELSE
+							PRINTFORMW %CALLNAME:TARGET%의 청춘을 그저 기분좋게 되기 위해서 사용하기로 했다……。
+						ENDIF
+					ENDSELECT
+					ラブホ以外 = 6
+				ENDSELECT
+			ELSEIF RESULT == 5
+			;裏通り
+				ラブホ以外 = 7
+				PRINTFORML %CALLNAME:MASTER%는 %CALLNAME:TARGET%の%TEXTR("어깨를 감싸、주위에게 과시하는듯이 가슴을 만지며/허리를 감싸、주위에 과시하는듯이 엉덩이를 만지며")% 데리고 걸어서、
+				PRINTFORMW 안쪽의 뒷골목으로 데리고 갔다……。
+				PRINTL
+				依頼用エリア１名称 = 奥まった路땅裏
+				CFLAG:MASTER:현재위치 = 場所_依頼用エリア１
+				CFLAG:TARGET:현재위치 = 場所_依頼用エリア１
+				TIME += 10
+				SIF CFLAG:TARGET:패배함 <= 3
+					CFLAG:TARGET:패배함 = 3
+				SETBIT CFLAG:TARGET:기정사실, 0
+				人祓いモード = 0
+				PRINTFORMW ────
+				PRINTL
+				PRINTFORMW 도심의 소란스러움에서 떨어진 뒷골목 안쪽에서、 %CALLNAME:MASTER%는 %CALLNAME:TARGET%의 몸을 끌어안는다。
+				PRINTL
+				PRINTFORML 원래 이 장소라면 습기와 곰팡이가 핀 냄새가 조금 코에 거슬리지만、
+				PRINTFORMW 이렇게 끌어안은 %CALLNAME:TARGET%의 머리에 얼굴을 묻어、깊게 호흡해 향기를 맏으면 그런건 신경쓰이지 않는다。
+				PRINTL
+				PRINTFORML %CALLNAME:TARGET%의 부드러움과 체온을 전신으로 느끼면서、옷 위에서 가슴을、엉덩이를、고간을 만지작거리니、
+				PRINTFORMW 지금부터 이런 장소에서 범해져버린다고 싫어해도 이해해버린 %CALLNAME:TARGET%가 %TEXTR("굴욕/치욕")%에 입술을 깨물었다。
+				PRINTL
+				PRINTFORMW ──자、즐거움의 시간이다。
+				PRINTL
+				PRINTFORML 말그대로 「쓰레기통에 장미」라고 해야할만한 이 팔 안의 여자%TEXTR("/의 몸")%에、
+				PRINTFORMW 이 장소에 맞는 퇴폐의 쾌락을 때려넣어 주기위해 %CALLNAME:MASTER%는 슬쩍 옷에 손을 댔다……。
+			ELSEIF RESULT == 6
+			;마법都市、王宮都市
+				PRINTFORML %CALLNAME:MASTER%는 %CALLNAME:TARGET%の%TEXTR("어깨를 감싸、주위에게 과시하는듯이 가슴을 만지며/허리를 감싸、주위에 과시하는듯이 엉덩이를 만지며")%、
+				PRINTFORMW 어딘가 둘만이 될 수 있는 장소로 안내받았다……。
+				IF CFLAG:MASTER:현재위치 == 場所_마법都市
+					ラブホ以外 = 8
+					依頼用エリア１名称 = 連れ込み宿
+					CFLAG:MASTER:현재위치 = 場所_依頼用エリア１
+					CFLAG:TARGET:현재위치 = 場所_依頼用エリア１
+					TIME += 10
+					SIF CFLAG:TARGET:패배함 <= 3
+						CFLAG:TARGET:패배함 = 3
+					SETBIT CFLAG:TARGET:기정사실, 0
+					人祓いモード = 0
+					PRINTFORMW ────
+					PRINTL
+					PRINTFORMW 마법이 있는 세계여도、일반적인 집의 생김새는 비슷하게 되어있는듯 하다。
+					PRINTL
+					PRINTFORML 반목골조의 단층집。회반죽의 벽。듀얼세계에 있어선「중세풍」이라고 해야할까。
+					PRINTFORML 이국……아니 이세계정서가 흘러넘치는 마을에 잠겨、 %CALLNAME:TARGET%의 부드러움을 손으로 즐기면서、
+					PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:TARGET%에게 이끌리는 채로 그 안의 한 건물로 들어간다……。
+					PRINTL
+					PRINTFORMW %CALLNAME:TARGET%에게 현지의 코인으로 지불시키고、점주에게 선망의 눈초리를 등으로 받으며 방으로 들어간다。
+					PRINTL
+					PRINTFORML 멀리 떨어진 타향의 땅、차원조차 다른 세계의 숙소에서 극상의 암컷을 맛보는 여정에 취해、
+					PRINTFORMW 희미한 난색의 마법빛으로 비추어진 간소하게 만들어진 침대를 앞에두고、 %CALLNAME:MASTER%는 %CALLNAME:TARGET%의 몸을 끌어안았다……。
+				ELSEIF CFLAG:MASTER:현재위치 == 場所_王宮都市
+					ラブホ以外 = 9
+					依頼用エリア１名称 = 路땅裏
+					CFLAG:MASTER:현재위치 = 場所_依頼用エリア１
+					CFLAG:TARGET:현재위치 = 場所_依頼用エリア１
+					TIME += 10
+					SIF CFLAG:TARGET:패배함 <= 3
+						CFLAG:TARGET:패배함 = 3
+					SETBIT CFLAG:TARGET:기정사실, 0
+					人祓いモード = 0
+					PRINTFORMW ────
+					PRINTL
+					PRINTFORMW 『왕궁도시』등으로 불리는 찬란한 장소여도、뒷골목쯤 되면 어두컴컴하고 음침한 공기가 떠돈다。
+					PRINTL
+					PRINTFORML 큰 대로에서 샛길로、샛길에서 골목으로。
+					PRINTFORMW %CALLNAME:MASTER%에게 몸을 만져지면서 %CALLNAME:TARGET%가 안내한곳은、이 안쪽의 험한 길이었다。
+					PRINTL
+					PRINTFORML 여긴『왕궁도시』이다。남녀동반여관 정도는 많이 있겠지、
+					PRINTFORMW %CALLNAME:TARGET%는 난잡하게 쌓여올려진 나무상자 그늘에 숨어、「빨리 끝내줘」라고 말하자마자 다물고 벽에 손을 대고 엉덩이를 내밀었다。
+					PRINTL
+					PRINTFORML 숙소에서 상냥하게 안겨지는것보다、골목에서 조잡하게 범해지는편이「개에게 물린것같다」라고 납득하려는것인가？
+					PRINTFORMW 그게 아니면──
+					PRINTL
+					PRINTFORMW 찔려진 엉덩이를 문지르니、「응♥」하며 목소리를 흘려 깜짝놀라 %CALLNAME:TARGET%의 몸이 뛰어오른다。
+					PRINTL
+					PRINTFORML 천너머로 비소를 만지작거리니 손끝에 전해지는 미끈하고 질척거리는 감촉。
+					PRINTFORMW 참을 생각이었다만、숨길수 없는 달콤한 숨결。
+					PRINTL
+					PRINTFORML 몸의 반사인지、강자에게 기는 암컷의 본능인지。아니면 피학의 성벽인지。
+					PRINTFORML 로맨틱과는 거리가 먼 이 음울한 뒷골목에서 지금부터 범해지려고 하는 %CALLNAME:TARGET%의、몸 안에 남아있는 기대와 흥분을 확신한 %CALLNAME:MASTER%는、
+					PRINTFORMW 그녀가 원하는 대로、「승자」에게 기는 패배암컷의 몸에 듬뿍 패배의 기쁨을 새겨넣어 주기로 했다……。
+				ENDIF
+			ELSEIF RESULT == 90
+				;だが俺は……レアだぜ
+				;デュエルアカデミアの学生である場合低確率で発生
+				PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:TARGET%의 %TEXTR("어깨를 감싸、주위에게 과시하는듯이 가슴을 만지며/허리를 감싸、주위에 과시하는듯이 엉덩이를 만지며")% 둘만이 될만 한 장소로 안내시켰다……。
+				PRINTL
+				PRINTFORMW ……그랬더니。
+				PRINTL
+				PRINTFORMW 듀얼을 구경하고있던 군중속에서、한명의 소년이 튀어나왔다。
+				PRINTL
+				PRINTFORML 아무래도、지금부터 %CALLNAME:MASTER%에게 먹을것이 되려고 하는 %CALLNAME:TARGET%의 모습에 참을 수 없어、그녀를 구하기 위해 튀어나온것같다。
+				PRINTFORMW 얼굴을 보면 알 수 있다。정의감뿐만이 아니다。분명 %CALLNAME:TARGET%에게 마음이 있는거겠지。
+				PRINTL
+				PRINTFORMW %CALLNAME:MASTER%가 가는쪽을 서서 막아 디스크를 준비하는 모습은 마치 히어로。 %CALLNAME:TARGET%의 눈에도、필히 멋있게 보이겠지……。
+				PRINTL
+				PRINTFORMW ──애초에、「이긴다면」의 이야기다만。
+				PRINTL
+				PRINTFORMW …………
+				PRINTL
+				PRINTFORMW ……………………
+				PRINTL
+				PRINTFORMW 결론부터 말하자면、순살이었다。
+				PRINTL
+				PRINTFORML 손패가 사고난것인가？일부러 선공을 주었는데도 불구하고 맥빠질정도로 어이없게 패배해 무릎을 꿇은 소년은 명확하게 %CALLNAME:TARGET%보다도 약했다。
+				PRINTFORMW %CALLNAME:MASTER%의 입에서도 생각치도 못한 한숨이 새어나와、얼마 안되는 기대를 완전히 배신당한 %CALLNAME:TARGET%도 차가운 눈으로 소년을 내려보고있다。
+				PRINTL
+				PRINTFORMW 뭐가 어찌되었든、이걸로 %CALLNAME:MASTER%%TEXTR("의 앞을 막는/의 방해를 하는")%사람은 없다。남은것은 즐거움의 시간이다。
+				PRINTL
+				PRINTFORMW 모처럼이다。막아선 그 용기를 칭찬해、그에게는 특등석을 준비해주도록 하자。
+				PRINTL
+				PRINTFORML %CALLNAME:MASTER%는 새로이 소년도 데리고、 %CALLNAME:TARGET%의 %TEXTR("어깨를 감싸、주위에게 과시하는듯이 가슴을 만지며/허리를 감싸、주위에 과시하는듯이 엉덩이를 만지며")%데리고 걸었다、
+				PRINTFORMW 완전히 얌전해진 이『전리품』을 근처의 러브호텔로 데리고 갔다……。
+				PRINTL
+				CFLAG:MASTER:현재위치 = 場所_ラブホ
+				CFLAG:TARGET:현재위치 = 場所_ラブホ
+				TIME += 10
+				SIF CFLAG:TARGET:패배함 <= 3
+					CFLAG:TARGET:패배함 = 3
+				SETBIT CFLAG:TARGET:기정사실, 0
+				人祓いモード = 0
+				PRINTFORMW ────
+				PRINTL
+				PRINTFORMW 방에 들어가자마자、 %CALLNAME:MASTER%는 %CALLNAME:TARGET%를 침대로 밀어쓰러뜨려、데리고 온 소년에게 %CALLNAME:TARGET%의 팔을 잡으라고 시켰다。
+				PRINTL
+				PRINTFORML 그가 만지는걸 허락받은것은、이 손목 뿐。
+				PRINTFORMW 마음을 갖고있던 %CALLNAME:TARGET%를 자신의 손으로 구속하여、 %CALLNAME:MASTER%에게 건네 레이브의 공범이 되는것이、패자가 된 이 이름도 모르는 소년으로의 벌이다。
+				PRINTL
+				PRINTFORML 싫어하며 날뛰는 팔을 꼭 쥐면서、숨결조차 닿는 거리에서 %CALLNAME:TARGET%가 알몸으로 벗겨져가、
+				PRINTFORML 옷 아래에 숨겨져있넌 맨살의 매끄러움을、입술의 맛을、가슴이나 엉덩이의 부드러움을、보지의 이 닫힌모습을、
+				PRINTFORMW 손을 뻗으면 닿는 거리에 있는、그가 맛보고싶었을터인 좋아하는 사람의 전부를 앞에두고 %CALLNAME:MASTER%에게 까발려진 눈앞에서 관능당하는 동안、그에게는 자위조차도 허락되지 않는다。
+				PRINTL
+				PRINTFORMW 하지만、분명 이 소년도 기뻐하고 있을것이다。지금부터 뇌에 새겨질 광경은 평생의 자위소재가 될것이니까。
+				PRINTL
+				PRINTFORM ──자、즐거움은 지금부터다。
+				SELECTCASE RAND:7
+				CASE 0
+					PRINTFORMW 「승자의 특권」이라는 녀석을、충분히 행사해주도록 하자……。
+				CASE 1
+					PRINTFORMW 이 비참한「패자」의 몸에、 %CALLNAME:MASTER%의 %TEXTR("강함/모양")%을 듬뿍%TEXTR("알려 주도록/새겨주도록")%하지……。
+				CASE 2
+					PRINTFORMW 이겨서 얻은 %CALLNAME:TARGET%의 몸으로、「승리의 유열」을 충분히 맛보도록 하지……。
+				CASE 3
+					PRINTFORMW %CALLNAME:TARGET%의 몸과 마음에、지울수 없는「패배의 추억」을 새겨넣어주기로 했다……。
+				CASE 4
+					PRINTFORMW 이번엔 침대 위에서、 %CALLNAME:TARGET%의 몸조차도「패배」시켜주지……。
+				CASE 5
+					PRINTFORMW %CALLNAME:MASTER%를 유혹해 마지않는 %CALLNAME:TARGET%의 몸에、「패자의 말로」를 알려주도록 하지……。
+				CASE 6
+					PRINTFORMW 「전리품」으로서 이겨서 얻은 이 몸、%TEXTR("천천히/구석구석/마음가는대로/충분히/사양없이/마음내킬때까지")%%TEXTR("관능해/핥아/맛봐주/범해주/써주/사용해 최고로 기분좋아지")%도록 하지……。
+				ENDSELECT
+				PRINTL
+				SELECTCASE RAND:4
+				CASE 0
+					PRINTFORM 다른사람의 좋아하는 사람을 빼앗아 그 모든것을 %TEXTR("자신의 것으로 한다/거칠게 맛보고 착취한다")%
+				CASE 1
+					PRINTFORM 다른사람의 좋아하는사람을 그저 순간적으로 기분좋기위해 「사용한다」
+				CASE 2
+					PRINTFORM 좋아하는 사람을 내놓고서 눈앞에서 먼저 %TEXTR("핥아/맛봐")%버린다
+				CASE 3
+					PRINTFORM 다른사람의 좋아하는 사람 앞에 손을 대고、가치있는 모든것을 %TEXTR("손때투성이로 한다/「중고」로 한다/먹어치운다")%
+				ENDSELECT
+				PRINTFORM 압도적인 %TEXTR("유열/우월감/전능감")%에 취해、
+				PRINTFORMW %CALLNAME:MASTER%는 난폭하게 %CALLNAME:TARGET%의 옷에 손을 댔다……。
+				ＢＳＳ = 1
+			ENDIF
+		ELSE
+			PRINTFORML %CALLNAME:MASTER%는 %CALLNAME:TARGET%の%TEXTR("어깨를 감싸、주위에게 과시하는듯이 가슴을 만지며/허리를 감싸、주위에 과시하는듯이 엉덩이를 만지며")% 데리고 걸었다、
+			PRINTFORMW 완전히 얌전해진 이『전리품』을 근처 러브호텔로데리고 갔다……。
+			PRINTL
+			CFLAG:MASTER:현재위치 = 場所_ラブホ
+			CFLAG:TARGET:현재위치 = 場所_ラブホ
+			TIME += 30
+			SIF CFLAG:TARGET:패배함 <= 3
+				CFLAG:TARGET:패배함 = 3
+			SETBIT CFLAG:TARGET:기정사실, 0
+			人祓いモード = 0
+			PRINTFORMW ────
+			PRINTL
+			PRINTFORMW 방에 들어가자마자、 %CALLNAME:MASTER%는 %CALLNAME:TARGET%를 침대로 밀어넘어뜨린다。
+			PRINTL
+			;レディース！エーン！ジェントルメーン！
+			PRINTFORM 즐거움은、지금부터다。
+			SELECTCASE RAND:7
+			CASE 0
+				PRINTFORMW 「승자의 특권」이라는 녀석을、충분히 행사해주도록 하자……。
+			CASE 1
+				PRINTFORMW 이 비참한「패자」의 몸에、 %CALLNAME:MASTER%의 %TEXTR("강함/모양")%을 듬뿍%TEXTR("알려 주도록/새겨주도록")%하지……。
+			CASE 2
+				PRINTFORMW 이겨서 얻은 %CALLNAME:TARGET%의 몸으로、「승리의 유열」을 충분히 맛보도록 하지……。
+			CASE 3
+				PRINTFORMW %CALLNAME:TARGET%의 몸과 마음에、지울수 없는「패배의 추억」을 새겨넣어주기로 했다……。
+			CASE 4
+				PRINTFORMW 이번엔 침대 위에서、 %CALLNAME:TARGET%의 몸조차도「패배」시켜주지……。
+			CASE 5
+				PRINTFORMW %CALLNAME:MASTER%를 유혹해 마지않는 %CALLNAME:TARGET%의 몸에、「패자의 말로」를 알려주도록 하지……。
+			CASE 6
+				PRINTFORMW 「전리품」으로서 이겨서 얻은 이 몸、%TEXTR("천천히/구석구석/마음가는대로/충분히/사양없이/마음내킬때까지")%%TEXTR("관능해/핥아/맛봐주/범해주/써주/사용해 최고로 기분좋아지")%도록 하지……。
+			ENDSELECT
+			PRINTFORMW %CALLNAME:MASTER%는 깔려있는 %CALLNAME:TARGET%의 옷에 손을 대、겁먹은 표정을 반찬으로 욕망의 한계를 다하기 시작했다……。
+			ラブホ以外 = 0
+		ENDIF
+
+		IF TALENT:TARGET:처녀
+			CALL EVILTY_POINT(30)
+			패배のロストバージン = 1
+		ENDIF
+		TCVAR:TARGET:말하는대로 = 1
+		BASE:MASTER:발기 = 800
+		TCVAR:TARGET:듀얼패배섹스 = 1
+		EXP:TARGET:패배조교경험 += 1
+
+		CALL RESET_TARINCON
+		依頼조교대상 = TARGET
+		CALL EVENT_TRAIN
+
+		IF ＢＳＳ == 1
+			PRINTFORML ────
+			PRINTL
+			PRINTFORM 침대에 나른하게 누워、
+			IF TCVAR:TARGET:질내사정횟수 >= 1
+				PRINTFORM 고간에서
+				SIF 패배のロストバージン == 1
+					PRINTFORM 파과혈과
+				PRINTFORM 가득 싸넣은 정액을 흘러넘치게 하며
+			ENDIF
+			PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+			PRINTFORML %CALLNAME:MASTER%는 한 숨을 쉰다。
+			PRINTFORMW 꽤 만족한 한때 였다……。
+			PRINTL
+			PRINTFORMW 히어로인척 하던 소년도 지금은 처참하게도、 %CALLNAME:TARGET%의 손을 쥐면서 우울한 사정으로 바지에 번져있다……。
+			PRINTL
+			PRINTFORML [1] - 소년을 먼저 돌아가게 한다
+			;처녀と키스を奪っていること前提。最初から非처녀もいるので、かわりに질내사정を条件とした。
+			SIF TCVAR:TARGET:질내사정횟수 >= 1 && CFLAG:TARGET:키스상실장소 >= 1
+				PRINTFORML [2] - 소년을 남기고 먼저 돌아간다
+			BINPUT
+			IF RESULT == 1
+				PRINTFORML %CALLNAME:MASTER%은 역할을 끝낸 소년을 방에서 내쫒았다、
+				PRINTFORMW 오늘이라는 날을 기념으로、마지막으로 한장、듬뿍 범해준 %CALLNAME:TARGET%의 있을수 없는 사후사진을 찍고、 %CALLNAME:MASTER%는 호텔방을 뒤로했다……。
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					;用意した画像が질내사정ありきの事後なので
+					CALLFORM IMAGE_PRODUCTION(TARGET,9999)
+				ENDIF
+				PRINTL
+				PRINTFORMW ────
+				PRINTL
+				PRINTFORML 듀얼에 패배해、원치않은 섹스로 몸을 바쳐。
+				PRINTFORMW 가슴도、엉덩이도、입술도、여자아이가 %TEXTR("비밀로 해야하는/특벌한 상대에게만 허락해야하는")% 장소는 전부、%TEXTR("마치 장난감처럼/원치않은 상대의 욕망대로/승자를 대접하는 상품으로서")%%TEXTR("즐김당해/놀아나/능욕당해")%……。
+				PRINTL
+				IF 패배のロストバージン == 1 || TCVAR:TARGET:질내사정횟수 >= 1
+					SIF 패배のロストバージン == 1
+						PRINTFORM 사랑하는 사람에게 바쳐야 할 터인 처녀는 빼앗겨、
+					SELECTCASE RAND:10
+					CASE 0 TO 5
+						PRINTFORM 범해지면서%TEXTR("원하지도 않은『조르기』를 말해지며/「감사합니다」같은 감사의 말까지 말하게하며/자신의 성편력을 적나라하게 고백하게하며/「좋아해」「너무좋아해」같은 사랑의 말을 강요받으며/자신도 몰랐던『약점』을 이래도말이냐 하고 교육받으며/『사용감』을 평가받으며")%
+					CASE 6 TO 8
+						PRINTFORM %TEXTR("난폭하게 머리를 잡히며/굴욕을 새겨지듯이 눌러지며/반응을 즐기는듯이 비웃으며")%범해져
+					CASEELSE
+						PRINTFORM 싫은데도、몇번이나 몇번이나 무리하게 기분좋게 당해서
+					ENDSELECT
+					SIF TCVAR:TARGET:질내사정횟수 >= 1
+						PRINTFORM 、%TEXTR(""저항/애원")%도 허무하게 자궁%TEXTR("을 정액으로 끈적하게 마킹당해/을 끈적끈적한 정액으로 더럽혀져/을 『승자』의 유전자에게 정복되어/에 정액을 버려져/에 가득 정액이 쏟아부어져")%
+					PRINTFORMW …………
+				ENDIF
+				PRINTL
+				PRINTFORMW 듀얼리스트로서의 프라이드도、여자로서의 순정도 존엄도、전부 다 %CALLNAME:MASTER%%TEXTR("에세 짓밟혀/에게 빼앗겨/에게 바쳐버려/에게 건네어/의 것이 되어")%버렸다는것을 나타내는『기념사진』。
+				SIF 패배のロストバージン == 1
+					PRINTFORM %TEXTR("평생 잊을수 없는/인생에 새겨진")%、%TEXTR("굴욕적인/치욕을 느낀")%%TEXTR("처음/로스트 버진/처녀상실")%의 기억。
+				PRINTFORMW 누구에게도 보여줄수 없는、진 암컷으로서의 등급을 매긴 증거。누구에게도 보여줄수 없는、지울수 없는 패배의 낙인。
+				PRINTL
+				PRINTFORML 이것이 %CALLNAME:MASTER%의 손에 있는 한、 %CALLNAME:TARGET%은 %CALLNAME:MASTER%에게서 요구를 거절할수는 없겠지……。
+				PRINTFORMW %CALLNAME:TARGET%의 약점을 잡았다！
+				CFLAG:TARGET:약점장악 = 1
+				IF EXP:TARGET:패배조교경험 >= 3
+					PRINTL 
+					PRINTFORML 몇번이나 %CALLNAME:MASTER%에게 패배를 당하며、그 때마다 범해져 원치않는 쾌락을 두들김당한 %CALLNAME:TARGET%는
+					PRINTFORMW %CALLNAME:MASTER%에게 져서 범해지는것이 완전히 버릇이 되어버린것 같다……。
+					PRINTL
+					PRINTFORMW %CALLNAME:TARGET%의 몸에【패배버릇】이 새겨져버렸다……！
+					TALENT:TARGET:패배버릇 = 1
+				ENDIF
+			ELSEIF RESULT == 2
+				CALL EVILTY_POINT(30)
+				PRINTFORMW %CALLNAME:TARGET%의 몸은 충분히 즐겼다。
+				PRINTL
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					;用意した画像が질내사정ありきの事後なので
+					CALLFORM IMAGE_PRODUCTION(TARGET,9999)
+					SIF RESULT == 1
+						PRINTFORML ────찰칵、하고。
+				ENDIF
+				PRINTFORML 오늘이라는 날을 기념하며 한장、듬뿍 범해준 %CALLNAME:TARGET%의 있을수 없는 사후사진을 찍은 %CALLNAME:MASTER%는、
+				PRINTFORMW 마지막으로 소년에게 「뒤는 알아서 해라」라는 말을 남기고 나갈채비를 한다。
+				PRINTL
+				PRINTFORML 처음엔 들은 말을 잘 몰랐던 모습의 소년은、어리둥절한 채로 %CALLNAME:TARGET%의 손목에서 손을 놓고、
+				PRINTFORMW 역할에서 해방된것에 크게 안도의 한숨을 쉬었다……
+				PRINTL
+				PRINTFORMW ……그리고 다시금、자신의 눈앞에 펼쳐진 광경을 재확인한것같다。
+				PRINTL
+				PRINTFORMW 있을 수 없는 일을 눈앞에서 누워있는、무참하게도 능욕당한 일찍이 좋아하던 사람의 나체。
+				PRINTL
+				PRINTFORMW 빛을 잃은 눈과 흘러떨어진 눈물자국。피부에、가슴에、목덜미에、마치 소유자의 각인인것처럼 여기저기 빨갛게 남은 물린자국과 키스마크。
+				PRINTL
+				PRINTFORML 무리하게 느껴버려 완전히 딱딱해져버린 유두도、아직 남은 절정의 여운에 떨고있는 입술도、
+				PRINTFORML 무구하다고 믿고있던 그것들이 지금은 덕지덕지 %CALLNAME:MASTER%의 침범벅、
+				PRINTFORMW 뻥하고 관통당해버린 암컷구멍에선 질척질척하게 %CALLNAME:MASTER%의 정액이 흘러넘치고 있다……。
+				PRINTL
+				PRINTFORML 수치범벅、손때아 타、「처음」을 사용당해져버린 퇴물이라고 해도、 %CALLNAME:TARGET%이 특상의 암컷이었다는것에 변함은 없다。
+				PRINTFORMW 맛있는 부분은 전부 한꺼번에 %CALLNAME:MASTER%에게 맛을 봐버려진 『잔반』을 앞에두고、계속 나중으로 미뤄지고 있던 소년은 꿀꺽 하고 목을 울렸다。
+				PRINTL
+				PRINTFORMW 외모가 아름답고、그보다도 월등히 강한 듀얼리스트였던 %CALLNAME:TARGET%。원래라면 분명、그가 손에 넣을 수 조차 없었던 존재。
+				PRINTL
+				PRINTFORMW ──하지만、지금이라면。
+				PRINTL
+				PRINTFORML 강자의 먹이가 되어、「긍지 높은 듀얼리스트」에서 「침대위에서 남자를 기쁘게 하기위할 뿐인 물건」으로 추락해버린 지금이라면……。
+				PRINTFORMW 기라성처럼 눈부셨던 %CALLNAME:TARGET%이、긍지를 깨뜨려져、패배를 받아들여……자신과 같은「패배자」의 스테이지에 떨어져왔다、굴욕에 침몰당한 지금이라면……！
+				PRINTL
+				PRINTFORML ……배후에선 불현듯、욕망의 기색이 일어나。아무래도、「멋대로 하고싶다」는것은 찾은것같다。
+				PRINTFORMW 이제부터 %CALLNAME:TARGET%가 맞이할터인 비극의 예감에 썩은 미소를 지으며、옷을 입은 %CALLNAME:MASTER%는 방 문을 열었다。
+				PRINTL
+				PRINTFORML 밖을 나가서 문고리에서 손을 놓으니、천천히 문이 닫혀간다……。
+				PRINTFORMW 철컥、하고 문이 닫힌 소리가 나고 몇초 후、문 안쪽에서 한탄과 절망의 비명이 울렸다……。
+				PRINTL
+				PRINTFORMW ────
+				PRINTL
+				PRINTFORML 듀얼에 패배해、원치않은 섹스에 몸을 바쳐。
+				PRINTFORMW 가슴도、엉덩이도、입술도、여자아이가%TEXTR("비밀로 해애할/특별한 상대에게만 허락해야하는")%장소는 전부、%TEXTR("마치 장난감처럼/원치않은 상대의 욕망 그대로/승자를 대접하는 상품으로서")%%TEXTR("농락되어/장난당해/능욕당해")%……。
+				PRINTL
+				IF 패배のロストバージン == 1 || TCVAR:TARGET:질내사정횟수 >= 1
+					SIF 패배のロストバージン == 1
+						PRINTFORM 사랑하는 사람에게 바쳐야 할 터인 처녀는 빼앗겨、
+					SELECTCASE RAND:10
+					CASE 0 TO 5
+						PRINTFORM 범해지면서%TEXTR("원하지도 않은『조르기』를 말해지며/「감사합니다」같은 감사의 말까지 말하게하며/자신의 성편력을 적나라하게 고백하게하며/「좋아해」「너무좋아해」같은 사랑의 말을 강요받으며/자신도 몰랐던『약점』을 이래도말이냐 하고 교육받으며/『사용감』을 평가받으며")")%
+					CASE 6 TO 8
+						PRINTFORM %TEXTR("난폭하게 머리를 잡히며/굴욕을 새겨지듯이 눌러지며/반응을 즐기는듯이 비웃으며")%범해져
+					CASEELSE
+						PRINTFORM 싫은데도、몇번이나 몇번이나 무리하게 기분좋게 당해서
+					ENDSELECT
+					SIF TCVAR:TARGET:질내사정횟수 >= 1
+						PRINTFORM 、%TEXTR("저항/애원")%도 허무하게 자궁%TEXTR("을 정액으로 끈적하게 마킹당해/을 끈적끈적한 정액으로 더럽혀져/을 『승자』의 유전자에게 정복되어/에 정액을 버려져/에 가득 정액이 쏟아부어져")%
+					PRINTFORMW …………
+				ENDIF
+				PRINTL
+				PRINTFORMW 그리고 그뿐만 아니라──
+				PRINTL
+				;独白바람にしてみたけど……女の子側の一人称によっては齟齬出るなぁ……
+				;さりとて一人称を취득する手段はないし、モノローグ바람にするこの案は中々ハマってると思うから捨てたくないし……痛し痒し
+				PRINTFORMW 『머、멋대로…………、괘、괜찮은거지？ 읏…………후헤、헤……이、이번엔……내 %TEXTR("、턴/차례")%、！』
+				PRINTL
+				PRINTFORMW 「으、아……에……？ 읏！？ 힉……！ 왜、어째서！？ 싫어！ 싫어엇！！」
+				PRINTL
+				PRINTFORMW 도우려고 했을터인、반 친구도……
+				PRINTL
+				PRINTFORMW 『큭、이……！날뛰지말라고！！저녀석한텐 얌전하게 군 주제에！！』
+				PRINTL
+				PRINTFORMW 왜……어째서……내기에 진것도 아닌데……나보다、약한데……
+				PRINTL
+				PRINTFORMW ……그런데도……남자의 완력에는、이길수가 없어서……
+				PRINTL
+				CALL SOURCE_CALC_고통(TARGET, MASTER, 250)
+				PRINTL
+				PRINTFORMW 『헤、헤헤、 %CALLNAME:TARGET%의、가슴、흐♥ 드디어、드디어다♥』
+				PRINTL
+				PRINTFORML %TEXTR("이름정도밖에 몰랐던/언제나 음흉한 눈으로 가슴을 보고있던/시원찮은")%반 친구에게 난폭하게 가슴을 장난감처럼 당해……
+				PRINTL
+				CALL SOURCE_CALC_고통(TARGET, MASTER, 200)
+				EXP:TARGET:Ｂ경험 += 1
+				PRINTFORMW Ｂ경험　　　　 +1　( %CALLNAME:TARGET%)
+				PRINTL
+				PRINTFORMW 『츄릅……츄르릅、큭……♥ 젠장、입 닫고앉았어！ 저녀석이랑은 혀 섞었던 주제에！ 젠장、젠장！！』
+				PRINTL
+				PRINTFORML 기분나쁜 숨결을 끼얹어지면서、입술도 볼도 할짝할짝 핥아져……
+				PRINTL
+				CALL SOURCE_CALC_불결(TARGET, MASTER, 200)
+				CALL SOURCE_CALC_접촉(TARGET, MASTER, 50)
+				EXP:TARGET:키스경험 += 2
+				PRINTFORMW 키스경험　　　 +2　( %CALLNAME:TARGET%)
+				PRINTL
+				IF RAND:2 == 0
+					PRINTFORMW 『으아……위험해♥ 헤、헤헤……내、내가 녀석이 내뿜은걸、긁어내줄테니까、읏！ 、 %CALLNAME:TARGET%…… %CALLNAME:TARGET%읏……아、나와……、읏……♥』
+				ELSE
+					PRINTFORMW 『으아……위험해♥ 이게 %CALLNAME:TARGET%의 안쪽、♥ 따뜻하고、미끌미끌해서、이제、나온다……、읏……♥』
+				ENDIF
+				PRINTL
+				PRINTFORML 쭈그러져 허리를 치며、내 안에 멋대로 욕망을 뿜어냈다……
+				PRINTFORML ……작았던 탓인지 들어온지는 몰랐었지만
+				PRINTL
+				CALL SOURCE_CALC_접촉(TARGET, MASTER, 100)
+				EXP:TARGET:Ｖ경험 += 1
+				PRINTFORML Ｖ경험　　　　 +1　( %CALLNAME:TARGET%)
+				EXP:TARGET:정액경험 += 1
+				PRINTFORMW 정액경험　　　 +1　( %CALLNAME:TARGET%)
+				PRINTL
+				PRINTFORML 이제와선 내기의 지불조차 아니다……동급생에 의한、그저 %TEXTR("능욕/레이프/강간")%。
+				PRINTFORMW 악몽은、내가 의식을 놓을때까지 계속되었다……
+				PRINTL
+				FOR カウンタ,0,3
+					;変動するステータスだけで、詳細を描写せずとも「何をされたか」の想像がつくように。
+					;クラスメートくんは욕망を満たすので精一杯なので、쾌락系のステートがまったく上がらず珠も増えない。下手っぴさ……
+					;思ったよりバリエーションが出ないな……？
+					PRINTL
+					SELECTCASE RAND:3
+					CASE 0
+					;犯され
+						CALL SOURCE_CALC_접촉(TARGET, MASTER, 100)
+						EXP:TARGET:Ｖ경험 += 1
+						PRINTFORML Ｖ경험　　　　 +1　( %CALLNAME:TARGET%)
+						EXP:TARGET:정액경험 += 1
+						PRINTFORML 정액경험　　　 +1　( %CALLNAME:TARGET%)
+					CASE 1
+					;키스と乱暴な가슴만지기
+						CALL SOURCE_CALC_고통(TARGET, MASTER, 200)
+						CALL SOURCE_CALC_불결(TARGET, MASTER, 250)
+						CALL SOURCE_CALC_접촉(TARGET, MASTER, 100)
+						EXP:TARGET:키스경험 += 1
+						PRINTFORML 키스경험　　　 +1　( %CALLNAME:TARGET%)
+						EXP:TARGET:Ｂ경험 += 1
+						PRINTFORML Ｂ경험　　　　 +1　( %CALLNAME:TARGET%)
+					CASE 2
+					;펠라させられ
+						CALL SOURCE_CALC_접촉(TARGET, MASTER, 50)
+						CALL SOURCE_CALC_봉사(TARGET, MASTER, 150)
+						EXP:TARGET:펠라경험 += 2
+						PRINTFORML 펠라경험　　　 +2　( %CALLNAME:TARGET%)
+						EXP:TARGET:정음경험 += 1
+						PRINTFORML 정음경험　　　 +1　( %CALLNAME:TARGET%)
+					ENDSELECT
+					PRINTFORMW …………
+				NEXT
+				PRINTL
+				PRINTFORMW ……………………
+				PRINTL
+				PRINTFORMW 듀얼리스트로서의 프라이드도、여자로서의 순정도 존엄도、전부 다 %CALLNAME:MASTER%%TEXTR("에세 짓밟혀/에게 빼앗겨/에게 바쳐버려/에게 건네어/의 것이 되어")%。
+				PRINTL
+				PRINTFORMW 끝내는 사용이 끝나니「불하」당해、자신 이하의 약한 수컷에게까지 무참히 범해져 밟혀버려서。
+				PRINTL
+				PRINTFORML 철저하게도 프라이드를 꺾여져、패배암컷으로서의 굴욕을 마음과 몸에 깊고 깊게 새겨진 %CALLNAME:TARGET%는、
+				PRINTFORMW 오늘의 기억이 있는 한 %CALLNAME:MASTER%에겐 거스를 수 없겠지……。
+				PRINTL
+				;生意気や메스가키を失ったり、프라이드低いを취득させるのもいいかもしれない。やりすぎって言われてもあれなので今回は見送っておく
+				PRINTFORMW %CALLNAME:TARGET%의 약점을 잡았다！
+				CFLAG:TARGET:약점장악 = 1
+				IF EXP:TARGET:패배조교경험 >= 3
+					PRINTL 
+					PRINTFORML 몇번이나 %CALLNAME:MASTER%에게 패배를 당하며、그 때마다 범해져 원치않는 쾌락을 두들김당한 %CALLNAME:TARGET%는
+					PRINTFORMW %CALLNAME:MASTER%에게 져서 범해지는것이 완전히 버릇이 되어버린것 같다……。
+					PRINTL
+					PRINTFORMW %CALLNAME:TARGET%의 몸에【패배버릇】이 새겨져버렸다……！
+					TALENT:TARGET:패배버릇 = 1
+				ENDIF
+			ENDIF
+		ELSE
+			SELECTCASE ラブホ以外
+			CASE 1
+				PRINTFORML ────
+				PRINTL
+				PRINTFORM 양변기에 힘없이 기대어、
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					PRINTFORM 고간에서
+					SIF 패배のロストバージン == 1
+						PRINTFORM 파과혈과
+					PRINTFORM 가득 싸넣은 정액을 흘러넘치게 하며
+				ENDIF
+				PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+				PRINTFORML %CALLNAME:MASTER%는 한 숨을 쉰다。
+				PRINTFORMW 꽤 만족한 한때 였다……。
+				PRINTL
+				PRINTFORML 오늘이라는 날을 기념으로、마지막으로 한장、가득 범해준 %CALLNAME:TARGET%의 있을수없는 사후사진을 찍은 %CALLNAME:MASTER%는、
+				PRINTFORMW 「다른 손님에게『사용되』지 않도록」이라는 말을 남기고 화장실을 뒤로하고、가게 안으로 돌아갔다……。
+				CFLAG:MASTER:현재위치 = 場所_カドショ
+				CFLAG:TARGET:현재위치 = 場所_カドショ
+			CASE 2
+				PRINTFORML ────
+				PRINTL
+				PRINTFORM 양변기에 힘없이 기대어、
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					PRINTFORM 고간에서
+					SIF 패배のロストバージン == 1
+						PRINTFORM 파과혈과
+					PRINTFORM 가득 싸넣은 정액을 흘러넘치게 하며
+				ENDIF
+				PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+				PRINTFORML %CALLNAME:MASTER%는 한 숨을 쉰다。
+				PRINTFORMW 꽤 만족한 한때 였다……。
+				PRINTL
+				PRINTFORML 오늘이라는 날을 기념으로、마지막으로 한장、가득 범해준 %CALLNAME:TARGET%의 있을수없는 사후사진을 찍은 %CALLNAME:MASTER%는、
+				PRINTFORMW 「다른 손님에게『사용되』지 않도록」이라는 말을 남기고 화장실을 뒤로하고、가게 안으로 돌아갔다……。
+				CFLAG:MASTER:현재위치 = 場所_カフェ
+				CFLAG:TARGET:현재위치 = 場所_カフェ
+			CASE 3
+				PRINTFORML ────
+				PRINTL
+				PRINTFORM 양변기에 힘없이 기대어、
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					PRINTFORM 고간에서
+					SIF 패배のロストバージン == 1
+						PRINTFORM 파과혈과
+					PRINTFORM 가득 싸넣은 정액을 흘러넘치게 하며
+				ENDIF
+				PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+				PRINTFORML %CALLNAME:MASTER%는 한 숨을 쉰다。
+				PRINTFORMW 꽤 만족한 한때 였다……。
+				PRINTL
+				PRINTFORML 오늘이라는 날을 기념으로、마지막으로 한장、가득 범해준 %CALLNAME:TARGET%의 있을수없는 사후사진을 찍은 %CALLNAME:MASTER%는、
+				PRINTFORMW 「그대로 『공중변소』가 되지 않도록」이라는 말을 남기고 화장실을 뒤로하고、공원으로 돌아갔다……。
+				CFLAG:MASTER:현재위치 = 場所_公園
+				CFLAG:TARGET:현재위치 = 場所_公園
+			CASE 4
+				PRINTFORML ────
+				PRINTL
+				PRINTFORM 참회실 벽에 힘없이 기대어、
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					PRINTFORM 고간에서
+					SIF 패배のロストバージン == 1
+						PRINTFORM 파과혈과
+					PRINTFORM 하얗고 끈적한 『범한 죄의 증거』를 뚝뚝 흘러넘치게 하며
+				ENDIF
+				PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+				PRINTFORML %CALLNAME:MASTER%는 한 숨을 쉰다。
+				PRINTFORMW 꽤 만족한 한때 였다……。
+				PRINTL
+				PRINTFORML 오늘이라는 날을 기념으로 한장、 %CALLNAME:TARGET%의 있을수없는 사후사진을 찍은 %CALLNAME:MASTER%는、
+				PRINTFORMW 마지막으로 %CALLNAME:TARGET%의 가슴을 거칠게 만지며 귓가에「부디 제 죄를 용서해주시옵소서」라는 말뿐인 참회의 말을 읊으며 참회실을 뒤로했다……。
+				CFLAG:MASTER:현재위치 = 場所_教会
+				CFLAG:TARGET:현재위치 = 場所_教会
+			CASE 5
+				PRINTFORML ────
+				PRINTL
+				PRINTFORM 매트에 나른하게 누워、
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					PRINTFORM 고간에서
+					SIF 패배のロストバージン == 1
+						PRINTFORM 파과혈과
+					PRINTFORM 흘러넘칠정도로 주입당한 정액이 매트에 얼룩을 만들며
+				ENDIF
+				PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+				PRINTFORML %CALLNAME:MASTER%는 한 숨을 쉰다。
+				PRINTFORMW 꽤 만족한 한때 였다……。
+				PRINTL
+				PRINTFORML 오늘이라는 날을 기념으로 한장、 %CALLNAME:TARGET%의 있을수없는 사후사진을 찍은 %CALLNAME:MASTER%는、
+				PRINTFORMW 수업에서 여기에 올때마다 오늘을 기억하라는 말을 남기고 체육창고를 뒤로했다……。
+				CFLAG:MASTER:현재위치 = 場所_学校内
+				CFLAG:TARGET:현재위치 = 場所_学校内
+			CASE 6
+				PRINTFORML ────
+				PRINTL
+				PRINTFORM 체육관 벽에 힘없이 기대어、
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					PRINTFORM 고간에서
+					SIF 패배のロストバージン == 1
+						PRINTFORM 파과혈과
+					PRINTFORM 듬뿍 쏟아넣어진 정액을 뚝뚝 흘리면서
+				ENDIF
+				PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+				PRINTFORML %CALLNAME:MASTER%는 한 숨을 쉰다。
+				PRINTFORMW 꽤 만족한 한때 였다……。
+				PRINTL
+				PRINTFORMW 오늘이라는 날을 기념으로、마지막으로 한장、듬뿍 범해준 %CALLNAME:TARGET%의 있을수없는 사후사진을 찍고、 %CALLNAME:MASTER%는 체육관을 뒤로했다……。
+				CFLAG:MASTER:현재위치 = 場所_学校内
+				CFLAG:TARGET:현재위치 = 場所_学校内
+			CASE 7
+				PRINTFORML ────
+				PRINTL
+				PRINTFORM 조금 더러운 건물 벽에 힘없이 기대어、
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					PRINTFORM 고간에서
+					SIF 패배のロストバージン == 1
+						PRINTFORM 파과혈과
+					PRINTFORM 듬뿍 쏟아넣어진 정액을 뚝뚝 흘리며
+				ENDIF
+				PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+				PRINTFORML %CALLNAME:MASTER%는 한 숨을 쉰다。
+				PRINTFORMW 꽤 만족한 한때 였다……。
+				PRINTL
+				PRINTFORMW 오늘이라는 날을 기념으로、마지막으로 한장、듬뿍 범해준 %CALLNAME:TARGET%의 있을수없는 사후사진을 찍고、 %CALLNAME:MASTER%는 뒷골목을 뒤로했다……。
+				CFLAG:MASTER:현재위치 = 場所_裏通り
+				CFLAG:TARGET:현재위치 = 場所_裏通り
+			CASE 8
+				PRINTFORML ────
+				PRINTL
+				PRINTFORM 남녀동반숙소의 간소한 시트 위에 나른하게 몸을 던져、
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					PRINTFORM 고간에서
+					SIF 패배のロストバージン == 1
+						PRINTFORM 파과혈과
+					PRINTFORM 가득 싸넣은 정액을 흘러넘치게 하며
+				ENDIF
+				PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+				PRINTFORML %CALLNAME:MASTER%는 한 숨을 쉰다。
+				PRINTFORMW 꽤 만족한 한때 였다……。
+				PRINTL
+				PRINTFORMW 오늘이라는 날을 기념으로、마지막으로 한장、듬뿍 범해준 %CALLNAME:TARGET%의 있을수없는 사후사진을 찍고、 %CALLNAME:MASTER%는 남녀동반숙소를 뒤로했다……。
+				CFLAG:MASTER:현재위치 = 場所_마법都市
+				CFLAG:TARGET:현재위치 = 場所_마법都市
+			CASE 9
+				PRINTFORML ────
+				PRINTL
+				PRINTFORM 벽에 힘없이 기대어、나무상자 위에서 쩌억하고 다리를 열고
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					PRINTFORM 고간에서
+					SIF 패배のロストバージン == 1
+						PRINTFORM 파과혈과
+					PRINTFORM 듬뿍 쏙아넣어진 정액을 뚝뚝 흘리며
+				ENDIF
+				PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+				PRINTFORML %CALLNAME:MASTER%는 깊은 숨을 쉬었다。
+				PRINTFORMW 꽤 만족한 한때 였다……。
+				PRINTL
+				PRINTFORML 오늘이라는 날을 기념으로、마지막으로 한장、듬뿍 범해준 %CALLNAME:TARGET%의 있을수없는 사후사진을 찍은 %CALLNAME:MASTER%가、
+				PRINTFORMW 마지막으로 귓가에 「%TEXTR("하고싶어지면 또 지게해주지/또 지고싶어진다면 만나어 와라")%」라고 속삭이고 다시 밀회를 암시해주고、 %CALLNAME:TARGET%는 수상한 눈을 한 채로 희미하게 입꼬리를 올렸다……。
+				CFLAG:MASTER:현재위치 = 場所_王宮都市
+				CFLAG:TARGET:현재위치 = 場所_王宮都市
+			CASEELSE
+				PRINTFORML ────
+				PRINTL
+				PRINTFORM 침대에 나른하게 누워、
+				IF TCVAR:TARGET:질내사정횟수 >= 1
+					PRINTFORM 고간에서
+					SIF 패배のロストバージン == 1
+						PRINTFORM 파과혈과
+					PRINTFORM 가득 싸넣은 정액을 흘러넘치게 하며
+				ENDIF
+				PRINTFORML 절정의 여운에 몸을 떠는 %CALLNAME:TARGET%의 모습을 내려다보며
+				PRINTFORML %CALLNAME:MASTER%는 한 숨을 쉰다。
+				PRINTFORMW 꽤 만족한 한때 였다……。
+				PRINTL
+				IF TCVAR:TARGET:질내사정횟수 >= 1 && ラブホ以外 == 0
+					;用意した画像が질내사정ありきの事後なので
+					CALLFORM IMAGE_PRODUCTION(TARGET,9999)
+					SIF RESULT == 1
+						PRINTFORMW ────찰칵、하고。
+				ENDIF
+				PRINTFORMW 오늘이라는 날을 기념으로、마지막으로 한장、듬뿍 범해준 %CALLNAME:TARGET%의 있을수없는 사후사진을 찍고、 %CALLNAME:MASTER%는 호텔방을 뒤로했다……。
+			ENDSELECT
+			PRINTL
+			PRINTFORMW ────
+			PRINTL
+			PRINTFORMW 듀얼에 패배해、원치않은 섹스에 몸을 바쳐。
+			PRINTL
+			PRINTFORMW 가슴도、엉덩이도、입술도、여자아이가%TEXTR("비밀로 해애할/특별한 상대에게만 허락해야하는")%장소는 전부、%TEXTR("마치 장난감처럼/원치않은 상대의 욕망 그대로/승자를 대접하는 상품으로서")%%TEXTR("농락되어/장난당해/능욕당해")%……。
+			PRINTL
+			IF 패배のロストバージン == 1 || TCVAR:TARGET:질내사정횟수 >= 1
+				SIF 패배のロストバージン == 1
+					PRINTFORM 사랑하는 사람에게 바쳐야 할 터인 처녀는 빼앗겨、
+				SELECTCASE RAND:10
+				CASE 0 TO 5
+					PRINTFORM 범해지면서%TEXTR("원하지도 않은『조르기』를 말해지며/「감사합니다」같은 감사의 말까지 말하게하며/자신의 성편력을 적나라하게 고백하게하며/「좋아해」「너무좋아해」같은 사랑의 말을 강요받으며/자신도 몰랐던『약점』을 이래도말이냐 하고 교육받으며/『사용감』을 평가받으며")%
+				CASE 6 TO 8
+					PRINTFORM %TEXTR("난폭하게 머리를 잡히며/굴욕을 새겨지듯이 눌러지며/반응을 즐기는듯이 비웃으며")%범해져
+				CASEELSE
+					PRINTFORM 싫은데도、몇번이나 몇번이나 무리하게 기분좋게 당해서
+				ENDSELECT
+				SIF TCVAR:TARGET:질내사정횟수 >= 1
+					PRINTFORM 、%TEXTR("저항/애원")%도 허무하게 자궁%TEXTR("을 정액으로 끈적하게 마킹당해/을 끈적끈적한 정액으로 더럽혀져/을 『승자』의 유전자에게 정복되어/에 정액을 버려져/에 가득 정액이 쏟아부어져")%
+				PRINTFORMW …………
+			ENDIF
+			PRINTL
+			PRINTFORMW 듀얼리스트로서의 프라이드도、여자로서의 순정도 존업도、전부 다 %CALLNAME:MASTER%%TEXTR("에세 짓밟혀/에게 빼앗겨/에게 바쳐버려/에게 건네어/의 것이 되어")%버렸다는것을 나타내는『기념사진』。
+			SIF 패배のロストバージン == 1
+				PRINTFORM %TEXTR("평생 잊을수 없는/인생에 새겨진")%、%TEXTR("굴욕적인/치욕을 느낀")%%TEXTR("처음/로스트 버진/처녀상실")%의 기억。
+			PRINTFORMW 누구에게도 보여줄수 없는、진 암컷으로서의 등급을 매긴 증거。누구에게도 보여줄수 없는、지울수 없는 패배의 낙인。
+			PRINTL
+			PRINTFORMW 이것이 %CALLNAME:MASTER%의 손에 있는 한、 %CALLNAME:TARGET%은 %CALLNAME:MASTER%에게서 요구를 거절할수는 없겠지……。
+			PRINTL
+			PRINTFORMW %CALLNAME:TARGET%의 약점을 잡았다！
+			CFLAG:TARGET:약점장악 = 1
+			IF EXP:TARGET:패배조교경험 >= 3
+				PRINTL 
+				PRINTFORML 몇번이나 %CALLNAME:MASTER%에게 패배를 당하며、그 때마다 범해져 원치않는 쾌락을 두들김당한 %CALLNAME:TARGET%는
+				PRINTFORMW %CALLNAME:MASTER%에게 져서 범해지는것이 완전히 버릇이 되어버린것 같다……。
+				PRINTL
+				PRINTFORMW %CALLNAME:TARGET%의 몸에【패배버릇】이 새겨져버렸다……！
+				TALENT:TARGET:패배버릇 = 1
+			ENDIF
+		ENDIF
+	;Anonym추가
+	CASE 10
+		FOR LOCAL, 0, 70
+			PRINTL
+		NEXT
+		PRINTFORMW 　　벌게임！
+		PRINTFORMW %CALLNAME:MASTER%는 패배한 %CALLNAME:TARGET%을 향해서、천년카메라의 버튼을 누른다。
+		PRINTFORML
+		CALL FLASH(2)
+		PRINTFORMW 천년카메라에거 뿜어진 플래시가 사라진 후、 %CALLNAME:TARGET%의 모습은 사라져、그 장소에는 %CALLNAME:TARGET%의 모습이 찍힌 카드만이 남았다。
+		CALL CARD_GET_CHARA(TARGET,1)
+		IF CFLAG:TARGET:카드화됨 != 1 || TALENT:TARGET:듀얼리스트 != 0
+			TALENT:TARGET:듀얼리스트 = 0
+			CFLAG:TARGET:카드화됨 = 1
+		ENDIF
+		CFLAG:TARGET:현재위치 = 場所_VOID
+
+	ENDSELECT
+ELSEIF デュエル結果 == 結果_패배
+
+	SELECTCASE 賭け内容
+	CASE 5
+		PRINTFORMW %CALLNAME:TARGET%과 듀얼후、틈을 찔려、신기한 힘으로 기절당해버렸다……。
+		CALL RECOVER_PERMIL(MASTER,-200,"체력")
+		CALL RECOVER_PERMIL(MASTER,-300,"기력")
+		PRINTFORMW ………으ー음、아무래도 도망쳐버린것같다。
+		CFLAG:TARGET:현재위치 = 100
+		TIME += 60
+	CASE 6
+		IF TALENT:TARGET:패배버릇 == 1
+			PRINTFORMW 패배해버렸다……。
+			PRINTL
+			PRINTFORML ……듀얼리스트에게 두말은 없다。
+			PRINTFORML 맥빠진것같은 표정으로 기막혀하는 %CALLNAME:TARGET%에게 가까이 걸어가、
+			PRINTFORMW 내기의 대가로서 『기념사진』의 삭제를 하려하는 %CALLNAME:MASTER%를、갑자기 %CALLNAME:TARGET%각 멈췄다。
+			PRINTL
+			PRINTFORML 얼굴을 보니 볼을 물들이고、부끄러운듯이 눈을 돌리고 말을 머뭇거리는 %CALLNAME:TARGET%……。
+			PRINTL
+			PRINTFORML [0] - ……뭐야、범해줬으면 하는건가？
+			BINPUT
+			PRINTFORMW 전해진 말에 귀까지 빨갛게 하면서 머뭇머뭇 끄덕이는 %CALLNAME:TARGET%의 모습에、생각치도 못한 %CALLNAME:MASTER%의 입꼬리가 비틀린다。
+			PRINTL
+			PRINTFORML 그럼 어쩔수 없지。이번에도 충분히 귀여워해주도록 하지……。
+			PRINTFORMW 승자의 권리를 행사해서 몸소 패자에게 몸을 떨어뜨린 %CALLNAME:TARGET%을 데리고、 %CALLNAME:MASTER%는 가까운 러브호텔로 향했다……。
+			CFLAG:MASTER:현재위치 = 場所_ラブホ
+			CFLAG:TARGET:현재위치 = 場所_ラブホ
+			TIME += 30
+			SIF CFLAG:TARGET:패배함 <= 3
+				CFLAG:TARGET:패배함 = 3
+			SETBIT CFLAG:TARGET:기정사실, 0
+			人祓いモード = 0
+			TCVAR:TARGET:말하는대로 = 1
+			BASE:MASTER:발기 = 800
+			TCVAR:TARGET:듀얼패배섹스 = 1
+			EXP:TARGET:패배조교경험 += 1
+			CALL RESET_TARINCON
+			依頼조교대상 = TARGET
+			CALL EVENT_TRAIN
+		ELSE
+			PRINTFORML ……듀얼리스트에게 두말은 없다。
+			PRINTFORM 듀얼에 패배한 %CALLNAME:MASTER%는 승자가 된 %CALLNAME:TARGET%를 기려、
+			IF CFLAG:TARGET:약점장악 == 1
+				IF EXP:TARGET:패배조교경험 >= 1
+					PRINTFORMW 그녀가 보는 앞에서 그날의 『기념사진』을 삭제해주었다……。
+					PRINTL
+					PRINTFORMW …………뭐 당연히、백업은 남겨두었다만。
+				ELSE
+					PRINTFORMW 그녀의 약점에 대해서는 『잊어』주는것을 약속했다……。
+				ENDIF
+				CFLAG:TARGET:약점장악 = 0
+			ELSE
+				PRINTFORMW 제시한 액의 배상금을 지불했다……。
+				IF TALENT:TARGET:연령 == -2
+					CALL MONEY_GET(-100000)
+				ELSEIF TALENT:TARGET:연령 == -1
+					CALL MONEY_GET(-500000)
+				ELSE
+					CALL MONEY_GET(-1000000)
+				ENDIF
+			ENDIF
+		ENDIF
+	CASE 2
+		IF CFLAG:TARGET:호감도 >= 1500 && RAND:2 == 0
+			PRINTFORMW 듀얼에 패배한 후……내기에 이긴 %CALLNAME:TARGET%은 승자의 권리를 행사하여 %CALLNAME:MASTER%와의 데이트를 요구했다。
+			PRINTL
+			PRINTFORML 듀얼에 진 %CALLNAME:MASTER%에게 거절할 자격은 없다。
+			PRINTFORMW %TEXTR("기쁜듯/즐거우둣")%이 달라붙어오는 %CALLNAME:TARGET%의 감촉을 팔로 느끼면서、 %CALLNAME:MASTER%는 %CALLNAME:TARGET%와 나란히 걷기 시작했다……。
+			CFLAG:TARGET:데이트중 = 1
+			CFLAG:TARGET:동행 = 1400
+		ELSEIF CFLAG:TARGET:호감도 >= 500
+			PRINTFORMW 듀얼에 패배한 후……데이트 하고싶다면 평범하게 부탁하면 좋을텐데、라며 설교당했다。
+			PRINTL
+			PRINTFORML 내기에는 졌지만 데이트해주지 않을까 하며 %CALLNAME:MASTER%가 다시 부탁하니、
+			PRINTFORMW %CALLNAME:TARGET%는 어쩔수 없다는듯이 시큰둥해보이면서도 데이트의 권유를 받아주었다。
+			CFLAG:TARGET:데이트중 = 1
+			CFLAG:TARGET:동행 = 1400
+		ENDIF
+	;Anonym추가
+	CASE 10
+		FOR LOCAL, 0, 70
+			PRINTL
+		NEXT
+		PRINTFORMW %CALLNAME:MASTER%가 지는것이 결정된 순간、천년카메라가 멋대로 움직여、 %CALLNAME:MASTER%를 향해 플래시를 터트린다！
+		PRINTFORMW 　　벌게임！
+		PRINTFORML
+		CALL FLASH(2)
+		PRINTFORMW 플래시가 사라진 후、 %CALLNAME:MASTER%의 모습은 사라져、그 장소에는 %CALLNAME:MASTER%의 모습이 찍힌 카드만이 남았다。
+		SETCOLOR C_YELLOW
+		CUSTOMDRAWLINE ―
+		ALIGNMENT CENTER
+		PRINTL
+		CALL CHARA_CUTIN(""," GAME OVER")
+		PRINTL
+		RESETCOLOR
+		ALIGNMENT LEFT
+		CUSTOMDRAWLINE ―
+		CALL GAME_OVER
+	CASEELSE
+		SELECTCASE RAND:2
+		CASE 0
+			PRINTFORMW 진 만큼 카드팩을 상대에게 넘겨주었다……。
+			PRINTFORMW 소지금이 450 줄었다……。
+			CALL MONEY_GET(-450)
+		CASEELSE
+			PRINTFORMW 듀얼에 패배한 후……아무것도 빼앗기진 않았지만 꽤 혼났다。
+			CALL RECOVER_PERMIL(MASTER,-200,"체력")
+			CALL RECOVER_PERMIL(MASTER,-300,"기력")
+			TIME += 60
+		ENDSELECT
+	ENDSELECT
+ELSEIF デュエル結果 == 結果_引分
+	SELECTCASE 賭け内容
+	CASE 5
+		PRINTFORMW %CALLNAME:TARGET%과 듀얼후、틈을 찔려、신기한 힘으로 기절당했다……。
+		CALL RECOVER_PERMIL(MASTER,-200,"체력")
+		CALL RECOVER_PERMIL(MASTER,-300,"기력")
+		PRINTFORMW ………으ー음、아무래도 도망친것같다。
+		CFLAG:TARGET:현재위치 = 100
+		TIME += 60
+	CASE 10
+		PRINTFORMW 準備中
+	ENDSELECT
+ELSEIF デュエル結果 == 結果_NOGAME
+	SELECTCASE 賭け内容
+	CASE 5
+		PRINTFORMW 준비중인 %CALLNAME:TARGET%에게 틈을 찔려、신기한 힘으로 기절당했다……。
+		CALL RECOVER_PERMIL(MASTER,-200,"체력")
+		CALL RECOVER_PERMIL(MASTER,-300,"기력")
+		PRINTFORMW ………으ー음、아무래도 도망친것같다。
+		CFLAG:TARGET:현재위치 = 100
+		TIME += 60
+	CASE 10
+		PRINTFORMW 준비중
+	ENDSELECT
+ENDIF
+$SKIP_KAKE
+
+VARSET 賭け内容
+
+@EVILTY_POINT(悪辣상승)
+#DIM DYNAMIC 悪辣상승
+
+
+FLAG:악랄치 += 悪辣상승
+
+IF FLAG:악랄치 <= -20
+	FLAG:악랄치 = -20
+ELSEIF FLAG:악랄치 >= 120
+	FLAG:악랄치 = 120
+ENDIF
+RETURN

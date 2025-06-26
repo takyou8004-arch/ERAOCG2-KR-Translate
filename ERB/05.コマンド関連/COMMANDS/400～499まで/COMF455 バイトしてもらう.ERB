@@ -1,0 +1,526 @@
+﻿;-------------------------------------------------
+;알바시킨다
+;-------------------------------------------------
+@COM455
+#DIM DYNAMIC カウンタ,2
+#DIM DYNAMIC リスト開始
+#DIM DYNAMIC リスト終了
+#DIM DYNAMIC 아르바이트選択
+#DIM DYNAMIC お小遣い
+#DIM DYNAMIC バイト先
+#DIM DYNAMIC 着用衣装
+
+
+IF CFLAG:TARGET:아르바이트 == 0
+	PRINTFORMW 당신은 %CALLNAME:TARGET%에게 집에 돈을 벌어와줄수 없는지 부탁했지만、
+	IF CFLAG:TARGET:극대노 == 1
+		PRINTFORMW 혼났다。
+		RETURN 0
+	ENDIF
+ENDIF
+
+IF TALENT:TARGET:듀얼리스트 >= 1 && TALENT:TARGET:연령 >= 0 && CFLAG:TARGET:용돈줌 == 0
+	PRINTFORM %CALLNAME:TARGET%는 아주 싫은것도 아닌듯이、용돈으로
+	お小遣い = (RAND:30) * 100
+	PRINTFORMW {お小遣い}円를 넘겨주었습니다……。
+	IF !GETBIT(CFLAG:TARGET:10 , 1) && お小遣い >= 10000
+		SETBIT CFLAG:TARGET:10 ,1
+		PRINTFORMW %CALLNAME:TARGET%에게 약점을 잡혔다。
+	ENDIF
+	CFLAG:TARGET:용돈줌 = 1
+	RETURN 1
+ELSEIF TALENT:TARGET:듀얼리스트 >= 1 && TALENT:TARGET:연령 >= 0 && CFLAG:TARGET:용돈줌 == 0
+	PRINTFORM %CALLNAME:TARGET%에겐 오늘은 안된다고 손가락으로 X를 만들었다。
+	RETURN 0
+ENDIF
+
+
+IF CFLAG:TARGET:아르바이트
+	PRINTFORMW %CALLNAME:TARGET%는 이미 아르바이트를 하고있습니다만、아르바이트를 그만두게 하시겠습니까？
+	PRINTL [0] - 예
+	PRINTL [1] - 다른 알바를 하게한다
+	PRINTL [2] - 다시 생각한다
+	BINPUT
+	IF RESULT == 0
+		CFLAG:TARGET:아르바이트 = 0
+;		CFLAG:TARGET:バイト衣装 = 0
+;		CFLAG:TARGET:バ先 = 0
+		RETURN 0
+	ELSEIF RESULT == 2
+		RETURN 0
+	ENDIF
+ENDIF
+
+
+IF CFLAG:TARGET:호감도 >= 2000 || TALENT:TARGET:수치심 == -1
+	PRINTFORML [1] - 바니 바
+	PRINTFORML [2] - 듀얼메이드
+	PRINTFORML [3] - 무녀
+ENDIF
+PRINTFORML [4] - 편의점 알바
+PRINTFORML [5] - 슈퍼
+PRINTFORML [6] - 헬스장 인스트럭터
+PRINTFORML [7] - 패밀리레스토랑
+IF CFLAG:TARGET:호감도 >= 2000 || TALENT:TARGET:수치심 == -1
+	IF TALENT:TARGET:성별 == 2
+		PRINTFORML [8] - 신부
+	ELSE
+		PRINTFORML [8] - 수녀
+	ENDIF
+ENDIF
+IF CFLAG:TARGET:호감도 >= 2000 || TALENT:TARGET:수치심 == -1
+	IF TALENT:TARGET:성별 == 2
+		PRINTFORML [10] - 자택집사
+	ELSE
+		PRINTFORML [10] - 자택메이드
+	ENDIF
+ENDIF
+SIF CFLAG:TARGET:호감도 >= 3000 || TALENT:TARGET:수치심 == -1
+	PRINTFORML [100] - 그라비아모델
+SIF (依頼_完了횟수:304 != 0 && CFLAG:TARGET:호감도 >= 3000) || (依頼_完了횟수:304 != 0 && TALENT:TARGET:수치심 == -1 && TALENT:TARGET:마조 == 1)
+	PRINTFORML [304] - 착유목장
+SIF TALENT:TARGET:음교의신도 == 1
+	PRINTFORML [433] - 음교의 신도
+SIF 依頼_完了횟수:451 != 0 && MARK:TARGET:쾌락각인 == 3 && MARK:TARGET:굴복각인 == 3 && MARK:TARGET:반발각인 == 0
+	PRINTFORML [451] - 에로방송
+
+PRINTL
+PRINTL [1000] - 돌아간다
+
+BINPUT
+IF RESULT == 1000
+	RETURN 0
+ELSE
+	아르바이트選択 = RESULT
+	CFLAG:TARGET:아르바이트 = 아르바이트選択
+	CALL PTJ_SETTINGS(TARGET,"名前")
+	PRINTFORML %CALLNAME:TARGET%는 깔끔하게 승낙하고、오늘부터 %RESULTS%로서 일하기로 했다。
+	CALL PTJ_SETTINGS(TARGET,"衣装")
+	CALL PTJ_SETTINGS(TARGET,"行先",1)
+	RETURN 1
+ENDIF
+
+
+
+@CAN_COM455(ARG)
+#DIM DYNAMIC 時間外
+SKIPDISP ARG
+
+
+IF TIME >= 540
+	PRINTFORML 지금부터 일을 찾기엔 조금 늦은것 같다……。
+	時間外 = 1
+ENDIF
+SKIPDISP 0
+
+SIF 時間外
+	RETURN 0
+RETURN 1
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;バイトをお願いする。
+@COM_ABLE455
+;엉덩이를 쓰다듬는다実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(455)
+	RETURN RESULT
+SIF TARGET <= 0
+	RETURN 0
+;호감도1000以下は불가
+SIF CFLAG:TARGET:호감도 <= 1000
+	RETURN 0
+SIF CFLAG:TARGET:시작위치 >= 20
+	RETURN 0
+;수면中
+SIF CFLAG:수면
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1
+
+
+
+
+
+;-------------------------------------------------
+;バイト代
+;-------------------------------------------------
+@GETMONEY_PTJ(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC バイト종류
+#DIM DYNAMIC バイト代
+
+バイト종류 = CFLAG:캐릭터_ID:아르바이트
+
+CALL PTJ_SETTINGS(캐릭터_ID,"給与")
+バイト代 = RESULT
+IF バイト代 > 0
+	IF バイト종류 == PT_信徒
+		PRINTFORML 신도 %CALLNAME:캐릭터_ID%는 {バイト代}円의 상납금을 거두었다。
+	ELSEIF バイト종류 == PT_착유
+		PRINTFORML %CALLNAME:캐릭터_ID%는 암컷으로서 가슴을 짜여져 번 돈 중、{バイト代}円을 집에 넣어주었다。
+	ELSE
+		CALL PTJ_SETTINGS(캐릭터_ID,"名前")
+		PRINTFORMW %CALLNAME:캐릭터_ID%는 %RESULTS%으로서 일해서 얻은 돈 중、{バイト代}円을 집에 넣어주었다。
+	ENDIF
+	CALL PTJ_SETTINGS(캐릭터_ID,"경험")
+	;CALL CARD_EROTICS_END(캐릭터_ID) WAITが多すぎるようになって一旦コメントアウト
+	CALL MONEY_GET(バイト代)
+ENDIF
+
+
+
+;-------------------------------------------------
+;개시시간
+;-------------------------------------------------
+@PTJ_SETTINGS(캐릭터_ID,参照先,汎用플래그)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC バイト종류
+#DIM DYNAMIC 개시시간
+#DIM DYNAMIC バイト代
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 汎用플래그
+
+バイト종류 = CFLAG:캐릭터_ID:아르바이트
+SIF バイト종류 == 0
+	RETURN 0
+
+SELECTCASE バイト종류
+CASE PT_バニー
+	IF 参照先 == "名前"
+		RESULTS = バニーさん
+	ELSEIF 参照先 == "衣装"
+		CALL CLOTHES_SETTING(캐릭터_ID,500)
+		RETURN 1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = 場所_夜のお店
+		RETURN 場所_夜のお店
+	ELSEIF 参照先 == "給与"
+		CALLFORM CHARA_KACHI(캐릭터_ID, 200,1)
+		RETURN RESULT
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:대화경험 += 6
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(17,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(23,30)
+	ENDIF
+CASE PT_メイド
+	IF 参照先 == "名前"
+		RESULTS = デュエルメイド
+	ELSEIF 参照先 == "衣装"
+		CALL CLOTHES_SETTING(캐릭터_ID,501)
+		RETURN 1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = 場所_カフェ
+		RETURN 場所_カフェ
+	ELSEIF 参照先 == "給与"
+		RETURN 3000
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:대화경험 += 8
+		EXP:캐릭터_ID:듀얼경험 += 5
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(8,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(17,00)
+	ENDIF
+CASE PT_巫女
+	IF 参照先 == "名前"
+		RESULTS = 巫女さん
+	ELSEIF 参照先 == "衣装"
+		CALL CLOTHES_SETTING(캐릭터_ID,505)
+		RETURN 1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = 場所_神社
+		RETURN 場所_神社
+	ELSEIF 参照先 == "給与"
+		RETURN 2500
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:청소경험 += 8
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(8,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(17,00)
+	ENDIF
+CASE PT_편의점
+	IF 参照先 == "名前"
+		RESULTS = 편의점店員
+	ELSEIF 参照先 == "衣装"
+		CALL CLOTHES_SETTING(캐릭터_ID,506)
+		RETURN 1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = 場所_편의점
+		RETURN 場所_편의점
+	ELSEIF 参照先 == "給与"
+		RETURN 1500
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:대화경험 += 8
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(8,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(17,00)
+	ENDIF
+CASE PT_スーパー
+	IF 参照先 == "名前"
+		RESULTS = スーパー店員
+	ELSEIF 参照先 == "衣装"
+		CALL CLOTHES_SETTING(캐릭터_ID,510)
+		RETURN 1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = 場所_スーパー
+		RETURN 場所_スーパー
+	ELSEIF 参照先 == "給与"
+		RETURN 1100
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:대화경험 += 8
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(8,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(17,00)
+	ENDIF
+CASE PT_ジム
+	IF 参照先 == "名前"
+		RESULTS = ジムインストラクター
+	ELSEIF 参照先 == "衣装"
+		;ジャージスタイル
+		CALL CLOTHES_SETTING(캐릭터_ID,406)
+		RETURN 1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = 場所_ジム
+		RETURN 場所_ジム
+	ELSEIF 参照先 == "給与"
+		RETURN 500 + (MAXBASE:캐릭터_ID:체력 / 50)
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:운동경험 += 8
+		MAXBASE:캐릭터_ID:체력 += 50
+		MAXBASE:캐릭터_ID:기력 += 50
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(8,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(17,00)
+	ENDIF
+CASE PT_ファミレス
+	IF 参照先 == "名前"
+		RESULTS = ファミレスバイト
+	ELSEIF 参照先 == "衣装"
+		;メイドセット
+		CALL CLOTHES_SETTING(캐릭터_ID,501)
+		RETURN 1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = 場所_식사通り
+		RETURN 場所_식사通り
+	ELSEIF 参照先 == "給与"
+		RETURN 1500
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:대화경험 += 8
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(8,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(17,00)
+	ENDIF
+CASE PT_教会
+	IF 参照先 == "名前"
+		IF TALENT:캐릭터_ID:성별 == 2
+			RESULTS = 신父
+		ELSE
+			RESULTS = シスター
+		ENDIF
+	ELSEIF 参照先 == "衣装"
+		;（엑소시스터共通）
+		CALL CLOTHES_SETTING(캐릭터_ID,133)
+		RETURN 1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = 場所_教会
+		RETURN 場所_教会
+	ELSEIF 参照先 == "給与"
+		RETURN 2500
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:청소경험 += 8
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(8,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(17,00)
+	ENDIF
+CASE PT_使用人
+	IF 参照先 == "名前"
+		IF TALENT:캐릭터_ID:성별 == 2
+			RESULTS = 執事
+		ELSE
+			RESULTS = メイド
+		ENDIF
+	ELSEIF 参照先 == "衣装"
+		;メイドセット
+		CALL CLOTHES_SETTING(캐릭터_ID,501)
+		RETURN 1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = RAND:10 + 1
+		RETURN 1
+	ELSEIF 参照先 == "給与"
+		RETURN 0
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:청소경험 += 10
+		EXP:캐릭터_ID:요리경험 += 10
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(8,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(22,00)
+	ENDIF
+CASE PT_グラビア
+	IF 参照先 == "名前"
+		RESULTS = グラビアモデル
+	ELSEIF 参照先 == "衣装"
+		;물着セット欲しい
+		RETURN -1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = 場所_裏通り
+		RETURN 場所_裏通り
+	ELSEIF 参照先 == "給与"
+		CALLFORM CHARA_KACHI(캐릭터_ID,100,1)
+		RETURN RESULT
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:피사경험 += 5
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(15,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(20,00)
+	ENDIF
+CASE PT_착유
+	IF 参照先 == "名前"
+		RESULTS = 착유암소
+	ELSEIF 参照先 == "衣装"
+		CALL CLOTHES_SETTING(캐릭터_ID,115)
+		RETURN 1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = 場所_森
+		RETURN 場所_森
+	ELSEIF 参照先 == "給与"
+		IF TALENT:캐릭터_ID:모유체질 == 1
+			CALLFORM CHARA_KACHI(캐릭터_ID,1000,1)
+		ELSE
+			CALLFORM CHARA_KACHI(캐릭터_ID,10,1)
+		ENDIF
+		RETURN RESULT
+	ELSEIF 参照先 == "경험"	
+		EXP:캐릭터_ID:Ｂ경험 += 6
+		CFLAG:캐릭터_ID:가슴성장 += 5
+		CFLAG:캐릭터_ID:엉덩이성장 += 3
+		EXP:캐릭터_ID:Ｂ절정경험 += 3
+		SIF MILK_CAN(캐릭터_ID) == 1
+			EXP:캐릭터_ID:분유경험 += 6
+		EXP:캐릭터_ID:구속경험 += 6
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(17,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(23,30)
+	ENDIF
+CASE PT_信徒
+	IF 参照先 == "名前"
+		RESULTS = 음교의신도
+	ELSEIF 参照先 == "衣装"
+		CALL CLOTHES_SETTING(캐릭터_ID,114)
+		RETURN 1
+	ELSEIF 参照先 == "行先"
+		RETURN -1
+	ELSEIF 参照先 == "給与"
+		RETURN 3500
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:대화경험 += 5
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN -1
+	ELSEIF 参照先 == "終了"
+		RETURN -1
+	ENDIF
+CASE PT_エロ配信者
+	IF 参照先 == "名前"
+		RESULTS = エロ配信者
+	ELSEIF 参照先 == "衣装"
+		RETURN -1
+	ELSEIF 参照先 == "行先"
+		SIF 汎用플래그 == 1
+			CFLAG:캐릭터_ID:현재위치 = 場所_寝室
+		RETURN 場所_寝室
+	ELSEIF 参照先 == "給与"
+		CALLFORM CHARA_KACHI(캐릭터_ID,100+EXP:캐릭터_ID:피사경험,1)
+		RETURN RESULT
+	ELSEIF 参照先 == "경험"
+		EXP:캐릭터_ID:촬영경험 += 3
+		EXP:캐릭터_ID:피사경험 += 3
+		RETURN -1
+	ELSEIF 参照先 == "開始"
+		RETURN KANTAN_TIME(23,00)
+	ELSEIF 参照先 == "終了"
+		RETURN KANTAN_TIME(24,00)
+	ENDIF
+ENDSELECT
+
+RETURN -1
+
+
+;-------------------------------------------------
+;帰宅時間
+;-------------------------------------------------
+@BACKTIME_PTJ(캐릭터_ID,バイト종류)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC バイト종류
+#DIM DYNAMIC 帰宅時間
+SELECTCASE バイト종류
+	CASE 1
+		帰宅時間 = KANTAN_TIME(23,30)
+	CASEELSE
+		帰宅時間 = KANTAN_TIME(17,00)
+ENDSELECT
+RETURN 帰宅時間
+
+@CHAR_GOINGOUT(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カウンタ
+
+
+IF CFLAG:캐릭터_ID:현재위치 == CFLAG:MASTER:현재위치 || CFLAG:MASTER:현재위치 <= 自宅部屋最大値
+	;目の前の子が아르바이트に行くか、자신이 家にいるときに同居人がバイトに向かうとメッセージ
+	IF CFLAG:캐릭터_ID:알바중 == 1
+		PRINTFORMW %CALLNAME:캐릭터_ID%는 직장으로 향한 것 같다。
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 11, 7, 1)
+	ELSE
+		PRINTFORMW %CALLNAME:캐릭터_ID%는 외출한 것 같다。
+		CALL KOJO_MESSAGE_SEND("EVENT", 캐릭터_ID, 11, 7)
+	ENDIF
+ENDIF
+
+;현재위치が同じなら、その캐릭터クターの동행を解除し、エッチな雰囲気は解除される。
+IF CFLAG:캐릭터_ID:현재위치 == CFLAG:MASTER:현재위치
+	CFLAG:캐릭터_ID:동행 = 0
+	FOR カウンタ,0,CHARANUM
+		CALL RESET_SEXCON(캐릭터_ID)
+	NEXT
+ENDIF
+
+

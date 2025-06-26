@@ -1,0 +1,148 @@
+﻿;-------------------------------------------------
+;디저트카페로 초대한다
+;-------------------------------------------------
+@COM617 
+LOCAL = RAND:100
+LOCAL:1 = 90 + GET_SUCCESS_RATE() / 5
+SIF LOCAL:1 > 99
+	LOCAL:1 = 99
+IF LOCAL <= 9
+	;10％で大成功
+	EXP:MASTER:대화경험 ++
+	EXP:MASTER:데이트경험 ++
+	EXP:TARGET:데이트경험 ++
+	TFLAG:SELECTCOM분기 = 1
+ELSEIF LOCAL >= LOCAL:1
+	;10～1％で失敗
+	TFLAG:SELECTCOM분기 = -1
+ELSE
+	;残りは成功
+	TFLAG:SELECTCOM분기 = 0
+ENDIF
+
+;その場に居る데이트중TARGET全員で回す
+LOCAL:1 = TARGET
+FOR LOCAL,1,CHARANUM
+	SIF TARGET:LOCAL <= 0
+		CONTINUE
+	SIF CFLAG:(TARGET:LOCAL):수면
+		CONTINUE
+	SIF CFLAG:(TARGET:LOCAL):데이트중 == 0
+		CONTINUE
+	TARGET = TARGET:LOCAL
+	CALL COM617_1
+NEXT
+TARGET = LOCAL:1
+
+BASE:MASTER:체력 = MIN(BASE:MASTER:체력 + MAXBASE:MASTER:체력 / 10 , MAXBASE:MASTER:체력)
+BASE:MASTER:기력 = MIN(BASE:MASTER:기력 + MAXBASE:MASTER:기력 / 3 , MAXBASE:MASTER:기력)
+EXP:MASTER:데이트경험 ++
+
+TIME += 60
+CALL MONEY_GET(-3000)
+
+RETURN 1
+
+
+@COM617_1
+DOWNBASE:기력 += 10
+
+;固定で획득するソース
+SOURCE:환락 = 800
+SOURCE:정애 = 300
+
+;ABL:욕망をみる
+IF ABL:욕망 <= 1
+	SOURCE:환락 += (ABL:욕망 * 60)
+ELSEIF ABL:욕망 <= 3
+	SOURCE:환락 += 300 + (ABL:욕망 * 60)
+ELSEIF ABL:욕망 <= 5
+	SOURCE:환락 += 600 + (ABL:욕망 * 60)
+ELSEIF ABL:욕망 <= 8
+	SOURCE:환락 += 900 + (ABL:욕망 * 75)
+ELSEIF ABL:욕망 <= 11
+	SOURCE:환락 += 1500 + (ABL:욕망 * 75)
+ELSE
+	SOURCE:환락 += 2500 + (ABL:욕망 * 30)
+ENDIF
+
+;ABL:봉사정신をみる
+IF ABL:봉사정신 <= 1
+	SOURCE:정애 += (ABL:봉사정신 * 30)
+ELSEIF ABL:봉사정신 <= 3
+	SOURCE:정애 += 200 + (ABL:봉사정신 * 30)
+ELSEIF ABL:봉사정신 <= 5
+	SOURCE:정애 += 500 + (ABL:봉사정신 * 30)
+ELSEIF ABL:봉사정신 <= 8
+	SOURCE:정애 += 700 + (ABL:봉사정신 * 45)
+ELSEIF ABL:봉사정신 <= 11
+	SOURCE:정애 += 1200 + (ABL:봉사정신 * 45)
+ELSE
+	SOURCE:정애 += 1800 + (ABL:봉사정신 * 20)
+ENDIF
+
+;호감도をみる
+IF CFLAG:호감도 <= 500
+	SOURCE:환락 += CFLAG:호감도
+ELSEIF CFLAG:호감도 <= 5000
+	SOURCE:환락 += 750 + (CFLAG:호감도 - 500) / 3
+ELSE
+	SOURCE:환락 += 2000 + (CFLAG:호감도 - 5000) / 4
+ENDIF
+SIF SOURCE:환락 < 0
+	SOURCE:환락 = 0
+
+
+SOURCE:수동 = 200 + 100 * ABL:순종
+SOURCE:정복 = 200 + 100 * ABL:새드끼
+
+IF TFLAG:SELECTCOM분기 == -1
+	TIMES SOURCE:환락 , 0.10
+	TIMES SOURCE:정애 , 0.10
+	TIMES SOURCE:정복 , 0.50
+	TIMES SOURCE:수동 , 0.50
+ELSEIF TFLAG:SELECTCOM분기 == 0
+	TIMES SOURCE:환락 , 1.00
+	TIMES SOURCE:정애 , 1.00
+	TIMES SOURCE:정복 , 1.00
+	TIMES SOURCE:수동 , 1.00
+ELSE
+	TIMES SOURCE:환락 , 2.00
+	TIMES SOURCE:정애 , 1.50
+	TIMES SOURCE:정복 , 2.00
+	TIMES SOURCE:수동 , 2.00
+	SIF TALENT:15 < 1
+		TALENT:15 = 1
+ENDIF
+
+BASE:(TARGET:LOCAL):체력 = MIN(BASE:(TARGET:LOCAL):체력 + MAXBASE:(TARGET:LOCAL):체력 / 10 , MAXBASE:(TARGET:LOCAL):체력)
+BASE:(TARGET:LOCAL):기력 = MIN(BASE:(TARGET:LOCAL):기력 + MAXBASE:(TARGET:LOCAL):기력 / 3 , MAXBASE:(TARGET:LOCAL):기력)
+EXP:TARGET:데이트경험 ++
+TCVAR:MASTER:식사가능여부 = 1440 * DAY + TIME
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;디저트카페로 초대한다
+@COM_ABLE617
+;毎日リセット甘味플래그
+SIF MONEY < 3000
+	RETURN 0
+SIF TIME_PROGRESS(TCVAR:식사가능여부) < 240
+	RETURN 0
+;데이트중以外
+SIF CFLAG:TARGET:데이트중 != 1
+	RETURN 0
+SIF CFLAG:MASTER:현재위치 != 50
+	RETURN 0
+SIF GLOBAL_COMABLE(617)
+	RETURN RESULT
+;상대가 居ない
+SIF !TARGET
+	RETURN 0
+;수면中
+SIF CFLAG:수면
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

@@ -1,0 +1,135 @@
+﻿@CARDNAME_72406,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 초량 요청 알파-콜
+	CASE "略称"
+RESULTS = 알파-콜
+	CASE "カテゴリ"
+RESULTS:0 = 초량
+ENDSELECT
+
+
+@CARD_72406(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "추가日"
+		RETURN 250427
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72406(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①: 자신의 「초량」 몬스터가 전투 / 효과로 파괴되었을 경우 발동할 수 있다.
+PRINTL 엑스트라 덱에서 랭크 7 이하의 「초량」 엑시즈 몬스터 1장을 특수 소환한다.
+PRINTL 그 후, 그 엑시즈 몬스터 카드에 카드명이 기재되어 있는 「초량사」 몬스터 1장을,
+PRINTL 자신의 패 / 덱 / 묘지에서 특수 소환할 수 있다.
+
+
+@CARDCAN_72406(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72406)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72406)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 엑시즈
+	효과条件カテゴリ = 초량
+	CALLFORM 효과条件レベル_ADV(7,"以下")
+	효과条件소환可 = 1
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 초량
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_72406(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 選択カード名前
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72406,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종류 = 엑시즈
+		효과条件カテゴリ = 초량
+		CALLFORM 효과条件レベル_ADV(7,"以下")
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			SELECTCASE RESULT:1
+				CASE 42262
+					選択カード名前 = 초량士ブル-レイヤ-
+				CASE 52141
+					選択カード名前 = 초량士レッドレイヤ-
+				CASE 52142
+					選択カード名前 = 초량士グリ-ンレイヤ-
+				CASE 52143
+					選択カード名前 = 초량士ホ화이트レイヤ-
+				CASE 52144
+					選択カード名前 = 초량사 블랙 레이어
+			ENDSELECT
+		ENDIF
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+효과条件名前 = %選択カード名前%
+		효과条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

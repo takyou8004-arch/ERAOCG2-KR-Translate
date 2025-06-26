@@ -1,0 +1,110 @@
+﻿@CARDNAME_94232,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 고스트 컨버트
+	CASE "略称"
+RESULTS = 망령 컨버트
+	CASE "カテゴリ"
+RESULTS:0 = 기황
+ENDSELECT
+
+
+@CARD_94232(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250602
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_94232(종류)
+#DIM DYNAMIC 종류
+CALL CARD_ABLE(0,발동誘発)
+PRINTL ①: 자신 필드에 "기황제" 몬스터가 존재하고, 상대의 마법 / 함정/몬스터의 효과가 발동했을 때,
+PRINTL 자신의 묘지의 기계족 몬스터 1장을 게임에서 제외하고 발동할 수 있다.
+PRINTL 그 발동을 무효로 하고 파괴한다.
+PRINTL 발동 후 이 카드는 묘지로 보내지 않고, 그대로 세트한다.
+PRINTL 
+
+@CARDCAN_94232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,94232)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 발동誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+효과条件カテゴリ = 기황제
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 기계족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_94232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,94232)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"表",3,1)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 기계족
+		효과条件종류 = モン全般
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+			RETURN 1
+		ENDIF
+	ENDIF
+ENDIF

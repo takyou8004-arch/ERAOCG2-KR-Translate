@@ -1,0 +1,100 @@
+﻿@CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カードID
+
+#DIM DYNAMIC 条件合致数
+#DIM DYNAMIC 条件合致レベル数
+#DIM DYNAMIC 条件合致攻撃力数
+#DIM DYNAMIC 条件合致守備力数
+#DIM DYNAMIC 条件合致魔力Ｃ数
+#DIM DYNAMIC 条件合致個別Ｃ数
+#DIM DYNAMIC 条件合致悪性Ｃ数
+#DIM DYNAMIC 条件合致Ｘ素材数
+SELECTCASE ゾーン
+	CASE "","효과処理"
+		PRINT
+	CASEELSE
+		カードID = GETVAR(@"%듀얼리스트%_%ゾーン%:場所")
+ENDSELECT
+
+CALL CARD_FILTER_BASIC(듀얼리스트,"上級",ゾーン,場所,0,1,カードID)
+条件合致数 = RESULT:1
+条件合致レベル数 = RESULT:2
+条件合致攻撃力数 = RESULT:3
+条件合致守備力数 = RESULT:4
+
+条件合致魔力Ｃ数 = RESULT:8
+条件合致個別Ｃ数 = RESULT:9
+条件合致悪性Ｃ数 = RESULT:10
+条件合致Ｘ素材数 = RESULT:11
+VARSET RESULT
+;条件달성！
+IF 효과条件CNT == 1
+	RESULT:2 = 条件合致レベル数
+	RESULT:3 = 条件合致攻撃力数
+	RESULT:4 = 条件合致守備力数
+	
+	RESULT:8 = 条件合致魔力Ｃ数
+	RESULT:9 = 条件合致個別Ｃ数
+	RESULT:10 = 条件合致悪性Ｃ数
+	RESULT:11 = 条件合致Ｘ素材数
+
+	IF うららチェック == 1 && 효과範囲덱 == 1
+		うららチェックパス = 1
+	ELSEIF わらしチェック == 1 && 효과範囲묘지 == 1
+		わらしチェックパス = 1
+	ENDIF
+	IF 효과条件限界値 >= 1
+		IF 条件合致数 >= 효과条件限界値
+			条件合致数 = 효과条件限界値
+		ENDIF
+	ENDIF
+	RETURN 条件合致数
+ELSE
+	IF 条件合致数 >= 1
+		IF うららチェック == 1 && 효과範囲덱 == 1
+			うららチェックパス = 1
+			SIF 효과条件うらら解除
+				CALL CARD_DRAW_CHECK(1)
+		ELSEIF わらしチェック == 1 && 효과範囲묘지 == 1
+			わらしチェックパス = 1
+		ENDIF
+		RETURN 1
+	ENDIF
+ENDIF
+RETURN 0
+
+
+@CARD_DRAW_CHECK(チェック破棄)
+#DIM DYNAMIC チェック破棄
+IF チェック破棄 == 0
+	SIF うららチェック == 1
+		うららチェックパス = 1
+ELSEIF チェック破棄 == 1
+	うららチェックパス = 0
+ENDIF
+
+@CARD_CHECK_EXT(듀얼리스트,종류,ゾーン,場所,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カードID
+
+#DIM DYNAMIC 条件合致数
+
+CALL CARD_FILTER_EXT(듀얼리스트,"上級",종류,場所,0,1,カードID)
+条件合致数 = RESULT:1
+
+;条件달성！
+IF 濾過条件CNT == 1
+	RETURN 条件合致数
+ELSE
+	SIF 条件合致数 >= 1
+		RETURN 1
+	RETURN 0
+ENDIF
+RETURN 0

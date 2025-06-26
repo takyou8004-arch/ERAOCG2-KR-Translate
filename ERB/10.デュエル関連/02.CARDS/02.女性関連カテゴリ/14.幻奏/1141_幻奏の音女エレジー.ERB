@@ -1,0 +1,103 @@
+@CARDNAME_1141,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 환주의 음녀 엘레지
+	CASE "略称"
+RESULTS = 환주 엘레지
+	CASE "カテゴリ"
+RESULTS:0 = 환주
+ENDSELECT
+
+
+@CARD_1141(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1141(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①: 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 자신 필드의 특수 소환된 「환주」 몬스터는 효과로는 파괴되지 않는다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 특수 소환된 이 카드가 몬스터 존에 존재하는 한,
+PRINTL 자신 필드의 천사족 몬스터의 공격력은 300 증가한다.
+
+
+
+@CARDCAN_1141(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1141)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") == 召種通常
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1141(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 환주
+	효과条件召種 = 召種全특수
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件종족 = 천사족
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,300)
+ENDIF

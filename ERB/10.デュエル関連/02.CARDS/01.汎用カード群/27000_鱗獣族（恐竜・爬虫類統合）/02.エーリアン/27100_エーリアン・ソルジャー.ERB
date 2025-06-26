@@ -1,0 +1,165 @@
+﻿@CARDNAME_27100,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 에일리언 솔저
+	CASE "略称"
+RESULTS = A 솔저
+	CASE "カテゴリ"
+RESULTS:0 = 에일리언
+ENDSELECT
+
+
+@CARD_27100(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+@CARD_EXPLANATION_27100(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 수수께끼의 생명체, 에일리언의 상급 전사.
+PRINTL 비교적 높은 공격력을 지니고 있지만, 반면 특수한 능력은 갖추고 있지 않다.
+PRINTL 
+PRINTL 
+PRINTL 
+;PRINTL ①：この카드가 戦闘で몬스터를 破壊した場合に발동する。
+;PRINTL 그 몬스터를 자신의 마법＆함정 존에 둔다。
+;PRINTL 置けない場合は제외한다。
+;PRINTL ②：자신의 마법＆함정ゾーンの조교대상はことあるごとに開発される。
+
+@CARDCAN_27100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,27100)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == リアクション효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_27100(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名前
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃後強制誘発
+	CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",戦闘場所(듀얼리스트,1),1)
+	IF RESULT != -1
+		조교대상 = RESULT
+		選択カード名前 = %CALLNAME:조교대상%
+	ELSE
+		TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트,1)},"名前"
+		選択カード名前 = %RESULTS%
+	ENDIF
+
+	IF 마함数(듀얼리스트) < 5
+		CALL FULLRESET
+		효과条件ID = 戦闘カードID(듀얼리스트,1)
+		CALL CARD_SET_BASIC(듀얼리스트,"상대묘지",ゾーン,場所,"表側표시")
+		IF RESULT == 1
+			PRINTFORML 에이리언 ソルジャ-は下級전사に지시を出し、
+			PRINTFORMW 倒れた%選択カード名前%を拘束させた。
+			IF 조교대상 != -1
+				CALL EROTIC_MOVE("拘束晒し",조교대상,-1,100)
+			ENDIF
+		ENDIF
+	ELSE
+		CALL FULLRESET
+		효과条件ID = 戦闘カードID(듀얼리스트,1)
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			PRINTFORML 에이리언 ソルジャ-は持っていた機械を起動させ、
+			PRINTFORMW 無数の同胞の待つ이차원へと%選択カード名前%を転移させた。
+			IF 조교대상 != -1
+				CALL EROTIC_MOVE("묘상捕縛",조교대상,-1,200)
+				CALL EROTIC_MOVE("全身凌辱",조교대상,-1,2000)
+				CALL EROTIC_MOVE("疑似출산",조교대상,-1,1000)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 묘지起動
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_마함:{カウンタ}") == -1
+			CONTINUE
+		
+
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"마함",カウンタ)
+		IF RESULT != -1
+			조교대상 = RESULT
+			SELECTCASE RAND:4
+				CASE 0
+					PRINTFORMW 拘束されている %CALLNAME:조교대상%는全身を激しく凌辱されている。
+					CALL EROTIC_MOVE("全身凌辱",조교대상,-1,100)
+				CASE 1
+					PRINTFORMW 拘束されている %CALLNAME:조교대상%는謎の光線を照射され続けている。
+					CALL EROTIC_MOVE("절정光線",조교대상,-1,1000)
+				CASE 2
+					PRINTFORMW 拘束されている %CALLNAME:조교대상%는에이리언の幼体を출산させられている。
+					CALL EROTIC_MOVE("疑似출산",조교대상,-1,100)
+				CASE 3
+					PRINTFORMW 拘束されている %CALLNAME:조교대상%는謎の粘つく액체を口内に流し込まれている。
+					CALL EROTIC_MOVE("정음",조교대상,-1,500)
+			ENDSELECT
+		ENDIF
+	NEXT
+ENDIF

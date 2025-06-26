@@ -1,0 +1,162 @@
+﻿@CARDNAME_50562,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 블랙 페더 드래곤
+	CASE "略称"
+RESULTS = 블랙 페더
+	CASE "カテゴリ"
+RESULTS:0 = 블랙 페더
+RESULTS:1 = 블랙 페더 드래곤
+ENDSELECT
+
+
+@CARD_50562(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50562(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 8
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50562) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_50562(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너 + 튜너 이외의 몬스터 1장 이상
+PRINTL 이 카드명의 ③의 효과는 1턴에 1번밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(0,ライフ変強制誘発)
+PRINTL ①: 자신이 효과 데미지를 받을 때마다, 이 카드에 악성 카운터를 1개 놓는다.
+PRINTL 그 후, 받은 효과 데미지분의 LP를 회복한다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 이 카드의 공격력은, 이 카드의 악성 카운터의 수× 700 내린다.
+CALLFORM CARD_ABLE(3,필드起動)
+PRINTL ③: 자신 필드의 악성 카운터를 전부 제거하고,
+PRINTL 제거한 악성 카운터의 수× 700 데미지를 준다.
+
+@CARDCAN_50562(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50562)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == ライフ変強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ダメージ受者 != 듀얼리스트
+		RETURN 0
+	SIF ダメージ増減 != "減少"
+		RETURN 0
+	SIF ダメージ종류 != "효과"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_3(듀얼리스트,50562)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_50562(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 与ダメージ
+#DIM DYNAMIC 消費カウンタ
+
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == ライフ変強制誘発
+	CALL FULLRESET
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"悪Ｃ",1)
+	PRINTFORML
+	PRINTFORMW 黒날개がダメージを受け止めました。
+	PRINTFORML
+	CALL LIFE_CHANGE(듀얼리스트,"増加","효과",ダメージ受値)
+ELSEIF 종류 == 攻守変動
+	攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_悪Ｃ:場所") * 700
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,-攻撃力修正)
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50562,3)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+				CONTINUE
+			SIF GETVAR(@"%듀얼리스트%_MZ_悪Ｃ:カウンタ") == 0
+				CONTINUE
+			消費カウンタ += GETVAR(@"%듀얼리스트%_MZ_悪Ｃ:カウンタ")
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"悪Ｃ",0,1)
+		NEXT
+		与ダメージ = 消費カウンタ * 700
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과", 与ダメージ,1)
+	ENDIF
+ENDIF
+

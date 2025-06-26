@@ -1,0 +1,172 @@
+﻿@CARDNAME_12001,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 섬도희－하야테 (로제)
+	CASE "略称"
+		RESULTS = 섬도희－하야테영
+	CASE "カテゴリ"
+		RESULTS:0 = 섬도희
+		RESULTS:1 = 섬도
+		RESULTS:2 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_12001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1000
+	CASE "특수制限"
+		RETURN 1
+	CASE "別途ID"
+		RETURN 42002
+	CASE "성별"
+		RETURN 牝性
+	CASE "生産불가"
+		RETURN 1
+	CASE "連動ID"
+		RETURN 2001
+ENDSELECT
+
+
+RETURN 0
+
+
+@CARD_EXPLANATION_12001(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「섬도희－로제」 1장
+PRINTL 자신은 「섬도희－하야테 (로제)」를 1턴에 1번밖에 특수 소환할 수 없다.
+CALL CARD_ABLE(0,EX덱起動)
+PRINTL 자신의 묘지에 "섬도희－하야테」가 존재할 경우, 이 카드는 배틀 페이즈 중에도 L소환 할 수 있다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 직접 공격할 수 있다.
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ②：이 카드가 전투를 실행한 데미지 스텝 종료시에 발동할 수 있다.
+PRINTL EX덱에서 "섬도」 카드 1장을 묘지로 보낸다.
+
+@CARDSUMMON_12001(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件名前 = 섬도희－로제
+ELSE
+	PRINT
+ENDIF
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,12001) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_12001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,12001)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == EX덱起動
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,59650)
+	SIF RESULT == 1
+		RETURN 0
+
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 섬도희－하야테
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = 섬도희－로제
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 섬도
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_12001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 攻撃力低下
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,12001,1)
+	IF RESULT == 0
+		TRYCALLFORM CARDSUMMON_12001(듀얼리스트,場所)
+		TRYCALLFORM LINSUMMON(듀얼리스트,場所)
+	ENDIF
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,12001)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 섬도
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"자신",場所,"直攻")
+ENDIF
+
+

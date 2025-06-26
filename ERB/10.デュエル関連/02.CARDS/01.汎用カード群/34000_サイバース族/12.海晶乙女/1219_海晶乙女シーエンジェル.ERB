@@ -1,0 +1,127 @@
+﻿@CARDNAME_1219,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 마린세스 시-엔젤
+	CASE "略称"
+RESULTS = 시-엔젤
+	CASE "カテゴリ"
+RESULTS:0 = 마린세스
+ENDSELECT
+
+
+@CARD_1219(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 사이버스족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+
+RETURN 0
+
+
+@CARD_EXPLANATION_1219(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 레벨 4 이하의 "마린세스" 몬스터 1장
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①: 이 카드가 링크 소환에 성공했을 경우에 발동할 수 있다.
+PRINTL 덱에서 "마린세스" 마법 카드 1장을 패에 넣는다.
+
+
+
+
+@CARDSUMMON_1219(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 마린세스
+	CALLFORM 素材条件レベル_ADV(4, "以下")
+	素材条件종류 = レベル持ち
+ELSE
+	PRINT
+ENDIF
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,1219) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_1219(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1219)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,1219)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 마린세스
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1219(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1219,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 마린세스
+		효과条件종류 = 마법全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ENDIF
+
+

@@ -1,0 +1,220 @@
+@CARDNAME_79856,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마인드컨트롤러 - 예속의 봉사교육
+	CASE "略称"
+		RESULTS = MC 봉사교육
+	CASE "カテゴリ"
+		RESULTS:0 = MC
+		RESULTS:1 = 드래곤메이드
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79856(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79856(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：자신의 마법 / 함정 존에 『드래곤메이드의 야간근무』가 존재할 경우 발동할 수 있다.
+PRINTL 이 카드의 발동시의 효과 처리로서 자신 필드에 존재하는『드래곤메이드」카드 수만큼, 예속의 봉사교육을 한다.
+CALLFORM CARD_ABLE(2,ターン終了時)
+PRINTL ②：자신 / 상대의 엔드 페이즈에 자신의 마법 / 함정 존에 『드래곤메이드의 야간근무」가 존재할 경우, 묘지에서 발동할 수 있다.
+PRINTL 자신 필드에 존재하는「드래곤메이드」카드 수만큼, 예속의 봉사교육을 한다.
+PRINTL 상대의 덱이 40장 이상인 경우, 봉사교육은 상대의 패에 넣어진다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ③：이 카드가 마법 / 함정 존에 존재하는 한, 상대 묘지의「MC」카드의 수×50 만큼
+PRINTL 자신의「E.R.A" 몬스터의 공격력 / 수비력은 올라간다.
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79856(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79856)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79856)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 드래곤메이드의 야간근무
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = 드래곤메이드
+		효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 드래곤메이드의 야간근무
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "묘지"
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79856(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 횟수
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79856,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		SETCOLOR C_PINK 
+		PRINTFORMW %CALLNAME:MASTER%는 지금부터 행해지는 봉사교육을 읽어 내려간다.
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과条件カテゴリ = 드래곤메이드
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			횟수 = RESULT
+
+			REPEAT 횟수
+				SELECTCASE RAND:4
+					CASE 0
+						CALL CARD_GENERATE_DECK(対面者,79853)
+					CASE 1
+						CALL CARD_GENERATE_DECK(対面者,79854)
+					CASE 2
+						CALL CARD_GENERATE_DECK(対面者,79855)
+					CASE 3
+						CALL CARD_GENERATE_DECK(対面者,79857)
+				ENDSELECT
+			REND
+
+		PRINTFORMW 상대의 덱에 최면 봉사 카드가 {횟수}장 생성되었다.
+		RESETCOLOR
+		CALL SHUFFLE(対面者)
+	ENDIF
+ELSEIF 종류 == ターン終了時
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79856)
+	IF RESULT == 0
+
+		SETCOLOR C_PINK 
+		PRINTFORMW %CALLNAME:MASTER%는 지금부터 행해지는 봉사교육을 읽어 내려간다.
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과条件カテゴリ = 드래곤메이드
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			횟수 = RESULT
+		IF 現山札数(対面者) > 40
+			;４０장을 超えると그대로 손패へ
+			PRINTFORMW 음란한 의상을 입고 있는 드래곤메이드들은 교육 진도가 나아가지 못 하는 것을 지적하고 있다.
+			REPEAT 횟수
+				SELECTCASE RAND:4
+					CASE 0
+						CALL CARD_GENERATE_HAND(対面者,79853)
+					CASE 1
+						CALL CARD_GENERATE_HAND(対面者,79854)
+					CASE 2
+						CALL CARD_GENERATE_HAND(対面者,79855)
+					CASE 3
+						CALL CARD_GENERATE_HAND(対面者,79857)
+				ENDSELECT
+			REND
+			PRINTFORMW 상대의 덱에 최면 봉사 카드가 {횟수}장 생성되었다.
+			RESETCOLOR
+
+		ELSE
+			REPEAT 횟수
+				SELECTCASE RAND:4
+					CASE 0
+						CALL CARD_GENERATE_DECK(対面者,79853)
+					CASE 1
+						CALL CARD_GENERATE_DECK(対面者,79854)
+					CASE 2
+						CALL CARD_GENERATE_DECK(対面者,79855)
+					CASE 3
+						CALL CARD_GENERATE_DECK(対面者,79857)
+				ENDSELECT
+			REND
+		PRINTFORMW 상대의 덱에 최면 봉사 카드가 {횟수}장 생성되었다.
+		RESETCOLOR
+		CALL SHUFFLE(対面者)
+	ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과条件カテゴリ = MC
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 50
+	CALL FULLRESET
+	효과条件カテゴリ = E.R.A
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻撃力修正)
+	CALL FULLRESET
+ENDIF

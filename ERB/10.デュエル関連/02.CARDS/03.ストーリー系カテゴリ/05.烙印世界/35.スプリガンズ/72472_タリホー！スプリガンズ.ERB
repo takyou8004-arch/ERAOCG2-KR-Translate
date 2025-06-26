@@ -1,0 +1,213 @@
+﻿@CARDNAME_72472,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 탈리호-! 스프리건즈
+	CASE "略称"
+RESULTS = 탈리호-!
+	CASE "カテゴリ"
+RESULTS:0 = 스프리건즈
+ENDSELECT
+
+
+@CARD_72472(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72472(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 그 중 어느 하나밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動,フリー誘発)
+PRINTL 이 카드는 자신 필드의 엑시즈 소재를 3개까지 제거하고 발동할 수도 있다.
+PRINTL ①: 덱에서 "스프리건즈" 몬스터 1장을 패에 추가한다.
+PRINTL 엑시즈 소재를 제거하고 이 카드를 발동했을 경우, 추가로 그 수만큼, 자신의 패 / 묘지에서 "스프리건즈" 몬스터를 고르고 특수 소환할 수 있다.
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ②: 이 카드가 묘지에 존재할 경우, 필드의 엑시즈 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터의 엑시즈 소재를 1개 제거하고, 이 카드를 패에 추가한다.
+PRINTL 
+
+@CARDCAN_72472(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72472)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,72472)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,72472)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件Ｘ素所持 = 999
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_72472(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC タリホ－,3
+#DIM DYNAMIC 条件달성,5
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;タリホ－！
+;参考：プロムスプラッシュ、特攻ダグ
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72472,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 스프리건즈
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件Ｘ素所持 = 999
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1 
+			条件달성:1 = 1
+
+		IF 条件달성:1 != 1
+PRINTL 엑시즈 소재를 제거하고 발동하시겠습니까?
+			CALL YN_CHOICE(듀얼리스트,"取り除かず발동する","取り除いて발동する！タリホ－！")
+		ELSEIF 条件달성:1 == 1
+			RESULT = 0
+		ENDIF
+		IF RESULT != 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 스프리건즈
+			효과条件종류 = モン全般
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ELSE
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 스프리건즈
+			효과条件종류 = モン全般
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+
+			タリホ－:1 = 0
+			
+			REPEAT 3
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과条件Ｘ素所持 = 999
+				CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+				選択カード = RESULT
+				IF 選択カード == 9999
+					SIF 듀얼리스트 == "자신"
+						PRINTFORMW 残念、弾切れだ！
+					GOTO INPUTSKIP
+				ENDIF
+				CALL CARD_SELECT(듀얼리스트,選択カード)
+				選択カード = RESULT
+				CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"Ｘ",-1)
+				タリホ－:1 = タリホ－:1 + 1
+				IF タリホ－:1 + モンスター数(듀얼리스트) >= 5
+					SIF 듀얼리스트 == "자신"
+						PRINTFORMW 残念、定員オ-バ-だ！
+					タリホ－:1 = 5 - モンスター数(듀얼리스트)
+					GOTO INPUTSKIP
+				ENDIF
+				IF タリホ－:1 <= 3
+PRINTL 계속 갈래?
+					CALL YN_CHOICE(듀얼리스트)
+					IF RESULT == 1
+						GOTO INPUTSKIP
+					ELSE
+						SIF 듀얼리스트 == "자신"
+							PRINTFORMW タリホ－！
+					ENDIF
+				ELSE 
+					SIF 듀얼리스트 == "자신"
+						PRINTFORMW タリホ－！！！
+				ENDIF
+			REND
+			$INPUTSKIP
+
+			REPEAT タリホ－:1
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 스프리건즈
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			REND
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72472,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과条件Ｘ素所持 = 999
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		SIF 選択カード == 9999
+			RETURN 0
+		CALL CARD_SELECT(듀얼리스트,選択カード)
+		選択カード = RESULT
+		CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"Ｘ",-1)
+
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,손패行き)
+		SIF 듀얼리스트 == "자신"
+			PRINTFORMW タリホ－！！！！！
+	ENDIF
+ENDIF
+
+
+

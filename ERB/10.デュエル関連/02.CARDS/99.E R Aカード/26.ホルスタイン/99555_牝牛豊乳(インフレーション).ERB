@@ -1,0 +1,458 @@
+@CARDNAME_99555,参照先
+;ココで지정 카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;カード制作者：xonng
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 【풍유】호루스타인플레이션
+	CASE "略称"
+		RESULTS = 인플레【풍유】
+	CASE "カテゴリ"
+		RESULTS:0 = 호루스타인
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+@CARD_99555(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250325
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99555(종류)
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC 듀얼리스트
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의  ②의 효과는 １턴에 １번밖에 발동할 수 없다。
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①：메인 페이즈 및 배틀 페이즈에 발동할 수 있다。필드의 암컷 몬스터를 １장 골라、발정시킨다。
+PRINTL 그 후、이하의 효과에서 선택한다。
+PRINTL ●가슴은 한사이즈 크게 한다。
+PRINTL ●필드에서 가장 가슴이 큰 몬스터와 같은 크기로 한다。
+PRINTL (호루스타인 카드에 의해 마법&함정존에 놓여진 자신의 카드도 참조한다)
+PRINTL 자신의 마법＆함정 존에 세트된 카드가 존재하지 않을 경우、이 카드는 패에서 버리고 발동할 수 있다。
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ②：자신의 필드나 묘지에 야수족 통상몬스터가 존재하는 경우、자신 메인 페이즈에 발동할 수 있다。
+PRINTL 묘지의 이 카드를 패에 넣는다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 대상カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99555)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 
+	SIF !(メインフェイズ == 1 || バトルフェイズ == 1 )
+		RETURN 0
+	
+	IF ゾーン == "손패"
+		;セット카드가 あれば使えない
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件표시 = 裏側표시
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT > 0
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		;세트 한 턴에 は使えない
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") != 2
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	
+	;필드에 牝が居なければ使えない
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 0
+		RETURN 0
+		
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	
+	SIF 발동済_2(듀얼리스트,99555)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = 通常モン
+	효과条件종족 = 야수족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 参照場所
+#DIM DYNAMIC 상대플래그
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 選択カードID_保
+#DIM DYNAMIC 参照カードID
+#DIM DYNAMIC 암소대상
+#DIMS DYNAMIC 암소名称
+#DIM DYNAMIC 元乳サイズ
+#DIM DYNAMIC 現乳サイズ
+#DIM DYNAMIC 암소最大ID
+#DIMS DYNAMIC 最大듀얼리스트
+#DIMS DYNAMIC 암소最大名称
+#DIM DYNAMIC 암소最大サイズ
+#DIMS DYNAMIC カテゴリ名称
+#DIM DYNAMIC 절정횟수
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99555,1)
+	IF RESULT == 0
+		
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과条件성별 = 牝性
+		
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+	
+		IF RESULT != -1
+			選択カード = RESULT
+			選択カードID = RESULT:99
+			選択カードID_保 = RESULT:99
+			
+			IF 選択カード >= 2000
+				選択カード = 選択カード - 2000
+				상대플래그 = 1
+			ENDIF
+			
+			;호루스타인カードなら、마법함정のカードIDを参照
+			IF 상대플래그 == 0
+				CALL HORUSTEIN_GET_DATA(듀얼리스트,選択カード,選択カードID)
+			ELSE
+				CALL HORUSTEIN_GET_DATA(対面者,選択カード,選択カードID)
+			ENDIF
+			암소名称 = %RESULTS:0%
+			参照場所 = RESULT:0
+			参照カードID = RESULT:99
+			
+			SIF 参照場所 != -1
+				選択カードID = 参照カードID
+			
+			암소最大サイズ = -5
+			;필드의 가슴サイズチェック
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%듀얼리스트%_필드:{カウンタ}") == -1
+					CONTINUE
+				CALL HORUSTEIN_GET_DATA(듀얼리스트,カウンタ,GETVAR(@"%듀얼리스트%_MZ_ID:{カウンタ}") )
+				CALL HORUSTEIN_GET_BUST(RESULT:99, GETVAR(@"%듀얼리스트%_MZ_가슴追:カウンタ"))
+				IF RESULT:2 > 암소最大サイズ 
+					암소最大サイズ = RESULT:2
+					암소最大ID = GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ")
+					最大듀얼리스트 = %듀얼리스트%
+					;PRINTFORML 암소最大ID{암소最大ID} 암소最大サイズ {암소最大サイズ} 가슴追{GETVAR(@"%듀얼리스트%_MZ_가슴追:カウンタ")}
+				ENDIF
+			NEXT
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%対面者%_필드:{カウンタ}") == -1
+					CONTINUE
+				CALL HORUSTEIN_GET_DATA(対面者,カウンタ,GETVAR(@"%対面者%_MZ_ID:{カウンタ}") )
+				CALL HORUSTEIN_GET_BUST(RESULT:99, GETVAR(@"%対面者%_MZ_가슴追:カウンタ"))
+				IF RESULT:2 > 암소最大サイズ 
+					암소最大サイズ = RESULT:2
+					암소最大ID = GETVAR(@"%対面者%_MZ_ID:カウンタ")
+					最大듀얼리스트 = %対面者%
+				ELSE
+							
+				ENDIF
+			NEXT
+			
+			;자신의 호루스타인마법함정のチェック
+			;モンスターゾーン에 존재하고ていなくても、가슴の変化情報が個Cに乗っているため
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%듀얼리스트%_마함:{カウンタ}") == -1
+					CONTINUE
+				;乳の登録情報は、個別Cで관리
+				IF GETVARS(@"%듀얼리스트%_魔_追カテ:カウンタ") == "登録情報：호루스타인─미유" || GETVARS(@"%듀얼리스트%_魔_追カテ:カウンタ") == "登録情報：호루스타인─애유" || GETVARS(@"%듀얼리스트%_魔_追カテ:カウンタ") == "登録情報：호루스타인─지유"|| GETVARS(@"%듀얼리스트%_魔_追カテ:カウンタ") == "登録情報：호루스타인─EX유"
+					
+					CALL HORUSTEIN_GET_BUST(GETVAR(@"%듀얼리스트%_魔_ID:{カウンタ}") , GETVAR(@"%듀얼리스트%_魔_個Ｃ:カウンタ"))
+					IF RESULT:2 > 암소最大サイズ 
+						암소最大サイズ = RESULT:2 
+						암소最大ID = GETVAR(@"%듀얼리스트%_魔_ID:カウンタ")
+						最大듀얼리스트 = %듀얼리스트%
+					ENDIF
+				ENDIF
+			NEXT
+			
+			;마지막으로見た카드가 호루스타인カードなら、마법함정の 카드를 参照
+			CALL HORUSTEIN_GET_DATA(最大듀얼리스트,選択カード,암소最大ID)
+			
+			参照場所 = RESULT:0
+			参照カードID = RESULT:99
+			
+			SIF 参照場所 != -1
+				암소最大ID = 参照カードID
+			
+			CALL HORUSTEIN_GET_DATA(듀얼리스트,-1,암소最大ID)
+			암소最大名称 = %RESULTS:0%
+			
+			CALL HORUSTEIN_PRINT_STATE(듀얼리스트,-1,암소最大ID, 암소最大サイズ,2,1);2乳上書き(比較なし)、1画像アイコンのみ
+			
+			PRINTFORML 
+			SETCOLOR C_GOLD
+			PRINTFORM ★最大サイズ★ ：
+			RESETCOLOR
+			SETCOLOR C_PINK
+			PRINTFORM  [%GET_TALENTNAME(121,암소最大サイズ)%] 
+			RESETCOLOR
+			PRINTFORML %암소最大名称%
+			PRINTFORML 
+			
+			;현재의 サイズを취득
+			CALL HORUSTEIN_GET_BUST(選択カードID, GETVAR(@"%대상者（CS）%_MZ_가슴追:選択カード"))
+			元乳サイズ = RESULT:0
+			現乳サイズ = RESULT:2
+			
+			CALL HORUSTEIN_GET_DATA(듀얼리스트,-1,選択カードID)
+			암소名称 = %RESULTS:0%
+			암소대상 = RESULT:1
+			
+			PRINTFORM 　現在サイズ　 ：
+			PRINTFORM  [%GET_TALENTNAME(121,現乳サイズ)%] 
+			RESETCOLOR
+			PRINTFORML %암소名称%
+			PRINTFORMW 
+			
+			;CALL HORUSTEIN_PRINT_STATE(選択カードID, 現乳サイズ,,,2,1);乳上書き(比較なし)、1画像アイコンのみ
+			
+			;가슴のサイズによって選択肢の표시有無
+			IF 암소最大サイズ <= 現乳サイズ
+				;サイズアップのみ
+				PRINTFORML
+				PRINTFORMW 선택한 카드가 가장 커다란 가슴이기 때문에、「가슴을 한단계 크게 한다」가 선택됩니다。
+				RESULT = 0
+			ELSE
+				;選択可能
+				CALL YN_CHOICE(듀얼리스트,"「乳をひと回り大きくする」","「フィールドで一番乳の大きい몬스터와 同じ大きさ로 한다。」")
+			ENDIF
+
+			;호루스타인 몬스터의 경우、마법の方に個別Cを乗せる
+			IF INRANGE (選択カードID_保, 179556, 179559) 
+				SIF 選択カードID_保 == 179556
+					カテゴリ名称 = 登録情報：호루스타인─미유
+				SIF 選択カードID_保 == 179557
+					カテゴリ名称 = 登録情報：호루스타인─애유
+				SIF 選択カードID_保 == 179558
+					カテゴリ名称 = 登録情報：호루스타인─지유
+				SIF 選択カードID_保 == 179559
+					カテゴリ名称 = 登録情報：호루스타인─EX유
+				
+				FOR カウンタ,0,5
+					IF (상대플래그 == 1 && GETVAR(@"상대_MZ_所有:選択カード") == 1 ) || (상대플래그 == 0 && GETVAR(@"자신_MZ_所有:選択カード") == 1 ) 
+						SIF GETVARS(@"자신_魔_追カテ:カウンタ") != カテゴリ名称
+							CONTINUE
+						상대플래그 = 0
+					ELSEIF (상대플래그 == 0 && GETVAR(@"자신_MZ_所有:選択カード") == 2 ) || (상대플래그 == 1 && GETVAR(@"상대_MZ_所有:選択カード") == 2 )
+						;상대의 카드なら、상대의 場を見る
+						SIF GETVARS(@"상대_魔_追カテ:カウンタ") != カテゴリ名称
+							CONTINUE
+						상대플래그 = 1
+					ELSE
+						CONTINUE
+					ENDIF
+					IF RESULT == 0
+						CALL SET_FIELD_INFO("자신","마함",カウンタ,"個Ｃ",1,,상대플래그)
+						現乳サイズ += 1
+					ELSE
+						CALL SET_FIELD_INFO("자신","마함",カウンタ,"個Ｃ",암소最大サイズ - 元乳サイズ,上書きモード,상대플래그)
+						現乳サイズ = 암소最大サイズ
+					ENDIF
+					BREAK
+				NEXT
+				
+			ELSE
+				IF RESULT == 0
+					;乳を大きくする
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"가슴追",1,,상대플래그)
+					現乳サイズ += 1
+				ELSE
+					;フィールドで一番乳の大きい몬스터와 同じ大きさ로 한다。」
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"가슴追",암소最大サイズ - 元乳サイズ,上書きモード,상대플래그)
+					現乳サイズ = 암소最大サイズ
+				ENDIF
+			ENDIF
+			
+			PRINTFORML 
+			PRINTFORML 호루스의 종자들이 %암소名称%를 둘러싸、수상한 주문을 외기 시작했다…
+			PRINTFORMW 
+			
+			;名前から가슴のサイズの変動まで표시
+			CALL HORUSTEIN_PRINT_STATE(듀얼리스트,場所,選択カードID, 現乳サイズ-元乳サイズ)
+			
+			IF 암소대상 != -1
+				CALL PRINT_STATE_CLOTH(암소대상)
+			ENDIF
+			PRINTL
+			PRINTFORML
+			PRINTL □ 건강상태 □——————————————————————————————————————————————————————————————————————————————————
+			PRINTFORML 
+			PRINTFORML  모유의양　…　검사대상외
+			PRINTFORML  모유품질　…　검사대상외
+			PRINTFORM  젖 감 도　… 
+			FONTSTYLE 4
+			PRINTFORM  검사대상외 
+			FONTSTYLE 0
+			SETCOLOR C_PINK
+			PRINTFORML  → 敏感
+			RESETCOLOR
+			PRINTFORML  성　　욕　…　검사대상외
+			PRINTFORML  촉　　진　… 　이상없음
+			PRINTFORM 　　　　　　　　　　　　
+			FONTSTYLE 8
+			PRINTFORML 　평 가：― 
+			FONTSTYLE 0
+			PRINTFORML 
+			PRINTL □ 특이사항 □——————————————————————————————————————————————————————————————————————————————————
+			PRINTFORML 
+			SETCOLOR C_PINK
+			PRINTFORML  발정하고있습니다。
+			PRINTFORML 　사이즈가 커진 영향인지、일시적으로 민감해진것같습니다。강한 자극은 삼가해주세요。
+			PRINTFORML 
+			RESETCOLOR
+			
+			CALL HORUSTEIN_GET_BUST(選択カードID,現乳サイズ-元乳サイズ)
+			PRINTFORM  가슴 사이즈가 [%GET_TALENTNAME(121,RESULT:0)%] 에서
+			SETCOLOR C_H_PINK
+			PRINTFORM  [%GET_TALENTNAME(121,RESULT:2)%] 
+			RESETCOLOR
+			PRINTFORML 가 되었습니다。
+			PRINTFORML 　이 카드로 부여한 발정상태는、가슴 사이즈에 의한 공격이 실패하는 확률이 변동합니다。
+			PRINTFORML 　이하、참고자료가 되겠습니다。참고해주세요。
+			PRINTFORML 
+			PRINTFORML 　[평범]이하　：５０％정도
+			SETCOLOR C_D_GRAY
+			PRINTFORML 　　[거유]　　：６０％정도
+			SETCOLOR 0X222222
+			PRINTFORML 　　[폭유]　　：７０％정도
+			SETCOLOR 0X111111
+			PRINTFORML 　 [소젖] 　：８０％정도
+			RESETCOLOR
+			PRINTFORML 
+			;PRINTFORML 　　[魔乳]　　：９０%정도
+			;PRINTFORML 
+			;PRINTFORML 　 [規格外] 　：１００％
+			;PRINTFORML 
+
+			CUSTOMDRAWLINE —
+			PRINTFORMW 
+			
+			IF INRANGE (RESULT:2 , 2, 4) 
+				PRINTFORML
+				PRINTFORML %암소名称%는 커진 가슴을 무거운듯이 붙잡고있다…
+				PRINTFORMW 
+			ELSEIF RESULT:2 >= 5
+				PRINTFORML
+				PRINTFORML %암소名称%는 가슴이 너무 커서 움직이지 못하는듯 하다…
+				PRINTFORMW 
+			ENDIF
+		
+			SETCOLOR C_PINK
+			CUSTOMDRAWLINE —
+			PRINTFORML
+			PRINTFORML %암소名称%는 발정해있다…
+			PRINTFORML 
+			CUSTOMDRAWLINE —
+			PRINTFORML
+			RESETCOLOR
+			
+			
+			;発情値설정
+			SELECTCASE 現乳サイズ
+				CASE IS < 0
+					CALL STATCHANGE_EFFECT(대상者（CS）,"자신",選択カード,"発情",150)
+					PRINTFORML %암소名称%는 발정해있다…
+				CASE 1 ;巨乳
+					CALL STATCHANGE_EFFECT(대상者（CS）,"자신",選択カード,"発情",160)
+				CASE 2 ;爆乳
+					CALL STATCHANGE_EFFECT(대상者（CS）,"자신",選択カード,"発情",170)
+				CASE 3 ;牛乳
+					CALL STATCHANGE_EFFECT(대상者（CS）,"자신",選択カード,"発情",180)
+				CASE 4 ;魔乳
+					CALL STATCHANGE_EFFECT(대상者（CS）,"자신",選択カード,"発情",190)
+				CASE 5 ;規格外
+					CALL STATCHANGE_EFFECT(대상者（CS）,"자신",選択カード,"発情",200)
+			CASEELSE
+					CALL STATCHANGE_EFFECT(대상者（CS）,"자신",選択カード,"発情",200)
+			ENDSELECT
+			
+			IF 암소대상 != -1 && (現乳サイズ-元乳サイズ) > 0
+				;元のサイズより大きい分だけ強い刺激になる
+				CALL EROTIC_MOVE("バスト조교",암소대상,-1, 100 + (現乳サイズ-元乳サイズ) * 50)
+				
+				PRINTFORML 
+				절정횟수 += RESULT:1
+			ENDIF
+			
+			IF 절정횟수 > 0
+				
+				SETCOLOR C_PINK
+				PRINTFORML 
+				PRINTFORML %암소名称%는 막 커져서 민감한 가슴을 흔들어버려서
+				PRINTFORML 그 희미한 자극으로 {절정횟수}번 가버렸다…
+				PRINTFORMW 
+				RESETCOLOR
+			ENDIF
+			
+		ENDIF
+		;テスト時はコメント化
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99555,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,손패行き)
+	ENDIF
+ENDIF

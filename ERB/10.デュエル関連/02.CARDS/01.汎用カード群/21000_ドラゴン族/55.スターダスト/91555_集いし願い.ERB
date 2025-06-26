@@ -1,0 +1,152 @@
+﻿@CARDNAME_91555,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 모인 염원
+	CASE "略称"
+RESULTS = 모인 염원
+	CASE "カテゴリ"
+RESULTS:0 = 스타더스트
+ENDSELECT
+
+
+@CARD_91555(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91555(종류)
+#DIM DYNAMIC 종류
+CALLFORM CARD_ABLE(0,마함起動 ,フリー誘発)
+PRINTL ①: 자신 묘지에 드래곤족 S 몬스터가 5종류 이상 존재할 경우, 그 모두를 제외하고 발동할 수 있다.
+PRINTL EX덱에서 "스타더스트 드래곤" 1장을 S 소환 취급으로 특수 소환하고, 이 카드를 장착한다.
+PRINTL 이 효과로 특수 소환한 몬스터는 엔드 페이즈에 제외된다.
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②: 장착 몬스터의 공격력은, 자신의 제외 상태의 드래곤족 S 몬스터의 공격력의 합계만큼 올라간다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③: 장착 몬스터는, 자신의 제외 상태의 드래곤족 S 몬스터의 종류의 수만큼 추가 공격할 수 있다.
+
+@CARDCAN_91555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91555)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,50550,"EX덱")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 싱크로
+	효과条件종족 = 드래곤족
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+효과条件名前 = 스타더스트 드래곤
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_91555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91555)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		FOR カウンタ, 98, -1, -1
+			IF GETVAR(@"%듀얼리스트%_묘지:{カウンタ}") == -1
+				CONTINUE
+			ENDIF
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}, "종류"
+			IF RESULT != 싱크로
+				CONTINUE
+			ENDIF
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}, "종족"
+			IF RESULT != 드래곤족
+				CONTINUE
+			ENDIF
+			CALL CARD_DISPOSE(듀얼리스트,"묘지",カウンタ,1)
+		NEXT
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+효과条件名前 = 스타더스트 드래곤
+		효과추가종류 = 10 + 제외行き
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		효과範囲필드 = 1
+		효과条件固定 = カード소환先
+		CALLFORM CARD_EQUIP_ADV(듀얼리스트,場所,ゾーン)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件종류 = 싱크로
+	효과条件종족 = 드래곤족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	CALL STATCHANGE_BASIC(듀얼리스트,"装備",場所,(RESULT:3))
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件종류 = 싱크로
+	효과条件종족 = 드래곤족
+	효과条件固名前起動 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"装備",場所,"追戦",RESULT)
+ENDIF

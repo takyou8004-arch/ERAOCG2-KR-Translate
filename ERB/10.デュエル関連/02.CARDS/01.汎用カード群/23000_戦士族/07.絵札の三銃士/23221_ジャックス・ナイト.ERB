@@ -1,0 +1,112 @@
+﻿@CARDNAME_23221,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 잭 나이트
+	CASE "略称"
+RESULTS = 잭 K
+	CASE "カテゴリ"
+RESULTS:0 = 페이스 카드 삼총사
+ENDSELECT
+
+
+@CARD_23221(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 通常モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+	CASE "分割"
+		RETURN デュアル
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23221(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①: 자신 필드에 이 카드를 제외한 2체 이상의 빛 속성 몬스터가 존재할 경우,
+PRINTL 이 카드는 앞면 표시로 존재하는 한, 자신 메인 페이즈에 1번만 「각성」할 수 있다.
+PRINTL 「각성」은 1턴에 1번만 실행할 수 있다.
+PRINTL 이렇게 각성했을 경우, 덱에서 「그림 한 벌의 삼총사」 마법 카드를 1장 패에 넣는다.
+
+@CARDCAN_23221(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23221)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,覚醒발동)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 빛속성
+	효과条件他所 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 페이스 카드 삼총사
+	효과条件종류 = 마법全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23221(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,覚醒발동,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+		CALL FULLRESET
+		효과条件カテゴリ = 페이스 카드 삼총사
+		효과条件종류 = 마법全般
+		CALL CARD_ADD_BASIC(対面者,"덱",ゾーン,場所)
+	ENDIF
+ENDIF
+

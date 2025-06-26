@@ -1,0 +1,303 @@
+﻿@DUEL_KANNI
+#DIM 듀얼_ターン
+#DIM 듀얼_상대選択
+#DIM 듀얼_자신選択
+#DIM 듀얼_자신ライフ
+#DIM 듀얼_상대ライフ
+#DIM 듀얼_자신山札
+#DIM 듀얼_상대山札
+#DIM 듀얼_자신손패
+#DIM 듀얼_상대손패
+#DIM 듀얼_初期손패カウンタ
+#DIM 듀얼_加わったカード
+#DIM 듀얼_カウンタ
+#DIM 듀얼_추가ダメ
+#DIM 듀얼_EXゲージ
+#DIM 듀얼_ドロー権
+#DIM 듀얼_デュエル形式
+#DIM 덱_ID
+
+
+IF TARGET >= 1
+	듀얼_デュエル形式 = 0
+ELSE
+	듀얼_デュエル形式 = 1
+ENDIF
+
+
+;덱설정
+덱_ID = 使用덱설정
+;編集されてない덱は初期설정に
+SIF 덱初編集:덱_ID == 0
+	CALL EDIT_DECK_RESET(덱_ID)
+
+
+;セットアップ
+듀얼_ターン = 0
+듀얼_자신ライフ = 4000
+듀얼_상대ライフ = 4000
+듀얼_자신山札 = 13
+듀얼_상대山札 = 13
+듀얼_자신손패 = 2
+듀얼_상대손패 = 2
+듀얼_初期손패カウンタ = 0
+듀얼_추가ダメ = 0
+듀얼_EXゲージ = 0
+듀얼_ドロー権 = 0
+
+FOR 듀얼_カウンタ,0,덱登録カードID
+	듀얼山札内カード:덱_ID:듀얼_カウンタ = 1
+	듀얼손패内カード:덱_ID:듀얼_カウンタ = 0
+	듀얼使用済カード:덱_ID:듀얼_カウンタ = 0
+NEXT
+
+PRINTL
+PRINTL
+SIF 듀얼_デュエル形式 == 0
+	PRINTFORMW 「「듀얼！！」」
+SIF 듀얼_デュエル形式 == 1
+	PRINTFORMW D U E L ！！
+PRINTL
+PRINTL
+
+;最初の2ドロー
+$INPUT_LOOP_CARD
+듀얼_加わったカード = RAND:15
+IF 듀얼_初期손패カウンタ >= 2
+	PRINTFORML 종료
+ELSEIF 듀얼山札内カード:덱_ID:듀얼_加わったカード == 0
+	SIF デバッグシステム == 1
+		PRINTFORML 차도[{듀얼_加わったカード}]
+	GOTO INPUT_LOOP_CARD
+ELSE
+	듀얼山札内カード:덱_ID:듀얼_加わったカード = 0
+	듀얼손패内カード:덱_ID:듀얼_加わったカード = 1
+	듀얼_初期손패カウンタ += 1
+	;デバッグ用
+	SIF デバッグシステム == 1
+		PRINTFORML 실행[{듀얼_加わったカード}]
+	GOTO INPUT_LOOP_CARD
+ENDIF
+
+
+
+$INPUT_LOOP1
+;상대選択
+듀얼_상대選択 = RAND:3
+
+듀얼_ターン += 1
+듀얼_상대山札 -= 1
+듀얼_상대손패 += 1
+
+;ドロー
+$INPUT_DRAW_CARD
+듀얼_加わったカード = RAND:15
+	IF 듀얼_初期손패カウンタ == 15
+		PRINTFORML 이 이상은 뽑을 수 없어요！
+	ELSEIF 듀얼山札内カード:덱_ID:듀얼_加わったカード == 0
+		PRINTFORML 드로우 차도[{듀얼_加わったカード}]
+		GOTO INPUT_DRAW_CARD
+	ELSE
+		듀얼山札内カード:덱_ID:듀얼_加わったカード = 0
+		듀얼손패内カード:덱_ID:듀얼_加わったカード = 1
+		듀얼_初期손패カウンタ += 1
+		듀얼_자신山札 -= 1
+		듀얼_자신손패 += 1
+		PRINTFORML 드로우 실행[{듀얼_加わったカード}]
+	ENDIF
+	IF 듀얼_ドロー権 > 0
+		듀얼_ドロー権 -= 1
+		GOTO INPUT_DRAW_CARD
+	ENDIF
+
+;こちら選択
+$INPUT_LOOP2
+PRINTL
+PRINTFORML 현재 턴 수【{듀얼_ターン}】
+
+;상대UI
+SIF 듀얼_デュエル形式 == 0
+	PRINTFORML %CALLNAME:TARGET%【LP：{듀얼_상대ライフ}】【손패：{듀얼_상대손패}】【산패：{듀얼_상대山札}】
+SIF 듀얼_デュエル形式 == 1
+	PRINTFORML ENEMY【LP：{듀얼_상대ライフ}】【손패：{듀얼_상대손패}】【산패：{듀얼_상대山札}】
+
+
+PRINTFORM %LOCALS,35,RIGHT% 
+PRINTFORML V S
+PRINTFORM %LOCALS,40,RIGHT% 
+
+;あなたUI
+PRINTFORML %CALLNAME:MASTER%【LP：{듀얼_자신ライフ}】】【손패：{듀얼_자신손패}】【덱：{듀얼_자신山札}】
+PRINTFORML 【차지:{듀얼_추가ダメ}데미지】【EX게이지:{듀얼_EXゲージ}/3】
+
+IF デバッグシステム == 1 || ITEM:80 == 1
+	SETCOLOR C_YELLOW
+	PRINTFORML 마인드 스캔！
+	PRINTFORM 상대가 낼 카드는:
+	SIF 듀얼_상대選択 == 0
+		PRINTL 공세（주먹）
+	SIF 듀얼_상대選択 == 1
+		PRINTL 방패（바위）
+	SIF 듀얼_상대選択 == 2
+		PRINTL 전개（보자기）
+	RESETCOLOR
+ENDIF
+PRINTFORML 이 턴은 어떻게하지……？
+PRINTL
+
+;選択肢呼び出し
+FOR 듀얼_カウンタ,0,덱登録カードID
+	IF 듀얼손패内カード:덱_ID:듀얼_カウンタ == 1 && !듀얼使用済カード:덱_ID:듀얼_カウンタ == 1
+		IF 덱カード:덱_ID:듀얼_カウンタ == 0
+			PRINTFORML [{듀얼_カウンタ,2}] - 공세에 나간다（주먹）
+		ELSEIF 덱カード:덱_ID:듀얼_カウンタ == 1
+			PRINTFORML [{듀얼_カウンタ,2}] - 질투를 한다（가위）
+		ELSEIF 덱カード:덱_ID:듀얼_カウンタ == 2
+			PRINTFORML [{듀얼_カウンタ,2}] - 전개에 들억나다（보）
+		ENDIF
+	ELSE 
+		CONTINUE
+	ENDIF
+NEXT
+IF 듀얼_EXゲージ >= 3
+	PRINTL [15] - 【비장의 패】
+ELSE
+	SETCOLOR C_GRAY 
+	PRINTL [15] - EX카운터가 부족합니다
+	RESETCOLOR
+ENDIF
+PRINTL [100] - 항복！
+
+INPUT
+;その덱のカード番号自体に登録되어있는 情報を解放＋使用済みカードに登録
+IF RESULT >= 0 && RESULT < 15
+	듀얼使用済カード:덱_ID:RESULT = 1
+	듀얼손패内カード:덱_ID:RESULT = 0
+	RESULT = 덱カード:덱_ID:RESULT
+ENDIF
+듀얼_자신選択 = RESULT
+IF 듀얼_자신選択 == 0 || 듀얼_자신選択 == 1 || 듀얼_자신選択 == 2  || (듀얼_EXゲージ >=3 && 듀얼_자신選択 == 15) || 듀얼_자신選択 == 100
+	IF 듀얼_자신選択 == 0
+		PRINTFORMW %CALLNAME:MASTER%「공세！」
+		듀얼_추가ダメ += 500
+		듀얼_자신손패 -= 1
+	ELSEIF 듀얼_자신選択 == 1
+		PRINTFORMW %CALLNAME:MASTER%「방해！」		
+		듀얼_ドロー権 += 1
+		듀얼_자신손패 -= 1
+	ELSEIF 듀얼_자신選択 == 2
+		PRINTFORMW %CALLNAME:MASTER%「전개！」
+		듀얼_EXゲージ += 1
+		듀얼_자신손패 -= 1
+	ENDIF
+
+	IF 듀얼_상대選択 == 0 && 듀얼_자신選択 != 100
+		SIF 듀얼_デュエル形式 == 0
+			PRINTFORMW %CALLNAME:TARGET%「공세！」
+		SIF 듀얼_デュエル形式 == 1
+			PRINTFORMW 상대는 공세로 나왔다！
+	ELSEIF 듀얼_상대選択 == 1 && 듀얼_자신選択 != 100
+		SIF 듀얼_デュエル形式 == 0
+			PRINTFORMW %CALLNAME:TARGET%「방해！」
+		SIF 듀얼_デュエル形式 == 1
+			PRINTFORMW 상대は %CALLNAME:MASTER%의 움직임의 방해를 시작했다！
+	ELSEIF 듀얼_상대選択 == 2 && 듀얼_자신選択 != 100
+		SIF 듀얼_デュエル形式 == 0
+			PRINTFORMW %CALLNAME:TARGET%「전개！」
+		SIF 듀얼_デュエル形式 == 1
+			PRINTFORMW 상대는 전개를 할 카드를 사용했다！
+	ENDIF
+	듀얼_상대손패 -= 1
+	;必殺
+		IF 듀얼_자신選択 == 15
+		PRINTFORMW %CALLNAME:MASTER%「몬스터를 연속 특수소환！！！」
+		IF 덱内캐릭터:덱_ID:0 > 0 || 덱内캐릭터:덱_ID:1 > 0 || 덱内캐릭터:덱_ID:2 > 0
+			PRINTFORM %CALLNAME:MASTER%「나타나라…
+			SIF 덱内캐릭터:덱_ID:0 > 0
+				PRINTFORM %NAME:(덱内캐릭터:덱_ID:0)%！
+			SIF 덱内캐릭터:덱_ID:1 > 0
+				PRINTFORM %NAME:(덱内캐릭터:덱_ID:1)%！！
+			SIF 덱内캐릭터:덱_ID:2 > 0
+				PRINTFORM %NAME:(덱内캐릭터:덱_ID:2)%！！
+			PRINTFORMW 」
+		ENDIF
+		듀얼_EXゲージ -= 3
+	ENDIF
+
+	;あいこ
+	IF 듀얼_자신選択 == 듀얼_상대選択
+		PRINTFORMW 쌍살했다！！
+	;勝利！！
+		ELSEIF 듀얼_자신選択 == 15
+		PRINTFORMW 일제공격이다！！
+		듀얼_상대ライフ -= 2000
+		PRINTFORMW 2000포인트의 데미지！！！
+	;グーチョキ
+	ELSEIF 듀얼_자신選択 == 0 && 듀얼_상대選択 == 1
+		PRINTFORMW 상대의 방해를 깨부수고 데미지를 입혔다！
+		듀얼_상대ライフ -= 500 + 듀얼_추가ダメ
+		PRINTFORMW {500 + 듀얼_추가ダメ}포인트의 데미지！！！
+		듀얼_추가ダメ = 0
+	;チョキパー
+	ELSEIF 듀얼_자신選択 == 1 && 듀얼_상대選択 == 2
+		PRINTFORMW 상대의 전개를 방해할수 있었다！
+		듀얼_상대ライフ -= 500
+		PRINTFORMW {500}포인트의 데미지！！！
+	;パーグー
+	ELSEIF 듀얼_자신選択 == 2 && 듀얼_상대選択 == 0
+		PRINTFORMW 상대의 공격을 넘는 전개로 필드를 정리했다！
+		듀얼_상대ライフ -= 500
+		PRINTFORMW {500}포인트의 데미지！！！
+	;패배！！
+	;グーパー
+	ELSEIF 듀얼_자신選択 == 0 && 듀얼_상대選択 == 2
+		PRINTFORMW 이쪽이 공세에 들어가기도 전에 전개력에 밀려 졌다…
+		듀얼_자신ライフ -= 1000
+		PRINTFORMW {1000}포인트의 데미지！！！
+	;チョキグー
+	ELSEIF 듀얼_자신選択 == 1 && 듀얼_상대選択 == 0
+		PRINTFORMW 이쪽의 방해가 상대의 공세게 무너졌다…
+		듀얼_자신ライフ -= 1000
+		PRINTFORMW {1000}포인트의 데미지！！！
+	;パーチョキ
+	ELSEIF 듀얼_자신選択 == 2 && 듀얼_상대選択 == 1
+		PRINTFORMW 이쪽의 전개가 방해로 막혀버렸다…
+		듀얼_자신ライフ -= 1000
+		PRINTFORMW {1000}포인트의 데미지！！！
+	ENDIF
+
+	PRINTL
+	PRINTL
+	PRINTL
+
+
+	;リザルト画面、もしまだお互いにライフがあればもう一度
+
+
+	IF 듀얼_자신山札 == 0 && 듀얼_상대山札 == 0 &&  (듀얼_자신ライフ > 0 && 듀얼_상대ライフ > 0)
+		PRINTL
+		PRINTFORMW DRAW！？
+		PRINTFORMW 덱이 없어졌습니다…
+		RETURN 3
+	ELSEIF 듀얼_자신ライフ <= 0 || 듀얼_자신選択 ==100 || (듀얼_자신山札 == 0 && 듀얼_상대ライフ > 0)
+		PRINTL
+		PRINTFORMW LOSE...
+		SIF	듀얼_자신ライフ <= 0
+			PRINTFORMW 라이프 포인트가 0이 되었습니다。
+		SIF	듀얼_자신山札 == 0
+			PRINTFORMW 당신은 덱에서 카드를 뽑을수 없게 되었습니다。
+		RETURN 0
+	ELSEIF 듀얼_상대ライフ <= 0 || 듀얼_상대山札 == 0
+		PRINTL
+		PRINTFORMW WINNER！！
+		SIF	듀얼_상대ライフ <= 0
+			PRINTFORMW 상대의 라이프 포인트를 전부 없앴습니다。
+		SIF	듀얼_상대山札 == 0
+			PRINTFORMW 상대는 덱에서 카드를 뽑을수 없게 되었습니다。
+		RETURN 1
+	ELSE
+		GOTO INPUT_LOOP1
+	ENDIF
+ELSE
+	GOTO INPUT_LOOP2
+ENDIF

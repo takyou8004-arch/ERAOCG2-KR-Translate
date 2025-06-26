@@ -1,0 +1,158 @@
+﻿@CARDNAME_4050,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 신심 깊은 코튼
+	CASE "略称"
+RESULTS = 코튼
+	CASE "カテゴリ"
+RESULTS:0 = 오라클
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_4050(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 200
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4050(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,ターン開始時)
+PRINTL ①: 상대 스탠바이 페이즈에 발동할 수 있다.
+PRINTL 카드의 종류(몬스터/마법 / 함정)를 1개 선언한다.
+PRINTL 자신의 덱 맨 위 카드를 넘기고, 그 카드가 선언한 카드의 종류일 경우,
+PRINTL 몬스터라면, 그 카드를 소환 조건을 무시하고 특수 소환한다.
+PRINTL 마법 / 함정이라면 필드에 세트한다. 그 카드는 세트한 턴에도 사용할 수 있다.
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ②: 이 카드가 파괴될 경우,
+PRINTL 대신에 자신의 라이프를 1000 LP 지불할 수 있다.
+PRINTL 
+
+@CARDCAN_4050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4050)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,4050)
+		RETURN 0
+	SIF 現山札数(듀얼리스트) <= 0
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5 && 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 1000
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4050(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4050,1)
+	IF RESULT == 0
+		SIF 現山札数(듀얼리스트) <= 0
+			RETURN 0
+
+		IF 듀얼리스트 == "자신"
+			PRINTFORML どの종류を宣言しますか？
+			PRINTFORML [1] - モンスター
+			PRINTFORML [2] - 마법
+			PRINTFORML [3] - 함정
+			PRINTFORML 
+			BINPUT
+		ELSEIF 듀얼리스트 == "상대"
+			RESULT = 1
+		ENDIF
+
+
+		TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_덱:0"))
+		PRINTW
+		IF RESULT == 1
+			CALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_덱:0")},"종류"
+			IF RESULT <= 10 
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트, "덱", 0)
+			ENDIF
+		ELSEIF RESULT == 2
+			CALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_덱:0")},"종류"
+			IF INRANGE(RESULT,20,30) 
+				CALL CARD_DISPOSE(듀얼리스트,"덱",0,마함行き,2)
+			ENDIF
+		ELSEIF RESULT == 3
+			CALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_덱:0")},"종류"
+			IF INRANGE(RESULT,30,40) 
+				CALL CARD_DISPOSE(듀얼리스트,"덱",0,마함行き,2)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4050)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1000)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+

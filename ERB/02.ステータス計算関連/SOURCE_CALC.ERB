@@ -1,0 +1,3316 @@
+﻿;CUP計算用関数
+;대상者	被行為者
+;実行者	行為者
+;쾌락강도	강도
+;--------------------------------------------------------------------------------------------------
+;共通処理
+;--------------------------------------------------------------------------------------------------
+@SOURCE_COMMON_CHECK(대상者, 実行者)
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+
+;--------------------------------------------------------------------------------------------------
+;쾌Ｃ
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_쾌Ｃ(대상者, 実行者, 쾌락강도)
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP쾌Ｃ
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP억울
+
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;共通倍率計算
+	;기교(上限5倍)
+	SIF 実行者 >= 0
+		CUP基礎 = CUP基礎 * GET_REVISION(ABL:実行者:기교 + 2, 500, 10) / 100
+	;미약
+	SIF TEQUIP:대상者:미약
+		CUP基礎 *= 2
+	;이뇨제
+	SIF TEQUIP:대상者:이뇨제
+		TIMES CUP基礎 , 0.70
+	;PALAM:욕정をみる
+	IF PALAM:대상者:욕정 < PALAMLV:1
+		TIMES CUP基礎 , 0.80
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:2
+		TIMES CUP基礎 , 1.00
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:3
+		TIMES CUP基礎 , 1.20
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:4
+		TIMES CUP基礎 , 1.40
+	ELSEIF PALAM:대상者:욕정 >= PALAMLV:4
+		TIMES CUP基礎 , 1.60
+	ENDIF
+	;Ｃ감도
+	CUP基礎 = CUP基礎 * (2 + TALENT:대상者:Ｃ감도) / 2
+	;C감각
+	CUP基礎 = CUP基礎 * SOURCE_REVISION1(ABL:대상者:Ｃ감각) / 10
+
+
+;쾌Ｃ計算
+	CUP쾌Ｃ = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP쾌Ｃ = CUP쾌Ｃ * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP쾌Ｃ = CUP쾌Ｃ * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+	;조교者のTALENT:解放をみる
+	SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+		TIMES CUP쾌Ｃ , 1.20
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP쾌Ｃ , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP쾌Ｃ , 1.20
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP쾌Ｃ = CUP쾌Ｃ * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP쾌Ｃ /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP쾌Ｃ = CUP쾌Ｃ * RELATION:대상者:実行者 / 100
+	;음란
+	IF TALENT:대상者:음란 == 1
+		TIMES CUP쾌Ｃ , 1.20
+	ELSEIF TALENT:대상者:음란 == 2
+		TIMES CUP쾌Ｃ , 1.50
+	ENDIF
+
+
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		TIMES CUP쾌Ｃ , 2.00
+		CUP쾌Ｃ = CUP쾌Ｃ * (TALENT:대상者:즉시타락) * 2
+	;자위狂い
+	SIF TALENT:대상者:자위광
+		TIMES CUP쾌Ｃ , 1.20
+	CUP:대상者:쾌Ｃ += CUP쾌Ｃ
+
+	;女性、ふたなり
+	IF TALENT:대상者:성별 & 1
+		CUP:대상者:윤활 += CUP쾌Ｃ / 10
+	ELSE
+		CUP:대상者:윤활 += CUP쾌Ｃ / 20
+	ENDIF
+
+;욕정計算
+	CUP욕정 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP욕정 = CUP욕정 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP욕정 = CUP욕정 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+	;무드(上限1.5倍)
+	CUP욕정 = CUP욕정 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+	
+	;조교者のTALENT:解放をみる
+	SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP욕정 , 1.20
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP욕정 = CUP욕정 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP욕정 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP욕정 = CUP욕정 * RELATION:대상者:実行者 / 100
+	;음란
+	IF TALENT:대상者:음란 == 1
+		TIMES CUP욕정 , 1.20
+	ELSEIF TALENT:대상者:음란 == 2
+		TIMES CUP욕정 , 1.50
+	ENDIF
+
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		TIMES CUP욕정 , 2.00
+		CUP욕정 = CUP욕정 * (TALENT:대상者:즉시타락) * 2
+	;연모
+	SIF 実行者 == MASTER
+		CUP욕정 = CUP욕정 * ( 2 + TALENT:대상者:연모 ) / 2
+	;자제심
+	CUP욕정 = CUP욕정 * (5 - TALENT:대상者:자제심) / 5
+	;무관심
+	CUP욕정 = CUP욕정 * (5 - TALENT:대상者:무관심) / 5
+	;성적흥미
+	CUP욕정 = CUP욕정 * (10 + TALENT:대상者:성적흥미) / 10
+	;자기애
+	CUP욕정 = CUP욕정 * (5 + TALENT:대상者:자기애) / 5
+	;쾌락반응
+	CUP욕정 = CUP욕정 * (2 + TALENT:대상者:쾌감반응) / 2
+	;쾌락각인
+	CUP욕정 = CUP욕정 * (10 + MARK:대상者:쾌락각인 * MARK:대상者:쾌락각인) / 10
+	;ABL:욕망をみる
+	CUP욕정 = CUP욕정 * SOURCE_REVISION2(ABL:대상者:욕망) / 100
+
+	CUP:대상者:욕정 += CUP욕정
+;억울計算
+	CUP억울 = CUP基礎
+	;호감도
+	SIF 実行者 == MASTER
+		CUP억울 = CUP억울 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+	;이성(下限1/2)
+		CUP억울 = CUP억울 * (BASE:대상者:이성 + 1000) / 2000
+	;무드(下限1/2)
+		CUP억울 = CUP억울 * (100 - BASE:대상者:무드 / 30) / 100
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP억울 = CUP억울 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+	;연모
+	SIF 実行者 == MASTER
+		CUP억울 = CUP억울 * ( 2 - TALENT:대상者:연모 ) / 2
+	
+	;반응
+	CUP억울 = CUP억울 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP억울 = CUP억울 * (5 + TALENT:대상者:프라이드) / 5
+	;무관심
+	CUP억울 = CUP억울 * (5 - TALENT:대상者:무관심) / 5
+	;성적흥미
+	CUP억울 = CUP억울 * (10 - TALENT:대상者:성적흥미) / 10
+	;양기／음기,
+	CUP억울 = CUP억울 * (10 - TALENT:대상者:양기／음기) / 10
+	;자기애
+	CUP억울 = CUP억울 * (5 - TALENT:대상者:자기애) / 5
+	;쾌락반응
+	CUP억울 = CUP억울 * (2 - TALENT:대상者:쾌감반응) / 2
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP억울, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP억울, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP억울, 1.20
+	ENDIF
+	;쾌락각인
+	CUP억울 = CUP억울 * (5 - MARK:대상者:쾌락각인) / 5
+		
+	;ABL순종욕망依存
+	CUP억울 = CUP억울  * 10 / (10 + (ABL:대상者:순종 * ABL:대상者:욕망))
+	
+	CUP:대상者:억울 += CUP억울
+	
+;--------------------------------------------------------------------------------------------------
+;쾌Ｖ
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_쾌Ｖ(대상者, 実行者, 쾌락강도)
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP쾌Ｖ
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP억울
+
+VARSET CUP基礎
+
+IF TALENT:대상者:성별 == 2
+	RETURN 0
+ENDIF
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;共通倍率計算
+	;기교(上限5倍)
+	SIF 実行者 >= 0
+		CUP基礎 = CUP基礎 * GET_REVISION(ABL:実行者:기교 + 2, 500, 10) / 100
+
+
+	;미약
+	SIF TEQUIP:대상者:미약
+		CUP基礎 *= 2
+	;이뇨제
+	SIF TEQUIP:대상者:이뇨제
+		TIMES CUP基礎 , 0.70
+
+	;PALAM:욕정をみる
+	IF PALAM:대상者:욕정 < PALAMLV:1
+		TIMES CUP基礎 , 0.60
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:2
+		TIMES CUP基礎 , 0.80
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:3
+		TIMES CUP基礎 , 1.00
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:4
+		TIMES CUP基礎 , 1.20
+	ELSEIF PALAM:대상者:욕정 >= PALAMLV:4
+		TIMES CUP基礎 , 1.50
+	ENDIF
+
+	;Ｖ감도
+	CUP基礎 = CUP基礎 * (2 + TALENT:대상者:Ｖ감도) / 2
+
+	;V감각
+	CUP基礎 = CUP基礎 * SOURCE_REVISION1(ABL:대상者:Ｖ감각) / 10
+	;EXP:Ｖ경험をみる
+	IF EXP:대상者:Ｖ경험 < EXPLV:1
+		TIMES CUP基礎 , 0.30
+	ELSEIF EXP:대상者:Ｖ경험 < EXPLV:2
+		TIMES CUP基礎 , 0.50
+	ELSEIF EXP:대상者:Ｖ경험 < EXPLV:3
+		TIMES CUP基礎 , 0.80
+	ELSEIF EXP:대상者:Ｖ경험 < EXPLV:4
+		TIMES CUP基礎 , 1.00
+	ELSEIF EXP:대상者:Ｖ경험 < EXPLV:5
+		TIMES CUP基礎 , 1.20
+	ELSEIF EXP:대상者:Ｖ경험 >= EXPLV:5
+		TIMES CUP基礎 , 1.50
+	ENDIF
+
+
+
+
+	;PALAM:윤활をみる
+	IF PALAM:대상者:윤활 < PALAMLV:1
+		TIMES CUP基礎 , 0.10
+	ELSEIF PALAM:대상者:윤활 < PALAMLV:2
+		TIMES CUP基礎 , 0.40
+	ELSEIF PALAM:대상者:윤활 < PALAMLV:3
+		TIMES CUP基礎 , 0.60
+	ELSEIF PALAM:대상者:윤활 < PALAMLV:4
+		TIMES CUP基礎 , 0.80
+	ELSEIF PALAM:대상者:윤활 >= PALAMLV:4
+		TIMES CUP基礎 , 1.00
+	ENDIF
+
+;쾌Ｖ計算
+	CUP쾌Ｖ = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP쾌Ｖ = CUP쾌Ｖ * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP쾌Ｖ = CUP쾌Ｖ * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+	;조교者のTALENT:解放をみる
+	SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+		TIMES CUP쾌Ｖ , 1.20
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP쾌Ｖ , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP쾌Ｖ , 1.20
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP쾌Ｖ = CUP쾌Ｖ * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+	
+	;추가：조교者のTALENT:형태をみる
+	IF 実行者 >= 0 && TALENT:実行者:형태 == 0
+		TIMES CUP쾌Ｖ , 1.00
+	ELSEIF 実行者 >= 0 && TALENT:実行者:형태 == 1
+		TIMES CUP쾌Ｖ , 0.10
+	ELSEIF 実行者 >= 0 && TALENT:実行者:형태 == 2
+		TIMES CUP쾌Ｖ , 0.30
+	ELSEIF 実行者 >= 0 && TALENT:実行者:형태 == 3
+		TIMES CUP쾌Ｖ , 0.50
+	ELSEIF 実行者 >= 0 && TALENT:実行者:형태 == 4
+		TIMES CUP쾌Ｖ , 1.00
+	ELSEIF 実行者 >= 0 && TALENT:実行者:형태 == 5
+		TIMES CUP쾌Ｖ , 1.20
+	ELSEIF 実行者 >= 0 && TALENT:実行者:형태 == 6
+		TIMES CUP쾌Ｖ , 1.50
+	ELSEIF 実行者 >= 0 && TALENT:実行者:형태 == 7
+		TIMES CUP쾌Ｖ , 2.00
+	ELSEIF 実行者 >= 0 && TALENT:実行者:형태 >= 8
+		TIMES CUP쾌Ｖ , 4.00
+	ENDIF
+
+
+
+
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP쾌Ｖ /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP쾌Ｖ = CUP쾌Ｖ * RELATION:대상者:実行者 / 100
+	;음란
+	IF TALENT:대상者:음란 == 1
+		TIMES CUP쾌Ｖ , 1.20
+	ELSEIF TALENT:대상者:음란 == 2
+		TIMES CUP쾌Ｖ , 1.50
+	ENDIF
+
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		TIMES CUP쾌Ｖ , 2.00
+		CUP쾌Ｖ = CUP쾌Ｖ * (TALENT:대상者:즉시타락) * 2
+	;자위狂い
+	SIF TALENT:대상者:자위광
+		TIMES CUP쾌Ｖ , 1.20
+	CUP:대상者:쾌Ｖ += CUP쾌Ｖ
+	CUP:대상者:윤활 += CUP쾌Ｖ / 10
+
+;욕정計算
+	CUP욕정 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP욕정 = CUP욕정 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP욕정 = CUP욕정 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+	;무드(上限1.5倍)
+	CUP욕정 = CUP욕정 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+	
+	;조교者のTALENT:解放をみる
+	SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP욕정 , 1.20
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP욕정 = CUP욕정 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP욕정 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP욕정 = CUP욕정 * RELATION:대상者:実行者 / 100
+	;음란
+	IF TALENT:대상者:음란 == 1
+		TIMES CUP욕정 , 1.20
+	ELSEIF TALENT:대상者:음란 == 2
+		TIMES CUP욕정 , 1.50
+	ENDIF
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		TIMES CUP욕정 , 2.00
+		CUP욕정 = CUP욕정 * (TALENT:대상者:즉시타락) * 2
+	;연모
+	SIF 実行者 == MASTER
+		CUP욕정 = CUP욕정 * ( 2 + TALENT:대상者:연모 ) / 2
+	;자제심
+	CUP욕정 = CUP욕정 * (5 - TALENT:대상者:자제심) / 5
+	;무관심
+	CUP욕정 = CUP욕정 * (5 - TALENT:대상者:무관심) / 5
+	;성적흥미
+	CUP욕정 = CUP욕정 * (10 + TALENT:대상者:성적흥미) / 10
+	;자기애
+	CUP욕정 = CUP욕정 * (5 + TALENT:대상者:자기애) / 5
+	;쾌락반응
+	CUP욕정 = CUP욕정 * (2 + TALENT:대상者:쾌감반응) / 2
+	;쾌락각인
+	CUP욕정 = CUP욕정 * (10 + MARK:대상者:쾌락각인 * MARK:대상者:쾌락각인) / 10
+	;ABL:욕망をみる
+	CUP욕정 = CUP욕정 * SOURCE_REVISION2(ABL:대상者:욕망) / 100
+
+	CUP:대상者:욕정 += CUP욕정
+
+;억울計算
+	CUP억울 = CUP基礎 * 2
+	;호감도
+	SIF 実行者 == MASTER
+		CUP억울 = CUP억울 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+	;이성(下限1/2)
+		CUP억울 = CUP억울 * (BASE:대상者:이성 + 1000) / 2000
+	;무드(下限1/2)
+		CUP억울 = CUP억울 * (100 - BASE:대상者:무드 / 30) / 100
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP억울 = CUP억울 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+	;연모
+	SIF 実行者 == MASTER
+		CUP억울 = CUP억울 * ( 2 - TALENT:대상者:연모 ) / 2
+	;반응
+	CUP억울 = CUP억울 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP억울 = CUP억울 * (5 + TALENT:대상者:프라이드) / 5
+	;무관심
+	CUP억울 = CUP억울 * (5 - TALENT:대상者:무관심) / 5
+	;성적흥미
+	CUP억울 = CUP억울 * (10 - TALENT:대상者:성적흥미) / 10
+	;양기／음기,
+	CUP억울 = CUP억울 * (10 - TALENT:대상者:양기／음기) / 10
+	;자기애
+	CUP억울 = CUP억울 * (5 - TALENT:대상者:자기애) / 5
+	;쾌락반응
+	CUP억울 = CUP억울 * (2 - TALENT:대상者:쾌감반응) / 2
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP억울, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP억울, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP억울, 1.20
+	ENDIF
+	;쾌락각인
+	CUP억울 = CUP억울 * (5 - MARK:대상者:쾌락각인) / 5
+	;ABL순종욕망依存
+	CUP억울 = CUP억울  * 10 / (10 + (ABL:대상者:순종 * ABL:대상者:욕망))
+	
+	CUP:대상者:억울 += CUP억울
+
+;--------------------------------------------------------------------------------------------------
+;쾌Ａ
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_쾌Ａ(대상者, 実行者, 쾌락강도)
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP쾌Ａ
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP억울
+#DIM DYNAMIC CUP굴복
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;共通倍率計算
+	;기교(上限5倍)
+	SIF 実行者 >= 0
+		CUP基礎 = CUP基礎 * GET_REVISION(ABL:実行者:기교 + 2, 500, 10) / 100
+	;미약
+	SIF TEQUIP:대상者:미약
+		CUP基礎 *= 2
+	;이뇨제
+	SIF TEQUIP:대상者:이뇨제
+		TIMES CUP基礎 , 0.70
+
+	;PALAM:욕정をみる
+	;쾌ＡはあまりPALAM:욕정では差が出ない
+	IF PALAM:대상者:욕정 < PALAMLV:1
+		TIMES CUP基礎 , 0.90
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:2
+		TIMES CUP基礎 , 1.00
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:3
+		TIMES CUP基礎 , 1.10
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:4
+		TIMES CUP基礎 , 1.20
+	ELSEIF PALAM:대상者:욕정 >= PALAMLV:4
+		TIMES CUP基礎 , 1.30
+	ENDIF
+
+	;Ａ감도
+	CUP基礎 = CUP基礎 * (2 + TALENT:대상者:Ａ감도) / 2
+
+	;A감각
+	CUP基礎 = CUP基礎 * SOURCE_REVISION1(ABL:대상者:Ａ감각) / 10
+	;EXP:Ａ경험をみる
+	IF EXP:대상者:Ａ경험 < EXPLV:1
+		TIMES CUP基礎 , 0.30
+	ELSEIF EXP:대상者:Ａ경험 < EXPLV:2
+		TIMES CUP基礎 , 0.50
+	ELSEIF EXP:대상者:Ａ경험 < EXPLV:3
+		TIMES CUP基礎 , 0.80
+	ELSEIF EXP:대상者:Ａ경험 < EXPLV:4
+		TIMES CUP基礎 , 1.00
+	ELSEIF EXP:대상者:Ａ경험 < EXPLV:5
+		TIMES CUP基礎 , 1.20
+	ELSEIF EXP:대상者:Ａ경험 >= EXPLV:5
+		TIMES CUP基礎 , 1.50
+	ENDIF
+
+	;PALAM:윤활をみる
+	IF PALAM:대상者:윤활 < PALAMLV:1
+		TIMES CUP基礎 , 0.40
+	ELSEIF PALAM:대상者:윤활 < PALAMLV:2
+		TIMES CUP基礎 , 0.60
+	ELSEIF PALAM:대상者:윤활 < PALAMLV:3
+		TIMES CUP基礎 , 0.80
+	ELSEIF PALAM:대상者:윤활 < PALAMLV:4
+		TIMES CUP基礎 , 0.90
+	ELSEIF PALAM:대상者:윤활 >= PALAMLV:4
+		TIMES CUP基礎 , 1.00
+	ENDIF
+
+;쾌Ａ計算
+	CUP쾌Ａ = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP쾌Ａ = CUP쾌Ａ * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP쾌Ａ = CUP쾌Ａ * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+	;조교者のTALENT:解放をみる
+	SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+		TIMES CUP쾌Ａ , 1.20
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP쾌Ａ , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP쾌Ａ , 1.20
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP쾌Ａ = CUP쾌Ａ * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP쾌Ａ /= 2
+	;Ｂ
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP쾌Ａ = CUP쾌Ａ * RELATION:대상者:実行者 / 100
+	;음란
+	IF TALENT:대상者:음란 == 1
+		TIMES CUP쾌Ａ , 1.20
+	ELSEIF TALENT:대상者:음란 == 2
+		TIMES CUP쾌Ａ , 1.50
+	ENDIF
+
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+		CUP쾌Ａ = CUP쾌Ａ * (TALENT:대상者:즉시타락) * 2
+	;자위狂い
+	SIF TALENT:대상者:자위광
+		TIMES CUP쾌Ａ , 1.20
+	CUP:대상者:쾌Ａ += CUP쾌Ａ
+	CUP:대상者:윤활 += CUP쾌Ａ / 15
+;욕정計算
+	CUP욕정 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP욕정 = CUP욕정 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP욕정 = CUP욕정 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+	;무드(上限1.5倍)
+	CUP욕정 = CUP욕정 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+	
+	;조교者のTALENT:解放をみる
+	SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP욕정 , 1.20
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP욕정 = CUP욕정 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP욕정 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP욕정 = CUP욕정 * RELATION:대상者:実行者 / 100
+	;음란
+	IF TALENT:대상者:음란 == 1
+		TIMES CUP욕정 , 1.20
+	ELSEIF TALENT:대상者:음란 == 2
+		TIMES CUP욕정 , 1.50
+	ENDIF
+
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		TIMES CUP욕정 , 2.00
+		CUP욕정 = CUP욕정 * (TALENT:대상者:즉시타락) * 2
+	;연모
+	SIF 実行者 == MASTER
+		CUP욕정 = CUP욕정 * ( 2 + TALENT:대상者:연모 ) / 2
+	;자제심
+	CUP욕정 = CUP욕정 * (5 - TALENT:대상者:자제심) / 5
+	;무관심
+	CUP욕정 = CUP욕정 * (5 - TALENT:대상者:무관심) / 5
+	;성적흥미
+	CUP욕정 = CUP욕정 * (10 + TALENT:대상者:성적흥미) / 10
+	;자기애
+	CUP욕정 = CUP욕정 * (5 + TALENT:대상者:자기애) / 5
+	;쾌락반응
+	CUP욕정 = CUP욕정 * (2 + TALENT:대상者:쾌감반응) / 2
+	;쾌락각인
+	CUP욕정 = CUP욕정 * (10 + MARK:대상者:쾌락각인 * MARK:대상者:쾌락각인) / 10
+	;ABL:욕망をみる
+	CUP욕정 = CUP욕정 * SOURCE_REVISION2(ABL:대상者:욕망) / 100
+
+	CUP:대상者:욕정 += CUP욕정
+
+;억울計算
+	CUP억울 = CUP基礎 * 3
+	;호감도
+	SIF 実行者 == MASTER
+		CUP억울 = CUP억울 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+	;이성(下限1/2)
+		CUP억울 = CUP억울 * (BASE:대상者:이성 + 1000) / 2000
+	;무드(下限1/2)
+		CUP억울 = CUP억울 * (100 - BASE:대상者:무드 / 30) / 100
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP억울 = CUP억울 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+	;연모
+	SIF 実行者 == MASTER
+		CUP억울 = CUP억울 * ( 2 - TALENT:대상者:연모 ) / 2
+	;반응
+	CUP억울 = CUP억울 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP억울 = CUP억울 * (5 + TALENT:대상者:프라이드) / 5
+	;무관심
+	CUP억울 = CUP억울 * (5 - TALENT:대상者:무관심) / 5
+	;성적흥미
+	CUP억울 = CUP억울 * (10 - TALENT:대상者:성적흥미) / 10
+	;양기／음기,
+	CUP억울 = CUP억울 * (10 - TALENT:대상者:양기／음기) / 10
+	;자기애
+	CUP억울 = CUP억울 * (5 - TALENT:대상者:자기애) / 5
+	;쾌락반응
+	CUP억울 = CUP억울 * (2 - TALENT:대상者:쾌감반응) / 2
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP억울, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP억울, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP억울, 1.20
+	ENDIF
+	;쾌락각인
+	CUP억울 = CUP억울 * (5 - MARK:대상者:쾌락각인) / 5
+	;ABL순종욕망依存
+	CUP억울 = CUP억울  * 10 / (10 + (ABL:대상者:순종 * ABL:대상者:욕망))
+	
+	CUP:대상者:억울 += CUP억울
+
+;굴복計算
+	CUP굴복 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP굴복 = CUP굴복 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP굴복 = CUP굴복 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+	;연모
+	SIF 実行者 == MASTER && TALENT:대상者:연모
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	SIF 実行者 == MASTER && TALENT:대상者:음란
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:음란 ) / 2
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		CUP굴복 = CUP굴복 * 2
+		CUP굴복 = CUP굴복 * (TALENT:대상者:즉시타락) * 2
+	;태도
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:태도) / 10
+	;반응
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:프라이드) / 5
+	;성적흥미
+	CUP굴복 = CUP굴복 * (10 - TALENT:대상者:성적흥미) / 10
+	;수치심
+	CUP굴복 = CUP굴복 * (10 - TALENT:대상者:수치심) / 10
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP굴복 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP굴복 = CUP굴복 * RELATION:대상者:実行者 / 100
+	;굴복각인
+	CUP굴복 = CUP굴복 * (10 + MARK:대상者:굴복각인) / 10
+
+	CUP:대상者:굴복 += CUP굴복
+;--------------------------------------------------------------------------------------------------
+;쾌Ｂ
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_쾌Ｂ(대상者, 実行者, 쾌락강도)
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP쾌Ｂ
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP억울
+
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+;共通倍率計算
+	;기교(上限5倍)
+	SIF 実行者 >= 0
+		CUP基礎 = CUP基礎 * GET_REVISION(ABL:実行者:기교 + 2, 500, 10) / 100
+	;미약
+	SIF TEQUIP:대상者:미약
+		CUP基礎 *= 2
+	;이뇨제
+	SIF TEQUIP:대상者:이뇨제
+		TIMES CUP基礎 , 0.70
+	SIF CFLAG:대상者:함몰개방
+		TIMES CUP基礎 , 1.50
+
+
+;PALAM:욕정をみる
+IF PALAM:대상者:욕정 < PALAMLV:1
+	TIMES CUP基礎 , 0.80
+ELSEIF PALAM:대상者:욕정 < PALAMLV:2
+	TIMES CUP基礎 , 1.00
+ELSEIF PALAM:대상者:욕정 < PALAMLV:3
+	TIMES CUP基礎 , 1.20
+ELSEIF PALAM:대상者:욕정 < PALAMLV:4
+	TIMES CUP基礎 , 1.40
+ELSEIF PALAM:대상者:욕정 >= PALAMLV:4
+	TIMES CUP基礎 , 1.60
+ENDIF
+
+;Ｂ감도
+CUP基礎 = CUP基礎 * (2 + TALENT:대상者:Ｂ감도) / 2
+
+;B감각
+CUP基礎 = CUP基礎 * SOURCE_REVISION1(ABL:대상者:Ｂ감각) / 10
+
+;쾌Ｂ計算
+CUP쾌Ｂ = CUP基礎
+;호감도(上限3倍)
+SIF 実行者 == MASTER
+	CUP쾌Ｂ = CUP쾌Ｂ * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+;이성(上限1.5倍)
+CUP쾌Ｂ = CUP쾌Ｂ * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+;조교者のTALENT:解放をみる
+SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+	TIMES CUP쾌Ｂ , 1.20
+;조교者のTALENT:매혹をみる
+SIF 実行者 >= 0 && TALENT:実行者:매혹
+	TIMES CUP쾌Ｂ , 1.20
+;조교者のTALENT:수수께끼의매력をみる
+SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+	TIMES CUP쾌Ｂ , 1.20
+;同性愛
+SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+	CUP쾌Ｂ = CUP쾌Ｂ * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+;기력
+SIF BASE:대상者:기력 <= 0
+	CUP쾌Ｂ /= 2
+;相性
+SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+	CUP쾌Ｂ = CUP쾌Ｂ * RELATION:대상者:実行者 / 100
+;음란
+IF TALENT:대상者:음란 == 1
+	TIMES CUP쾌Ｂ , 1.20
+ELSEIF TALENT:대상者:음란 == 2
+	TIMES CUP쾌Ｂ , 1.50
+ENDIF
+
+;즉시타락
+SIF TALENT:대상者:즉시타락
+;		TIMES CUP쾌Ｂ , 2.00
+	CUP쾌Ｂ = CUP쾌Ｂ * (TALENT:대상者:즉시타락) * 2
+;자위狂い
+SIF TALENT:대상者:자위광
+	TIMES CUP쾌Ｂ , 1.20
+CUP:대상者:쾌Ｂ += CUP쾌Ｂ
+CUP:대상者:윤활 += CUP쾌Ｂ / 20
+
+;욕정計算
+CUP욕정 = CUP基礎
+;호감도(上限3倍)
+SIF 実行者 == MASTER
+	CUP욕정 = CUP욕정 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+;이성(上限1.5倍)
+CUP욕정 = CUP욕정 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+;무드(上限1.5倍)
+CUP욕정 = CUP욕정 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+
+;조교者のTALENT:解放をみる
+SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+	TIMES CUP욕정 , 1.20
+;조교者のTALENT:매혹をみる
+SIF 実行者 >= 0 && TALENT:実行者:매혹
+	TIMES CUP욕정 , 1.20
+;조교者のTALENT:수수께끼의매력をみる
+SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+	TIMES CUP욕정 , 1.20
+;同性愛
+SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+	CUP욕정 = CUP욕정 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+;기력
+SIF BASE:대상者:기력 <= 0
+	CUP욕정 /= 2
+;相性
+SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+	CUP욕정 = CUP욕정 * RELATION:대상者:実行者 / 100
+;연모
+SIF 実行者 == MASTER
+	CUP욕정 = CUP욕정 * ( 2 + TALENT:대상者:연모 ) / 2
+;음란
+IF TALENT:대상者:음란 == 1
+	TIMES CUP욕정 , 1.20
+ELSEIF TALENT:대상者:음란 == 2
+	TIMES CUP욕정 , 1.50
+ENDIF
+
+;즉시타락
+SIF TALENT:대상者:즉시타락
+;		TIMES CUP욕정 , 2.00
+	CUP욕정 = CUP욕정 * (TALENT:대상者:즉시타락) * 2
+;자제심
+CUP욕정 = CUP욕정 * (5 - TALENT:대상者:자제심) / 5
+;무관심
+CUP욕정 = CUP욕정 * (5 - TALENT:대상者:무관심) / 5
+;성적흥미
+CUP욕정 = CUP욕정 * (10 + TALENT:대상者:성적흥미) / 10
+;자기애
+CUP욕정 = CUP욕정 * (5 + TALENT:대상者:자기애) / 5
+;쾌락반응
+CUP욕정 = CUP욕정 * (2 + TALENT:대상者:쾌감반응) / 2
+;쾌락각인
+CUP욕정 = CUP욕정 * (10 + MARK:대상者:쾌락각인 * MARK:대상者:쾌락각인) / 10
+;ABL:욕망をみる
+CUP욕정 = CUP욕정 * SOURCE_REVISION2(ABL:대상者:욕망) / 100
+
+CUP:대상者:욕정 += CUP욕정
+;억울計算
+CUP억울 = CUP基礎
+;호감도
+SIF 実行者 == MASTER
+	CUP억울 = CUP억울 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+;이성(下限1/2)
+	CUP억울 = CUP억울 * (BASE:대상者:이성 + 1000) / 2000
+;무드(下限1/2)
+	CUP억울 = CUP억울 * (100 - BASE:대상者:무드 / 30) / 100
+;同性愛
+SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+	CUP억울 = CUP억울 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+;연모
+SIF 実行者 == MASTER
+	CUP억울 = CUP억울 * ( 2 - TALENT:대상者:연모 ) / 2
+;반응
+CUP억울 = CUP억울 * (10 + TALENT:대상者:반응) / 10
+;프라이드
+CUP억울 = CUP억울 * (5 + TALENT:대상者:프라이드) / 5
+;무관심
+CUP억울 = CUP억울 * (5 - TALENT:대상者:무관심) / 5
+;성적흥미
+CUP억울 = CUP억울 * (10 - TALENT:대상者:성적흥미) / 10
+;양기／음기,
+CUP억울 = CUP억울 * (10 - TALENT:대상者:양기／음기) / 10
+;자기애
+CUP억울 = CUP억울 * (5 - TALENT:대상者:자기애) / 5
+;쾌락반응
+CUP억울 = CUP억울 * (2 - TALENT:대상者:쾌감반응) / 2
+;人間不信
+IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+	TIMES CUP억울, 1.20
+;女嫌い
+ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+	TIMES CUP억울, 1.20
+;男嫌い
+ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+	TIMES CUP억울, 1.20
+ENDIF
+;쾌락각인
+CUP억울 = CUP억울 * (5 - MARK:대상者:쾌락각인) / 5
+;ABL순종욕망依存
+CUP억울 = CUP억울  * 10 / (10 + (ABL:대상者:순종 * ABL:대상者:욕망))
+
+CUP:대상者:억울 += CUP억울
+
+
+;--------------------------------------------------------------------------------------------------
+;쾌Ｍ
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_쾌Ｍ(대상者, 実行者, 쾌락강도)
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP쾌Ｍ
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP억울
+
+
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;共通倍率計算
+	;기교(上限5倍)
+	SIF 実行者 >= 0
+		CUP基礎 = CUP基礎 * GET_REVISION(ABL:実行者:기교 + 2, 500, 10) / 100
+	;미약
+	SIF TEQUIP:대상者:미약
+		CUP基礎 *= 2
+	;이뇨제
+	SIF TEQUIP:대상者:이뇨제
+		TIMES CUP基礎 , 0.70
+
+;PALAM:욕정をみる
+IF PALAM:대상者:욕정 < PALAMLV:1
+	TIMES CUP基礎 , 0.80
+ELSEIF PALAM:대상者:욕정 < PALAMLV:2
+	TIMES CUP基礎 , 1.00
+ELSEIF PALAM:대상者:욕정 < PALAMLV:3
+	TIMES CUP基礎 , 1.20
+ELSEIF PALAM:대상者:욕정 < PALAMLV:4
+	TIMES CUP基礎 , 1.40
+ELSEIF PALAM:대상者:욕정 >= PALAMLV:4
+	TIMES CUP基礎 , 1.60
+ENDIF
+
+;Ｍ감도
+CUP基礎 = CUP基礎 * (2 + TALENT:대상者:Ｍ감도) / 2
+
+;Ｍ감각
+CUP基礎 = CUP基礎 * SOURCE_REVISION1(ABL:대상者:Ｍ감각) / 10
+
+;쾌Ｍ計算
+	CUP쾌Ｍ = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP쾌Ｍ = CUP쾌Ｍ * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP쾌Ｍ = CUP쾌Ｍ * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+	;조교者のTALENT:解放をみる
+	SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+		TIMES CUP쾌Ｍ , 1.20
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP쾌Ｍ , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP쾌Ｍ , 1.20
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP쾌Ｍ = CUP쾌Ｍ * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP쾌Ｍ /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP쾌Ｍ = CUP쾌Ｍ * RELATION:대상者:実行者 / 100
+	;음란
+	IF TALENT:대상者:음란 == 1
+		TIMES CUP쾌Ｍ , 1.20
+	ELSEIF TALENT:대상者:음란 == 2
+		TIMES CUP쾌Ｍ , 1.50
+	ENDIF
+
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		TIMES CUP쾌Ｍ , 2.00
+		CUP쾌Ｍ = CUP쾌Ｍ * (TALENT:대상者:즉시타락) * 2
+	;자위狂い
+	SIF TALENT:대상者:자위광
+		TIMES CUP쾌Ｍ , 1.20
+	CUP:대상者:쾌Ｍ += CUP쾌Ｍ
+	CUP:대상者:윤활 += CUP쾌Ｍ / 20
+
+;욕정計算
+	CUP욕정 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP욕정 = CUP욕정 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP욕정 = CUP욕정 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+	;무드(上限1.5倍)
+	CUP욕정 = CUP욕정 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+	
+	;조교者のTALENT:解放をみる
+	SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP욕정 , 1.20
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP욕정 = CUP욕정 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP욕정 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP욕정 = CUP욕정 * RELATION:대상者:実行者 / 100
+	;연모
+	SIF 実行者 == MASTER
+		CUP욕정 = CUP욕정 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	IF TALENT:대상者:음란 == 1
+		TIMES CUP욕정 , 1.20
+	ELSEIF TALENT:대상者:음란 == 2
+		TIMES CUP욕정 , 1.50
+	ENDIF
+
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		TIMES CUP욕정 , 2.00
+		CUP욕정 = CUP욕정 * (TALENT:대상者:즉시타락) * 2
+	;자제심
+	CUP욕정 = CUP욕정 * (5 - TALENT:대상者:자제심) / 5
+	;무관심
+	CUP욕정 = CUP욕정 * (5 - TALENT:대상者:무관심) / 5
+	;성적흥미
+	CUP욕정 = CUP욕정 * (10 + TALENT:대상者:성적흥미) / 10
+	;자기애
+	CUP욕정 = CUP욕정 * (5 + TALENT:대상者:자기애) / 5
+	;쾌락반응
+	CUP욕정 = CUP욕정 * (2 + TALENT:대상者:쾌감반응) / 2
+	;쾌락각인
+	CUP욕정 = CUP욕정 * (10 + MARK:대상者:쾌락각인 * MARK:대상者:쾌락각인) / 10
+	;ABL:욕망をみる
+	CUP욕정 = CUP욕정 * SOURCE_REVISION2(ABL:대상者:욕망) / 100
+
+	CUP:대상者:욕정 += CUP욕정
+;억울計算
+	CUP억울 = CUP基礎
+	;호감도
+	SIF 実行者 == MASTER
+		CUP억울 = CUP억울 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+	;이성(下限1/2)
+		CUP억울 = CUP억울 * (BASE:대상者:이성 + 1000) / 2000
+	;무드(下限1/2)
+		CUP억울 = CUP억울 * (100 - BASE:대상者:무드 / 30) / 100
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP억울 = CUP억울 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+	;연모
+	SIF 実行者 == MASTER
+		CUP억울 = CUP억울 * ( 2 - TALENT:대상者:연모 ) / 2
+	;반응
+	CUP억울 = CUP억울 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP억울 = CUP억울 * (5 + TALENT:대상者:프라이드) / 5
+	;무관심
+	CUP억울 = CUP억울 * (5 - TALENT:대상者:무관심) / 5
+	;성적흥미
+	CUP억울 = CUP억울 * (10 - TALENT:대상者:성적흥미) / 10
+	;양기／음기,
+	CUP억울 = CUP억울 * (10 - TALENT:대상者:양기／음기) / 10
+	;자기애
+	CUP억울 = CUP억울 * (5 - TALENT:대상者:자기애) / 5
+	;쾌락반응
+	CUP억울 = CUP억울 * (2 - TALENT:대상者:쾌감반응) / 2
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP억울, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP억울, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP억울, 1.20
+	ENDIF
+	;쾌락각인
+	CUP억울 = CUP억울 * (5 - MARK:대상者:쾌락각인) / 5
+	;ABL순종욕망依存
+	CUP억울 = CUP억울  * 10 / (10 + (ABL:대상者:순종 * ABL:대상者:욕망))
+	
+	CUP:대상者:억울 += CUP억울
+
+;--------------------------------------------------------------------------------------------------
+;접촉
+;--------------------------------------------------------------------------------------------------
+;욕정、호의、불쾌の珠
+@SOURCE_CALC_접촉(대상者, 実行者, 쾌락강도)
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP호의
+#DIM DYNAMIC CUP불쾌
+#DIM DYNAMIC CUP공순
+
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;욕정計算
+	CUP욕정 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP욕정 = CUP욕정 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP욕정 = CUP욕정 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+	;무드(上限1.5倍)
+	;PRINTFORMW BASE:{대상者}:무드 : {BASE:대상者:무드}
+	CUP욕정 = CUP욕정 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+	;미약
+	SIF TEQUIP:대상者:미약
+		CUP욕정 *= 2
+	;조교者のTALENT:解放をみる
+	SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP욕정 , 1.20
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP욕정 = CUP욕정 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP욕정 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP욕정 = CUP욕정 * RELATION:대상者:実行者 / 100
+	;음란
+	IF TALENT:대상者:음란 == 1
+		TIMES CUP욕정 , 1.20
+	ELSEIF TALENT:대상者:음란 == 2
+		TIMES CUP욕정 , 1.50
+	ENDIF
+
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		TIMES CUP욕정 , 2.00
+		CUP욕정 = CUP욕정 * (TALENT:대상者:즉시타락) * 2
+	;자제심
+	CUP욕정 = CUP욕정 * (3 - TALENT:대상者:자제심) / 3
+	;무관심
+	CUP욕정 = CUP욕정 * (3 - TALENT:대상者:무관심) / 3
+	;성적흥미
+	CUP욕정 = CUP욕정 * (10 + TALENT:대상者:성적흥미) / 10
+	;자기애
+	CUP욕정 = CUP욕정 * (5 + TALENT:대상者:자기애) / 5
+
+	;PALAM:욕정をみる
+	IF PALAM:대상者:욕정 < PALAMLV:1
+		TIMES CUP욕정 , 1.00
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:2
+		TIMES CUP욕정 , 1.20
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:3
+		TIMES CUP욕정 , 1.50
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:4
+		TIMES CUP욕정 , 1.80
+	ELSEIF PALAM:대상者:욕정 >= PALAMLV:4
+		TIMES CUP욕정 , 2.00
+	ENDIF
+	;体の開発度を見る
+	CUP욕정 = CUP욕정 * GET_REVISION(1 + ABL:대상者:Ｃ감각 + ABL:대상者:Ｖ감각 + ABL:대상者:Ａ감각 + ABL:대상者:Ｂ감각 + ABL:대상者:Ｍ감각 , 100 , 10) / 20
+	
+	;ABL:욕망をみる
+	CUP욕정 = CUP욕정 * (5 + ABL:대상者:욕망) / 5	
+	;ABL:친밀をみる
+	CUP욕정 = CUP욕정 * (5 + ABL:대상者:친밀) / 5
+	CUP:대상者:욕정 += CUP욕정
+;호의
+	CUP호의 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP호의 = CUP호의 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP호의 = CUP호의 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+	;무드(上限1.5倍)
+	CUP호의 = CUP호의 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+	
+	;조교者のTALENT:解放をみる
+	SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+		TIMES CUP호의 , 1.20
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP호의 , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP호의 , 1.20
+	;성별보정はなし
+
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP호의 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP호의 = CUP호의 * RELATION:대상者:実行者 / 100
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		TIMES CUP호의 , 2.00
+		CUP호의 = CUP호의 * (TALENT:대상者:즉시타락) * 2
+	;태도
+	CUP호의 = CUP호의 * (5 - TALENT:대상者:태도) / 5
+	;반응
+	CUP호의 = CUP호의 * (5 - TALENT:대상者:반응) / 5
+	;무관심
+	CUP호의 = CUP호의 * (3 - TALENT:대상者:무관심) / 3
+	;자기애
+	CUP호의 = CUP호의 * (5 + TALENT:대상者:자기애) / 5
+	;ABL:친밀をみる
+	CUP호의 = CUP호의 * SOURCE_REVISION2(ABL:대상者:친밀) / 100
+	;PLAYER限定
+	SIF 実行者 == MASTER
+		CUP:대상者:호의 += CUP호의
+
+;불쾌
+	CUP불쾌 = CUP基礎 * 3
+	;호감도
+	SIF 実行者 == MASTER
+		CUP불쾌 = CUP불쾌 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+	;이성(下限1/2)
+		CUP불쾌 = CUP불쾌 * (BASE:대상者:이성 + 500) / 1500
+	;무드(下限1/2)
+		CUP불쾌 = CUP불쾌 * (1500 - BASE:대상者:무드) / 1500
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP불쾌 = CUP불쾌 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+	;연모
+	SIF 実行者 == MASTER
+		CUP불쾌 = CUP불쾌 * ( 2 - TALENT:대상者:연모 ) / 2
+	
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP불쾌 , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP불쾌 , 1.20
+	;태도
+	CUP불쾌 = CUP불쾌 * (5 + TALENT:대상者:태도) / 5
+	;반응
+	CUP불쾌 = CUP불쾌 * (5 + TALENT:대상者:반응) / 5
+	;무관심
+	CUP불쾌 = CUP불쾌 * (3 + TALENT:대상者:무관심) / 3
+	;자기애
+	CUP불쾌 = CUP불쾌 * (5 + TALENT:대상者:자기애) / 5
+	;정조
+	CUP불쾌 = CUP불쾌 * (3 + TALENT:대상者:정조) / 3
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP불쾌, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP불쾌, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP불쾌, 1.20
+	ENDIF
+	;ABL친밀
+	CUP불쾌 = CUP불쾌  * 10 / (5 + (ABL:대상者:친밀 * ABL:대상者:친밀))
+
+
+	;憑依状態処理	
+	SIF 憑依状態 == 1
+		CUP불쾌 = 0
+	;PLAYER限定
+	SIF 実行者 == MASTER
+		CUP:대상者:불쾌 += CUP불쾌
+
+;공순計算
+	CUP공순 = CUP基礎 / 3
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP공순 = CUP공순 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;무드(上限1.5倍)
+		CUP공순 = CUP공순 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP공순 = CUP공순 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+	;연모
+	SIF 実行者 == MASTER && TALENT:대상者:연모
+		CUP공순 = CUP공순 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	SIF 実行者 == MASTER && TALENT:대상者:음란
+		CUP공순 = CUP공순 * ( 2 + TALENT:대상者:음란 ) / 2
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		CUP공순 = CUP공순 * 2
+		CUP공순 = CUP공순 * (TALENT:대상者:즉시타락) * 2
+	;태도
+	CUP공순 = CUP공순 * (10 + TALENT:대상者:태도) / 10
+	;반응
+	SIF TALENT:대상者:반응
+		TIMES CUP공순 , 0.80
+	;ツンデレ
+	IF 実行者 == MASTER && TALENT:대상者:츤／데레 == 1
+		;함락素質がある場合と無い場合で変化する
+		IF TALENT:대상者:연모 || TALENT:대상者:음란 || TALENT:대상者:복종
+			TIMES CUP공순 , 1.20
+		ELSE
+			TIMES CUP공순 , 0.80
+		ENDIF
+	ENDIF
+	;デレデレ
+	IF 実行者 == MASTER && TALENT:대상者:츤／데레 == -1
+			TIMES CUP공순 , 1.20
+	ENDIF
+
+
+	;무관심
+	SIF TALENT:대상者:무관심
+		TIMES CUP공순 , 0.80
+	;감정부족함
+	SIF TALENT:대상者:감정부족함
+		TIMES CUP공순 , 0.80
+	;저항
+	SIF TALENT:대상者:저항
+		TIMES CUP공순 , 0.80
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP공순 /= 2
+	;반발각인
+	CUP공순 = CUP공순 * (10 - MARK:대상者:반발각인) / 10
+	;ABL:친밀をみる
+	SELECTCASE ABL:대상者:친밀
+		CASE 0
+			TIMES CUP공순 , 0.10
+		CASE 1
+			TIMES CUP공순 , 0.30
+		CASE 2
+			TIMES CUP공순 , 0.60
+		CASE 3
+			TIMES CUP공순 , 1.00
+		CASE 4
+			TIMES CUP공순 , 1.20
+		CASE 5
+			TIMES CUP공순 , 1.40
+		CASE 6
+			TIMES CUP공순 , 1.60
+		CASE 7
+			TIMES CUP공순 , 1.80
+		CASE 8
+			TIMES CUP공순 , 2.00
+		CASE 9
+			TIMES CUP공순 , 2.50
+		CASEELSE
+			TIMES CUP공순 , 3.00
+	ENDSELECT
+	CUP:대상者:공순 += CUP공순
+
+;--------------------------------------------------------------------------------------------------
+;액체추가
+;로션等の固定値を想定
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_액체(대상者, 実行者, 쾌락강도)
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+
+CUP:대상者:윤활 += 쾌락강도
+
+
+;--------------------------------------------------------------------------------------------------
+;노출
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_노출(대상者, 実行者, 쾌락강도)
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP치정
+#DIM DYNAMIC CUP공포
+#DIM DYNAMIC CUP반감
+#DIM DYNAMIC CUP굴복
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;共通倍率
+SIF TALENT:대상者:수치심 > 0
+	TIMES CUP基礎 , 2.00
+SIF TALENT:대상者:수치심 < 0
+	TIMES CUP基礎 , 0.50
+	
+;욕정計算
+	CUP욕정 = CUP基礎
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP욕정 = CUP욕정 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+	;도착적
+	CUP욕정 = CUP욕정 * ( 3 + TALENT:대상者:도착적 ) / 3
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP욕정 /= 2
+	;ABL:노출증をみる
+	SELECTCASE ABL:대상者:노출증
+		CASE 0
+			TIMES CUP욕정 , 0.00
+		CASE 1
+			TIMES CUP욕정 , 0.10
+		CASE 2
+			TIMES CUP욕정 , 0.20
+		CASE 3
+			TIMES CUP욕정 , 0.40
+		CASE 4
+			TIMES CUP욕정 , 0.60
+		CASE 5
+			TIMES CUP욕정 , 0.80
+		CASE 6
+			TIMES CUP욕정 , 1.00
+		CASE 7
+			TIMES CUP욕정 , 1.20
+		CASE 8
+			TIMES CUP욕정 , 1.40
+		CASE 9
+			TIMES CUP욕정 , 1.60
+		CASEELSE
+			TIMES CUP욕정 , 2.00
+	ENDSELECT
+	CUP:대상者:욕정 += CUP욕정
+	CUP:대상者:윤활 += CUP욕정 / 10
+;치정計算
+	CUP치정 = CUP基礎
+	;감정부족함
+	CUP치정 = CUP치정 * (5 + TALENT:대상者:감정부족함) / 5
+	;무관심
+	CUP치정 = CUP치정 * (5 + TALENT:대상者:무관심) / 5
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP치정 /= 2
+	;PALAM:치정をみる
+	;恥ずかしさを感じれば感じるほどあまり恥ずかしくなくなる
+	IF PALAM:대상者:치정 < PALAMLV:1
+		TIMES CUP치정 , 2.00
+	ELSEIF PALAM:대상者:치정 < PALAMLV:2
+		TIMES CUP치정 , 1.50
+	ELSEIF PALAM:대상者:치정 < PALAMLV:3
+		TIMES CUP치정 , 1.00
+	ELSEIF PALAM:대상者:치정 < PALAMLV:4
+		TIMES CUP치정 , 0.80
+	ELSEIF PALAM:대상者:치정 >= PALAMLV:4
+		TIMES CUP치정 , 0.60
+	ENDIF
+
+	CUP:대상者:치정 += CUP치정
+
+;공포計算
+	CUP공포 = CUP基礎
+
+	;조교者のTALENT:새드をみる
+	SIF 実行者 >= 0 && TALENT:実行者:새드
+		TIMES CUP공포 , 1.50
+
+	;배짱
+	CUP공포 = CUP공포 * (3 + TALENT:대상者:배짱) / 3
+	;目立ちたがり
+	CUP공포 = CUP공포 * (2 - TALENT:대상者:자기과시욕) / 2
+	;이성(下限1/2)
+	CUP공포 = CUP공포 * (BASE:대상者:이성 + 500) / 1500
+	;ABL:노출증をみる
+	CUP공포 = CUP공포 / (1 + ABL:대상者:노출증)
+	
+	SIF CUP공포 < 30
+		CUP공포 = 0
+	SIF 実行者 != -1 && 대상者 == MASTER && CFLAG:実行者:호감도 >= 1000
+		CUP공포 = 0	
+
+	SIF 憑依状態 == 1
+		CUP공포 = 0
+	CUP:대상者:공포 += CUP공포
+
+;반감計算
+CUP반감 = CUP基礎 * 5
+	;호감도
+	SIF 実行者 == MASTER
+		CUP반감 = CUP반감 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+	;이성(下限1/2)
+		CUP반감 = CUP반감 * (BASE:대상者:이성 + 500) / 1500
+	;무드(下限1/2)
+		CUP반감 = CUP반감 * (1500 - BASE:대상者:무드) / 1500
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP반감 = CUP반감 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+	;연모
+	SIF 実行者 == MASTER
+		CUP반감 = CUP반감 * ( 2 - TALENT:대상者:연모 ) / 2
+	
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP반감 , 0.80
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP반감 , 0.50
+	;태도
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:태도) / 5
+	;반응
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:반응) / 5
+	;프라이드
+	CUP반감 = CUP반감 * (3 + TALENT:대상者:프라이드) / 3
+	;무관심
+	CUP반감 = CUP반감 * (3 + TALENT:대상者:무관심) / 3
+	;저항
+	CUP반감 = CUP반감 * (2 + TALENT:대상者:저항) / 2
+	;도착적
+	CUP반감 = CUP반감 * ( 3 - TALENT:대상者:도착적 ) / 3
+	;마조
+	CUP반감 = CUP반감 * (2 - TALENT:대상者:마조 ) / 2
+	;새드
+	CUP반감 = CUP반감 * (10 + TALENT:대상者:새드 ) / 10
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP반감, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP반감, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP반감, 1.20
+	ENDIF
+
+	;ABL:순종をみる
+	SELECTCASE ABL:대상者:순종 + ABL:대상者:친밀
+		CASE 0
+			TIMES CUP반감 , 3.00
+		CASE 1
+			TIMES CUP반감 , 2.00
+		CASE 2
+			TIMES CUP반감 , 1.50
+		CASE 3
+			TIMES CUP반감 , 1.00
+		CASE 4
+			TIMES CUP반감 , 0.90
+		CASE 5
+			TIMES CUP반감 , 0.80
+		CASE 6
+			TIMES CUP반감 , 0.70
+		CASE 7
+			TIMES CUP반감 , 0.60
+		CASE 8
+			TIMES CUP반감 , 0.50
+		CASE 9
+			TIMES CUP반감 , 0.40
+		CASEELSE
+			TIMES CUP반감 , 0.30
+	ENDSELECT
+
+	;ABL:마조끼,노출증をみる
+	SELECTCASE ABL:대상者:마조끼 + ABL:대상者:노출증
+		CASE 0
+			TIMES CUP반감 , 1.00
+		CASE 1
+			TIMES CUP반감 , 0.90
+		CASE 2
+			TIMES CUP반감 , 0.80
+		CASE 3
+			TIMES CUP반감 , 0.70
+		CASE 4
+			TIMES CUP반감 , 0.60
+		CASE 5
+			TIMES CUP반감 , 0.50
+		CASE 6
+			TIMES CUP반감 , 0.40
+		CASE 7
+			TIMES CUP반감 , 0.30
+		CASE 8
+			TIMES CUP반감 , 0.20
+		CASE 9
+			TIMES CUP반감 , 0.10
+		CASEELSE
+			TIMES CUP반감 , 0.00
+	ENDSELECT
+	SIF 憑依状態 == 1
+		CUP반감 = 0
+	;行為者PLAYER限定
+	SIF 実行者 == MASTER
+		CUP:대상者:반감 += CUP반감
+
+;굴복計算
+	CUP굴복 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP굴복 = CUP굴복 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP굴복 = CUP굴복 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+	;연모
+	SIF 実行者 == MASTER && TALENT:대상者:연모
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	SIF 実行者 == MASTER && TALENT:대상者:음란
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:음란 ) / 2
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		CUP굴복 = CUP굴복 * 2
+		CUP굴복 = CUP굴복 * (TALENT:대상者:즉시타락) * 2
+	;태도
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:태도) / 10
+	;반응
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:프라이드) / 5
+	;성적흥미
+	CUP굴복 = CUP굴복 * (5 - TALENT:대상者:성적흥미) / 5
+	;도착적
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:도착적) / 10
+	;새드마조
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:마조 + TALENT:대상者:새드) / 10
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP굴복 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP굴복 = CUP굴복 * RELATION:대상者:実行者 / 100
+	;굴복각인
+	CUP굴복 = CUP굴복 * (10 + MARK:대상者:굴복각인) / 10
+	;노출증
+	CUP굴복 = CUP굴복 * (10 + ABL:대상者:노출증 * ABL:대상者:노출증) / 10
+
+	CUP:대상者:굴복 += CUP굴복
+;--------------------------------------------------------------------------------------------------
+;고통
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_고통(대상者, 実行者, 쾌락강도)
+;공포,고통,욕정,반감,굴복
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP고통
+#DIM DYNAMIC CUP공포
+#DIM DYNAMIC CUP반감
+#DIM DYNAMIC CUP굴복
+
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;共通倍率
+;통각
+CUP基礎 = CUP基礎 * (TALENT:대상者:통각 + 2) / 2
+;行為者の새드
+SIF 実行者 >= 0 && TALENT:実行者:새드
+	TIMES CUP基礎 , 1.50
+
+
+
+
+
+;욕정
+	CUP욕정 = CUP基礎
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP욕정 = CUP욕정 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+	;도착적
+	CUP욕정 = CUP욕정 * ( 3 + TALENT:대상者:도착적 ) / 3
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP욕정 /= 2
+	;고통쾌락경험
+	CUP욕정 = CUP욕정 * (3 + GETEXPLV(EXP:대상者:고통쾌락경험,8)) / 3
+	;ABL:마조っけをみる
+	SELECTCASE ABL:대상者:마조끼
+		CASE 0
+			TIMES CUP욕정 , 0.00
+		CASE 1
+			TIMES CUP욕정 , 0.20
+		CASE 2
+			TIMES CUP욕정 , 0.50
+		CASE 3
+			TIMES CUP욕정 , 1.00
+		CASE 4
+			TIMES CUP욕정 , 1.50
+		CASE 5
+			TIMES CUP욕정 , 2.00
+		CASE 6
+			TIMES CUP욕정 , 3.00
+		CASE 7
+			TIMES CUP욕정 , 4.20
+		CASE 8
+			TIMES CUP욕정 , 5.40
+		CASE 9
+			TIMES CUP욕정 , 7.00
+		CASEELSE
+			TIMES CUP욕정 , 10.00
+	ENDSELECT
+	CUP:대상者:욕정 += CUP욕정
+	CUP:대상者:윤활 += CUP욕정 / 10
+
+;고통計算
+	CUP고통 = CUP基礎
+
+	;조교者のTALENT:새드をみる
+	SIF 実行者 >= 0 && TALENT:実行者:새드
+		TIMES CUP고통 , 1.50
+	;조교者のABL:새드끼をみる
+	SIF 実行者 >= 0
+		CUP고통 = CUP고통 * (3 + ABL:実行者:새드끼) / 3
+	;고통각인
+	CUP고통 = CUP고통 * (5 + MARK:대상者:고통각인) / 5
+	CUP:대상者:고통 += CUP고통
+
+
+;공포計算
+	CUP공포 = CUP基礎
+
+	;조교者のTALENT:새드をみる
+	SIF 実行者 >= 0 && TALENT:実行者:새드
+		TIMES CUP공포 , 1.20
+	;조교者のABL:새드끼をみる
+	SIF 実行者 >= 0
+		CUP공포 = CUP공포 * (5 + ABL:実行者:새드끼) / 5
+
+	;배짱
+	CUP공포 = CUP공포 * (3 + TALENT:대상者:배짱) / 3
+	;태도
+	CUP공포 = CUP공포 * (3 - TALENT:대상者:태도) / 3
+	;고통각인
+	CUP공포 = CUP공포 * (1 + MARK:대상者:고통각인)
+	;ABL:마조끼をみる
+	CUP공포 = CUP공포 / (1 + ABL:대상者:마조끼)
+
+	;PALAM:고통
+	CUP공포 = CUP공포 * (3 + GETPALAMLV(PALAM:대상者:고통,10)) / 3
+	SIF 憑依状態 == 1
+		CUP공포 = 0
+	CUP:대상者:공포 += CUP공포
+
+;반감計算
+CUP반감 = CUP基礎 * 10
+	;호감도
+	SIF 実行者 == MASTER
+		CUP반감 = CUP반감 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+	;이성(下限1/2)
+		CUP반감 = CUP반감 * (BASE:대상者:이성 + 500) / 1500
+	;무드(下限1/2)
+		CUP반감 = CUP반감 * (1500 - BASE:대상者:무드) / 1500
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP반감 = CUP반감 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+	;연모
+	SIF 実行者 == MASTER
+		CUP반감 = CUP반감 * ( 2 - TALENT:대상者:연모 ) / 2
+	
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP반감 , 0.80
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP반감 , 0.50
+	;태도
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:태도) / 5
+	;반응
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:반응) / 5
+	;프라이드
+	CUP반감 = CUP반감 * (3 + TALENT:대상者:프라이드) / 3
+	;무관심
+	CUP반감 = CUP반감 * (3 + TALENT:대상者:무관심) / 3
+	;저항
+	CUP반감 = CUP반감 * (2 + TALENT:대상者:저항) / 2
+	;도착적
+	CUP반감 = CUP반감 * (3 - TALENT:대상者:도착적 ) / 3
+	;마조
+	CUP반감 = CUP반감 * (2 - TALENT:대상者:마조 ) / 2
+	;새드
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:새드 ) / 5
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP반감, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP반감, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP반감, 1.20
+	ENDIF
+	;고통각인
+	CUP반감 = CUP반감 * (5 - MARK:대상者:고통각인) / 5
+
+	;ABL:순종をみる
+	SELECTCASE ABL:대상者:순종
+		CASE 0
+			TIMES CUP반감 , 5.00
+		CASE 1
+			TIMES CUP반감 , 3.00
+		CASE 2
+			TIMES CUP반감 , 2.00
+		CASE 3
+			TIMES CUP반감 , 1.00
+		CASE 4
+			TIMES CUP반감 , 0.90
+		CASE 5
+			TIMES CUP반감 , 0.80
+		CASEELSE
+			TIMES CUP반감 , 0.70
+	ENDSELECT
+
+	;ABL:마조끼
+	SELECTCASE ABL:대상者:마조끼
+		CASE 0
+			TIMES CUP반감 , 2.00
+		CASE 1
+			TIMES CUP반감 , 1.50
+		CASE 2
+			TIMES CUP반감 , 1.00
+		CASE 3
+			TIMES CUP반감 , 0.80
+		CASE 4
+			TIMES CUP반감 , 0.60
+		CASE 5
+			TIMES CUP반감 , 0.50
+		CASE 6
+			TIMES CUP반감 , 0.40
+		CASE 7
+			TIMES CUP반감 , 0.30
+		CASE 8
+			TIMES CUP반감 , 0.20
+		CASE 9
+			TIMES CUP반감 , 0.10
+		CASEELSE
+			TIMES CUP반감 , 0.00
+	ENDSELECT
+	SIF 憑依状態 == 1
+		CUP반감 = 0
+	;行為者PLAYER限定
+	SIF 実行者 == MASTER
+		CUP:대상者:반감 += CUP반감
+
+;굴복計算
+	CUP굴복 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP굴복 = CUP굴복 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP굴복 = CUP굴복 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+	;연모
+	SIF 実行者 == MASTER && TALENT:대상者:연모
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	SIF 実行者 == MASTER && TALENT:대상者:음란
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:음란 ) / 2
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		CUP굴복 = CUP굴복 * 2
+		CUP굴복 = CUP굴복 * (TALENT:대상者:즉시타락) * 2
+	;태도
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:태도) / 10
+	;반응
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:프라이드) / 5
+	;성적흥미
+	CUP굴복 = CUP굴복 * (10 - TALENT:대상者:성적흥미) / 10
+	;도착적
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:도착적) / 5
+	;새드마조
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:마조 + TALENT:대상者:새드) / 5
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP굴복 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP굴복 = CUP굴복 * RELATION:대상者:実行者 / 100
+	;고통각인
+	CUP공포 = CUP공포 * (3 + MARK:대상者:고통각인) / 3
+	;굴복각인
+	CUP굴복 = CUP굴복 * (10 + MARK:대상者:굴복각인) / 10
+	;마조끼
+	CUP굴복 = CUP굴복 * (10 + ABL:대상者:마조끼 * ABL:대상者:마조끼) / 10
+
+	CUP:대상者:굴복 += CUP굴복
+;--------------------------------------------------------------------------------------------------
+;拘束
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_拘束(대상者, 実行者, 쾌락강도)
+;공포,욕정,반감,굴복
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP공포
+#DIM DYNAMIC CUP반감
+#DIM DYNAMIC CUP굴복
+
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;共通倍率
+;行為者の새드
+SIF 実行者 >= 0 && TALENT:実行者:새드
+	TIMES CUP基礎 , 1.50
+
+;욕정
+	CUP욕정 = CUP基礎 / 2
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP욕정 = CUP욕정 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+	;도착적
+	CUP욕정 = CUP욕정 * ( 3 + TALENT:대상者:도착적 ) / 3
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP욕정 /= 2
+	;긴박경험
+	CUP욕정 = CUP욕정 * (3 + GETEXPLV(EXP:대상者:구속경험,8)) / 3
+	;ABL:마조っけをみる
+	SELECTCASE ABL:대상者:마조끼
+		CASE 0
+			TIMES CUP욕정 , 0.00
+		CASE 1
+			TIMES CUP욕정 , 0.20
+		CASE 2
+			TIMES CUP욕정 , 0.50
+		CASE 3
+			TIMES CUP욕정 , 1.00
+		CASE 4
+			TIMES CUP욕정 , 1.50
+		CASE 5
+			TIMES CUP욕정 , 2.00
+		CASE 6
+			TIMES CUP욕정 , 3.00
+		CASE 7
+			TIMES CUP욕정 , 4.20
+		CASE 8
+			TIMES CUP욕정 , 5.40
+		CASE 9
+			TIMES CUP욕정 , 7.00
+		CASEELSE
+			TIMES CUP욕정 , 10.00
+	ENDSELECT
+	CUP:대상者:욕정 += CUP욕정
+	CUP:대상者:윤활 += CUP욕정 / 10
+
+;공포計算
+	CUP공포 = CUP基礎
+
+	;조교者のTALENT:새드をみる
+	SIF 実行者 >= 0 && TALENT:実行者:새드
+		TIMES CUP공포 , 1.20
+	;조교者のABL:새드끼をみる
+	SIF 実行者 >= 0
+		CUP공포 = CUP공포 * (5 + ABL:実行者:새드끼) / 5
+
+	;배짱
+	CUP공포 = CUP공포 * (3 + TALENT:대상者:배짱) / 3
+	;태도
+	CUP공포 = CUP공포 * (3 - TALENT:대상者:태도) / 3
+	;ABL:마조끼をみる
+	CUP공포 = CUP공포 / (1 + ABL:대상者:마조끼)
+	SIF 憑依状態 == 1
+		CUP공포 = 0
+	CUP:대상者:공포 += CUP공포
+
+;반감計算
+CUP반감 = CUP基礎 * 5
+	;호감도
+	SIF 実行者 == MASTER
+		CUP반감 = CUP반감 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+
+	;이성(下限1/2)
+		CUP반감 = CUP반감 * (BASE:대상者:이성 + 500) / 1500
+	;무드(下限1/2)
+		CUP반감 = CUP반감 * (1500 - BASE:대상者:무드) / 1500
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP반감 = CUP반감 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+	;연모
+	SIF 実行者 == MASTER
+		CUP반감 = CUP반감 * ( 2 - TALENT:대상者:연모 ) / 2
+	
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP반감 , 0.80
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP반감 , 0.50
+	;태도
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:태도) / 5
+	;반응
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:반응) / 5
+	;프라이드
+	CUP반감 = CUP반감 * (3 + TALENT:대상者:프라이드) / 3
+	;무관심
+	CUP반감 = CUP반감 * (3 + TALENT:대상者:무관심) / 3
+	;저항
+	CUP반감 = CUP반감 * (2 + TALENT:대상者:저항) / 2
+	;도착적
+	CUP반감 = CUP반감 * (3 - TALENT:대상者:도착적 ) / 3
+	;마조
+	CUP반감 = CUP반감 * (2 - TALENT:대상者:마조 ) / 2
+	;새드
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:새드 ) / 5
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP반감, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP반감, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP반감, 1.20
+	ENDIF
+
+	;ABL:순종をみる
+	SELECTCASE ABL:대상者:순종
+		CASE 0
+			TIMES CUP반감 , 4.00
+		CASE 1
+			TIMES CUP반감 , 3.00
+		CASE 2
+			TIMES CUP반감 , 2.00
+		CASE 3
+			TIMES CUP반감 , 1.50
+		CASE 4
+			TIMES CUP반감 , 1.00
+		CASE 5
+			TIMES CUP반감 , 0.90
+		CASE 6
+			TIMES CUP반감 , 0.80
+		CASE 7
+			TIMES CUP반감 , 0.70
+		CASE 8
+			TIMES CUP반감 , 0.60
+		CASE 9
+			TIMES CUP반감 , 0.50
+		CASEELSE
+			TIMES CUP반감 , 0.40
+	ENDSELECT
+
+	;ABL:마조끼
+	SELECTCASE ABL:대상者:마조끼
+		CASE 0
+			TIMES CUP반감 , 2.00
+		CASE 1
+			TIMES CUP반감 , 1.50
+		CASE 2
+			TIMES CUP반감 , 1.00
+		CASE 3
+			TIMES CUP반감 , 0.80
+		CASE 4
+			TIMES CUP반감 , 0.60
+		CASE 5
+			TIMES CUP반감 , 0.50
+		CASE 6
+			TIMES CUP반감 , 0.40
+		CASE 7
+			TIMES CUP반감 , 0.30
+		CASE 8
+			TIMES CUP반감 , 0.20
+		CASE 9
+			TIMES CUP반감 , 0.10
+		CASEELSE
+			TIMES CUP반감 , 0.00
+	ENDSELECT
+	SIF 憑依状態 == 1
+		CUP반감 = 0
+	;行為者PLAYER限定
+	SIF 実行者 == MASTER
+		CUP:대상者:반감 += CUP반감
+
+;굴복計算
+	CUP굴복 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP굴복 = CUP굴복 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP굴복 = CUP굴복 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+	;연모
+	SIF 実行者 == MASTER && TALENT:대상者:연모
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	SIF 実行者 == MASTER && TALENT:대상者:음란
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:음란 ) / 2
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		CUP굴복 = CUP굴복 * 2
+		CUP굴복 = CUP굴복 * (TALENT:대상者:즉시타락) * 2
+	;태도
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:태도) / 10
+	;반응
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:프라이드) / 5
+	;성적흥미
+	CUP굴복 = CUP굴복 * (10 - TALENT:대상者:성적흥미) / 10
+	;도착적
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:도착적) / 5
+	;새드마조
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:마조 + TALENT:대상者:새드) / 5
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP굴복 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP굴복 = CUP굴복 * RELATION:대상者:実行者 / 100
+	;굴복각인
+	CUP굴복 = CUP굴복 * (10 + MARK:대상者:굴복각인) / 10
+	;마조끼
+	CUP굴복 = CUP굴복 * (10 + ABL:대상者:마조끼 * ABL:대상者:마조끼) / 10
+
+	CUP:대상者:굴복 += CUP굴복
+
+	
+;--------------------------------------------------------------------------------------------------
+;환락
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_환락(대상者, 実行者, 쾌락강도)
+;호의
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP호의
+
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;호의計算
+	CUP호의 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP호의 = CUP호의 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP호의 = CUP호의 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+	;무드(上限1.5倍)
+		CUP호의 = CUP호의 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+	;연모
+	SIF 実行者 == MASTER
+		CUP호의 = CUP호의 * ( 2 + TALENT:대상者:연모 ) / 2
+
+	;자제심
+	CUP호의 = CUP호의 * (10 - TALENT:대상者:자제심) / 10
+	;무관심
+	CUP호의 = CUP호의 * (5 - TALENT:대상者:무관심) / 5
+	;감정부족함
+	CUP호의 = CUP호의 * (5 - TALENT:대상者:감정부족함) / 5
+	;자기애
+	CUP호의 = CUP호의 * (5 + TALENT:대상者:자기애) / 5
+
+	;자기애
+	SIF TALENT:대상者:의존체질 && CFLAG:대상者:호감도 >= 5000
+		CUP호의 = CUP호의 * 2
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP호의 /= 2
+
+
+	;ABL:친밀をみる
+	CUP호의 = CUP호의 * SOURCE_REVISION1(ABL:대상者:친밀) / 10
+
+	;ABL:욕망をみる
+	CUP호의 = CUP호의 * (3 + ABL:대상者:욕망 ) / 3
+
+	;일선넘지않음
+	SIF TALENT:대상者:일선넘지않음 && !TALENT:대상者:연모 && !TALENT:대상者:음란 && CUP호의 > 2000
+		CUP호의 = 2000 + (CUP호의 - 2000) / 2
+
+	CUP:대상者:호의 += CUP호의
+	CUP:MASTER:욕정 += MIN(CUP호의 / 10 , 100)
+
+;--------------------------------------------------------------------------------------------------
+;봉사
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_봉사(대상者, 実行者, 쾌락강도)
+;습득,공순,반감,굴복
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP습득
+#DIM DYNAMIC CUP공순
+#DIM DYNAMIC CUP반감
+#DIM DYNAMIC CUP굴복
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;습득計算
+	;습득早い遅いはABLUPで対応
+	CUP습득 = CUP基礎
+	;연모
+	SIF 実行者 == MASTER
+		CUP습득 = CUP습득 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	CUP습득 = CUP습득 * ( 2 + TALENT:대상者:음란 ) / 2
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP습득 /= 2
+	;ABL:기교をみる
+	SELECTCASE ABL:대상者:기교
+		CASE 0
+			TIMES CUP습득 , 0.60
+		CASE 1
+			TIMES CUP습득 , 1.20
+		CASE 2
+			TIMES CUP습득 , 1.80
+		CASE 3
+			TIMES CUP습득 , 2.40
+		CASE 4
+			TIMES CUP습득 , 3.00
+		CASE 5
+			TIMES CUP습득 , 3.60
+		CASE 6
+			TIMES CUP습득 , 4.20
+		CASE 7
+			TIMES CUP습득 , 4.80
+		CASE 8
+			TIMES CUP습득 , 5.40
+		CASE 9
+			TIMES CUP습득 , 6.00
+		CASEELSE
+			TIMES CUP습득 , 7.00
+	ENDSELECT
+
+	;ABL:봉사정신をみる
+	SELECTCASE ABL:대상者:봉사정신
+		CASE 0
+			TIMES CUP습득 , 0.60
+		CASE 1
+			TIMES CUP습득 , 0.80
+		CASE 2
+			TIMES CUP습득 , 1.00
+		CASE 3
+			TIMES CUP습득 , 1.20
+		CASE 4
+			TIMES CUP습득 , 1.40
+		CASE 5
+			TIMES CUP습득 , 1.70
+		CASE 6
+			TIMES CUP습득 , 2.00
+		CASE 7
+			TIMES CUP습득 , 2.40
+		CASE 8
+			TIMES CUP습득 , 2.80
+		CASE 9
+			TIMES CUP습득 , 4.00
+		CASEELSE
+			TIMES CUP습득 , 5.00
+	ENDSELECT
+	CUP:대상者:습득 += CUP습득
+
+;공순計算
+	CUP공순 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP공순 = CUP공순 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;무드(上限1.5倍)
+		CUP공순 = CUP공순 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP공순 = CUP공순 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+	;연모
+	SIF 実行者 == MASTER && TALENT:대상者:연모
+		CUP공순 = CUP공순 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	SIF 実行者 == MASTER && TALENT:대상者:음란
+		CUP공순 = CUP공순 * ( 2 + TALENT:대상者:음란 ) / 2
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		CUP공순 = CUP공순 * 2
+		CUP공순 = CUP공순 * (TALENT:대상者:즉시타락) * 2
+	;태도
+	CUP공순 = CUP공순 * (10 + TALENT:대상者:태도) / 10
+	;반응
+	SIF TALENT:대상者:반응
+		TIMES CUP공순 , 0.80
+	;ツンデレ
+	IF 実行者 == MASTER && TALENT:대상者:츤／데레 == 1
+		;함락素質がある場合と無い場合で変化する
+		IF TALENT:대상者:연모 || TALENT:대상者:음란 || TALENT:대상者:복종
+			TIMES CUP공순 , 1.20
+		ELSE
+			TIMES CUP공순 , 0.80
+		ENDIF
+	ENDIF
+	;デレデレ
+	IF 実行者 == MASTER && TALENT:대상者:츤／데레 == -1
+			TIMES CUP공순 , 1.20
+	ENDIF
+
+	;무관심
+	SIF TALENT:대상者:무관심
+		TIMES CUP공순 , 0.80
+	;감정부족함
+	SIF TALENT:대상者:감정부족함
+		TIMES CUP공순 , 0.80
+	;저항
+	SIF TALENT:대상者:저항
+		TIMES CUP공순 , 0.80
+	;헌신적
+	CUP공순 = CUP공순 * (5 + TALENT:대상者:헌신적) / 5
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP공순 /= 2
+	;반발각인
+	CUP공순 = CUP공순 * (10 - 3 * MARK:대상者:반발각인) / 10
+	;굴복각인
+	CUP공순 = CUP공순 * (10 + MARK:대상者:굴복각인) / 10
+	;노출증
+	;ABL:순종をみる
+	SELECTCASE ABL:대상者:순종
+		CASE 0
+			TIMES CUP공순 , 0.50
+		CASE 1
+			TIMES CUP공순 , 0.80
+		CASE 2
+			TIMES CUP공순 , 1.00
+		CASE 3
+			TIMES CUP공순 , 1.20
+		CASE 4
+			TIMES CUP공순 , 1.40
+		CASE 5
+			TIMES CUP공순 , 1.60
+		CASE 6
+			TIMES CUP공순 , 1.80
+		CASE 7
+			TIMES CUP공순 , 2.00
+		CASE 8
+			TIMES CUP공순 , 2.40
+		CASE 9
+			TIMES CUP공순 , 3.00
+		CASEELSE
+			TIMES CUP공순 , 5.00
+	ENDSELECT
+	CUP:대상者:공순 += CUP공순
+
+;반감計算
+CUP반감 = CUP基礎 * 5
+	;호감도
+	SIF 実行者 == MASTER
+		CUP반감 = CUP반감 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+	;이성(下限1/2)
+		CUP반감 = CUP반감 * (BASE:대상者:이성 + 500) / 1500
+	;무드(下限1/2)
+		CUP반감 = CUP반감 * (1500 - BASE:대상者:무드) / 1500
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP반감 = CUP반감 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+	;연모
+	SIF 実行者 == MASTER
+		CUP반감 = CUP반감 * ( 2 - TALENT:대상者:연모 ) / 2
+	
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP반감 , 0.80
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP반감 , 0.50
+	;태도
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:태도) / 5
+	;반응
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:반응) / 5
+	;프라이드
+	CUP반감 = CUP반감 * (3 + TALENT:대상者:프라이드) / 3
+	;성적흥미
+	CUP반감 = CUP반감 * (10 + TALENT:대상者:성적흥미) / 10
+	;헌신적
+	CUP반감 = CUP반감 * (3 - TALENT:대상者:헌신적) / 3
+	;무관심
+	CUP반감 = CUP반감 * (3 + TALENT:대상者:무관심) / 3
+	;저항
+	CUP반감 = CUP반감 * (2 + TALENT:대상者:저항) / 2
+	;헌신적
+	CUP반감 = CUP반감 * (3 - TALENT:대상者:헌신적 ) / 3
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP반감, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP반감, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP반감, 1.20
+	ENDIF
+	;반발각인
+	CUP반감 = CUP반감 * (10 + MARK:대상者:반발각인) / 10
+
+	;ABL:순종,친밀をみる
+	SELECTCASE ABL:대상者:순종 + ABL:대상者:친밀
+		CASE 0
+			TIMES CUP반감 , 4.00
+		CASE 1
+			TIMES CUP반감 , 3.00
+		CASE 2
+			TIMES CUP반감 , 2.00
+		CASE 3
+			TIMES CUP반감 , 1.50
+		CASE 4
+			TIMES CUP반감 , 1.00
+		CASE 5
+			TIMES CUP반감 , 0.80
+		CASE 6
+			TIMES CUP반감 , 0.60
+		CASE 7
+			TIMES CUP반감 , 0.50
+		CASE 8
+			TIMES CUP반감 , 0.40
+		CASE 9
+			TIMES CUP반감 , 0.30
+		CASEELSE
+			TIMES CUP반감 , 0.20
+	ENDSELECT
+
+	;ABL:봉사정신をみる
+	SELECTCASE ABL:대상者:봉사정신
+		CASE 0
+			TIMES CUP반감 , 1.00
+		CASE 1
+			TIMES CUP반감 , 0.80
+		CASE 2
+			TIMES CUP반감 , 0.70
+		CASE 3
+			TIMES CUP반감 , 0.60
+		CASE 4
+			TIMES CUP반감 , 0.50
+		CASE 5
+			TIMES CUP반감 , 0.40
+		CASE 6
+			TIMES CUP반감 , 0.30
+		CASE 7
+			TIMES CUP반감 , 0.20
+		CASE 8
+			TIMES CUP반감 , 0.15
+		CASE 9
+			TIMES CUP반감 , 0.10
+		CASEELSE
+			TIMES CUP반감 , 0.00
+	ENDSELECT
+	SIF 憑依状態 == 1
+		CUP반감 = 0
+	;行為者PLAYER限定
+	SIF 実行者 == MASTER
+		CUP:대상者:반감 += CUP반감
+
+;굴복計算
+	CUP굴복 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP굴복 = CUP굴복 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP굴복 = CUP굴복 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+	;연모
+	SIF 実行者 == MASTER && TALENT:대상者:연모
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	SIF 実行者 == MASTER && TALENT:대상者:음란
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:음란 ) / 2
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		CUP굴복 = CUP굴복 * 2
+		CUP굴복 = CUP굴복 * (TALENT:대상者:즉시타락) * 2
+	;태도
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:태도) / 10
+	;반응
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:프라이드) / 5
+	;성적흥미
+	CUP굴복 = CUP굴복 * (5 - TALENT:대상者:성적흥미) / 5
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP굴복 /= 2
+	;相性
+	SIF 実行者 >= 0 &&  RELATION:대상者:実行者 != 0
+		CUP굴복 = CUP굴복 * RELATION:대상者:実行者 / 100
+	;굴복각인
+	CUP굴복 = CUP굴복 * (10 + MARK:대상者:굴복각인) / 10
+	;봉사정신
+	CUP굴복 = CUP굴복 * (3 + ABL:대상者:봉사정신) / 3
+
+	CUP:대상者:굴복 += CUP굴복
+;--------------------------------------------------------------------------------------------------
+;정복
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_정복(대상者, 実行者, 쾌락강도)
+;우월,욕정,치정
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP치정
+#DIM DYNAMIC CUP우월
+
+VARSET CUP基礎
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;호감도(上限3倍)
+SIF 実行者 == MASTER
+	CUP基礎 = CUP基礎 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+;이성(上限1.5倍)
+CUP基礎 = CUP基礎 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+;무드(上限1.5倍)
+CUP基礎 = CUP基礎 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+;기력
+SIF BASE:대상者:기력 <= 0
+	CUP基礎 /= 2
+CUP基礎 = CUP基礎 * (2 + TALENT:대상者:새드) / 2
+
+
+;땅位で분기
+IF 実行者 == MASTER && CFLAG:대상者:310 > CFLAG:MASTER:310
+	;高位の캐릭터
+	CUP욕정 = CUP基礎 / 4
+	;ABL:욕망をみる
+	SELECTCASE ABL:대상者:욕망
+		CASE 0
+			TIMES CUP욕정 , 0.10
+		CASE 1
+			TIMES CUP욕정 , 0.15
+		CASE 2
+			TIMES CUP욕정 , 0.20
+		CASE 3
+			TIMES CUP욕정 , 0.25
+		CASE 4
+			TIMES CUP욕정 , 0.30
+		CASEELSE
+			IF CUP욕정 < 100000
+				CUP욕정 = CUP욕정 * (ABL:대상者:욕망 * 5 + 15) / 100
+			ELSEIF CUP욕정 < 100000000
+				CUP욕정 = CUP욕정 / 100 * (ABL:대상者:욕망 * 5 + 15)
+			ENDIF
+	ENDSELECT
+	;ABL:새드끼をみる
+	IF CUP욕정 < 100000
+		CUP욕정 = CUP욕정 * (ABL:대상者:새드끼 * 30 + 100) / 100
+	ELSEIF CUP욕정 < 100000000
+		CUP욕정 = CUP욕정 / 100 * (ABL:대상者:새드끼 * 30 + 100)
+	ENDIF
+ELSEIF 実行者 == MASTER
+	;低位の캐릭터
+	CUP치정 = CUP基礎 / 2
+	;ABL:친밀をみる
+	SELECTCASE ABL:대상者:친밀
+		CASE 0
+			TIMES CUP치정 , 0.10
+		CASE 1
+			TIMES CUP치정 , 0.15
+		CASE 2
+			TIMES CUP치정 , 0.20
+		CASE 3
+			TIMES CUP치정 , 0.25
+		CASE 4
+			TIMES CUP치정 , 0.30
+		CASEELSE
+			IF CUP치정 < 100000
+				CUP치정 = CUP치정 * (ABL:대상者:친밀 * 5 + 15) / 100
+			ELSEIF B < 100000000
+				CUP치정 = CUP치정 / 100 * (ABL:대상者:친밀 * 5 + 15)
+			ENDIF
+	ENDSELECT
+ENDIF
+
+CUP:대상者:욕정 += CUP욕정
+CUP:대상者:치정 += CUP치정
+
+;우월計算
+CUP우월 = CUP基礎
+;ABL:새드끼をみる
+CUP우월 = CUP우월 * (2 + ABL:대상者:새드끼) / 2
+CUP:대상者:우월 += CUP우월
+
+;--------------------------------------------------------------------------------------------------
+;불결
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_불결(대상者, 実行者, 쾌락강도)
+;불쾌、반감,굴복
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP불쾌
+#DIM DYNAMIC CUP반감
+#DIM DYNAMIC CUP굴복
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;호감도
+SIF 実行者 == MASTER
+	CUP基礎 = CUP基礎 * 2000 / MAX( 4000 , ( 2000 + CFLAG:대상者:호감도 ))
+;이성
+	CUP基礎 = CUP基礎 * (BASE:대상者:이성 + 400) / 5000
+;무드
+	CUP基礎 = CUP基礎 * (5000 - BASE:대상者:무드) / 5000
+;연모
+SIF 実行者 == MASTER
+	CUP基礎 = CUP基礎 * ( 2 - TALENT:대상者:연모 ) / 2
+
+;조교者のTALENT:매혹をみる
+SIF 実行者 >= 0 && TALENT:実行者:매혹
+	TIMES CUP基礎 , 0.80
+;조교者のTALENT:수수께끼의매력をみる
+SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+	TIMES CUP基礎 , 0.50
+;악취내성
+CUP基礎 = CUP基礎 * (3 - TALENT:대상者:악취내성) / 3
+
+;불쾌
+	CUP불쾌 = CUP基礎
+	CUP불쾌 = CUP불쾌 * 10 / (10 + ABL:대상者:순종 * ABL:대상者:마조끼)
+
+	CUP불쾌 = CUP불쾌 / 2
+
+	;憑依状態処理	
+	SIF 憑依状態 == 1
+		CUP불쾌 = 0
+
+	CUP:대상者:불쾌 += CUP불쾌
+;반감
+	CUP반감 = CUP基礎 * 10
+	;태도
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:태도) / 5
+	;프라이드
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:프라이드) / 5
+	;무관심
+	CUP반감 = CUP반감 * (5 - TALENT:대상者:무관심) / 5
+	;감정부족함
+	CUP반감 = CUP반감 * (5 - TALENT:대상者:감정부족함) / 5
+	;저항
+	CUP반감 = CUP반감 * (5 + TALENT:대상者:저항) / 5
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP반감, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP반감, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP반감, 1.20
+	ENDIF
+
+	;ABL:순종,친밀をみる
+	SELECTCASE ABL:대상者:순종 + ABL:대상者:친밀
+		CASE 0
+			TIMES CUP반감 , 3.00
+		CASE 1
+			TIMES CUP반감 , 2.00
+		CASE 2
+			TIMES CUP반감 , 1.00
+		CASE 3
+			TIMES CUP반감 , 0.80
+		CASE 4
+			TIMES CUP반감 , 0.70
+		CASE 5
+			TIMES CUP반감 , 0.60
+		CASE 6
+			TIMES CUP반감 , 0.50
+		CASE 7
+			TIMES CUP반감 , 0.40
+		CASE 8
+			TIMES CUP반감 , 0.30
+		CASE 9
+			TIMES CUP반감 , 0.20
+		CASEELSE
+			TIMES CUP반감 , 0.10
+	ENDSELECT
+	SIF 憑依状態 == 1
+		CUP반감 = 0
+	;行為者PLAYER限定
+	SIF 実行者 == MASTER
+		CUP:대상者:반감 += CUP반감
+
+;굴복計算
+	CUP굴복 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP굴복 = CUP굴복 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP굴복 = CUP굴복 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+	;연모
+	SIF 実行者 == MASTER && TALENT:대상者:연모
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	SIF 実行者 == MASTER && TALENT:대상者:음란
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:음란 ) / 2
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		CUP굴복 = CUP굴복 * 2
+		CUP굴복 = CUP굴복 * (TALENT:대상者:즉시타락) * 2
+	;태도
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:태도) / 10
+	;반응
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:프라이드) / 5
+	;성적흥미
+	CUP굴복 = CUP굴복 * (5 - TALENT:대상者:성적흥미) / 5
+	;도착적
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:도착적) / 5
+	;새드마조
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:마조 + TALENT:대상者:새드) / 5
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP굴복 /= 2
+	;相性
+	SIF 実行者 >= 0 &&  RELATION:대상者:実行者 != 0
+		CUP굴복 = CUP굴복 * RELATION:대상者:実行者 / 100
+	;굴복각인
+	CUP굴복 = CUP굴복 * (10 + MARK:대상者:굴복각인) / 10
+	;봉사정신
+	CUP굴복 = CUP굴복 * (10 + ABL:대상者:마조끼 * ABL:대상者:마조끼) / 10
+
+	CUP:대상者:굴복 += CUP굴복
+	
+
+;--------------------------------------------------------------------------------------------------
+;절정
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_절정(대상者, 実行者, 쾌락강도)
+;욕정、치정、억울
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP치정
+#DIM DYNAMIC CUP억울
+#DIM DYNAMIC CUP윤활
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;共通倍率計算
+	;이뇨제
+	SIF TEQUIP:대상者:이뇨제
+		TIMES CUP基礎 , 0.70
+	;PALAM:욕정をみる
+	IF PALAM:대상者:욕정 < PALAMLV:1
+		TIMES CUP基礎 , 0.80
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:2
+		TIMES CUP基礎 , 1.00
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:3
+		TIMES CUP基礎 , 1.20
+	ELSEIF PALAM:대상者:욕정 < PALAMLV:4
+		TIMES CUP基礎 , 1.40
+	ELSEIF PALAM:대상者:욕정 >= PALAMLV:4
+		TIMES CUP基礎 , 1.60
+	ENDIF
+;욕정計算
+	CUP욕정 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP욕정 = CUP욕정 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP욕정 = CUP욕정 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+	;무드(上限1.5倍)
+	CUP욕정 = CUP욕정 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+	
+	;조교者のTALENT:解放をみる
+	SIF 実行者 >= 0 && TALENT:実行者:자기애 > 0
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP욕정 , 1.20
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP욕정 , 1.20
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP욕정 = CUP욕정 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP욕정 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP욕정 = CUP욕정 * RELATION:대상者:実行者 / 100
+	;연모
+	SIF 実行者 == MASTER
+		CUP욕정 = CUP욕정 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	IF TALENT:대상者:음란 == 1
+		TIMES CUP욕정 , 1.20
+	ELSEIF TALENT:대상者:음란 == 2
+		TIMES CUP욕정 , 1.50
+	ENDIF
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		TIMES CUP욕정 , 2.00
+		CUP욕정 = CUP욕정 * (TALENT:대상者:즉시타락) * 2
+
+	;자제심
+	CUP욕정 = CUP욕정 * (5 - TALENT:대상者:자제심) / 5
+	;무관심
+	CUP욕정 = CUP욕정 * (5 - TALENT:대상者:무관심) / 5
+	;성적흥미
+	CUP욕정 = CUP욕정 * (10 + TALENT:대상者:성적흥미) / 10
+	;자기애
+	CUP욕정 = CUP욕정 * (5 + TALENT:대상者:자기애) / 5
+	;쾌락반응
+	CUP욕정 = CUP욕정 * (2 + TALENT:대상者:쾌감반응) / 2
+	;쾌락각인
+	CUP욕정 = CUP욕정 * (10 + MARK:대상者:쾌락각인 * MARK:대상者:쾌락각인) / 10
+	;ABL:욕망をみる
+	CUP욕정 = CUP욕정 * SOURCE_REVISION2(ABL:대상者:욕망) / 100
+
+	CUP:대상者:욕정 += CUP욕정
+;치정計算
+	CUP치정 = CUP基礎 * 2
+	;감정부족함
+	CUP치정 = CUP치정 * (5 + TALENT:대상者:감정부족함) / 5
+	;무관심
+	CUP치정 = CUP치정 * (5 + TALENT:대상者:무관심) / 5
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP치정 /= 2
+	;PALAM:치정をみる
+	;恥ずかしさを感じれば感じるほどあまり恥ずかしくなくなる
+	IF PALAM:대상者:치정 < PALAMLV:1
+		TIMES CUP치정 , 2.00
+	ELSEIF PALAM:대상者:치정 < PALAMLV:2
+		TIMES CUP치정 , 1.50
+	ELSEIF PALAM:대상者:치정 < PALAMLV:3
+		TIMES CUP치정 , 1.00
+	ELSEIF PALAM:대상者:치정 < PALAMLV:4
+		TIMES CUP치정 , 0.80
+	ELSEIF PALAM:대상者:치정 >= PALAMLV:4
+		TIMES CUP치정 , 0.60
+	ENDIF
+
+	CUP:대상者:치정 += CUP치정
+
+;억울計算
+	CUP억울 = CUP基礎* 5
+	;호감도
+	SIF 実行者 == MASTER
+		CUP억울 = CUP억울 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+	;이성(下限1/2)
+		CUP억울 = CUP억울 * (BASE:대상者:이성 + 1000) / 2000
+	;무드(下限1/2)
+		CUP억울 = CUP억울 * (100 - BASE:대상者:무드 / 30) / 100
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP억울 = CUP억울 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+	;연모
+	SIF 実行者 == MASTER
+		CUP억울 = CUP억울 * ( 2 - TALENT:대상者:연모 ) / 2
+	;반응
+	CUP억울 = CUP억울 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP억울 = CUP억울 * (5 + TALENT:대상者:프라이드) / 5
+	;무관심
+	CUP억울 = CUP억울 * (5 - TALENT:대상者:무관심) / 5
+	;성적흥미
+	CUP억울 = CUP억울 * (10 - TALENT:대상者:성적흥미) / 10
+	;양기／음기,
+	CUP억울 = CUP억울 * (10 - TALENT:대상者:양기／음기) / 10
+	;자기애
+	CUP억울 = CUP억울 * (5 - TALENT:대상者:자기애) / 5
+	;쾌락반응
+	CUP억울 = CUP억울 * (2 - TALENT:대상者:쾌감반응) / 2
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP억울, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP억울, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP억울, 1.20
+	ENDIF
+	;쾌락각인
+	CUP억울 = CUP억울 * (5 - MARK:대상者:쾌락각인) / 5
+	;ABL순종욕망依存
+	CUP억울 = CUP억울  * 10 / (10 + (ABL:대상者:순종 * ABL:대상者:욕망))
+	
+	CUP:대상者:억울 += CUP억울
+	
+;액체
+	CUP윤활 = CUP基礎
+	CUP윤활 = CUP윤활 * (3 + TALENT:대상者:젖기쉬움정도) / 3
+	CUP:대상者:윤활 += CUP윤활
+;--------------------------------------------------------------------------------------------------
+;정액
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_정액(대상者, 実行者, 쾌락강도)
+;공순、굴복、불쾌
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP공순
+#DIM DYNAMIC CUP굴복
+#DIM DYNAMIC CUP불쾌
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;共通倍率計算
+;악취내성
+CUP基礎 = CUP基礎 * (3 - TALENT:대상者:악취내성) / 3
+;공순計算
+	CUP공순 = CUP基礎 * 3
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP공순 = CUP공순 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;무드(上限1.5倍)
+		CUP공순 = CUP공순 * (GET_REVISION(BASE:대상者:무드, 50 , 500) + 100) / 100
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP공순 = CUP공순 * (15 - 10 / (1 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))) / 10
+
+	;연모
+	SIF 実行者 == MASTER && TALENT:대상者:연모
+		CUP공순 = CUP공순 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	SIF 実行者 == MASTER && TALENT:대상者:음란
+		CUP공순 = CUP공순 * ( 2 + TALENT:대상者:음란 ) / 2
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		CUP공순 = CUP공순 * 2
+		CUP공순 = CUP공순 * (TALENT:대상者:즉시타락) * 2
+
+	;태도
+	CUP공순 = CUP공순 * (10 + TALENT:대상者:태도) / 10
+	;반응
+	SIF TALENT:대상者:반응
+		TIMES CUP공순 , 0.80
+	;ツンデレ
+	IF 実行者 == MASTER && TALENT:대상者:츤／데레 == 1
+		;함락素質がある場合と無い場合で変化する
+		IF TALENT:대상者:연모 || TALENT:대상者:음란 || TALENT:대상者:복종
+			TIMES CUP공순 , 1.20
+		ELSE
+			TIMES CUP공순 , 0.80
+		ENDIF
+	ENDIF
+
+	;デレデレ
+	IF 実行者 == MASTER && TALENT:대상者:츤／데레 == -1
+			TIMES CUP공순 , 1.20
+	ENDIF
+
+	;무관심
+	SIF TALENT:대상者:무관심
+		TIMES CUP공순 , 0.80
+	;감정부족함
+	SIF TALENT:대상者:감정부족함
+		TIMES CUP공순 , 0.80
+	;저항
+	SIF TALENT:대상者:저항
+		TIMES CUP공순 , 0.80
+	;헌신적
+	CUP공순 = CUP공순 * (5 + TALENT:대상者:헌신적) / 5
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP공순 /= 2
+	;반발각인
+	CUP공순 = CUP공순 * (10 - 3 * MARK:대상者:반발각인) / 10
+	;굴복각인
+	CUP공순 = CUP공순 * (10 + MARK:대상者:굴복각인) / 10
+	;ABL:봉사정신をみる
+	CUP공순 = CUP공순 * (2 + ABL:대상者:정액중독) / 2
+	;ABL:정액중독をみる
+	SELECTCASE ABL:대상者:정액중독
+		CASE 0
+			TIMES CUP공순 , 1.00
+		CASE 1
+			TIMES CUP공순 , 1.50
+		CASE 2
+			TIMES CUP공순 , 2.00
+		CASE 3
+			TIMES CUP공순 , 2.50
+		CASE 4
+			TIMES CUP공순 , 3.00
+		CASE 5
+			TIMES CUP공순 , 3.50
+		CASEELSE
+			TIMES CUP공순 , 4.00
+	ENDSELECT
+	CUP:대상者:공순 += CUP공순
+
+;굴복計算
+	CUP굴복 = CUP基礎
+	;호감도(上限3倍)
+	SIF 実行者 == MASTER
+		CUP굴복 = CUP굴복 * (GET_REVISION(CFLAG:대상者:호감도, 200 , 20000) + 100) / 100
+	;이성(上限1.5倍)
+	CUP굴복 = CUP굴복 * (GET_REVISION(1000 - BASE:대상者:이성, 50 , 500) + 100) / 100
+
+	;연모
+	SIF 実行者 == MASTER && TALENT:대상者:연모
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:연모 ) / 2
+	;음란
+	SIF 実行者 == MASTER && TALENT:대상者:음란
+		CUP굴복 = CUP굴복 * ( 2 + TALENT:대상者:음란 ) / 2
+	;즉시타락
+	SIF TALENT:대상者:즉시타락
+;		CUP굴복 = CUP굴복 * 2
+		CUP굴복 = CUP굴복 * (TALENT:대상者:즉시타락) * 2
+
+	;태도
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:태도) / 10
+	;반응
+	CUP굴복 = CUP굴복 * (10 + TALENT:대상者:반응) / 10
+	;프라이드
+	CUP굴복 = CUP굴복 * (5 + TALENT:대상者:프라이드) / 5
+	;성적흥미
+	CUP굴복 = CUP굴복 * (10 - TALENT:대상者:성적흥미) / 10
+	;기력
+	SIF BASE:대상者:기력 <= 0
+		CUP굴복 /= 2
+	;相性
+	SIF 実行者 >= 0 && RELATION:대상者:実行者 != 0
+		CUP굴복 = CUP굴복 * RELATION:대상者:実行者 / 100
+	;굴복각인
+	CUP굴복 = CUP굴복 * (10 + MARK:대상者:굴복각인) / 10
+	;정액경험,마조끼
+	CUP굴복 = CUP굴복 * (10 + ABL:대상者:마조끼 * GETEXPLV(EXP:대상者:정액경험,8)) / 10
+
+	CUP:대상者:굴복 += CUP굴복
+
+;불쾌計算
+	CUP불쾌 = CUP基礎
+	;호감도
+	SIF 実行者 == MASTER
+		CUP불쾌 = CUP불쾌 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ) + 1)
+
+
+	;이성(下限1/2)
+		CUP불쾌 = CUP불쾌 * (BASE:대상者:이성 + 500) / 1500
+	;무드(下限1/2)
+		CUP불쾌 = CUP불쾌 * (1500 - BASE:대상者:무드) / 1500
+	;同性愛
+	SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+		CUP불쾌 = CUP불쾌 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+	;연모
+	SIF 実行者 == MASTER
+		CUP불쾌 = CUP불쾌 * ( 2 - TALENT:대상者:연모 ) / 2
+	
+	;조교者のTALENT:매혹をみる
+	SIF 実行者 >= 0 && TALENT:実行者:매혹
+		TIMES CUP불쾌 , 0.80
+	;조교者のTALENT:수수께끼의매력をみる
+	SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+		TIMES CUP불쾌 , 0.50
+	;태도
+	CUP불쾌 = CUP불쾌 * (5 + TALENT:대상者:태도) / 5
+	;반응
+	CUP불쾌 = CUP불쾌 * (5 + TALENT:대상者:반응) / 5
+	;무관심
+	CUP불쾌 = CUP불쾌 * (3 + TALENT:대상者:무관심) / 3
+	;자기애
+	CUP불쾌 = CUP불쾌 * (5 + TALENT:대상者:자기애) / 5
+	;정조
+	CUP불쾌 = CUP불쾌 * (3 + TALENT:대상者:정조) / 3
+	;人間不信
+	IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+		TIMES CUP불쾌, 1.20
+	;女嫌い
+	ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+		TIMES CUP불쾌, 1.20
+	;男嫌い
+	ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+		TIMES CUP불쾌, 1.20
+	ENDIF
+
+	CUP불쾌 = CUP불쾌 * 3 / (3 + ABL:대상者:정액중독 + GETEXPLV(EXP:대상者:정액경험,8) + 2 * GETEXPLV(EXP:대상者:정음경험,8))
+	CUP불쾌 = CUP불쾌 / 2
+
+	;憑依状態処理	
+	SIF 憑依状態 == 1
+		CUP불쾌 = 0
+	;PLAYER限定
+	SIF 実行者 == MASTER
+		CUP:대상者:불쾌 += CUP불쾌
+
+
+
+
+;--------------------------------------------------------------------------------------------------
+;고통
+;--------------------------------------------------------------------------------------------------
+@SOURCE_CALC_반감(대상者, 実行者, 쾌락강도)
+;공포,고통,욕정,반감,굴복
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 実行者
+#DIM DYNAMIC 쾌락강도
+#DIM DYNAMIC CUP基礎
+#DIM DYNAMIC CUP욕정
+#DIM DYNAMIC CUP고통
+#DIM DYNAMIC CUP공포
+#DIM DYNAMIC CUP반감
+#DIM DYNAMIC CUP굴복
+
+
+;共通処理
+CALL SOURCE_COMMON_CHECK(대상者, 実行者)
+
+;강도をCUP基礎に
+CUP基礎 = 쾌락강도
+
+;공포計算
+CUP공포 = CUP基礎
+
+;조교者のTALENT:새드をみる
+SIF 実行者 >= 0 && TALENT:実行者:새드
+	TIMES CUP공포 , 1.20
+;조교者のABL:새드끼をみる
+SIF 実行者 >= 0
+	CUP공포 = CUP공포 * (5 + ABL:実行者:새드끼) / 5
+
+;배짱
+CUP공포 = CUP공포 * (3 + TALENT:대상者:배짱) / 3
+;태도
+CUP공포 = CUP공포 * (3 - TALENT:대상者:태도) / 3
+;고통각인
+CUP공포 = CUP공포 * (1 + MARK:대상者:고통각인)
+;ABL:마조끼をみる
+CUP공포 = CUP공포 / (1 + ABL:대상者:마조끼)
+
+;PALAM:고통
+CUP공포 = CUP공포 * (3 + GETPALAMLV(PALAM:대상者:고통,10)) / 3
+SIF 憑依状態 == 1
+	CUP공포 = 0
+CUP:대상者:공포 += CUP공포
+
+;반감計算
+CUP반감 = CUP基礎 * 10
+;호감도
+SIF 実行者 == MASTER
+	CUP반감 = CUP반감 * 1000 / MAX( 5000 , ( 1000 + CFLAG:대상者:호감도 ))
+;이성(下限1/2)
+	CUP반감 = CUP반감 * (BASE:대상者:이성 + 500) / 1500
+;무드(下限1/2)
+	CUP반감 = CUP반감 * (1500 - BASE:대상者:무드) / 1500
+;同性愛
+SIF 대상者 >= 0 && 実行者 >= 0 && HETEROSEX(대상者, 実行者)
+	CUP반감 = CUP반감 * 5 / (3 + ABL:대상者:(16 + HETEROSEX(대상者, 実行者)))
+;연모
+SIF 実行者 == MASTER
+	CUP반감 = CUP반감 * ( 2 - TALENT:대상者:연모 ) / 2
+
+;조교者のTALENT:매혹をみる
+SIF 実行者 >= 0 && TALENT:実行者:매혹
+	TIMES CUP반감 , 0.80
+;조교者のTALENT:수수께끼의매력をみる
+SIF 実行者 >= 0 && TALENT:実行者:수수께끼의매력
+	TIMES CUP반감 , 0.50
+;태도
+CUP반감 = CUP반감 * (5 + TALENT:대상者:태도) / 5
+;반응
+CUP반감 = CUP반감 * (5 + TALENT:대상者:반응) / 5
+;프라이드
+CUP반감 = CUP반감 * (3 + TALENT:대상者:프라이드) / 3
+;무관심
+CUP반감 = CUP반감 * (3 + TALENT:대상者:무관심) / 3
+;저항
+CUP반감 = CUP반감 * (2 + TALENT:대상者:저항) / 2
+;도착적
+CUP반감 = CUP반감 * (3 - TALENT:대상者:도착적 ) / 3
+;마조
+CUP반감 = CUP반감 * (2 - TALENT:대상者:마조 ) / 2
+;새드
+CUP반감 = CUP반감 * (5 + TALENT:대상者:새드 ) / 5
+;人間不信
+IF 実行者 >= 0 && TALENT:대상者:성별기호 == 3
+	TIMES CUP반감, 1.20
+;女嫌い
+ELSEIF TALENT:대상者:성별기호 == 2 && 実行者 >= 0 && TALENT:実行者:성별 & 1
+	TIMES CUP반감, 1.20
+;男嫌い
+ELSEIF TALENT:대상者:성별기호 == 1 && 実行者 >= 0 && HAS_PENIS(実行者) && TALENT:実行者:낭자애 == 0
+	TIMES CUP반감, 1.20
+ENDIF
+;고통각인
+CUP반감 = CUP반감 * (5 - MARK:대상者:고통각인) / 5
+
+;ABL:순종をみる
+SELECTCASE ABL:대상者:순종
+	CASE 0
+		TIMES CUP반감 , 5.00
+	CASE 1
+		TIMES CUP반감 , 3.00
+	CASE 2
+		TIMES CUP반감 , 2.00
+	CASE 3
+		TIMES CUP반감 , 1.00
+	CASE 4
+		TIMES CUP반감 , 0.90
+	CASE 5
+		TIMES CUP반감 , 0.80
+	CASEELSE
+		TIMES CUP반감 , 0.70
+ENDSELECT
+
+;ABL:마조끼
+SELECTCASE ABL:대상者:마조끼
+	CASE 0
+		TIMES CUP반감 , 2.00
+	CASE 1
+		TIMES CUP반감 , 1.50
+	CASE 2
+		TIMES CUP반감 , 1.00
+	CASE 3
+		TIMES CUP반감 , 0.80
+	CASE 4
+		TIMES CUP반감 , 0.60
+	CASE 5
+		TIMES CUP반감 , 0.50
+	CASE 6
+		TIMES CUP반감 , 0.40
+	CASE 7
+		TIMES CUP반감 , 0.30
+	CASE 8
+		TIMES CUP반감 , 0.20
+	CASE 9
+		TIMES CUP반감 , 0.10
+	CASEELSE
+		TIMES CUP반감 , 0.00
+ENDSELECT
+SIF 憑依状態 == 1
+	CUP반감 = 0
+;行為者PLAYER限定
+SIF 実行者 == MASTER
+	CUP:대상者:반감 += CUP반감

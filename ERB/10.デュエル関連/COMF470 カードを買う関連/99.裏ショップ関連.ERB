@@ -1,0 +1,1094 @@
+@CARD_SELL
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 캐릭터_NO
+#DIM DYNAMIC 買取価格
+#DIM DYNAMIC カウンタ
+
+PRINTFORML 
+PRINTFORML 
+PRINTFORML 「이쪽의 카드라면 매입 가능합니다」
+CALL MONSTER_LIST(9)
+IF RESULT >= 0
+	캐릭터_ID = RESULT
+	캐릭터_NO = NO:캐릭터_ID
+	CALL PRINT_STATE(캐릭터_ID)
+	PRINTFORMW 「《%NAME:캐릭터_ID%》인가요？」
+	PRINTFORMW 「그럼 감정을 해올테니 잠시 기다려주세요ー」
+	PRINTFORML 
+	PRINTFORML 
+	CALL CARD_SELL_VALUE(캐릭터_ID,0)
+	買取価格 = RESULT
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORMW 「이상으로 {買取価格}円으로 매입하겠습니다만、어떻게 하시겠습니까ー？」
+	PRINTFORML 
+	PRINTFORML 
+	PRINTL [0] - 판다
+	PRINTL [1] - 그만둔다
+	BINPUT
+    IF RESULT == 0
+	    PRINTFORML 
+		SETCOLOR C_RED
+	    PRINTFORMW 《주의！》파는 카드와의 관계가 붕괴하여、팔린 카드가 험한 꼴을 당할지도 모릅니다만 정말로 파시겠습니까？
+        RESETCOLOR
+	   	PRINTFORML 
+        PRINTL [0] - 그래도 판다
+        PRINTL [1] - 역시 그만둔다
+        BINPUT
+	    IF RESULT == 0
+        	PRINTFORML 
+   		    PRINTFORMW 「감사합니다ー」
+     		PRINTFORML 
+        	SETCOLOR C_RED
+    	    PRINTFORMW 《%NAME:캐릭터_ID%》를 팔았습니다。
+		    RESETCOLOR
+        	CFLAG:캐릭터_ID:소유함 = 0
+	    	SIF ITEM:(NO:캐릭터_ID) >= 1
+	    		ITEM:(NO:캐릭터_ID) -= 1
+		    PRINTFORML 
+    		PRINTFORMW 소지금 +{買取価格}円
+			CALL MONEY_GET(買取価格)
+			SIF 買取価格 >= 100000
+				実績_進行보존:52 = 1
+	    	PRINTFORML 
+		    PRINTFORMW 판매에 출품된 카드 중에서、쇼크를 받아 노려보는듯한 기분이 듭니다。
+    		MARK:캐릭터_ID:굴복각인 = 0
+    		MARK:캐릭터_ID:반발각인 = 3
+    		TALENT:캐릭터_ID:애처 = 0
+	    	TALENT:캐릭터_ID:연모 = 0
+			TALENT:캐릭터_ID:성별기호 = 3
+			TALENT:캐릭터_ID:중고 = 1
+    		ABL:캐릭터_ID:친밀 = 0
+    		ABL:캐릭터_ID:순종 = 0
+        	CFLAG:캐릭터_ID:호감도 = 0
+			CFLAG:캐릭터_ID:기정사실 = -1
+			CFLAG:캐릭터_ID:시작위치 = 100
+			CFLAG:캐릭터_ID:현재위치 = 100
+			CALL EVILTY_POINT(10)
+    	    ;ここから趣味が分かれる、売られたカードのその後の処理
+	    	IF TALENT:캐릭터_ID:성별 == 1
+            	PRINTFORML 팔린%NAME:캐릭터_ID%은 그로부터 험한꼴을……？
+            	PRINTFORML 
+            	PRINTL [0] - 받는다
+            	PRINTL [1] - 당하지 않는다
+                BINPUT
+                IF RESULT == 0
+        		    CALL CARD_LOST_AFTER(캐릭터_ID)
+                ENDIF
+        	ENDIF
+			;CALL LIST_SHORI(17,캐릭터_ID)
+			PRINTFORML 판%NAME:캐릭터_ID%과 영원히 헤어지시겠습니까？
+			PRINTFORML 
+			PRINTL [0] - 영원히 헤어진다（캐릭터 삭제）
+			PRINTL [1] - 또 만날거라 믿는다（캐릭터 보존）
+			BINPUT
+			IF RESULT == 0
+				PRINTFORML 
+				PRINTFORMW 팔린%NAME:캐릭터_ID%은 그로부터 여러 듀얼리스트와 샵으로 돌려지며、어둠으로 사라진것 같다。
+				PRINTFORML 
+				CALL DELETE_CHARA(캐릭터_ID)
+				IF 캐릭터_NO >= 1000 && 캐릭터_NO < 9100
+					ADDCHARA 캐릭터_NO
+					캐릭터_ID = CHARANUM - 1
+					CALL SET_BODYSIZE(캐릭터_ID,0,1)
+					; CALL SHOP_BUST_RESET(캐릭터_ID)
+					; CALL SHOP_BUTT_RESET(캐릭터_ID)
+					CALL CLOTHES_SETTING(캐릭터_ID)
+					CFLAG:캐릭터_ID:시작위치 = 100
+					CFLAG:캐릭터_ID:현재위치 = 100
+					CFLAG:캐릭터_ID:현재위치 = CFLAG:캐릭터_ID:시작위치
+					CFLAG:캐릭터_ID:키스상실상대 = -1
+					CFLAG:캐릭터_ID:처녀버린상대 = -1
+					CFLAG:캐릭터_ID:동정버린상대 = -1
+					IF EXISTCSV(NO:캐릭터_ID)
+						NAME:캐릭터_ID = %CSVNAME(NO:캐릭터_ID)%
+						CALLNAME:캐릭터_ID = %CSVCALLNAME(NO:캐릭터_ID)%
+						FOR カウンタ, 0, VARSIZE("MAXBASE")
+							MAXBASE:캐릭터_ID:カウンタ = CSVBASE(NO:캐릭터_ID,カウンタ)
+						NEXT
+						FOR カウンタ, 0, VARSIZE("BASE")
+							BASE:캐릭터_ID:カウンタ = CSVBASE(NO:캐릭터_ID,カウンタ)
+						NEXT
+						FOR カウンタ, 0, VARSIZE("TALENT")
+							TALENT:캐릭터_ID:カウンタ = CSVTALENT(NO:캐릭터_ID,カウンタ)
+
+						NEXT
+						FOR カウンタ, 0, VARSIZE("ABL")
+							ABL:캐릭터_ID:カウンタ = CSVABL(NO:캐릭터_ID,カウンタ)
+						NEXT
+						FOR カウンタ, 0, VARSIZE("EXP")
+							EXP:캐릭터_ID:カウンタ = CSVEXP(NO:캐릭터_ID,カウンタ)
+						NEXT
+						CFLAG:캐릭터_ID:지금복장 = CSVCFLAG(NO:캐릭터_ID,7)
+
+						CSTR:캐릭터_ID:등장작품 = %CSVCSTR(NO:캐릭터_ID,10)%
+
+						CALL CLOTHES_SETTING(캐릭터_ID)
+						CALL SET_BODYSIZE(캐릭터_ID,0,2)
+					ENDIF
+				ENDIF
+			ELSEIF RESULT == 1
+				FOR カウンタ,0,10
+					SIF お気に入り:カウンタ == 캐릭터_ID
+						お気に入り:カウンタ = 0
+				NEXT
+				FOR カウンタ,0,10
+					SIF 소환이력:カウンタ == 캐릭터_ID
+						소환이력:カウンタ = 0
+				NEXT
+				PRINTFORML 
+				PRINTFORMW 팔린%NAME:캐릭터_ID%은 그로부터 여러 듀얼리스트와 샵에 돌려진듯 하다。
+				PRINTFORML 
+			ENDIF
+        ELSEIF RESULT == 1
+	        PRINTFORML 
+	        PRINTFORMW 「알겠습니다ー또 와주세요ー」
+        ENDIF
+    ELSEIF RESULT == 1
+	    PRINTFORML 
+	    PRINTFORMW 「알겠습니다ー또 와주세요ー」
+    ENDIF
+ENDIF
+
+
+;-----------------------------------------------------------
+
+
+@CARD_SELL_VALUE(캐릭터_ID,初期価格)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 初期価格
+#DIM DYNAMIC 最終価値
+#DIM DYNAMIC 価格보정
+
+;査定基準＝別のバリアントを参考
+
+VARSET 最終価値
+
+
+VARSET 価格보정
+IF ABL:캐릭터_ID:친밀 == 0
+	価格보정 += 0
+ELSEIF ABL:캐릭터_ID:친밀 == 1
+	価格보정 += 200
+ELSEIF ABL:캐릭터_ID:친밀 == 2
+	価格보정 += 500
+ELSEIF ABL:캐릭터_ID:친밀 == 3
+	価格보정 += 850
+ELSEIF ABL:캐릭터_ID:친밀 == 4
+	価格보정 += 1500
+ELSE
+	価格보정 += 450 * (ABL:캐릭터_ID:친밀)
+ENDIF
+SIF 価格보정 > 0
+	PRINTFORML 친밀LV{ABL:캐릭터_ID:친밀} + {価格보정}
+最終価値 += 価格보정
+
+VARSET 価格보정
+IF ABL:캐릭터_ID:순종 == 0
+	価格보정 += 0
+ELSEIF ABL:캐릭터_ID:순종 == 1
+	価格보정 += 200
+ELSEIF ABL:캐릭터_ID:순종 == 2
+	価格보정 += 500
+ELSEIF ABL:캐릭터_ID:순종 == 3
+	価格보정 += 850
+ELSEIF ABL:캐릭터_ID:순종 == 4
+	価格보정 += 1500
+ELSE
+	価格보정 += 450 * (ABL:캐릭터_ID:순종)
+ENDIF
+SIF 価格보정 > 0
+	PRINTFORML 순종LV{ABL:캐릭터_ID:순종} + {価格보정}
+最終価値 += 価格보정
+
+VARSET 価格보정
+IF ABL:캐릭터_ID:욕망 == 0
+	価格보정 += 0
+ELSEIF ABL:캐릭터_ID:욕망 == 1
+	価格보정 += 100
+ELSEIF ABL:캐릭터_ID:욕망 == 2
+	価格보정 += 300
+ELSEIF ABL:캐릭터_ID:욕망 == 3
+	価格보정 += 700
+ELSEIF ABL:캐릭터_ID:욕망 == 4
+	価格보정 += 1200
+ELSE
+	価格보정 += 300 * (ABL:캐릭터_ID:욕망)
+ENDIF
+SIF 価格보정 > 0
+	PRINTFORML 욕망LV{ABL:캐릭터_ID:욕망} + {価格보정}
+最終価値 += 価格보정
+
+VARSET 価格보정
+IF ABL:캐릭터_ID:기교 == 0
+	価格보정 += 0
+ELSEIF ABL:캐릭터_ID:기교 == 1
+	価格보정 += 100
+ELSEIF ABL:캐릭터_ID:기교 == 2
+	価格보정 += 200
+ELSEIF ABL:캐릭터_ID:기교 == 3
+	価格보정 += 400
+ELSEIF ABL:캐릭터_ID:기교 == 4
+	価格보정 += 700
+ELSE
+	価格보정 += 250 * (ABL:캐릭터_ID:기교)
+ENDIF
+SIF 価格보정 > 0
+	PRINTFORML 기교LV{ABL:캐릭터_ID:기교} + {価格보정}
+最終価値 += 価格보정
+
+VARSET 価格보정
+IF ABL:캐릭터_ID:자위중독 == 0
+	価格보정 += 0
+ELSEIF ABL:캐릭터_ID:자위중독 == 1
+	価格보정 += 250
+ELSEIF ABL:캐릭터_ID:자위중독 == 2
+	価格보정 += 500
+ELSEIF ABL:캐릭터_ID:자위중독 == 3
+	価格보정 += 750
+ELSEIF ABL:캐릭터_ID:자위중독 == 4
+	価格보정 += 1000
+ELSE
+	価格보정 += 250 * (ABL:캐릭터_ID:자위중독)
+ENDIF
+SIF 価格보정 > 0
+	PRINTFORML 자위중독LV{ABL:캐릭터_ID:자위중독} + {価格보정}
+最終価値 += 価格보정
+
+
+VARSET 価格보정
+IF ABL:캐릭터_ID:정액중독 == 0
+	価格보정 += 0
+ELSEIF ABL:캐릭터_ID:정액중독 == 1
+	価格보정 += 300
+ELSEIF ABL:캐릭터_ID:정액중독 == 2
+	価格보정 += 600
+ELSEIF ABL:캐릭터_ID:정액중독 == 3
+	価格보정 += 900
+ELSEIF ABL:캐릭터_ID:정액중독 == 4
+	価格보정 += 1300
+ELSE
+	価格보정 += 350 * (ABL:캐릭터_ID:정액중독)
+ENDIF
+SIF 価格보정 > 0
+	PRINTFORML 정액중독LV{ABL:캐릭터_ID:정액중독} + {価格보정}
+最終価値 += 価格보정
+
+
+;각인
+
+IF MARK:캐릭터_ID:고통각인 == 1
+	PRINTFORML 고통각인LV1 + 100
+	最終価値 += 100
+ENDIF
+IF MARK:캐릭터_ID:고통각인 == 2
+	PRINTFORML 고통각인LV2 + 400
+	最終価値 += 400
+ENDIF
+IF MARK:캐릭터_ID:고통각인 == 3
+	PRINTFORML 고통각인LV3 + 1000
+	最終価値 += 1000
+ENDIF
+
+IF MARK:캐릭터_ID:쾌락각인 == 1
+	PRINTFORML 쾌락각인LV1 + 100
+	最終価値 += 100
+ENDIF
+IF MARK:캐릭터_ID:쾌락각인 == 2
+	PRINTFORML 쾌락각인LV2 + 400
+	最終価値 += 400
+ENDIF
+IF MARK:캐릭터_ID:쾌락각인 == 3
+	PRINTFORML 쾌락각인LV3 + 1000
+	最終価値 += 1000
+ENDIF
+
+IF MARK:캐릭터_ID:굴복각인 == 1
+	PRINTFORML 굴복각인LV1 + 100
+	最終価値 += 100
+ENDIF
+IF MARK:캐릭터_ID:굴복각인 == 2
+	PRINTFORML 굴복각인LV2 + 400
+	最終価値 += 400
+ENDIF
+IF MARK:캐릭터_ID:굴복각인 == 3
+	PRINTFORML 굴복각인LV3 + 1000
+	最終価値 += 1000
+ENDIF
+
+
+IF ABL:캐릭터_ID:손가락 >= 1
+	PRINTFORML 성기술손가락LV{ABL:캐릭터_ID:손가락} + {100 * (ABL:캐릭터_ID:손가락)}
+	最終価値 += 100 * (ABL:캐릭터_ID:손가락)
+ENDIF
+
+IF ABL:캐릭터_ID:혀 >= 1
+	PRINTFORML 성기술혀LV{ABL:캐릭터_ID:혀} + {100 * (ABL:캐릭터_ID:혀)}
+	最終価値 += 100 * (ABL:캐릭터_ID:혀)
+ENDIF
+
+IF ABL:캐릭터_ID:가슴 >= 1
+	PRINTFORML 성기술가슴LV{ABL:캐릭터_ID:가슴} + {100 * (ABL:캐릭터_ID:가슴)}
+	最終価値 += 100 * (ABL:캐릭터_ID:가슴)
+ENDIF
+
+IF ABL:캐릭터_ID:허리 >= 1
+	PRINTFORML 성기술허리LV{ABL:캐릭터_ID:허리} + {100 * (ABL:캐릭터_ID:허리)}
+	最終価値 += 100 * (ABL:캐릭터_ID:허리)
+ENDIF
+
+IF ABL:캐릭터_ID:질 >= 1
+	PRINTFORML 성기술질LV{ABL:캐릭터_ID:질} + {100 * (ABL:캐릭터_ID:질)}
+	最終価値 += 100 * (ABL:캐릭터_ID:질)
+ENDIF
+
+IF ABL:캐릭터_ID:애널 >= 1
+	PRINTFORML 성기술애널LV{ABL:캐릭터_ID:애널} + {100 * (ABL:캐릭터_ID:애널)}
+	最終価値 += 100 * (ABL:캐릭터_ID:애널)
+ENDIF
+
+価格보정 = 100
+IF ABL:캐릭터_ID:봉사정신 == 3
+	価格보정 = 110
+	TIMES 最終価値 , 1.10
+ELSEIF ABL:캐릭터_ID:봉사정신 == 4
+	価格보정 = 130
+	TIMES 最終価値 , 1.30
+ELSEIF ABL:캐릭터_ID:봉사정신 >= 5
+	価格보정 = 150
+	TIMES 最終価値 , 1.5
+ENDIF
+SIF 価格보정 != 100
+	PRINTFORML 봉사정신LV{ABL:캐릭터_ID:봉사정신} × {価格보정/100}.{価格보정%100}
+
+価格보정 = 100
+IF ABL:캐릭터_ID:노출증 == 3
+	価格보정 = 110
+	TIMES 最終価値 , 1.10
+ELSEIF ABL:캐릭터_ID:노출증 == 4
+	価格보정 = 130
+	TIMES 最終価値 , 1.30
+ELSEIF ABL:캐릭터_ID:노출증 >= 5
+	価格보정 = 150
+	TIMES 最終価値 , 1.5
+ENDIF
+SIF 価格보정 != 100
+	PRINTFORML 노출증LV{ABL:캐릭터_ID:노출증} × {価格보정/100}.{価格보정%100}
+
+価格보정 = 100
+IF ABL:캐릭터_ID:마조끼 == 1
+	価格보정 = 110
+	TIMES 最終価値 , 1.10
+ELSEIF ABL:캐릭터_ID:마조끼 == 2
+	価格보정 = 130
+	TIMES 最終価値 , 1.30
+ELSEIF ABL:캐릭터_ID:마조끼 == 3
+	価格보정 = 150
+	TIMES 最終価値 , 1.50
+ELSEIF ABL:캐릭터_ID:마조끼 == 4
+	価格보정 = 200
+	TIMES 最終価値 , 2.00
+ELSEIF ABL:캐릭터_ID:마조끼 >= 5
+	価格보정 = 250
+	TIMES 最終価値 , 2.5
+ENDIF
+SIF 価格보정 != 100
+	PRINTFORML 마조끼LV{ABL:캐릭터_ID:마조끼} × {価格보정/100}.{価格보정%100}
+	
+価格보정 = 100
+IF ABL:캐릭터_ID:새드끼 == 1
+	価格보정 = 110
+	TIMES 最終価値 , 1.10
+ELSEIF ABL:캐릭터_ID:새드끼 == 2
+	価格보정 = 130
+	TIMES 最終価値 , 1.30
+ELSEIF ABL:캐릭터_ID:새드끼 == 3
+	価格보정 = 150
+	TIMES 最終価値 , 1.50
+ELSEIF ABL:캐릭터_ID:새드끼 == 4
+	価格보정 = 200
+	TIMES 最終価値 , 2.00
+ELSEIF ABL:캐릭터_ID:새드끼 >= 5
+	価格보정 = 250
+	TIMES 最終価値 , 2.5
+ENDIF
+SIF 価格보정 != 100
+	PRINTFORML 새드끼LV{ABL:캐릭터_ID:새드끼} × {価格보정/100}.{価格보정%100}
+
+価格보정 = 100
+IF ABL:캐릭터_ID:Ｃ감각 == 2
+	価格보정 = 110
+	TIMES 最終価値 , 1.10
+ELSEIF ABL:캐릭터_ID:Ｃ감각 == 3
+	価格보정 = 120
+	TIMES 最終価値 , 1.20
+ELSEIF ABL:캐릭터_ID:Ｃ감각 == 4
+	価格보정 = 140
+	TIMES 最終価値 , 1.40
+ELSEIF ABL:캐릭터_ID:Ｃ감각 >= 5
+	価格보정 = 150
+	TIMES 最終価値 , 1.5
+ENDIF
+SIF 価格보정 != 100
+	PRINTFORML Ｃ감각LV{ABL:캐릭터_ID:Ｃ감각} × {価格보정/100}.{価格보정%100}
+
+価格보정 = 100
+IF ABL:캐릭터_ID:Ｖ감각 == 2
+	価格보정 = 110
+	TIMES 最終価値 , 1.10
+ELSEIF ABL:캐릭터_ID:Ｖ감각 == 3
+	価格보정 = 120
+	TIMES 最終価値 , 1.20
+ELSEIF ABL:캐릭터_ID:Ｖ감각 == 4
+	価格보정 = 140
+	TIMES 最終価値 , 1.40
+ELSEIF ABL:캐릭터_ID:Ｖ감각 >= 5
+	価格보정 = 150
+	TIMES 最終価値 , 1.5
+ENDIF
+SIF 価格보정 != 100
+	PRINTFORML Ｖ감각LV{ABL:캐릭터_ID:Ｖ감각} × {価格보정/100}.{価格보정%100}
+
+価格보정 = 100
+IF ABL:캐릭터_ID:Ａ감각 == 2
+	価格보정 = 110
+	TIMES 最終価値 , 1.10
+ELSEIF ABL:캐릭터_ID:Ａ감각 == 3
+	価格보정 = 120
+	TIMES 最終価値 , 1.20
+ELSEIF ABL:캐릭터_ID:Ａ감각 == 4
+	価格보정 = 140
+	TIMES 最終価値 , 1.40
+ELSEIF ABL:캐릭터_ID:Ａ감각 >= 5
+	価格보정 = 150
+	TIMES 最終価値 , 1.5
+ENDIF
+SIF 価格보정 != 100
+	PRINTFORML Ａ감각LV{ABL:캐릭터_ID:Ａ감각} × {価格보정/100}.{価格보정%100}
+
+価格보정 = 100
+IF ABL:캐릭터_ID:Ｂ감각 == 2
+	価格보정 = 110
+	TIMES 最終価値 , 1.10
+ELSEIF ABL:캐릭터_ID:Ｂ감각 == 3
+	価格보정 = 120
+	TIMES 最終価値 , 1.20
+ELSEIF ABL:캐릭터_ID:Ｂ감각 == 4
+	価格보정 = 140
+	TIMES 最終価値 , 1.40
+ELSEIF ABL:캐릭터_ID:Ｂ감각 >= 5
+	価格보정 = 150
+	TIMES 最終価値 , 1.5
+ENDIF
+SIF 価格보정 != 100
+	PRINTFORML Ｂ감각LV{ABL:캐릭터_ID:Ｂ감각} × {価格보정/100}.{価格보정%100}
+
+価格보정 = 100
+IF ABL:캐릭터_ID:Ｍ감각 == 2
+	価格보정 = 110
+	TIMES 最終価値 , 1.10
+ELSEIF ABL:캐릭터_ID:Ｍ감각 == 3
+	価格보정 = 120
+	TIMES 最終価値 , 1.20
+ELSEIF ABL:캐릭터_ID:Ｍ감각 == 4
+	価格보정 = 140
+	TIMES 最終価値 , 1.40
+ELSEIF ABL:캐릭터_ID:Ｍ감각 >= 5
+	価格보정 = 150
+	TIMES 最終価値 , 1.5
+ENDIF
+SIF 価格보정 != 100
+	PRINTFORML Ｍ감각LV{ABL:캐릭터_ID:Ｍ감각} × {価格보정/100}.{価格보정%100}
+
+
+IF TALENT:캐릭터_ID:Ｃ감도 == -1
+	PRINTFORML Ｃ둔감 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:Ｃ감도 == 1
+	PRINTFORML Ｃ민감 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:Ｖ감도 == -1
+	PRINTFORML Ｖ둔감 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:Ｖ감도 == 1
+	PRINTFORML Ｖ민감 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:Ａ감도 == -1
+	PRINTFORML Ａ둔감 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:Ａ감도 == 1
+	PRINTFORML Ａ민감 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:Ｂ감도 == -1
+	PRINTFORML Ｂ둔감 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:Ｂ감도 == 1
+	PRINTFORML Ｂ민감 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:Ｍ감도 == -1
+	PRINTFORML Ｍ둔감 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:Ｍ감도 == 1
+	PRINTFORML Ｍ민감 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+
+;性格
+
+IF TALENT:캐릭터_ID:태도 == -1
+	PRINTFORML 솔직 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+IF TALENT:캐릭터_ID:태도 == +1
+	PRINTFORML 반항적 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+
+IF TALENT:캐릭터_ID:반응 == -1
+	PRINTFORML 얌전함 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+IF TALENT:캐릭터_ID:반응 == +1
+	PRINTFORML 건방짐 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+
+IF TALENT:캐릭터_ID:자기과시욕 == -1
+	PRINTFORML 틀어박히기 안건 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:자기과시욕 == 1
+	PRINTFORML 눈에띄고싶어함 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:무지 == 1
+	PRINTFORML 무지 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:페이스배분 == 1
+	PRINTFORML 페이스배분 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:의존체질 == 1
+	PRINTFORML 의존체질 × 1.5
+	TIMES 最終価値 , 1.50
+ENDIF
+
+
+IF TALENT:캐릭터_ID:정조 == -1
+	PRINTFORML 정조무관심 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+IF TALENT:캐릭터_ID:정조 == 1
+	PRINTFORML 전조관념 × 0.7
+	TIMES 最終価値 , 0.70
+ENDIF
+
+IF TALENT:캐릭터_ID:저항 == -1
+	PRINTFORML 저항 × 0.7
+	TIMES 最終価値 , 0.70
+ENDIF
+
+IF TALENT:캐릭터_ID:수치심 == -1
+	PRINTFORML 수치심옅음 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+IF TALENT:캐릭터_ID:수치심 == 1
+	PRINTFORML 부끄럼쟁이 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+
+IF TALENT:캐릭터_ID:습득속도 == -1
+	PRINTFORML 습득느림 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:습득속도 == 1
+	PRINTFORML 습득빠름 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:솜씨좋은손가락
+	PRINTFORML 재주좋은손가락 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:혀사용자
+	PRINTFORML 혀사용자 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:고양이혀
+	PRINTFORML 고양이혀 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+
+IF TALENT:캐릭터_ID:약독내성
+	PRINTFORML 약독내성 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+
+IF TALENT:캐릭터_ID:실금벽
+	PRINTFORML 실금벽 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:자위하기쉬움
+	PRINTFORML 자위하기쉬움 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:프라이드 == -1
+	PRINTFORML 프라이드 낮음 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+IF TALENT:캐릭터_ID:프라이드 == 1
+	PRINTFORML 프라이드 높음 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+
+
+IF TALENT:캐릭터_ID:자제심
+	PRINTFORML 자제심 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+
+
+IF TALENT:캐릭터_ID:무관심
+	PRINTFORML 무관심 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+
+IF TALENT:캐릭터_ID:감정부족함
+	PRINTFORML 감정적음 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+
+
+IF TALENT:캐릭터_ID:성적흥미 == 1
+	PRINTFORML 호기심 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+IF TALENT:캐릭터_ID:성적흥미 == -1
+	PRINTFORML 보수적 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+
+IF TALENT:캐릭터_ID:일선넘지않음
+	PRINTFORML 일선을 넘지않음 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+
+
+IF TALENT:캐릭터_ID:자기애 == -1
+	PRINTFORML 억압 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:자기애 == 1
+	PRINTFORML 해방 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+
+IF TALENT:캐릭터_ID:젖기쉬움정도 == -1
+	PRINTFORML 젖기힘듬 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:젖기쉬움정도 == 1
+	PRINTFORML 젖기쉬움 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:헌신적
+	PRINTFORML 헌신적 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:쾌감반응 == -1
+	PRINTFORML 쾌감의 부정 × 0.6
+	TIMES 最終価値 , 0.60
+ENDIF
+IF TALENT:캐릭터_ID:쾌감반응 == 1
+	PRINTFORML 쾌감에 솔직 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+
+IF TALENT:캐릭터_ID:중독되기쉬움
+	PRINTFORML 중독되기 쉬움 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:도착적
+	PRINTFORML 도착적 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:즉시타락 == 1
+	PRINTFORML 즉시타락 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+IF TALENT:캐릭터_ID:즉시타락 == 2
+	PRINTFORML 잡몹암컷 × 1.5
+	TIMES 最終価値 , 1.50
+ENDIF
+
+
+
+IF TALENT:캐릭터_ID:성별기호 == -1
+	PRINTFORML 양날의검 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+IF TALENT:캐릭터_ID:성별기호 == 1
+	PRINTFORML 남성혐오 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:성별기호 == 2
+	PRINTFORML 여성혐오 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:성별기호 == 3
+	PRINTFORML 인간불신 × 0.6
+	TIMES 最終価値 , 0.60
+ENDIF
+
+IF TALENT:캐릭터_ID:마조
+	PRINTFORML 마조 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:망신
+	PRINTFORML 망신 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:소악마
+	PRINTFORML 소악마 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+
+IF TALENT:캐릭터_ID:자위광
+	PRINTFORML 자위광 × 1.3
+	TIMES 最終価値 , 1.30
+ENDIF
+
+IF TALENT:캐릭터_ID:음호
+	PRINTFORML 음호 × 1.3
+	TIMES 最終価値 , 1.30
+ENDIF
+
+IF TALENT:캐릭터_ID:엉덩이광
+	PRINTFORML 엉덩이광 × 1.3
+	TIMES 最終価値 , 1.30
+ENDIF
+
+IF TALENT:캐릭터_ID:음유
+	PRINTFORML 음유 × 1.3
+	TIMES 最終価値 , 1.30
+ENDIF
+
+IF TALENT:캐릭터_ID:연모 == 1
+	PRINTFORML 연모 × 1.3
+	TIMES 最終価値 , 1.30
+ENDIF
+IF TALENT:캐릭터_ID:연모 == 2
+	PRINTFORML 친애 × 1.5
+	TIMES 最終価値 , 1.50
+ENDIF
+
+IF TALENT:캐릭터_ID:애처
+	PRINTFORML 애처 × 2
+	最終価値 = 最終価値 * 2
+ENDIF
+
+IF TALENT:캐릭터_ID:음란 == 1
+	PRINTFORML 음란 × 1.3
+	TIMES 最終価値 , 1.30
+ENDIF
+IF TALENT:캐릭터_ID:음란 == 2
+	PRINTFORML 쾌락광 × 1.5
+	TIMES 最終価値 , 1.50
+ENDIF
+
+IF TALENT:캐릭터_ID:굴복됨 == 1
+	PRINTFORML 굴복됨 × 1.5
+	TIMES 最終価値 , 1.50
+ENDIF
+
+
+;素質:虚가슴を見る
+IF TALENT:캐릭터_ID:가슴사이즈 == -3
+	PRINTFORML 허무 × 0.6
+	TIMES 最終価値 , 0.60
+ENDIF
+;素質:絶壁を見る
+IF TALENT:캐릭터_ID:가슴사이즈 == -2
+	PRINTFORML 절벽 × 1.1
+	TIMES 最終価値 , 1.10
+ENDIF
+IF TALENT:캐릭터_ID:가슴사이즈 == -1
+	PRINTFORML 빈유 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+;素質:巨乳を見る
+IF TALENT:캐릭터_ID:가슴사이즈 >= 1
+	価格보정 = 200
+	TIMES 最終価値 , 2.0
+	PRINTFORML 바스트사이즈{TALENT:캐릭터_ID:가슴사이즈} × {価格보정/100}.{価格보정%100}
+ENDIF
+
+IF TALENT:캐릭터_ID:모유체질 == 1
+	PRINTFORML 모유체질 × 1.4
+	TIMES 最終価値 , 1.40
+ENDIF
+
+
+IF TALENT:캐릭터_ID:회복속도 == -1
+	PRINTFORML 회복느림 × 0.8
+	TIMES 最終価値 , 0.80
+ENDIF
+IF TALENT:캐릭터_ID:회복속도 == 1
+	PRINTFORML 회복빠름 × 1.2
+	TIMES 最終価値 , 1.20
+ENDIF
+
+IF TALENT:캐릭터_ID:용모 == -1
+	PRINTFORML 추악 ÷ 2
+	最終価値 = 最終価値 / 2
+ENDIF
+
+IF TALENT:캐릭터_ID:용모 == 1
+	PRINTFORML 용모단정 × 1.5
+	TIMES 最終価値 , 1.50
+ENDIF
+
+IF TALENT:캐릭터_ID:펫
+	PRINTFORML 펫 × 1.5
+	TIMES 最終価値 , 1.50
+ENDIF
+
+IF TALENT:캐릭터_ID:성별 == 2
+	PRINTFORML 남자 ÷ 2
+	TIMES 最終価値 , 0.50
+ENDIF
+
+
+IF TALENT:캐릭터_ID:붕괴
+	PRINTFORML 붕괴 ÷ 10
+	TIMES 最終価値 , 0.10
+ENDIF
+
+IF TALENT:캐릭터_ID:인기
+	PRINTFORML 인기 × 1.5
+	TIMES 最終価値 , 1.50
+ENDIF
+
+IF TALENT:캐릭터_ID:매력
+	PRINTFORML 매력 × 1.5
+	TIMES 最終価値 , 1.50
+ENDIF
+
+IF TALENT:캐릭터_ID:매혹
+	PRINTFORML 매혹 × 1.5
+	TIMES 最終価値 , 1.50
+ENDIF
+
+IF TALENT:캐릭터_ID:수수께끼의매력
+	PRINTFORML 수수게끼의 매력 × 4
+	TIMES 最終価値 , 4.00
+ENDIF
+
+IF TALENT:캐릭터_ID:처녀
+	PRINTFORML 처녀 × 3
+	最終価値 = 最終価値 * 3
+ENDIF
+
+IF MARK:캐릭터_ID:반발각인 == 1
+	PRINTFORML 반발각인LV1 ÷ 5
+	TIMES 最終価値 , 0.20
+ENDIF
+IF MARK:캐릭터_ID:반발각인 == 2
+	PRINTFORML 반발각인LV2 ÷ 10
+	TIMES 最終価値 , 0.10
+ENDIF
+IF MARK:캐릭터_ID:반발각인 == 3
+	PRINTFORML 반발각인LV3 ÷ 100
+	TIMES 最終価値 , 0.01
+ENDIF
+IF TALENT:캐릭터_ID:중고
+	PRINTFORML 중고 ÷ 3
+	TIMES 最終価値 , 0.33
+ENDIF
+
+
+
+最終価値 = 初期価格 + 最終価値
+
+
+RETURN 最終価値
+
+
+;-----------------------------------------------------------
+
+
+@CARD_LOST_AFTER(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 조교횟수
+#DIM DYNAMIC 절정횟수
+
+
+PRINTFORML
+PRINTFORML
+SETCOLOR C_PINK
+PRINTFORMW %TEXTR("잃어버린/당신의 손을 떠난")%%NAME:캐릭터_ID%은 그로부터 뒷세계샵에 의해 실체화되어、호사가들%TEXTR("에게 여러가지로 사용되었다/의 욕망을 그 몸으로 받아들였다/에게 마구 사용되었다/의 장난감이 되었다")%이후 중고카드가 되어 팔리게 되었다는듯 하다。
+RESETCOLOR
+PRINTFORML
+PRINTFORML
+
+SIF TALENT:캐릭터_ID:처녀 == 1
+	CFLAG:캐릭터_ID:처녀버린시츄 = 7
+
+IF TALENT:캐릭터_ID:키스미경험
+	TALENT:캐릭터_ID:키스미경험 = 0
+	CFLAG:캐릭터_ID:첫키스시츄 = 7
+ENDIF
+
+조교횟수 = RAND:5 + 5
+EXP:캐릭터_ID:Ｃ경험 += 조교횟수
+절정횟수 = 조교횟수
+EXP:캐릭터_ID:Ｃ절정경험 += 절정횟수
+EXP:캐릭터_ID:절정경험 += 절정횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+ABL:캐릭터_ID:Ｃ감각 += RAND:3
+
+조교횟수 = RAND:5 + 5
+EXP:캐릭터_ID:Ｖ경험 += 조교횟수
+조교횟수 = RAND:4
+EXP:캐릭터_ID:Ｖ성교경험 += 조교횟수 + 4
+CFLAG:캐릭터_ID:엉덩이성장 += 조교횟수 + 4
+EXP:캐릭터_ID:Ｖ확장경험 += 조교횟수
+EXP:캐릭터_ID:정액경험 += 조교횟수
+절정횟수 = 조교횟수
+EXP:캐릭터_ID:Ｖ절정경험 += 절정횟수
+EXP:캐릭터_ID:절정경험 += 절정횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+ABL:캐릭터_ID:Ｖ감각 += RAND:3
+TALENT:캐릭터_ID:처녀 = 0
+
+조교횟수 = RAND:5 + 5
+EXP:캐릭터_ID:Ａ경험 += 조교횟수
+조교횟수 = RAND:4
+EXP:캐릭터_ID:Ａ성교경험 += 조교횟수 + 4
+CFLAG:캐릭터_ID:엉덩이성장 += 조교횟수 + 4
+EXP:캐릭터_ID:Ａ확장경험 += 조교횟수
+EXP:캐릭터_ID:정액경험 += 조교횟수
+절정횟수 = 조교횟수
+EXP:캐릭터_ID:Ａ절정경험 += 절정횟수
+EXP:캐릭터_ID:절정경험 += 절정횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+ABL:캐릭터_ID:Ａ감각 += RAND:3
+
+ABL:캐릭터_ID:정액중독 += RAND:3
+
+조교횟수 = RAND:5
+EXP:캐릭터_ID:Ｂ경험 += 조교횟수 + 5
+EXP:캐릭터_ID:파이즈리경험 += 조교횟수
+절정횟수 = 조교횟수
+EXP:캐릭터_ID:Ｂ절정경험 += 절정횟수
+EXP:캐릭터_ID:절정경험 += 절정횟수
+IF TALENT:캐릭터_ID:모유체질 == 1
+	EXP:캐릭터_ID:분유경험 += 절정횟수
+ENDIF
+EXP:캐릭터_ID:조교경험 += 조교횟수
+ABL:캐릭터_ID:Ｂ감각 += RAND:3
+
+조교횟수 = RAND:5
+EXP:캐릭터_ID:Ｍ경험 += 조교횟수 + 5
+절정횟수 = 조교횟수
+EXP:캐릭터_ID:Ｍ절정경험 += 절정횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+ABL:캐릭터_ID:Ｍ감각 += RAND:3
+
+EXP:캐릭터_ID:절정경험 += 절정횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+
+EXP:캐릭터_ID:정음경험 += 절정횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+
+EXP:캐릭터_ID:펠라경험 += 조교횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+
+EXP:캐릭터_ID:키스경험 += 조교횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+
+ABL:캐릭터_ID:욕망 += RAND:4
+ABL:캐릭터_ID:기교 += RAND:3
+
+조교횟수 = RAND:5
+EXP:캐릭터_ID:수음경험 += 조교횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+
+조교횟수 = RAND:5
+EXP:캐릭터_ID:조교자위경험 += 조교횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+ABL:캐릭터_ID:자위중독 += RAND:3
+ABL:캐릭터_ID:노출증 += RAND:3
+
+조교횟수 = RAND:5
+EXP:캐릭터_ID:봉사쾌락경험 += 조교횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+ABL:캐릭터_ID:봉사정신 += RAND:3
+
+조교횟수 = RAND:5
+EXP:캐릭터_ID:고통쾌락경험 += 조교횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+ABL:캐릭터_ID:마조끼 += RAND:3
+
+조교횟수 = RAND:5
+EXP:캐릭터_ID:가학쾌락경험 += 조교횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+
+조교횟수 = RAND:5
+EXP:캐릭터_ID:구속경험 += 조교횟수
+EXP:캐릭터_ID:조교경험 += 조교횟수
+
+CALL CARD_EROTICS_END(캐릭터_ID)
+
+RETURN
+
+@DELETE_CHARA(캐릭터_ID)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カウンタ
+
+FOR カウンタ,0,10
+	SIF お気に入り:カウンタ == 캐릭터_ID
+		お気に入り:カウンタ = 0
+	SIF お気に入り:カウンタ >= 캐릭터_ID
+		お気に入り:カウンタ --
+NEXT
+FOR カウンタ,0,10
+	SIF 소환이력:カウンタ == 캐릭터_ID
+		소환이력:カウンタ = 0
+	SIF 소환이력:カウンタ > 캐릭터_ID
+		소환이력:カウンタ --
+NEXT
+DELCHARA 캐릭터_ID
+
+RETURN 1

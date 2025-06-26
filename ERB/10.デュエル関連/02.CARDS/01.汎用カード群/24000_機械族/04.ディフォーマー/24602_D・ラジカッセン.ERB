@@ -1,0 +1,119 @@
+﻿@CARDNAME_24602,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = D 라지캇센
+	CASE "略称"
+RESULTS = D 라지카세
+	CASE "カテゴリ"
+RESULTS:0 = 디포머
+ENDSELECT
+
+
+@CARD_24602(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 400
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24602(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 표시 형식에 따라 다음의 효과를 얻는다.
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ● 공격 표시: 이 카드는 1턴에 2번까지 공격할 수 있다.
+CALLFORM CARD_ABLE(10,攻撃時誘発)
+PRINTL ● 수비 표시: 1턴에 1번, 자신의 「디포머」 몬스터가 공격 대상이 되었을 때 발동할 수 있다.
+PRINTL 그 공격을 무효로 한다.
+
+
+@CARDCAN_24602(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24602)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発 ;&& GETVAR(@"%듀얼리스트%_MZ_表:場所") == 2
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	SIF RESULTS != "디포머"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") != 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24602(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",1)
+	
+ELSEIF 종류 == 攻撃時誘発 ;&& GETVAR(@"%듀얼리스트%_MZ_表:場所") == 2
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24602,2)
+	IF RESULT == 0
+		CALL EVADE_ATTACK(듀얼리스트)
+	ENDIF
+ENDIF
+
+
+

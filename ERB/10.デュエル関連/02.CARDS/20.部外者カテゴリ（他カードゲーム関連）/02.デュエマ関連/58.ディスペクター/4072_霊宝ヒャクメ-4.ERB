@@ -1,0 +1,266 @@
+﻿@CARDNAME_4072,参照先
+;ココで지정카드의 名前、略称を返す予定
+;#FUNCTIONS
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 영보 햐쿠메―4
+	CASE "略称"
+RESULTS = 햐쿠메
+	CASE "カテゴリ"
+RESULTS:0 = 판도라 박스
+RESULTS:1 = 디스타스
+RESULTS:4 = 듀얼 마스터즈
+ENDSELECT
+
+
+@CARD_4072(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RESULT:1 = 땅속성
+		RESULT:2 = 빛속성
+		RETURN 어둠속성
+	CASE "종족"
+		RESULT:1 = 천사족
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 2200
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_4072(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 패에서 카드(어둠 속성/땅 속성/빛 속성) 1장을 버리고 발동할 수 있다.
+PRINTL 이 카드를 패에서 특수 소환한다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 손패 1장을 버리고, EX덱의 디스펙터-(어둠 속성/땅 속성/빛 속성) 1장을 상대에게 보여주고 발동할 수 있다.
+PRINTL 이 카드를 파괴하고, 보여준 몬스터의 종족을 1개만 가지는, 「사사게루 토큰」 2장을 특수 소환한다.
+PRINTL 이 턴, 자신은 융합 몬스터밖에 EX덱에서 특수 소환할 수 없다.
+CALLFORM CARD_ABLE(3,효과後誘発)
+PRINTL ③: 자신 필드의 디스펙터-가 상대에 의해 필드에서 벗어났을 경우에 발동할 수 있다.
+PRINTL 패 / 묘지의 이 카드를 특수 소환한다.
+PRINTL 이 효과로 특수 소환한 이 카드는 필드에서 벗어났을 경우에 제외된다.
+PRINTL 
+PRINTL 「사사게루 토큰」
+PRINTL (어둠 별 1 공/수 0)
+
+
+@CARDSUMMON_AA_4072
+
+
+@CARDCAN_4072(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4072)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,4072)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,4072,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件속성 = 어둠속성
+	효과条件속성 = 땅속성
+	효과条件속성 = 빛속성
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,4072)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,104072,"")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件속성 = 어둠속성
+	효과条件속성 = 땅속성
+	효과条件속성 = 빛속성
+	효과条件分割 = ディスペクタ-
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_3(듀얼리스트,4072)
+		RETURN 0
+	SIF GROUPMATCH(ゾーン,"손패","묘지")
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,4072,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	SIF 処理中_듀얼리스트 == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과条件分割 = ディスペクタ-
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"필드離れ")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4072(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4072,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件속성 = 어둠속성
+		효과条件속성 = 땅속성
+		효과条件속성 = 빛속성
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4072,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件속성 = 어둠속성
+			효과条件속성 = 땅속성
+			효과条件속성 = 빛속성
+			효과条件分割 = ディスペクタ-
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+				選択カード = RESULT
+				選択カード_ID = RESULT:99
+				CALL FULLRESET
+				TRYCALLFORM CARD_{選択カード_ID},"종족"
+				효과추가종류 = 効追永種 + RESULT:0
+				CALL CARD_GENERATE(듀얼리스트,104072)
+
+				CALL FULLRESET
+				TRYCALLFORM CARD_{選択カード_ID},"종족"
+				효과추가종류 = 効追永種 + RESULT:1
+				CALL CARD_GENERATE(듀얼리스트,104072)
+			ENDIF
+		ENDIF
+		EX소환可能종류 = 융합
+		CALL CARD_EX_RESTRICTION(듀얼리스트)
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4072,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 効追除処
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン, 場所)
+	ENDIF
+ENDIF
+
+
+@CARDNAME_104072,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 사사게루 토큰
+	CASE "略称"
+RESULTS = 사사게루
+	CASE "カテゴリ"
+RESULTS:0 = 디스타스
+ENDSELECT
+
+
+@CARD_104072(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+
+@CARDCAN_104072(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+RETURN 0

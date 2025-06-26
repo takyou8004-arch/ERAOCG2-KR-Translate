@@ -1,0 +1,127 @@
+﻿@CARDNAME_1112,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 가가가 시스터
+	CASE "略称"
+RESULTS = 가가가 시스터
+	CASE "カテゴリ"
+RESULTS:0 = 가가가
+RESULTS:1 = 오노마트
+
+ENDSELECT
+
+
+@CARD_1112(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족 
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 200
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1112(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①: 이 카드가 소환에 성공했을 때 발동할 수 있다.
+PRINTL 덱에서 "가가가" 마법 / 함정 카드 1장을 패에 넣는다.
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ②: 1턴에 1번, 이 카드 이외의 자신 필드의 "오노마트" 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 그 몬스터와 이 카드는, 턴 종료시까지 그 2장의 레벨을 합계한 레벨이 된다.
+
+
+@CARDCAN_1112(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1112)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = 마함全般
+	효과条件カテゴリ = 가가가
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 오노마토
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1112(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC レベル合計
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1112)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = 마함全般
+		효과条件カテゴリ = 가가가
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1112,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 오노마토
+		CALL CARD_CHOOSE_BASIC(듀얼리스트, "필드",ゾーン,場所)	
+		選択カード = RESULT
+		IF 選択カード != 9999
+			レベル合計 = GETVAR(@"%듀얼리스트%_MZ_星:選択カード") + GETVAR(@"%듀얼리스트%_MZ_星:場所")
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一星",レベル合計,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"一星",レベル合計,1)
+		ENDIF
+	ENDIF
+ENDIF
+

@@ -1,0 +1,513 @@
+﻿@CARDNAME_55600,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 젬나이트마스터 다이아
+	CASE "略称"
+RESULTS = 젬KM 다이아
+	CASE "カテゴリ"
+RESULTS:0 = 젬나이트
+ENDSELECT
+
+
+@CARD_55600(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 원소정령족 
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_55600(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「젬나이트」 몬스터 ×3
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①: 이 카드의 공격력은, 자신의 묘지 / 제외 상태인 「젬나이트」 몬스터의 수×100 올린다.
+CALLFORM CARD_ABLE(0,필드起動)
+PRINTL ②: 자신의 묘지의 레벨 7 이하의 「젬나이트」 융합 몬스터 1장을 제외하고 발동할 수 있다.
+PRINTL 이 카드는 제외한 몬스터의 효과를 얻는다.
+
+PRINT 
+
+@CARDSUMMON_55600(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件カテゴリ = 젬나이트
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,55600) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_55600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과使用불가,10
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,55600)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+
+	;마스터 ダイヤ　【효과使用불가:0】
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前:0 = ダミ-０
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) != 1
+		효과条件名前:1 = 젬나이트 레이디 라피스라즐리
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) != 1 
+		효과条件名前:2 = 젬나이트 아쿠아마리나
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),3) != 1
+		효과条件名前:3 = 젬나이트 파즈
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) != 1
+		효과条件名前:4 = 젬나이트 프리즘 오라
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) != 1
+		효과条件名前:5 = 젬나이트 루비즈
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),6) != 1
+		효과条件名前:6 = 젬나이트 마디라
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),7) != 1
+		효과条件名前:7 = 젬나이트 세라피
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		효과使用불가:0 = 1
+
+	;ラピスラズリ（GETBIT1）　【효과使用불가:1】
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) == 1
+		;ダイヤは발동済み使ってないので、こっち（コピー효과使用판정）で有効活用しましょう。
+		SIF 발동済_1(듀얼리스트,55600)
+			효과使用불가:1 = 1
+	ELSE
+		효과使用불가:1 = 1
+	ENDIF
+
+	;プリズムオ-ラ（GETBIT4）　【효과使用불가:2】
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) == 1
+		;효과使用불가を活用することでそのまんまプリズムオ-ラの条件引っ張れるよ！
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 젬나이트
+		CALL CARD_CHECK_ADV(듀얼리스트,場所)
+		SIF RESULT != 1
+			효과使用불가:2 = 1
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件표시 = 表側표시 
+		CALL CARD_CHECK_ADV(듀얼리스트,場所)
+		SIF RESULT != 1
+			효과使用불가:2 = 1
+	ELSE
+		효과使用불가:2 = 1
+	ENDIF
+	;젬나이트 루비즈(GETBIT5）　【효과使用불가:3】
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) == 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 젬나이트
+		효과条件他所 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			효과使用불가:3 = 1
+	ELSE
+		효과使用불가:3 = 1
+	ENDIF
+	;젬나이트 세라피(GETBIT7）　【효과使用불가:4】
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),7) == 1
+		;空いてるスペ-スの有効活用
+		SIF 발동済_2(듀얼리스트,55600)
+			효과使用불가:4 = 1
+	ELSE
+		효과使用불가:4 = 1
+	ENDIF
+
+	;효과全部使えないなら、FULLNG
+	SIF 효과使用불가:0 == 1 && 효과使用불가:1 == 1 && 효과使用불가:2 == 1 && 효과使用불가:3 == 1 && 효과使用불가:4 == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時強制
+	;ゾーン판정は！必ず先頭！！
+	SIF ゾーン != "필드"
+		RETURN 0
+	;アクアマリナ(GETBIT2）
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) == 0
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") != 1 
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == バトル開始時
+	SIF 발동済_3(듀얼리스트,55600)
+		RETURN 0
+	;ゾーン판정は！必ず先頭！！
+	SIF ゾーン != "필드"
+		RETURN 0
+	;アクアマリナ(GETBIT2）
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) == 0
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,55605)
+		RETURN 0
+
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == バトル開始時強制
+	;ゾーン판정は！必ず先頭！！
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	;パ-ズ(GETBIT3）
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),3) == 0
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_戦:場所") == 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後誘発
+	;ゾーン판정は！必ず先頭！！
+	SIF ゾーン != "필드"
+		RETURN 0
+	;パ-ズ(GETBIT3）
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),3) == 0
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0	
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	;ゾーン판정は！必ず先頭！！！！！！
+	SIF ゾーン != "필드"
+		RETURN 0
+	;지속효과側にコメントあり
+	;SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) == 0 && GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),6) == 0
+	;	RETURN 0 
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_55600(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力상승
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 효과使用불가,10
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+;使用可能효과確認（そのまんま持ってきたよCARDCAN）―――――――――――――――――――――――――――――――――――――――
+	;마스터 ダイヤ　【효과使用불가:0】
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前:0 = ダミ-０
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) != 1
+		효과条件名前:1 = 젬나이트 레이디 라피스라즐리
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) != 1 
+		효과条件名前:2 = 젬나이트 아쿠아마리나
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),3) != 1
+		효과条件名前:3 = 젬나이트 파즈
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) != 1
+		효과条件名前:4 = 젬나이트 프리즘 오라
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) != 1
+		효과条件名前:5 = 젬나이트 루비즈
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),6) != 1
+		효과条件名前:6 = 젬나이트 마디라
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),7) != 1
+		효과条件名前:7 = 젬나이트 세라피
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		효과使用불가:0 = 1
+
+	;ラピスラズリ（GETBIT1）　【효과使用불가:1】
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) == 1
+		;ダイヤは발동済み使ってないので、こっち（コピー효과使用판정）で有効活用しましょう。
+		SIF 발동済_1(듀얼리스트,55600)
+			효과使用불가:1 = 1
+	ELSE
+		효과使用불가:1 = 1
+	ENDIF
+
+	;プリズムオ-ラ（GETBIT4）　【효과使用불가:2】
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) == 1
+		;효과使用불가を活用することでそのまんまプリズムオ-ラの条件引っ張れるよ！
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 젬나이트
+		CALL CARD_CHECK_ADV(듀얼리스트,場所)
+		SIF RESULT != 1
+			효과使用불가:2 = 1
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件표시 = 表側표시 
+		CALL CARD_CHECK_ADV(듀얼리스트,場所)
+		SIF RESULT != 1
+			효과使用불가:2 = 1
+	ELSE
+		효과使用불가:2 = 1
+	ENDIF
+	;젬나이트 루비즈(GETBIT5）　【효과使用불가:3】
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) == 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 젬나이트
+		효과条件他所 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			효과使用불가:3 = 1
+	ELSE
+		효과使用불가:3 = 1
+	ENDIF
+	;젬나이트 세라피(GETBIT7）　【효과使用불가:4】
+	IF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),7) == 1
+		;空いてるスペ-スの有効活用
+		SIF 발동済_2(듀얼리스트,55600)
+			효과使用불가:4 = 1
+	ELSE
+		효과使用불가:4 = 1
+	ENDIF
+;ここまで――――――――――――――――――――――――――――――――――――――――
+	IF 듀얼리스트 == "자신"
+		PRINTL
+PRINTL 어떤 보석의 힘을 해방하시겠습니까?
+		PRINTL
+		SIF 효과使用불가:0 == 0
+PRINTL [ 1] - 다이아몬드
+		SIF 효과使用불가:1 == 0
+PRINTL [ 2] - 라피스 라줄리
+		SIF 효과使用불가:2 == 0
+PRINTL [ 3] - 오라 크리스탈
+		SIF 효과使用불가:3 == 0	
+PRINTL [ 4] - 루비
+		SIF 효과使用불가:4 == 0
+PRINTL [ 5] - 세라피나이트
+		BINPUT
+
+	ELSEIF 듀얼리스트 == "상대"
+		IF 효과使用불가:4 == 0
+			RESULT = 5
+		ELSEIF 효과使用불가:3 == 0
+			RESULT = 4
+		ELSEIF 효과使用불가:2 == 0
+			RESULT = 3
+		ELSEIF 효과使用불가:1 == 0
+			RESULT = 2
+		ELSEIF 효과使用불가:0 == 0
+			RESULT = 1
+		ENDIF
+	ENDIF
+	IF RESULT == 1
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55600)
+		IF RESULT == 0
+			PRINTW 借り受ける力を選んでください
+			CALL FULLRESET
+			효과条件カテゴリ = 젬나이트
+			CALL 효과条件レベル_ADV(7, "以下")
+			효과条件종류 = 융합
+			효과範囲묘지 = 1
+			효과条件固名前:0 = ダミ-０
+			SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),1) == 1
+				효과条件固名前:1 = 젬나이트 레이디 라피스라즐리
+			SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),2) == 1
+				효과条件固名前:2 = 젬나이트 아쿠아마리나
+			SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),3) == 1
+				효과条件固名前:3 = 젬나이트 파즈
+			SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),4) == 1
+				효과条件固名前:4 = 젬나이트 프리즘 오라
+			SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) == 1
+				효과条件固名前:5 = 젬나이트 루비즈
+			SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),6) == 1
+				효과条件固名前:6 = 젬나이트 마디라
+			SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),7) == 1
+				효과条件固名前:7 = 젬나이트 세라피
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+			IF RESULT == 1
+				選択カード_ID = RESULT:1
+				TRYCALLFORM CARDNAME_{選択カード_ID}, "名前"
+				SELECTCASE RESULTS
+					CASE "젬나이트 레이디 라피스라즐리"
+						PRINTW 金剛の刃が、瑠璃の力を解放する！
+						CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",2)
+					CASE "젬나이트 아쿠아마리나"
+						PRINTW 金剛の刃が、藍玉の力を解放する！
+						CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",4)
+					CASE "젬나이트 파즈"
+						PRINTW 金剛の刃が、黄玉の力を解放する！
+						CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",8)
+					CASE "젬나이트 프리즘 오라"
+						PRINTW 金剛の刃が、オ-ラクリスタルの力を解放する！
+						CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",16)
+					CASE "젬나이트 루비즈"
+						PRINTW 金剛の刃が、紅玉の力を解放する！
+						CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",32)
+					CASE "젬나이트 마디라"
+						PRINTW 金剛の刃が、黄수정の力を解放する！
+						CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",64)
+					CASE "젬나이트 세라피"
+						PRINTW 金剛の刃が、斜緑泥石の力を解放する！
+						CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",128)
+				ENDSELECT
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 2
+		;ラピスラズリ（GETBIT1）
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55600,1)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과範囲EX덱 = 1
+			효과条件カテゴリ = 젬나이트
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)	
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과範囲상대필드 = 1
+				효과条件종류 = モン全般
+				효과条件召種 = 20
+				효과条件CNT = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				CALL LIFE_CHANGE(듀얼리스트,"減少","효과",(RESULT * 500),1)
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 3
+		;プリズムオ-ラ（GETBIT4）
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55600)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과条件カテゴリ = 젬나이트
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 4
+		;젬나이트 루비즈(GETBIT5）
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55600)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과条件カテゴリ = 젬나이트
+			효과条件他所 = 1
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+			IF RESULT == 1
+				CALLFORM CARD_{RESULT:1}("攻撃力")
+				攻撃力상승 = RESULT
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",攻撃力상승)
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 5
+		;젬나이트 세라피(GETBIT7）
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55600,2)
+		IF RESULT == 0
+			PRINTW 소환権が一つ増えました。
+			소환権 ++
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == ターン終了時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",2,1)
+
+ELSEIF 종류 == バトル開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55600,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"손패")
+	ENDIF
+
+ELSEIF 종류 == バトル開始時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",2,1)
+
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55600)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		CALLFORM CARD_{直前戦闘破壊ID(듀얼리스트,1)}("攻撃力")
+		ダメージ量 = RESULT
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	;こっちで条件づけてるから、CARD_CANに入らないよ
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),5) == 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"貫通")
+	SIF GETBIT(GETVAR(@"%듀얼리스트%_MZ_汎数:場所"),6) == 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦阻")
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 젬나이트
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 100
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)	
+ENDIF
