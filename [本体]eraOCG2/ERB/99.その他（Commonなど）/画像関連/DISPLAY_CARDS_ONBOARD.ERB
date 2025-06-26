@@ -1,0 +1,98 @@
+@DISPLAY_CARDS_ONBOARD()
+#DIM DYNAMIC GDI値
+#DIM FONTSIZE
+#DIM LINEHEIGHT
+#DIMS HTML_TEXT
+#DIM DYNAMIC 画像ID
+#DIMS DYNAMIC SPRITE名
+
+FONTSIZE = GETCONFIG("フォントサイズ")
+LINEHEIGHT = GETCONFIG("一行の高さ")
+
+VARSET HTML_TEXT
+
+; prepare card image
+FOR LOCAL, 0, 5
+    IF 自分_戦場_CARDDISPLAY:LOCAL != 자신_필드:LOCAL
+        GDI値 = 6000+LOCAL
+        SPRITE名 '= @"{LOCAL}_FIELDCARD"
+        ; REFRESH
+        画像ID = 자신_필드:LOCAL
+        自分_戦場_CARDDISPLAY:LOCAL = 画像ID
+        CALL PREPARE_CARD_ONBOARD(GDI値, SPRITE名,画像ID)
+    ENDIF
+
+    IF 相手_戦場_CARDDISPLAY:LOCAL != 상대_필드:LOCAL
+        GDI値 = 6005+LOCAL
+        SPRITE名 '= @"{LOCAL+5}_FIELDCARD"
+        ; REFRESH
+        画像ID = 상대_필드:LOCAL
+        相手_戦場_CARDDISPLAY:LOCAL = 画像ID
+        CALL PREPARE_CARD_ONBOARD(GDI値, SPRITE名,画像ID)
+    ENDIF
+NEXT
+
+; display card
+; 5 monser of enemy
+HTML_TEXT += "　 　"
+FOR LOCAL, 0, 5
+    HTML_TEXT += @"<img src='{LOCAL+5}_FIELDCARD' width='{FONTSIZE * 13}px' height='{LINEHEIGHT * 9}px' ypos='{LINEHEIGHT * 21/2}px'>"
+    HTML_TEXT += "　 "
+NEXT
+HTML_TEXT += "<br>"
+; 5 monser of player
+HTML_TEXT += "　 　"
+FOR LOCAL, 0, 5
+    HTML_TEXT += @"<img src='{LOCAL}_FIELDCARD' width='{FONTSIZE * 13}px' height='{LINEHEIGHT * 9}px' ypos='{LINEHEIGHT * 45/2}px'>"
+    HTML_TEXT += "　 "
+NEXT
+HTML_TEXT += "<br>"
+; thumbnail
+HTML_TEXT += @"　　　　　　<img src='MASTER_THUMB' width='{FONTSIZE * 21/2}px' height='{LINEHEIGHT * 3}px' ypos='{LINEHEIGHT * 18}px'>"
+HTML_TEXT += "　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　"
+HTML_TEXT += @"<img src='OPPOSER_THUMB' width='{FONTSIZE * 21/2}px' height='{LINEHEIGHT * 3}px' ypos='{LINEHEIGHT * 18}px'>"
+
+HTML_PRINT @"%HTML_TEXT%", 0
+
+@PREPARE_CARD_ONBOARD, GDI値, SPRITE名, 画像ID
+#DIM DYNAMIC GDI値
+#DIM DYNAMIC 画像ID
+#DIMS DYNAMIC SPRITE名
+#DIM カラーマトリクス, 5, 5
+#DIM DYNAMIC GRAPH_SIZE
+
+SPRITEDISPOSE SPRITE名
+GDISPOSE GDI値
+
+IF ENUMFILES("RESOURCES/DUEL", @"{画像ID}_DUEL.*")
+    SPLIT RESULTS, "\\", RESULTS
+    GCREATEFROMFILE GDI値, "DUEL/"+RESULTS:(RESULT-1)
+    GWIDTH GDI値
+    GRAPH_SIZE = GWIDTH(GDI値)
+    ; 色褪める
+    CALL GET_COLORMATRIX_GRAY(カラーマトリクス,64)
+    GDRAWG GDI値, GDI値, 0, 0, GRAPH_SIZE, GRAPH_SIZE, 0, 0, GRAPH_SIZE, GRAPH_SIZE, カラーマトリクス:0:0
+ELSEIF ENUMFILES("RESOURCES/CHARA", @"{画像ID}_FACE.*")
+    SPLIT RESULTS, "\\", RESULTS
+    GCREATEFROMFILE GDI値, "CHARA/"+RESULTS:(RESULT-1)
+    GWIDTH GDI値
+    GRAPH_SIZE = GWIDTH(GDI値)
+    ; 色褪める
+    CALL GET_COLORMATRIX_GRAY(カラーマトリクス,64)
+    GDRAWG GDI値, GDI値, 0, 0, GRAPH_SIZE, GRAPH_SIZE, 0, 0, GRAPH_SIZE, GRAPH_SIZE, カラーマトリクス:0:0
+ELSE
+    GCREATEFROMFILE GDI値, "半透明黒.png"
+    GWIDTH GDI値
+    GRAPH_SIZE = GWIDTH(GDI値)
+ENDIF
+SPRITECREATE SPRITE名, GDI値, 0, GRAPH_SIZE*2/13, GRAPH_SIZE, GRAPH_SIZE*9/13
+
+
+@GET_COLORMATRIX_GRAY, カラーマトリクス, ALPHA = 64
+#DIM REF カラーマトリクス, 0, 0	;使用するカラーマトリクスを格納する変数 参照渡し
+#DIM ALPHA
+カラーマトリクス:0:0 =  ALPHA,   0,   0,   0,   0;
+カラーマトリクス:1:0 =   0,  ALPHA,   0,   0,   0;
+カラーマトリクス:2:0 =   0,   0,  ALPHA,   0,   0;
+カラーマトリクス:3:0 =   0,   0,   0,  256,   0;
+カラーマトリクス:4:0 =   0,   0,   0,    0, 256;
