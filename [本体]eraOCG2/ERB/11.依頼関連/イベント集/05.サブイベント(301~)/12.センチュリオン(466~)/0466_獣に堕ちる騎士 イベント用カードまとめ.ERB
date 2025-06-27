@@ -1,0 +1,791 @@
+@CARDNAME_259790,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 그림자 악마 알미라지
+	CASE "略称"
+		RESULTS = 그림자 악마 알미라지
+	CASE "カテゴリ"
+		RESULTS:0 = 인디센츄리온
+		RESULTS:1 = 센츄리온
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_259790(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 0
+	CASE "別途ID"
+		RETURN 59790
+	CASE "生産不可"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_259790(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드는 카드의 효과로밖에 EX덱에서 특수 소환 할 수 없다。
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：이 카드가 특수 소환된 경우에 발동할 수 있다。
+PRINTL 자신 / 상대의 묘지 / 제외 상태에서「기사황 레가티아」１장을 특수 소환한다。
+PRINTL 이 효과로 특수 소환한「기사황 레가티아」는 발정한다。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：묘지의 이 카드를 제외하고 발동할 수 있다。
+PRINTL 자신 필드의 발정하지 않은「짐승 기사 프리메라 비트」１장을 턴 종료시까지 발정시키고、Ｘ소재를 ２개 늘린다。
+CALLFORM CARD_ABLE(0,EX덱起動)
+PRINTL ③：상대 몬스터 존에 「기사황 레가티아」가 존재하는 경우、EX덱의 이 카드를 보여주고 발동할 수 있다。
+PRINTL 상대 필드의 「기사황 레가티아」１장의 컨트롤을 얻는다。
+PRINTL 이 효과로 컨트롤을 얻은「기사황 레가티아」는、효과가 무효화되고、공격력 / 수비력이 ０이된다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDSUMMON_259790(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+RETURN 0
+
+
+@CARDCAN_259790(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259790)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 発動済_1(듀얼리스트,259790)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과範囲상대묘지 = 1
+	효과範囲상대제외 = 1
+	효과条件名前 = 기사황 레가티아
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 発動済_2(듀얼리스트,259790)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = 짐승 기사 프리메라 비트
+	효과条件発情 = 0
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件名前 = 기사황 레가티아
+	효과条件除去種 = 強奪
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+;もしトゥルース・센츄리온などで無効にされたら拍子抜けなので特別にチェーン不可に
+ELSEIF 종류 == チェーン可否
+	SIF !GROUPMATCH(チェーン可否종류, EX덱起動, EX소환時, 특수소환時)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259790(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259790,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과範囲상대묘지 = 1
+		효과範囲상대제외 = 1
+		효과条件名前 = 기사황 레가티아
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,場所)
+		IF RESULT == 1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"発情",2,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"接可",2,1)
+			;이벤트専用이벤트
+			SIF MARK:NO_TO_CHARANUM(2130):굴복각인 == 0
+				CALL IRAI_ACT_466_2
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259790,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件名前 = 짐승 기사 프리메라 비트
+		효과条件発情 = 0
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"発情",1,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"接可",1,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"Ｘ",2)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259790)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前 = 기사황 레가티아
+		효과추가종류:0 == 効追無効
+		효과추가종류:1 == 効追攻守０
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		;이벤트専用이벤트
+		IF RESULT == 1 && MARK:NO_TO_CHARANUM(2131):굴복각인 == 0
+			CALL IRAI_ACT_466_1
+		ENDIF
+	ENDIF
+ENDIF
+
+
+@IRAI_ACT_466_1(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(2130);プリメラ
+이벤트主:1 = NO_TO_CHARANUM(2131);トゥルーデア
+이벤트主:2 = NO_TO_CHARANUM(2132);アトリィ
+이벤트主:3 = NO_TO_CHARANUM(2133);シメーリア
+
+;トゥルーデアの侵蝕이벤트
+PRINTFORML
+PRINTFORMW ！？
+PRINTFORMW 《기사황 레가티아》は黒い影に絡め取られた。
+;この辺にプリメラの台詞あればいいかも
+PRINTFORMW 黒い影は《기사황 레가티아》の内部に侵蝕して行き、動力炉にいる《従騎士トゥルーデア》の所まで届く。
+;この辺にトゥルーデアの台詞あればいいかも
+PRINTFORMW やがて黒い影は%NAME:PLAYER%と同じ形を取り、影に縛られた《従騎士トゥルーデア》に手を伸ばす…！
+	SETCOLOR C_YELLOW
+PRINTFORMW 《聞こえますか……》
+PRINTFORMW 《굴복각인が１つでも付くまでトゥルーデアを躾けるのです……そうすれば新しいカードを手に入れるでしょう……》
+	RESETCOLOR
+
+;依頼調教対象 = 이벤트主:1
+CALL CARD_REACT("상대",이벤트主:1,"이벤트")
+IF MARK:(이벤트主:1):굴복각인 == 1
+	PRINTFORML 
+	PRINTFORMW 「……ぁ”❤ぁ”…ぷり…めらぁ”…❤」
+	PRINTFORML %NAME:PLAYER%に敗北を刻まれたトゥルーデア。
+	PRINTFORMW 幾度も%NAME:PLAYER%に犯された肉体は、プリメラと共に新たな敗北だけでなく淫靡な蹂躙と屈服を求めてしまっている……
+	PRINTFORMW 心が折れた《従騎士トゥルーデア》を、影が取り込む……
+	PRINTFORMW ………
+	PRINTFORML 
+	PRINTFORMW 程なくして影の中から、今までとは違う風体の《魔騎士トゥルーデア》が現れた！
+	;この辺にトゥルーデアの台詞あればいいかも
+	CALL CARD_GET_SINGLE(59792)
+	CFLAG:(이벤트主:1):소유함 = 1
+	자신_EX덱:現山札数("자신") = 59792
+	TRYCALLFORM CARD_UI(59792)
+	PRINTFORMW 
+	PRINTFORMW 《魔騎士トゥルーデア》はこのデュエル中にすぐ使用できそうだ。
+	PRINTFORMW 丁度素材もある事だし、소환してみよう。
+	PRINTFORML 
+	;陥落進行보존
+	SETBIT 依頼_進行보존:466, 0
+ELSE
+	PRINTFORML 
+	PRINTFORMW これ以上は無理か。
+	PRINTFORMW %NAME:PLAYER%は渋々《従騎士トゥルーデア》から離れた。
+	PRINTFORML 
+ENDIF
+
+
+
+@IRAI_ACT_466_2(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(2130);プリメラ
+이벤트主:1 = NO_TO_CHARANUM(2131);トゥルーデア
+이벤트主:2 = NO_TO_CHARANUM(2132);アトリィ
+이벤트主:3 = NO_TO_CHARANUM(2133);シメーリア
+
+;プリメラの侵蝕이벤트
+PRINTFORML
+PRINTFORMW 黒い影は《기사황 레가티아》を再度弄り回す。
+PRINTFORMW そして今度は《重騎士プリメラ》の所まで届く。
+;この辺にプリメラの台詞あればいいかも
+PRINTFORMW %NAME:PLAYER%と同じ形を取った黒い影は、影に縛られた《重騎士プリメラ》に手を伸ばす…！
+	SETCOLOR C_YELLOW
+PRINTFORMW 《聞こえますか……》
+PRINTFORMW 《굴복각인が１つでも付くまでプリメラを躾けるのです……そうすれば新しいカードを手に入れるでしょう……》
+	RESETCOLOR
+
+;依頼調教対象 = 이벤트主:0
+CALL CARD_REACT("상대",이벤트主:0,"이벤트")
+IF MARK:(이벤트主:0):굴복각인 == 1
+	PRINTFORML 
+	PRINTFORMW 「……ぁ”❤ぁ”…あたし…たち…❤また”…まけ”…❤」
+	PRINTFORML プリメラは必死に全裸土下座で%NAME:PLAYER%に見逃してもらうための命乞いをしていた。
+	PRINTFORMW %NAME:PLAYER%は勝てない、おちんぽ様に勝てるわけない、だから必死に媚びないと…という思いで、牝穴を濡らしながら……
+	PRINTFORMW 心が折れた《重騎士プリメラ》を、影が取り込む……
+	PRINTFORMW ………
+	PRINTFORML 
+	PRINTFORMW 程なくして影の中から、今までとは違う風体の《짐승 기사 프리메라 비트》が現れた！
+	;この辺にプリメラの台詞あればいいかも
+	CALL CARD_GET_SINGLE(59791)
+	CFLAG:(이벤트主:0):소유함 = 1
+	자신_EX덱:現山札数("자신") = 59791
+	TRYCALLFORM CARD_UI(59791)
+	PRINTFORMW 
+	PRINTFORMW 《짐승 기사 프리메라 비트》はこのデュエル中にすぐ使用できそうだ。
+	PRINTFORMW 丁度素材もある事だし、소환してみよう。
+	PRINTFORML 
+	;陥落進行보존
+	SETBIT 依頼_進行보존:466, 1
+ELSE
+	PRINTFORML 
+	PRINTFORMW これ以上は無理か。
+	PRINTFORMW %NAME:PLAYER%は渋々《重騎士プリメラ》から離れた。
+	PRINTFORML 
+ENDIF
+
+;―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@CARDNAME_259793,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 그림자 악마 와이반
+	CASE "略称"
+		RESULTS = 그림자 악마 와이반
+	CASE "カテゴリ"
+		RESULTS:0 = 인디센츄리온
+		RESULTS:1 = 센츄리온
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_259793(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비늘야수족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "튜너"
+		RETURN 1
+	CASE "성별"
+		RETURN 0
+	CASE "別途ID"
+		RETURN 59793
+	CASE "生産不可"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_259793(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드는 카드의 효과로밖에 EX덱에서 특수 소환할 수 없다。
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,X素材時효과)
+PRINTL ①：이 카드가 Ｘ소재가 되는 경우에 발동할 수 있다。
+PRINTL 상대 피드에 「그림자 악마 토큰」１장을 공격 표시로 특수 소환한다。
+PRINTL （악마족・어둠속성・레벨１２・공격력０・수비력０）
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：묘지의 이 카드를 제외하고 발동할 수 있다。
+PRINTL 자신 필드의 발정하지 않은「짐승 기사 아트리자드」１장을 턴 종료시까지 발정시키고、Ｘ소재를 ２개 늘린다。
+CALLFORM CARD_ABLE(0,EX덱起動)
+PRINTL ③：상대 몬스터 존에「기사황 아크실라」가 존재하는 경우、EX덱의 이 카드를 보여주고 발동할 수 있다。
+PRINTL 상대 필드의「기사황 아크실라」１장의 컨트롤을 얻는다。
+PRINTL 이 효과로 컨트롤을 얻은「기사황 아크실라」는、효과가 무효화되고、공격력・수비력이 ０이된다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDSUMMON_259793(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+RETURN 0
+
+
+@CARDCAN_259793(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259793)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == X素材時효과
+	SIF 発動済_1(듀얼리스트,259793)
+		RETURN 0
+	CALL CARD_SS_CHECK(対面者,159793,"",1)
+	SIF RESULT == 1
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 発動済_2(듀얼리스트,259793)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = 짐승 기사 아트리자드
+	효과条件発情 = 0
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件名前 = 기사황 아크실라
+	효과条件除去種 = 強奪
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+;もしトゥルース・센츄리온などで無効にされたら拍子抜けなので特別にチェーン不可に
+ELSEIF 종류 == チェーン可否
+	SIF !GROUPMATCH(チェーン可否종류, EX덱起動)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259793(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == X素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259793,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_GENERATE(対面者,159793,"攻撃表示")
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259793,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件名前 = 짐승 기사 아트리자드
+		효과条件発情 = 0
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"発情",1,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"接可",1,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"Ｘ",2)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259793)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前 = 기사황 아크실라
+		효과추가종류:0 == 効追無効
+		효과추가종류:1 == 効追攻守０
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		;이벤트専用이벤트
+		IF RESULT == 1 && MARK:NO_TO_CHARANUM(2133):굴복각인 == 0
+			CALL IRAI_ACT_466_3
+		ENDIF
+	ENDIF
+ENDIF
+
+
+@IRAI_ACT_466_3(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(2130);プリメラ
+이벤트主:1 = NO_TO_CHARANUM(2131);トゥルーデア
+이벤트主:2 = NO_TO_CHARANUM(2132);アトリィ
+이벤트主:3 = NO_TO_CHARANUM(2133);シメーリア
+
+;トゥルーデアの侵蝕이벤트
+PRINTFORML
+PRINTFORMW ！？
+PRINTFORMW 《기사황 아크실라》は黒い影に絡め取られた。
+;この辺にアトリィの台詞あればいいかも
+PRINTFORMW 黒い影は《기사황 아크실라》の内部に侵蝕して行き、動力炉にいる《影騎士シメーリア》の所まで届く。
+;この辺にシメーリアの台詞あればいいかも
+PRINTFORMW やがて黒い影は%NAME:PLAYER%と同じ形を取り、影に縛られた《影騎士シメーリア》に手を伸ばす…！
+	SETCOLOR C_YELLOW
+PRINTFORMW 《聞こえますか……》
+PRINTFORMW 《굴복각인が１つでも付くまでシメーリアを躾けるのです……そうすれば新しいカードを手に入れるでしょう……》
+	RESETCOLOR
+
+;依頼調教対象 = 이벤트主:3
+CALL CARD_REACT("상대",이벤트主:3,"이벤트")
+IF MARK:(이벤트主:3):굴복각인 == 1
+	PRINTFORML 
+	PRINTFORMW 「敗北……❤屈服…❤…ぅぅ”❤」
+	PRINTFORML %NAME:PLAYER%に負かされてしまったシメ―リアの肉体は無意識に自慰をしてしまっていた。
+	PRINTFORMW ーー私は敗北しました、どうかお許しください、この淫らな牝穴をどうかーー、と、無様な姿を晒し呆れさせ見逃してもらうために……
+	PRINTFORMW 心が折れた《影騎士シメーリア》を、影が取り込む……
+	PRINTFORMW ………
+	PRINTFORML 
+	PRINTFORMW 程なくして影の中から、今までとは違う風体の《마기사 시메리아》が現れた！
+	;この辺にシメーリアの台詞あればいいかも
+	CALL CARD_GET_SINGLE(59795)
+	CFLAG:(이벤트主:3):소유함 = 1
+	자신_EX덱:現山札数("자신") = 259795
+	TRYCALLFORM CARD_UI(59795)
+	PRINTFORMW 
+	PRINTFORMW 《마기사 시메리아》はこのデュエル中にすぐ使用できそうだ。
+	PRINTFORMW 丁度素材もある事だし、소환してみよう。
+	PRINTFORML 
+	;陥落進行보존
+	SETBIT 依頼_進行보존:466, 2
+ELSE
+	PRINTFORML 
+	PRINTFORMW これ以上は無理か。
+	PRINTFORMW %NAME:PLAYER%は渋々《影騎士シメーリア》から離れた。
+	PRINTFORML 
+ENDIF
+
+
+
+;―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@CARDNAME_259795,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마기사 시메리아
+	CASE "略称"
+		RESULTS = 마기 시메리아
+	CASE "カテゴリ"
+		RESULTS:0 = 인디센츄리온
+		RESULTS:1 = 센츄리온
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_259795(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 1600
+	CASE "특수制限"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 2133
+	CASE "別途ID"
+		RETURN 59795
+	CASE "生産不可"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_259795(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 「기사황 아크실라」１장
+PRINTL 자신은「마기사 시메리아」를 １턴에 １번밖에 특수 소환할 수 없다。
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 Ｌ소환한 경우에 발동할 수 있다。
+PRINTL 자신 / 상대의 묘지 / 제외 상태에서「기사황 아크실라」１장을 특수 소환한다。
+PRINTL 이 효과로 특수 소환한 몬스터는 발정한다。
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：이 카드를 릴리스하고 발동할 수 있다。
+PRINTL EX덱에서「그림자 악마 와이반」１장을 특수 소환한다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：몬스터 존의 이 카드는 항상 발정한다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDSUMMON_259795(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件名前 = 기사황 아크실라
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,259795) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDSUMMON_AA_259795
+
+
+@CARDCAN_259795(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259795)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 発動済_1(듀얼리스트,259795)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과範囲상대묘지 = 1
+	효과範囲상대제외 = 1
+	효과条件名前 = 기사황 아크실라
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 発動済_2(듀얼리스트,259795)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件名前 = 그림자 악마 와이반
+	효과条件소환可 = 2
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_259795(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259795,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과範囲상대묘지 = 1
+		효과範囲상대제외 = 1
+		효과条件名前 = 기사황 아크실라
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,場所)
+		IF RESULT == 1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"発情",2,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"接可",2,1)
+			;이벤트専用이벤트
+			SIF MARK:NO_TO_CHARANUM(2132):굴복각인 == 0
+				CALL IRAI_ACT_466_4
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259795,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件名前 = 그림자 악마 와이반
+		효과条件特不無視 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"発情",3)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"接可",3)
+ENDIF
+
+
+
+@IRAI_ACT_466_4(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(2130);プリメラ
+이벤트主:1 = NO_TO_CHARANUM(2131);トゥルーデア
+이벤트主:2 = NO_TO_CHARANUM(2132);アトリィ
+이벤트主:3 = NO_TO_CHARANUM(2133);シメーリア
+
+;アトリィの侵蝕이벤트
+PRINTFORML
+PRINTFORMW 黒い影は《기사황 아크실라》を再度弄り回す。
+PRINTFORMW そして今度は《竜騎士アトリィ》の所まで届く。
+;この辺にアトリィの台詞あればいいかも
+PRINTFORMW %NAME:PLAYER%と同じ形を取った黒い影は、影に縛られた《竜騎士アトリィ》に手を伸ばす…！
+	SETCOLOR C_YELLOW
+PRINTFORMW 《聞こえますか……》
+PRINTFORMW 《굴복각인が１つでも付くまでアトリィを躾けるのです……そうすれば新しいカードを手に入れるでしょう……》
+	RESETCOLOR
+
+;依頼調教対象 = 이벤트主:2
+CALL CARD_REACT("상대",이벤트主:2,"이벤트")
+IF MARK:(이벤트主:2):굴복각인 == 1
+	PRINTFORML 
+	PRINTFORMW 「ぁ”❤……ぼっ”❤ぼくっ、また、またまけっ”❤ぃ”❤」
+	PRINTFORML %NAME:PLAYER%の手で堕ちた肉体を再度嬲り物にされてしまいイかされるアトリィ、
+	PRINTFORMW 折れた肉体は%NAME:PLAYER%に媚びへつらうかのように愛液と潮を吹き続け肉体が示せれる敗北宣言を実行してしまっている……
+	PRINTFORMW 心が折れた《竜騎士アトリィ》を、影が取り込む……
+	PRINTFORMW ………
+	PRINTFORML 
+	PRINTFORMW 程なくして影の中から、今までとは違う風体の《짐승 기사 아트리자드》が現れた！
+	;この辺にアトリィの台詞あればいいかも
+	CALL CARD_GET_SINGLE(59794)
+	CFLAG:(이벤트主:2):소유함 = 1
+	자신_EX덱:現山札数("자신") = 59794
+	TRYCALLFORM CARD_UI(59794)
+	PRINTFORMW 
+	PRINTFORMW 《짐승 기사 아트리자드》はこのデュエル中にすぐ使用できそうだ。
+	PRINTFORMW 丁度素材もある事だし、소환してみよう。
+	PRINTFORML 
+	;陥落進行보존
+	SETBIT 依頼_進行보존:466, 3
+ELSE
+	PRINTFORML 
+	PRINTFORMW これ以上は無理か。
+	PRINTFORMW %NAME:PLAYER%は渋々《竜騎士アトリィ》から離れた。
+	PRINTFORML 
+ENDIF
+
+

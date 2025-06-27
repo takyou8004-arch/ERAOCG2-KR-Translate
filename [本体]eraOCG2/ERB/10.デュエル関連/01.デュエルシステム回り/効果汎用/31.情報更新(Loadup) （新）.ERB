@@ -111,7 +111,7 @@ ENDIF
 #DIMS DYNAMIC 듀얼리스트
 #DIMS DYNAMIC 対面者
 #DIM DYNAMIC カウンタ
-
+#DIM DYNAMIC 맥시멈状態
 듀얼리스트 = %ターンプレイヤー%
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
@@ -146,21 +146,21 @@ FOR カウンタ,0,紙束最大値
 		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_제외:カウンタ")}(듀얼리스트,지속효과,"제외",カウンタ)
 NEXT
 
-
+VARSET 맥시멈状態
 FOR カウンタ,1,4
 	VARSET RESULT
 	TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}(듀얼리스트,맥시멈条件,"필드",カウンタ)
 	IF RESULT == 1
+		맥시멈状態 ++
 		SETVAR @"%듀얼리스트%_MZ_MAX成立:カウンタ", 3
-		IF カウンタ == 2
-			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",カウンタ,"魔耐")
-			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",カウンタ,"함정耐")
-			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",カウンタ,"モ耐")
-		ENDIF
 		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_필드:カウンタ")}(듀얼리스트,맥시멈条件,"필드",カウンタ)
 	ENDIF
 NEXT
-
+IF 맥시멈状態 >= 3
+			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",2,"魔耐")
+			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",2,"함정耐")
+			CALL STATCHANGE_EFFECT(듀얼리스트,"자신",2,"モ耐")
+		ENDIF
 
 IF 듀얼리스트 == ターンプレイヤー
 	듀얼리스트 = %対面者%
@@ -225,6 +225,29 @@ FOR カウンタ,0,紙束最大値
 		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_제외:カウンタ")}(듀얼리스트,攻守変動,"제외",カウンタ)
 NEXT
 
+
+VARSET 攻撃修正
+VARSET 守備修正
+VARSET RESULT
+TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_필드:1")}(듀얼리스트,맥시멈条件,"필드",1)
+IF RESULT == 1
+	攻撃修正 += GETVAR(@"%듀얼리스트%_MZ_攻:1")
+	守備修正 += GETVAR(@"%듀얼리스트%_MZ_守:1")
+ENDIF
+VARSET RESULT
+TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_필드:3")}(듀얼리스트,맥시멈条件,"필드",3)
+IF RESULT == 1
+	攻撃修正 += GETVAR(@"%듀얼리스트%_MZ_攻:3")
+	守備修正 += GETVAR(@"%듀얼리스트%_MZ_守:3")
+ENDIF
+
+VARSET RESULT
+TRYCALLFORM CARDCAN_{GETVAR(@"%듀얼리스트%_필드:2")}(듀얼리스트,맥시멈条件,"필드",2)
+IF RESULT == 1
+	CALL STATCHANGE_BASIC(듀얼리스트,"자신",2,攻撃修正,守備修正)
+ENDIF
+
+
 IF 듀얼리스트 == ターンプレイヤー
 	듀얼리스트 = %対面者%
 	GOTO INPUT_LOOP
@@ -243,6 +266,8 @@ FOR カウンタ,0,5
 	SIF RESULT == 1
 		TRYCALLFORM CARDEFFECT_{GETVAR(@"%ターンプレイヤー%_필드:カウンタ")}(ターンプレイヤー,사신変動,"필드",カウンタ)
 NEXT
+
+
 
 
 

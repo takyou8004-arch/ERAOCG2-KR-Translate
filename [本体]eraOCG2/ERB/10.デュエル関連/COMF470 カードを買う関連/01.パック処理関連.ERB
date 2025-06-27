@@ -1,4 +1,4 @@
-﻿@CARD_PACK_SHORI(パック_구입数,パック_종류,カード数,청소플래그)
+﻿@CARD_PACK_SHORI(パック_구입数,パック_종류,カード数,청소플래그,倍率설정)
 #DIM DYNAMIC パック_구입数
 #DIM DYNAMIC パック_종류
 #DIM DYNAMIC パック_抽選結果
@@ -10,11 +10,25 @@
 #DIM DYNAMIC N카드_GET
 #DIM DYNAMIC GETカードリスト,500
 #DIM DYNAMIC GETカードレア度,500
+
+#DIM DYNAMIC UR倍率
+#DIM DYNAMIC SR倍率
+#DIM DYNAMIC R倍率
+
 #DIM DYNAMIC ゲットカード
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC カウンタB
 #DIM DYNAMIC 청소플래그
-
+#DIM DYNAMIC 倍率설정
+IF 倍率설정 == 0
+	UR倍率 = 20
+	SR倍率 = 120
+	R倍率 = 500
+ELSEIF 倍率설정 == 1
+	UR倍率 = 30
+	SR倍率 = 180
+	R倍率 = 500
+ENDIF
 IF パック_종류 >= 1
 	CALL SP_PACKPOOL_LOAD(パック_종류)
 ELSE
@@ -33,7 +47,7 @@ SIF カード数 == 0
 ;CM:50%
 FOR カウンタ,0,(パック_구입数) * カード数
 	パック_抽選結果 = RAND:1000
-	IF パック_抽選結果 <= 20
+	IF パック_抽選結果 <= UR倍率
 		ゲットカード = URプール:(RAND:URプール最大値())
 		SETCOLOR C_ROYAL_BLUE
 		PRINTFORMW UR겟 카드！！！！
@@ -47,14 +61,14 @@ FOR カウンタ,0,(パック_구입数) * カード数
 		UR카드_GET += 1
 		GETカードレア度:カウンタ = 3
 		GETカードリスト:カウンタ = ゲットカード
-	ELSEIF パック_抽選結果 > 20 && パック_抽選結果 <= 120
+	ELSEIF パック_抽選結果 <= SR倍率
 		ゲットカード = SRプール:(RAND:SRプール最大値())
 		ITEM:ゲットカード += 1
 		ITEM:SR카드 += 1
 		SR카드_GET += 1
 		GETカードレア度:カウンタ = 2
 		GETカードリスト:カウンタ = ゲットカード
-	ELSEIF パック_抽選結果 > 120 && パック_抽選結果 <= 500
+	ELSEIF パック_抽選結果 <= R倍率
 		ゲットカード = Rプール:(RAND:Rプール最大値())
 		;PRINTFORML  R겟 카드ID:{ゲットカード}
 		ITEM:ゲットカード += 1
@@ -71,6 +85,7 @@ FOR カウンタ,0,(パック_구입数) * カード数
 		GETカードレア度:カウンタ = 0
 		GETカードリスト:カウンタ = ゲットカード
 	ENDIF
+
 	IF オプション_パック취득止 == 0
 		;5パーセントの確率
 		IF RAND:20 == 0
@@ -119,6 +134,8 @@ PRINTFORM R카드×【{R카드_GET}】
 PRINTFORM N카드×【{N카드_GET}】
 PRINTW
 $INPUTLOOP
+
+CALL CARD_PACK_NAME(パック_종류)
 CUSTOMDRAWLINE —
 PRINTL 획득 카드리스트
 CUSTOMDRAWLINE —

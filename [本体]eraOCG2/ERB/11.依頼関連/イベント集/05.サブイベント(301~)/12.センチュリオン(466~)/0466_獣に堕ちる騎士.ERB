@@ -1,0 +1,294 @@
+@IRAI_EVENT_466(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+
+VARSET RESULT
+VARSET RESULTS
+
+;こちらで462番、8462番などの番号を使用してますので、
+;もし462番の依頼を作成する場合には、デュエル이벤트を挟まないでください
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP-CTR)짐승으로 떨어진 기사
+	CASE "이벤트種"
+		RETURN 이벤트_通常
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL ある日、応募した覚えのない推選の当選品としてカードが届いて…
+		PRINTL 
+		PRINTL 
+		PRINTL 報酬：？
+	CASE "条件"
+		;천년도어の解放が必要
+		SIF ITEM:천년도어 == 0
+			RETURN 0
+		;裏ショップ解放が条件
+		SIF パック_解放:99 == 0
+			RETURN 0
+		;악랄치66(悪人)以上も条件
+		SIF FLAG:악랄치 < 66
+			RETURN 0
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_466(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC 分岐플래그
+;いったんターゲットを非難させる（バグ回避用）
+
+이벤트主:0 = NO_TO_CHARANUM(2130);プリメラ
+이벤트主:1 = NO_TO_CHARANUM(2131);トゥルーデア
+이벤트主:2 = NO_TO_CHARANUM(2132);アトリィ
+이벤트主:3 = NO_TO_CHARANUM(2133);シメーリア
+
+;再実行なら飛ばす
+SIF 依頼_完了횟수:466 == 1
+	依頼_달성상황 = 1
+SIF 依頼_完了횟수:466 == 2
+	依頼_달성상황 = 2
+
+IF 依頼_달성상황 == 0
+	PRINTFORML 
+	PRINTFORML
+	PRINTFORMW ある日、応募した覚えのない推選の当選品としてカードが送られて来た。
+	PRINTFORMW ちょっと怪しいが、貰えるカードは貰っておく。
+	CALL CARD_GET_SINGLE(59790)
+	TRYCALLFORM CARD_UI(59790)
+	PRINTFORMW 
+	CALL CARD_GET_SINGLE(59793)
+	TRYCALLFORM CARD_UI(59793)
+	PRINTFORMW 
+	PRINTFORMW 「影魔アルミラージ」、「影魔ワイバーン」……黒く揺らめき形のない物が獣の形と整えているような見た目だ。
+	PRINTFORML テキストからはセンチュリオンとの連携を行うための効果を書かれてはいるが、
+	PRINTFORMW 見覚えの無い名前のカードのX素材を増やす効果が引っかかる。
+	PRINTFORMW センチュリオンはシンクロ召喚だけをするテーマじゃなかったのか？
+	PRINTFORMW 取りあえずカバンの底にでも詰めて置こう。
+	PRINTFORML
+	PRINTFORML
+	PRINTFORML
+		SETCOLOR C_YELLOW
+	PRINTFORMW 《聞こえますか……あなたの脳に直接呼びかけています……》
+	PRINTFORMW 《精霊世界の王宮都市へ向かうのです……》
+	PRINTFORMW 《望むものはそこにあります……。騎士と相対し、捕らえ、嬲り、貪り、染め上げるのです…》
+		RESETCOLOR
+	PRINTFORML
+	PRINTFORML
+	TIME += 10
+	依頼_場所 = 場所_王宮都市
+	;依頼_場所 = 場所_寝室
+	依頼_달성상황 ++
+ELSEIF 依頼_달성상황 == 1
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORMW ……頭の中に湧いてきた言葉に釣られ精霊世界の王宮都市に来てみた。
+	PRINTFORMW 王宮とは言っても、どの国の王宮なのかは知らない。
+	PRINTFORML 歩きやすく整えられた道を埋める程の物が並べられ、人がそれを求めせわしなく歩き回る。
+	PRINTFORMW 何度もぶつかりそうになりながら歩いていると、一際目を引く巨体で歩く騎士の鎧のようなロボットを見つけた。
+	PRINTFORMW 名前は《重騎士エメトⅥ（ゼクス）》、肩に兎のマークが描かれてるから間違いないだろう。
+	PRINTFORML 「異常無し！喧嘩無し！不届き者無し！ここいらも楽しそうだな！」
+	PRINTFORMW 肩に兎のマークが書かれたロボットを操縦している小柄ながら兎の耳のような装飾が施された兜を被った少女、《重騎士プリメラ》
+	PRINTFORMW 姿は見えないけれども重騎士エメトⅥの中に従騎士トゥルーデアもいるのだろう。
+	PRINTFORMW エメトⅥの操縦席からつま先を伸ばしてきょろきょろと周りを見渡すプリメラを眺めていると、
+	PRINTFORMW 身に着けていた덱ケースから伸びた影が囁いてくる
+	PRINTFORML
+		SETCOLOR C_YELLOW
+	PRINTFORML 《……捕らえ屠るのならば…力を貸そう……》
+		RESETCOLOR
+	PRINTFORMW 
+	PRINTFORML
+	PRINTFORML
+	;主人公があまり勝手に動き過ぎるのもあれなので、一回プレイヤーに選ばせる
+	PRINTFORML [0] - 後を追ってプリメラを墜とす
+	PRINTFORML [1] - 『影』を抑え込みこの場を去る
+	BINPUT
+	IF RESULT == 0
+		PRINTFORMW 덱を掴み溢れ出ようとする『影』を抑え込む。
+		PRINTFORMW この場ではダメだ、そう念じ伝えながら%NAME:PLAYER%は魔が差したように、プリメラたちの後を追う……。
+		PRINTFORML
+		PRINTFORML
+		依頼_달성상황 ++
+	ELSE
+		PRINTFORMW いや、流石に尾行してゲットするのは外聞に悪い。
+		PRINTFORMW 『影』と邪な欲望を収め、天に向けて指を指すプリメラの背を眺めてからその場を去っていく……。
+		PRINTFORML
+		PRINTFORML
+		;再実行時のチェック用
+		依頼_完了횟수:466 == 1	
+		RETURN 3
+	ENDIF
+ELSEIF 依頼_달성상황 == 2
+	IF 依頼_完了횟수:466 != 2
+		PRINTFORML
+		PRINTFORML
+		;面識あり/なしの分岐も増やした方がいいかも…？しかし四人分の分岐を作るのが……一旦面識無し前提
+		;IF CFLAG:(이벤트主:0):面識 == 0
+		PRINTFORMW 「お前、さっきからあたしたちを付けていたな？何の用だ」
+		PRINTFORMW 人気の無い所に入った所、プリメラたちに尾行がバレてしまった。
+		PRINTFORMW しかしここなら丁度いい。
+		PRINTFORMW %NAME:PLAYER%はプリメラたちをゲットするため、デュエルディスクを構えた。
+		PRINTFORMW 「デュエルか？いいだろう、受けて立ってやる！」
+		PRINTFORMW プリメラたちもやる気で덱を持ち出した。
+		PRINTFORML そうしてデュエルが始まる……！
+		PRINTFORMW 
+	ELSE
+		PRINTFORML
+		PRINTFORML
+		;未陥落캐릭터のセリフ出力。一旦プリメラだけ
+		SIF GETBIT(依頼_進行보존:466,1) != 1
+			PRINTFORMW プリメラ「また貴様か。今度こそ成敗してやる！」
+		SIF GETBIT(依頼_進行보존:466,0) != 1
+			PRINTFORMW トゥルーデア「また貴方ですか……！いい加減にするデス！！」
+		SIF GETBIT(依頼_進行보존:466,2) != 1
+			PRINTFORMW アトリィ「今度は逃がすつもりはない…、ボクの手で…！」
+		SIF GETBIT(依頼_進行보존:466,3) != 1
+			PRINTFORMW シメーリア「…………」
+		PRINTFORMW 王宮都市でまたセンチュリオンモンスターたちと遭遇した。
+		PRINTFORMW 向こうは既にやる気のようだ。
+		PRINTFORML %NAME:PLAYER%は今度こそセンチュリオンのモンスターたちをゲットするため、デュエルディスクを構えた。
+		PRINTFORMW 
+	ENDIF
+	;グループとの対戦なので、TARGETは-1
+	TARGET = -1
+	CALL DUEL_SYSTEM(1,466,,1)
+	IF RESULT != 1
+		;負け/引き分け分岐から判定
+		PRINTFORMW 勝てなかった……
+		PRINTFORMW ここは一旦引いて出直そう。
+		;未陥落캐릭터のセリフ出力。一旦プリメラだけ
+		SIF GETBIT(依頼_進行보존:466,0) != 1
+			PRINTFORMW プリメラ「貴様、待て！」
+		SIF GETBIT(依頼_進行보존:466,1) != 1
+			PRINTFORMW トゥルーデア「待つデス！『影魔』は闇を取り込んだ魔物で…！」
+		SIF GETBIT(依頼_進行보존:466,2) != 1
+			PRINTFORMW アトリィ「っ！逃げるんじゃない！！」
+		SIF GETBIT(依頼_進行보존:466,3) != 1
+			PRINTFORMW シメーリア「……逃した……、…情報、収集」
+		PRINTFORMW 追って来るセンチュリオンモンスター達を振り切り、%NAME:PLAYER%はその場から逃げた。
+		PRINTFORML
+		PRINTFORML
+		;再実行時のチェック用
+		依頼_完了횟수:466 == 2
+		CALL EVENT_MOVE(MASTER,場所_寝室)
+		RETURN 3
+	ELSEIF RESULT == 1 && (GETBIT(依頼_進行보존:466,0) != 1 || GETBIT(依頼_進行보존:466,1) != 1 || GETBIT(依頼_進行보존:466,2) != 1 || GETBIT(依頼_進行보존:466,3) != 1 )
+		;勝ったけどセンチュリオンモンスターの陥落抜けがある場合の分岐
+		;PRINTFORML 依頼_進行보존:466,0 = {GETBIT(依頼_進行보존:466,0)} 依頼_進行보존:466,1 = {GETBIT(依頼_進行보존:466,1)}
+		;PRINTFORML 依頼_進行보존:466,2 = {GETBIT(依頼_進行보존:466,2)} 依頼_進行보존:466,3 = {GETBIT(依頼_進行보존:466,3)}
+		PRINTFORMW 勝つことはできたが、全員を堕とすことは出来なかった、
+		PRINTFORMW そろそろ他のモンスターが来るかも知れない。
+		PRINTFORMW ここは一旦引いて出直そう。
+		;未陥落캐릭터のセリフ出力。一旦プリメラだけ
+		SIF GETBIT(依頼_進行보존:466,1) != 1
+			PRINTFORMW プリメラ「くそっ……、おい、待て！」
+		SIF GETBIT(依頼_進行보존:466,0) != 1
+			PRINTFORMW トゥルーデア「っ…ぅぅ」
+		SIF GETBIT(依頼_進行보존:466,2) != 1
+			PRINTFORMW アトリィ「ぐっ…ぅ……、…くそっ……」
+		SIF GETBIT(依頼_進行보존:466,3) != 1
+			PRINTFORMW シメーリア「…っ、撤退……」
+		PRINTFORMW デュエルに負けて動けないセンチュリオンのモンスター達を残したまま、%NAME:PLAYER%はその場を去った。
+		PRINTFORML
+		PRINTFORML
+		;再実行時のチェック用
+		依頼_完了횟수:466 == 2
+		CALL EVENT_MOVE(MASTER,場所_寝室)
+		RETURN 3
+	ELSE
+		;完全勝利
+		PRINTFORMW 完全勝利だ。
+		PRINTFORMW センチュリオンのモンスターたちは今자신の足元に獣みたいに跪いて媚びている。
+		PRINTFORMW 「ご主人様ぁ…❤ぇ…えへ…えへへ……❤…あたしたち獣騎士の首輪をお受け取りください…❤」
+		PRINTFORMW 躾けられ、屈服させられ、今では身にまとう物を脱ぎ捨て全裸土下座をしながらプリメラが語る。
+		PRINTFORMW 「あたし…間違ってた❤間違って…ました❤あたしみたいなちっこいのがテッペン目指すなんて…❤とんだ勘違いしてた❤」
+		PRINTFORMW 「小柄でちんまいオナホとして使いやすい体なあたしはぁ”❤どんなに強がっても、おちんぽ様の一突きで終わっちゃう雑魚まんこなんだ～って❤」
+		PRINTFORMW 「結局は%NAME:PLAYER%様みたいに強い雄様のおちんぽ様に頭うめて媚びちゃう孕まされたがりのよわっちい牝まんこなんだぁって…❤」
+		PRINTFORMW 「あたしはこれから『獣騎士プリメラビット』として…❤ご主人様の騎士、ご主人様の獣として、ご主人様をテッペンに崇める…あがめるからぁ…❤」
+		PRINTFORMW 「な…なぁ、だから❤だからさ❤ちゃんとっ”❤ちゃんとしたらご褒美❤ご褒美におちんぽ奉仕させて❤させてくれ…っ、ください❤」
+		PRINTFORMW 「おちんぽ奉仕…❤おちんぽ奉仕させてくださいぃ”❤❤❤」
+		PRINTFORMW プリメラが%NAME:PLAYER%の手で堕ちた姿を散々に見せつけられたトゥルーデアが同じく全裸土下座をしながら続けて口を開く
+		PRINTFORMW 「ワタシ…わたしも、プリメラと一緒に飼ってください❤お願いします”❤お願いします”❤❤❤」
+		PRINTFORMW 「%NAME:PLAYER%様に犯されて、いっぱいいっぱいイかされて、気づいちゃったヨぉ❤」
+		PRINTFORMW 「種族も何も関係ない…❤女の子は…メスは、牝はみーんな、屈強なおちんぽ様に使われる事を望んじゃうんだって❤」
+		PRINTFORMW 「従騎士の称号は捨てます❤もっ、もちろん、%NAME:PLAYER%様に従う騎士になるために❤❤❤」
+		PRINTFORMW 「『 魔騎士トゥルーデア』として、これからはプリメラと一緒に頑張っておちんぽ様を満足させるようがんばります❤」
+		PRINTFORMW 「どっ、どんなことでも、二人一緒だったらできる、できるから❤肉便器でも、犬みたいに飼う事も、身を売ってお金をご主人様に捧げるのも❤❤❤」
+		PRINTFORMW 「だっ、だから、いっぱいかわいがってください❤❤❤いっぱい、いっぱいわたしたちの穴を使ってください❤❤❤」
+		PRINTFORMW アトリィは膝をつき三つ指を立てながら、自身を敗北させ続けた%NAME:PLAYER%のおちんぽ様を見上げながらこう述べる
+		PRINTFORMW 「ボクは…ボクはもう、雄様に…いいえ、%NAME:PLAYER%様に…勝てないことを、心の底から…理解させていただきました…❤」
+		PRINTFORMW 「どんなに強大な力を振るっても…空の英雄ともてはやされても…おちんぽ様をねじ込まれるだけで、即座に子を孕むことを望む牝なのだと…❤」
+		PRINTFORMW 「牝を蹂躙し、子宮を圧し潰し、子を成すためではなく…性欲を吐き捨てる…、そんな行為に使われる事が最も気持ちの良いことだと感じる牝だと…❤」
+		PRINTFORMW 「%NAME:PLAYER%様は…ボクに…いいえ、ボクらに…理解できるまで、何度も、何度も教えていただきました…❤❤❤」
+		PRINTFORMW 「お許しくださいなどと望みません…❤ですが、どうか、浅ましくも意思のある存在だと思い込んでいた牝である我々に罰をお与えください…❤」
+		PRINTFORMW 「%NAME:PLAYER%様の命令ならどんなことでもしたがいます…❤%NAME:PLAYER%様を崇め、牝穴を差し出し慈悲を乞います…❤」
+		PRINTFORMW 「%NAME:PLAYER%様…❤どうか、ボクにも…『獣騎士アトリィザード』として、淫靡な贖罪の機会を、お与えくださいませ……❤」
+		PRINTFORMW シメ―リアは%NAME:PLAYER%に向けて、その頭を地面に擦りつけながらこう述べる
+		PRINTFORMW 「学習…❤%NAME:PLAYER%様は…私たちのご主人様…おちんぽ様が無いと生きていけない牝に精を注いでいただけるお方❤」
+		PRINTFORMW 「どんなに抵抗しても…逃れようとしても…その慈悲を等しくお与えくださる…尊ぶべきお方…❤」
+		PRINTFORMW 「提…ぃ…案…❤わたし、シメ―リアも…同じく、逃れて抵抗していた浅ましい牝の一つ…❤」
+		PRINTFORMW 「『魔騎士シメーリア』…として…今後、生涯をかけて…この罪を償い続ける事を…ちかう…いえ、誓わせ…て…❤」
+		PRINTFORMW 「魔騎士シメーリアは誓います……この騎士の称号にかけて、%NAME:PLAYER%様に遣い続ける事を…❤」
+		PRINTFORMW 「おちんぽケースとして…❤使い捨ておなほとして…❤飼い潰す肉便器…❤孕み穴…❤のどまんこ…❤」
+		PRINTFORMW 「どのような扱われ方でも喜んで受け入れ、恭順し、従い続ける事を…誓います…❤」
+		PRINTFORMW センチュリオンのモンスターたちは今자신の足元に獣みたいに跪いて媚びている。
+		CALL CARD_GET_SINGLE(99693)
+		TRYCALLFORM CARD_UI(99693)
+		PRINTFORMW 
+		PRINTFORMW せっかくだから、자신の所有物という印をつけておく。
+		PRINTFORMW 獣騎士たちに頭を後ろの手で組ませ、ガニ股の姿勢をさせ無防備な姿をとらせる、
+		PRINTFORMW それぞれ腰をへこっ、へこっと動かし溢れ出る愛液を撒き散らしながらご主人様からの『証』を待ちわびる。
+		PRINTFORMW それは자신たちを墜としていただいた%NAME:PLAYER%様から捧げていただく、服従の証、
+		PRINTFORMW それは자신たちを屈服させていただいた%NAME:PLAYER%様から刻んでいただく、隷属の証、
+		PRINTFORMW それは今後得られたはずの栄光も人権も捨て一生の全てを%NAME:PLAYER%様に捧げるという、誓いの証、
+		PRINTFORMW 「ぁ”❤ぁぁあ”❤あ”❤きもち”❤きもちいい”❤これきもぢいいい”❤」
+		PRINTFORMW 「ぉぉおおお”おぉ”❤プリメラ”❤いっしょにイご❤いっしょ”❤いっしょにぃ❤」
+		PRINTFORMW 「ん”っぎぃぃぃい”❤ボクの、ボクのおなか、こっっ、こわりぇ❤ぇ”❤」
+		PRINTFORMW 「%NAME:PLAYER%様っっっぁ”❤どう…ですか”❤ちゃんど”❤媚びれて”❤ぁ”❤あ”❤」
+		PRINTFORMW 자신たちで己にかける、屈服、服従、信奉、恭順、それらの意味を持たせた淫らな紋様『隷属のエンブレ―マ』
+		PRINTFORMW 各々がご主人様に首輪の手綱の差し出す飼い犬のように口に咥え、四つん這いで%NAME:PLAYER%に刻んでもらおうと近づいていった……
+		CALL CARD_GET_SINGLE(79693)
+		TRYCALLFORM CARD_UI(79693)
+		PRINTFORMW 
+		PRINTFORMW ゲットしたセンチュリオンのモンスターたちをカードにして収納した%NAME:MASTER%はホクホクした顔で家路に着いた。
+		PRINTFORML
+		PRINTFORML
+		CALL EVENT_MOVE(MASTER,場所_寝室)
+		RETURN 2
+	ENDIF
+
+ENDIF
+
+
+
+@IRAI_DUEL_INTRO_466
+#DIM DYNAMIC カード추가先
+
+
+PRINTFORML
+PRINTFORML ……ん？
+PRINTFORMW エクストラ덱に違和感があるような……
+PRINTFORML
+
+자신_EX덱:現EX山札数("자신") = 259790
+자신_EX덱:現EX山札数("자신") = 259793
+
+
+
+@IRAI_DECK_466(듀얼리스트)
+#DIMS DYNAMIC 듀얼리스트
+
+SIF 듀얼리스트 == "상대"
+	RETURN 2130
+RETURN 0
+
+
+
+
+
+
+
+
