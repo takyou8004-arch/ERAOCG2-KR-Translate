@@ -33,7 +33,7 @@ SELECTCASE 参照先
 	CASE "종족"
 		RETURN 마법사족
 	CASE "レベル"
-		RETURN 2
+		RETURN 3
 	CASE "攻撃力"
 		RETURN 1000
 	CASE "守備力"
@@ -45,19 +45,14 @@ RETURN 0
 @CARD_EXPLANATION_20532(종류)
 #DIM DYNAMIC 종류
 
-PRINTL 이 카드명의 ①②③ 효과는 각각 1턴에 1번밖에 사용할 수 없다.
-CALLFORM CARD_ABLE(1,손패起動)
-PRINTL ②: 이 카드가 패에 존재할 경우,
-PRINTL 자신의 묘지의 레벨 2 몬스터 1장을 대상으로 발동할 수 있다.
-PRINTL 그 몬스터와 이 카드를 특수 소환한다.
-CALL CARD_ABLE(2,소환時,특수소환時)
-PRINTL ②: 이 카드가 소환 / 특수 소환되었을 경우 발동할 수 있다.
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①: 이 카드가 소환 / 특수 소환되었을 경우 발동할 수 있다.
 PRINTL 덱에서 의식 몬스터 1장을 패에 가져온다.
-CALLFORM CARD_ABLE(3,戦闘→묘지,破壊→묘지)
-PRINTL ③: 이 카드가 전투 / 효과로 파괴되었을 경우 발동할 수 있다.
-PRINTL 자신의 덱 위에서 카드를 7장 넘긴다.
-PRINTL 그 중에서 "루아드" 몬스터 1장을 선택하여 패에 가져올 수 있다.
-PRINTL 남은 카드는 덱으로 되돌린다.
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②: 자신의 메인 페이즈에 발동할 수 있다.
+PRINTL 자신 필드의 "섀도우 팔라딘" 몬스터 1장을 파괴하고,
+PRINTL 덱에서 "어비설 아울" 이외의 어둠속성 / 레벨 3 몬스터 1장을 묘지로 보낸다.
 
 
 @CARDCAN_20532(듀얼리스트,종류,ゾーン,場所)
@@ -70,29 +65,8 @@ CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20532)
 SIF RESULT == 1
 	RETURN 0
 
-IF 종류 == 손패起動
+IF 종류 == 소환時 || 종류 == 특수소환時
 	SIF 발동済_1(듀얼리스트,20532)
-		RETURN 0
-	SIF メインフェイズ != 1
-		RETURN 0
-	SIF ターンプレイヤー != 듀얼리스트
-		RETURN 0
-	CALL CARD_SS_CHECK(듀얼리스트,20532,"손패")
-	SIF RESULT == 1
-		RETURN 0
-	SIF モンスター数(듀얼리스트) >= 4
-		RETURN 0
-	CALL FULLRESET
-	효과範囲묘지 = 1
-	효과条件レベル = 2
-	효과条件종류 = レベル持ち
-	효과条件소환可 = 1
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	SIF RESULT != 1
-		RETURN 0
-	RETURN 1
-ELSEIF 종류 == 소환時 || 종류 == 특수소환時
-	SIF 발동済_2(듀얼리스트,20532)
 		RETURN 0
 	CALL FULLRESET
 	효과範囲덱 = 1
@@ -101,8 +75,27 @@ ELSEIF 종류 == 소환時 || 종류 == 특수소환時
 	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
-ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
-	SIF 발동済_3(듀얼리스트,20532)
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,20532)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 섀도우 팔라딘
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件속성 = 어둠속성
+	효과条件レベル = 3
+	효과条件固名前 = 어비설 아울
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
 ENDIF
@@ -120,18 +113,7 @@ ENDIF
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 
-IF 종류 == 손패起動
-	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20532,1)
-	IF RESULT == 0
-		CALL FULLRESET
-		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
-		CALL FULLRESET
-		효과範囲묘지 = 1
-		효과条件レベル = 2
-		효과条件종류 = レベル持ち
-		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
-	ENDIF
-ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+IF 종류 == 소환時 || 종류 == 특수소환時
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20532,2)
 	IF RESULT == 0
 		CALL FULLRESET
@@ -143,7 +125,18 @@ ELSEIF 종류 == 戦闘→묘지 || 종류 == 破壊→묘지
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20532,3)
 	IF RESULT == 0
 		CALL FULLRESET
-		효과条件カテゴリ = 루아드
-		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,7)
+		효과範囲필드 = 1
+		효과条件カテゴリ = 섀도우 팔라딘
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件속성 = 어둠속성
+			효과条件レベル = 3
+			효과条件固名前 = 어비설 아울
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
 	ENDIF
 ENDIF
+

@@ -20,6 +20,7 @@
 #DIM DYNAMIC 条件달성
 #DIM DYNAMIC 選択数
 #DIM DYNAMIC 山切り無し
+#DIM DYNAMIC ランダム値
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 SIF 효과条件山切り無し == 1
@@ -179,13 +180,21 @@ ENDIF
 
 
 IF 효과条件複数 != 0
-	FOR カウンタ,0,(複数カウンタ + 1)
-		SIF 選択カード:カウンタ == -1
-			CONTINUE
-		選択カード_ID:カウンタ = GETVAR(@"%대상者%_%参照先%:(選択カード:カウンタ)")
-		CALL CARD_FIN_ID_SET(대상者,選択カード_ID,"효과취득")
-		CALL CARD_DISPOSE(대상者,参照先,(選択カード:カウンタ),손패行き)
-	NEXT
+	IF 효과条件RND == 1
+		ランダム値 = RAND:(複数カウンタ + 1)
+		選択カード_ID = GETVAR(@"%대상者%_%参照先%:(選択カード:ランダム値)")
+		CALL CARD_FIN_ID_SET(대상者,選択カード_ID,"효과取得")
+		CALL CARD_DISPOSE(대상者,参照先,(選択カード:ランダム値),손패行き)
+	ELSE
+		FOR カウンタ,0,(複数カウンタ + 1)
+			SIF 選択カード:カウンタ == -1
+				CONTINUE
+			選択カード_ID:カウンタ = GETVAR(@"%대상者%_%参照先%:(選択カード:カウンタ)")
+			CALL CARD_FIN_ID_SET(대상者,選択カード_ID,"효과취득")
+
+			CALL CARD_DISPOSE(대상者,参照先,(選択カード:カウンタ),손패行き)
+		NEXT
+	ENDIF
 ELSE
 	選択カード_ID = GETVAR(@"%대상者%_%参照先%:選択カード")
 	CALL CARD_FIN_ID_SET(대상者,選択カード_ID,"효과취득")

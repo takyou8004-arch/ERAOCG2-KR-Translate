@@ -1,0 +1,138 @@
+﻿@CARDNAME_24180,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 天魔王ゴッド・ゼクス
+	CASE "略称"
+		RESULTS = ゴッドゼクス
+	CASE "カテゴリ"
+		RESULTS:0 = 天魔王
+		RESULTS:4 = バトルスピリッツ
+ENDSELECT
+
+
+@CARD_24180(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+	CASE "連動ID"
+		RETURN 4126
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24180(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の②の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：このカードは대상耐性を持つ。
+PRINTL 『六天連鎖：条件《속성３色》』
+PRINTL 자신フィールド上のモンスターの속성が３종류以上の場合、
+PRINTL さらに상대は１ターンに１度しかモンスターの효과を발동できず、
+PRINTL １度のバトルフェイズ中にモンスター１体でしか攻撃できない。
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ②：상대フィールドの表側표시モンスター１体を대상として발동できる。
+PRINTL （자신フィールドのモンスターの속성が３종류以上の場合、この효과は상대ターンでも발동できる）
+PRINTL そのモンスターの攻撃力を２５００ポイントダウンする。
+PRINTL この효과で攻撃力、または守備力が０になった場合、さらにそのモンスターを묘지に送る。
+
+@CARDCAN_24180(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24180)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,24180)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+	CALL FIELD_INFO_COUNT(듀얼리스트,"属")
+	IF RESULT < 3
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		SIF 종류 == フリー誘発
+			RETURN 0
+	ENDIF
+ENDIF
+
+@CARDEFFECT_24180(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 軽減数
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL FIELD_INFO_COUNT(듀얼리스트,"属")
+	SIF RESULT < 3
+		RETURN 0
+	SIF GETVAR(@"%対面者%_モン발동数") >= 1
+		CALL SET_PLAYER_INFO(対面者,"モン효과無効",3)
+	CALL SET_PLAYER_INFO(対面者,"単体攻撃",3)
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24180,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과추가종류 = 11
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"永攻DOWN",2500)
+	ENDIF
+ENDIF
+

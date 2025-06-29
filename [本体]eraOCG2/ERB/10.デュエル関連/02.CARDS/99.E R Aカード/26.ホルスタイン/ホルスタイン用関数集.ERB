@@ -4,12 +4,13 @@
 ;仕様：
 ;설정された繰り返しと、パターン설정から鳴き声を返す
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-@HORUSTEIN_RAND_COW_TXT(繰り返し횟수,鳴きパターン,パターン範囲 = 20)
+@HORUSTEIN_RAND_COW_TXT(繰り返し횟수,鳴きパターン,パターン範囲 = 20,出力方法)
 #DIM DYNAMIC 繰り返し횟수
 #DIM DYNAMIC 鳴きパターン
 #DIM DYNAMIC パターン範囲
 #DIM DYNAMIC 文字色保持
 #DIMS DYNAMIC 鳴き声
+#DIM DYNAMIC 出力方法 ;0：L改行する。　1：W改行する。　2：改行しない
 
 SIF 繰り返し횟수 == 0
 	繰り返し횟수 = 1
@@ -234,6 +235,50 @@ REPEAT 繰り返し횟수
 				鳴き声 = 음머어어어-읏❤ %鳴き声%
 			CASE 19
 				鳴き声 = 음어어어어어어엇-❤ %鳴き声%
+			ENDSELECT
+	ELSEIF 鳴きパターン == 5
+		;繰り返し、うるさい鳴き(EX乳アレンジ、愛乳ひらがな想定)
+		SELECTCASE RAND:パターン範囲
+			CASE 0
+				鳴き声 = もぉっもぉっ❤ %鳴き声%
+			CASE 1
+				鳴き声 = もっっ❤もっ❤ %鳴き声%
+			CASE 2
+				鳴き声 = もっっもぉっ❤ %鳴き声%
+			CASE 3
+				鳴き声 = もぉっもぉぅっ❤ %鳴き声%
+			CASE 4
+				鳴き声 = もぉっもぉぉっ❤ %鳴き声%
+			CASE 5
+				鳴き声 = もぉっもぅ…っ❤ %鳴き声%
+			CASE 6
+				鳴き声 = もぉんっもぉんっ❤ %鳴き声%
+			CASE 7
+				鳴き声 = もぉっもぉぅ…っ❤ %鳴き声%
+			CASE 8
+				鳴き声 = もぉぅっもぉんっ❤ %鳴き声%
+			CASE 9
+				鳴き声 = もぉっもぉん…っ❤ %鳴き声%
+			CASE 10
+				鳴き声 = もぉっもぉぅ…っ❤ %鳴き声%
+			CASE 11
+				鳴き声 = もぉぅっもぉぅっ❤ %鳴き声%
+			CASE 12
+				鳴き声 = もぉん…っもぉぅっ❤ %鳴き声%
+			CASE 13
+				鳴き声 = もぉおっ❤もぉぉっ❤ %鳴き声%
+			CASE 14
+				鳴き声 = もぉんっ❤もぉんっ❤ %鳴き声%
+			CASE 15
+				鳴き声 = もぉぅっ❤もぉぉっ❤ %鳴き声%
+			CASE 16
+				鳴き声 = もぉぉ…っもぉぅっ❤ %鳴き声%
+			CASE 17
+				鳴き声 = もぉぅ…っもぉぅ…っ❤ %鳴き声%
+			CASE 18
+				鳴き声 = もぉんっ❤もぉぅ…っ❤ %鳴き声%
+			CASE 19
+				鳴き声 = もぉぅ…っもぉん…っ❤ %鳴き声%
 		ENDSELECT
 	ENDIF
 REND
@@ -243,7 +288,13 @@ REND
 
 SETCOLOR C_PINK
 ;通常(カッコつき)
-PRINTFORML "%鳴き声%"
+IF 出力方法 == 0
+	PRINTFORML "%鳴き声%"
+ELSEIF 出力方法 == 1
+	PRINTFORMW "%鳴き声%"
+ELSEIF 出力方法 == 2
+	PRINTFORM "%鳴き声%"
+ENDIF
 
 ;文字色を元으로 되돌린다
 SETCOLOR 文字色保持
@@ -254,89 +305,49 @@ SETCOLOR 文字色保持
 ;소환된  몬스터의 IDとカード위치から、いろいろとデ-タを취득する。
 ;호루스타인は자신의  카드의 효과で 몬스터의 IDを보존するためこのような処理に。
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-@HORUSTEIN_GET_DATA(듀얼리스트 = "자신",場所 = -1,選択カードID)
+@HORUSTEIN_GET_DATA(듀얼리스트 = "자신",紋章カードID)
 #DIMS DYNAMIC 듀얼리스트
-#DIMS DYNAMIC 対面者
-#DIM DYNAMIC 場所
-#DIM DYNAMIC 選択カードID
-#DIMS DYNAMIC カテゴリ名称
-#DIMS DYNAMIC 乳名
-#DIMS DYNAMIC 암소名称
-#DIMS DYNAMIC 암소略称
-#DIM DYNAMIC 암소대상
-#DIM DYNAMIC 암소所有
-#DIM DYNAMIC 所有者
-#DIM DYNAMIC 所有者_比較
+#DIM DYNAMIC 紋章カードID	;「○○登録」のカードID
+#DIMS DYNAMIC 乳名			;美乳～EX乳
+#DIMS DYNAMIC 乳소환		;소환時の口上
+#DIMS DYNAMIC 암소名称		;CSVのある캐릭터はCALLNAME、そうでない캐릭터は略称
+#DIMS DYNAMIC 암소略称		;【○乳】＋名称、基本的には표시名のイメージ
+#DIM DYNAMIC 암소대상		;조교대상：CARD_EROTICSで取得した値が入る
+#DIM DYNAMIC 암소鳴き声		;HORUSTEIN_RAND_COW_TXTのパターン、基本の鳴き声
+#DIM DYNAMIC 암소절정声 = 3	;절정時の鳴き声
+#DIM DYNAMIC 암소弛緩声		;절정後の鳴き声
 #DIM DYNAMIC カウンタ
-#DIM DYNAMIC 参照場所;마법함정に置かれた호루스타인の参照先
-#DIM DYNAMIC 参照カードID;마법함정に置かれた호루스타인の参照先
-#DIM DYNAMIC T1ミルクml
-#DIM DYNAMIC ミルクml
 
-;필드에 존재하는 마법함정をチェックする(호루스타인用)
+#DIM DYNAMIC 紋章場所		;紋章の汎数１～３の参照先(更新時に使用する)
+#DIM DYNAMIC 参照カードID	;汎数１：元のカードID
+#DIM DYNAMIC 乳サイズ補正	;汎数２：乳の補正値、フィールドから離れても増えた分の胸が分かる
+#DIM DYNAMIC ミルクml		;汎数３：搾ったミルク総量、듀얼終了時に乳サイズによって精算される。
+#DIMS DYNAMIC 参照듀얼리스트
 
-CALL FULLRESET
-CALL 対面者판정(듀얼리스트)
-対面者 = %RESULTS%
+参照듀얼리스트 = %RESULTS%
 
-IF 듀얼리스트 == "자신"
-	所有者 = 1
-	암소所有 = 2
-ELSEIF 듀얼리스트 == "상대"
-	所有者 = 2
-	암소所有 = 1
+IF INRANGE (紋章カードID, 179556, 179559)
+	紋章カードID -= 100000
+	参照듀얼리스트 = 자신
+ELSEIF INRANGE (紋章カードID, 279556, 279559)
+	紋章カードID -= 200000
+	参照듀얼리스트 = 상대
 ENDIF
 
-;見つからなければ、そのまま返す
-参照カードID = 選択カードID
-参照場所 = -1
-カテゴリ名称 = なし
-SELECTCASE 選択カードID
-	CASE 179556
-		カテゴリ名称 = 登録情報：호루스타인─미유
-		乳名 = 미유
-	CASE 179557
-		カテゴリ名称 = 登録情報：호루스타인─애유
-		乳名 = 애유
-	CASE 179558
-		カテゴリ名称 = 登録情報：호루스타인─지유
-		乳名 = 지유
-	CASE 179559
-		カテゴリ名称 = 登録情報：호루스타인─EX유
-		乳名 = EX유
-ENDSELECT
-
-;所有が자신경우、자신의 마법함정존의 카드から、カテゴリの存在ﾁｪｯｸ
-
-;＞ここで牛に変えた 카드의 元IDを취득している
-IF カテゴリ名称 != "なし"
-	IF 場所 == -1
-		所有者_比較 = 所有者; 場所が未지정＝손패等、フィールド外からのチェック
-	ELSE
-		所有者_比較 = GETVAR(@"%듀얼리스트%_MZ_所有:場所")
+;○○登録に설정されたカードならそっちを参照
+IF INRANGE (紋章カードID, 79556, 79559) 
+	CALL CARD_GET_EMBLEM_VALUES(参照듀얼리스트,紋章カードID)
+	紋章場所 = RESULT
+	参照カードID = RESULT:1
+	乳サイズ補正 = RESULT:2
+	ミルクml = RESULT:3
+ELSE
+	紋章場所 = -1
 	ENDIF
 	
-
-
-	IF 所有者_比較 == 所有者
-		FOR カウンタ,0,5
-			SIF GETVARS(@"%듀얼리스트%_魔_追カテ:カウンタ") != カテゴリ名称
-				CONTINUE
-			参照カードID = GETVAR(@"%듀얼리스트%_魔_ID:カウンタ")
-			参照場所 = カウンタ
-			암소所有 = 所有者
-			BREAK
-		NEXT
-	ELSE
-		;所有が상대의 경우、상대의 마법함정を参照
-		FOR カウンタ,0,5
-			SIF GETVARS(@"%対面者%_魔_追カテ:カウンタ") != カテゴリ名称
-				CONTINUE
-			参照カードID = GETVAR(@"%対面者%_魔_ID:カウンタ")
-			参照場所 = カウンタ
-			BREAK
-		NEXT
-	ENDIF
+IF 紋章場所 == -1
+	;紋章のカードIDじゃなかった場合、そのカードIDで処理をする。
+	参照カードID = 紋章カードID
 ENDIF
 
 CALL CARD_EROTICS(参照カードID)
@@ -350,34 +361,66 @@ ELSE
 	TRYCALLFORM CARDNAME_{参照カードID},"略称"
 	암소名称 = %RESULTS%
 ENDIF
+
+SELECTCASE 紋章カードID
+	CASE 79556
+		乳名 = 美乳
+		乳소환 = %암소名称%の美しい乳がしなやかに揺れた…
+		암소鳴き声 = 0
+		암소절정声 = 3
+		암소弛緩声 = 2
+	CASE 79557
+		乳名 = 愛乳
+		乳소환 = %암소名称%の可愛らしい乳首がぷるんと震えた…
+		암소鳴き声 = 1
+		암소절정声 = 5
+		암소弛緩声 = 1
+	CASE 79558
+		乳名 = 旨乳
+		乳소환 = %암소名称%の思わず吸い付きたくなる乳がしっとりと艶めいている…
+		암소鳴き声 = 2
+		암소절정声 = 3
+		암소弛緩声 = 2
+	CASE 79559
+		乳名 = EX乳
+		乳소환 = %암소名称%の頭より大きな乳がどぷんっと音を立てて震えた…
+		암소鳴き声 = 3
+		암소절정声 = 4
+		암소弛緩声 = 2
+	CASEELSE
+		암소鳴き声 = -1
+		암소절정声 = -1
+		암소弛緩声 = -1
+ENDSELECT
+
 SUBSTRING 암소名称, 0, 8
 암소略称 = 【%乳名%】%RESULTS%
-
-;착유量の취득
-IF 参照場所 != -1
-	T1ミルクml = GETVAR(@"%듀얼리스트%_魔_T1汎数:参照場所")
-	ミルクml = GETVAR(@"%듀얼리스트%_魔_汎数:参照場所")
-ENDIF
-
+;呼び名
 RESULTS:0 = %암소名称%
+;【○乳】名称
 RESULTS:1 = %암소略称%
+RESULTS:2 = %乳名%
+;소환時口上
+RESULTS:3 = %乳소환%
 
-RESULT:0 = 参照場所			;参照カードID(마함)の"場所"
+RESULT:0 = 紋章場所			;紋章の汎数１～３参照時の位置
 RESULT:1 = 암소대상			;えっち用のID：csv無しなら-1
-RESULT:2 = 암소所有			;
-RESULT:3 = T1ミルクml		;
-RESULT:4 = ミルクml			;
-RESULT:99 = 参照カードID	;마함に置かれた"元のカードID"
+RESULT:2 = 암소鳴き声		;
+RESULT:3 = 암소절정声		;
+RESULT:4 = 암소弛緩声		;
+RESULT:97 = ミルクml		;
+RESULT:98 = 乳サイズ補正	;
+RESULT:99 = 参照カードID	;書き換え前の「元のカードID」
 
-RETURN 参照場所
-
+RETURN 紋章場所
 
 
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 ;HORUSTEIN_GET_BUST
 ;仕様：
-;参照カードID（호루스타인カード）に登録された 카드의 가슴사이즈の설정취득
-;설정が行われるわけではない。
+;参照カードIDより、バストサイズを取得する。
+;フィールドの乳追の値などを乳추가に入力すると、その変動を加味してバストサイズを出す。
+;また、CSVが無い캐릭터については、攻守と속성からそれっぽいバストサイズを算出する。
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 @HORUSTEIN_GET_BUST(参照カードID,乳추가,乳上書き)
 #DIM DYNAMIC 参照カードID
@@ -513,24 +556,43 @@ RETURN RESULT
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 ;HORUSTEIN_PRINT_STATE
 ;仕様：
-;암소情報のビジュアル化、一番どうにかして共通化したいところ
+;「○○登録」によって生成されたカードIDを参照し、そこから各種情報を引っ張りステータス風画面を표시する。
 ;
+;CSVが無い캐릭터については専用のメッセージを표시
+;암소素質：○○登録によって표시内容を변경
+;健康状態：乳のサイズによって표시内容を변경
+;特記事項：発情状態や規格外のサイズの場合にメッセージを표시
+;場所を入力すると、フィールドの情報(発情状態・服状態)を反映する。
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-@HORUSTEIN_PRINT_STATE(듀얼리스트 = "자신",場所 = -1,参照カードID,乳추가,乳上書き,画像표시)
+@HORUSTEIN_PRINT_STATE(듀얼리스트 = "자신",場所,書換先カードID,乳추가,乳上書き,画像표시,특수표시 = -1)
 #DIMS DYNAMIC 듀얼리스트
-#DIM DYNAMIC 場所
+#DIM DYNAMIC 場所			;無くても動く。あると発情、服の状態が反映される。
+#DIM DYNAMIC 書換先カードID	;「○○登録」よって生成されたトークンのカードID
+#DIM DYNAMIC 乳추가			;표시時に乳を盛りたい場合、任意の値で표시したい場合に使用
+#DIM DYNAMIC 乳上書き		;(0：乳추가分増加、1：乳추가の値で書き換え、2：上書き+比較なし)
+#DIM DYNAMIC 画像표시		;(0：全표시、1：アイコンのみ(大画像非표시)、2：全非표시)
 #DIM DYNAMIC 参照カードID
-#DIM DYNAMIC 乳추가
-#DIM DYNAMIC 乳上書き ;(0：乳추가分増加、1：乳추가の値で書き換え、2：上書き+比較なし)
-#DIM DYNAMIC 画像표시 ;(0：全표시、1：アイコンのみ(大画像非표시)、2：全非표시)
+#DIM DYNAMIC 특수표시		;通常とは異なる표시を行う場合(-1：通常、99554：ドリップ、99555：インフレ)
 
-#DIM DYNAMIC T1ミルクml
+#DIMS DYNAMIC 암소名称
+#DIMS DYNAMIC 암소略称
+#DIMS DYNAMIC 乳名
+#DIM DYNAMIC 紋章カードID
+#DIM DYNAMIC 紋章場所
+#DIM DYNAMIC 암소鳴き声
+#DIM DYNAMIC 암소절정声
+#DIM DYNAMIC 암소弛緩声
+#DIM DYNAMIC 乳サイズ補正
 #DIM DYNAMIC ミルクml
-#DIM DYNAMIC 参照場所
+
+#DIM DYNAMIC 発情状態 ;(0：通常、1以上で발동中)
+#DIM DYNAMIC 服状態 ;(0：着衣、2：服無し、-1：メッセージ無し)
+#DIM DYNAMIC ドリップ状態 ;(0：無し、99554：ドリップ状態)
+#DIM DYNAMIC ドリップ中 ;MZ_効済でドリップした場合、専用メッセージを표시
+#DIM DYNAMIC T1ミルクml
 #DIMS DYNAMIC カテゴリ名
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC 암소대상
-#DIMS DYNAMIC 암소名称
 #DIM DYNAMIC 乳攻撃力
 #DIM DYNAMIC 乳守備力
 #DIM DYNAMIC 元乳サイズ
@@ -538,28 +600,54 @@ RETURN RESULT
 #DIM DYNAMIC 現乳サイズ
 #DIM DYNAMIC 現乳mm
 #DIM DYNAMIC GDI値
-#DIM DYNAMIC 발동カードID
 #DIM GDI보존
 
-;乳を主軸に置いた、ステータス風画面を출력する。(※호루스타인名称が欲しい경우、トークンのカードIDを지정する必要有)
-발동カードID = 参照カードID
+;★場所が入力されている場合、자신のフィールドの情報を参照する(発情状態,服状態,T1ミルクml)
+IF 場所 != -1
+	発情状態 = GETVAR(@"%듀얼리스트%_MZ_発情:場所")
+	服状態 = GETVAR(@"%듀얼리스트%_MZ_服状:場所")
+	ドリップ状態 = GETVAR(@"%듀얼리스트%_MZ_특수状態:場所")
+	ドリップ中 = GETVAR(@"%듀얼리스트%_MZ_効済:場所")
+	T1ミルクml = 0	;廃止…元々、無くても動くようにしていたのでそのままにしておく。
+ENDIF
 
+;乳を主軸に置いた、ステータス風画面を出力する。(※ホルスタイン名称が欲しい場合、トークンのカードIDを지정する必要有)
 
-;名称等の취득
-CALL HORUSTEIN_GET_DATA(듀얼리스트,場所,参照カードID)
+;◆ホルスタイン情報の取得(紋章カードIDから各種情報を取得)
+IF INRANGE (書換先カードID, 179556, 179559)
+	紋章カードID = 書換先カードID - 100000
+	CALL HORUSTEIN_GET_DATA("자신",紋章カードID)
+ELSEIF INRANGE (書換先カードID, 279556, 279559)
+	紋章カードID = 書換先カードID - 200000
+	CALL HORUSTEIN_GET_DATA("상대",紋章カードID)
+ELSE
+	CALL HORUSTEIN_GET_DATA("자신",書換先カードID)
+ENDIF
 암소名称 = %RESULTS:0%
-参照場所 = RESULT:0
+암소略称 = %RESULTS:1%
+乳名 = %RESULTS:2%
+紋章場所 = RESULT:0
 암소대상 = RESULT:1
-T1ミルクml = RESULT:3	;착유量(1ターン中)
-ミルクml = RESULT:4		;착유量(듀얼中総量)
+암소鳴き声 = RESULT:2 
+암소절정声 = RESULT:3 
+암소弛緩声 = RESULT:4 
+ミルクml = RESULT:97
+乳サイズ補正 = RESULT:98
 参照カードID = RESULT:99
  
 ;乳サイズの취득
+;MZ_乳追が入っていたら、そちらを優先する。(永紋で乳補正値を加算しているはずなので)
+SIF 乳추가 != 0
+	乳サイズ補正 = 乳추가
+;場所が入力されていて、EX乳の場合、乳のサイズを추가する
+SIF 場所 != -1 && 紋章カードID == 79559
+	乳サイズ補正 += GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
 CALL HORUSTEIN_GET_BUST(参照カードID,乳추가,乳上書き)
 元乳サイズ = RESULT:0
 元乳mm = RESULT:1
 現乳サイズ = RESULT:2
 現乳mm = RESULT:3
+
 
 ;ステータス표시
 PRINTFORML 
@@ -586,32 +674,24 @@ IF 암소대상 == -1 || 画像표시 == 2
 	PRINTFORML 
 	;乳サイズ
 	IF 現乳サイズ == 元乳サイズ || 乳上書き == 2
-		SETCOLOR C_PINK
-		PRINTFORML [%GET_TALENTNAME(121,現乳サイズ)%]
-		RESETCOLOR
-	ELSEIF SIGN(現乳サイズ - 元乳サイズ) == 1
-		PRINTFORM [%GET_TALENTNAME(121,元乳サイズ)%] → 
-		SETCOLOR C_PINK
-		PRINTFORM [%GET_TALENTNAME(121,現乳サイズ)%]
-		RESETCOLOR
+		CALL HORUSTEIN_DISP_BUSTSIZE(現乳サイズ)
 	ELSE
-		PRINTFORM [%GET_TALENTNAME(121,元乳サイズ)%] → 
-		SETCOLOR C_L_BLUE
-		PRINTFORM [%GET_TALENTNAME(121,現乳サイズ)%]
-		RESETCOLOR
+		CALL HORUSTEIN_DISP_BUSTSIZE(元乳サイズ)
+		PRINTFORM  → 
+		CALL HORUSTEIN_DISP_BUSTSIZE(現乳サイズ)
 	ENDIF
 	PRINTFORML 
 	
-	PRINTFORML  가슴 사이즈(듀얼前)：{元乳mm}mm
+	PRINTFORML ・가슴 사이즈(듀얼前)：{元乳mm}mm
 	IF 現乳mm == 元乳mm
-		PRINTFORML  가슴 사이즈( 현재 )：{現乳mm}mm
+		PRINTFORML ・가슴 사이즈( 현재 )：{現乳mm}mm
 	ELSEIF SIGN(現乳mm - 元乳mm) == 1
-		PRINTFORM  가슴 사이즈( 현재 )：{現乳mm}mm 
+		PRINTFORM ・가슴 사이즈( 현재 )：{現乳mm}mm 
 		SETCOLOR C_PINK
 		PRINTFORML (+{現乳mm - 元乳mm }mm증)
 		RESETCOLOR
 	ELSE
-		PRINTFORM  가슴 사이즈( 현재 )：{現乳mm}mm 
+		PRINTFORM ・가슴 사이즈( 현재 )：{現乳mm}mm 
 		SETCOLOR C_L_BLUE
 		PRINTFORML ({現乳mm - 元乳mm }mm감)
 		RESETCOLOR
@@ -619,7 +699,7 @@ IF 암소대상 == -1 || 画像표시 == 2
 
 	IF ミルクml > 0
 		PRINTFORML 
-		PRINTFORM  우유 착유량(누계)：{ミルクml}ml 
+		PRINTFORM ・우유 착유량(누계)：{ミルクml}ml 
 	ENDIF
 	IF T1ミルクml > 0
 		SETCOLOR C_PINK
@@ -649,6 +729,24 @@ ELSE
 
 	PRINTL
 	PRINT ┃
+	
+	;自動搾乳時に画像重ねられないかな…って試した跡…
+	;IF ENUMFILES("RESOURCES/DUEL", @"99554_DUELB.png")
+	;	GDI値 = 2000 + GDI保存
+	;	GDISPOSE GDI値
+    ;
+	;	GDI保存 ++
+	;	IF GDI保存 >= 20
+	;		GDI保存 = 0
+	;	ENDIF
+	;	
+	;	GCREATEFROMFILE GDI値, "DUEL/99554_DUELB.png"
+	;	SPRITEDISPOSE @"{GDI値}_DUELB"
+	;	SPRITECREATE @"{GDI値}_DUELB", GDI値
+	;	GWIDTH GDI値
+	;	HTML_PRINT "<button value='99554'><img src='{GDI値}_DUEL' srcb='' height='{1000}' width='{1000}'></button>",1
+	;	
+	;ENDIF
 	CALL SHOW_GRAPHICS(암소대상,GDI値,2)
 	PRINT ┃
 
@@ -675,19 +773,26 @@ ELSE
 
 	;乳サイズ
 	IF 現乳サイズ == 元乳サイズ || 乳上書き == 2
-		SETCOLOR C_PINK
-		PRINTFORM [%GET_TALENTNAME(121,現乳サイズ)%]
-		RESETCOLOR
+		CALL HORUSTEIN_DISP_BUSTSIZE(現乳サイズ)
+		;SETCOLOR C_PINK
+		;PRINTFORM [%GET_TALENTNAME(121,現乳サイズ)%]
+		;RESETCOLOR
 	ELSEIF SIGN(現乳サイズ - 元乳サイズ) == 1
-		PRINTFORM [%GET_TALENTNAME(121,元乳サイズ)%] → 
-		SETCOLOR C_PINK
-		PRINTFORM [%GET_TALENTNAME(121,現乳サイズ)%]
-		RESETCOLOR
+		CALL HORUSTEIN_DISP_BUSTSIZE(元乳サイズ)
+		PRINTFORM  → 
+		CALL HORUSTEIN_DISP_BUSTSIZE(現乳サイズ)
+		;PRINTFORM [%GET_TALENTNAME(121,元乳サイズ)%] → 
+		;SETCOLOR C_PINK
+		;PRINTFORM [%GET_TALENTNAME(121,現乳サイズ)%]
+		;RESETCOLOR
 	ELSE
-		PRINTFORM [%GET_TALENTNAME(121,元乳サイズ)%] → 
-		SETCOLOR C_L_BLUE
-		PRINTFORM [%GET_TALENTNAME(121,現乳サイズ)%]
-		RESETCOLOR
+		CALL HORUSTEIN_DISP_BUSTSIZE(元乳サイズ)
+		PRINTFORM  → 
+		CALL HORUSTEIN_DISP_BUSTSIZE(現乳サイズ)
+		;PRINTFORM [%GET_TALENTNAME(121,元乳サイズ)%] → 
+		;SETCOLOR C_L_BLUE
+		;PRINTFORM [%GET_TALENTNAME(121,現乳サイズ)%]
+		;RESETCOLOR
 	ENDIF
 	PRINTFORML
 
@@ -696,26 +801,26 @@ ELSE
 	PRINTL
 
 	PRINTFORM ┃%"",20,LEFT%┃
-	PRINTFORM  가슴 사이즈(결투전)：{元乳mm}mm
+	PRINTFORM ・가슴 사이즈(듀얼전)：{元乳mm}mm
 	PRINTL
 
 	PRINTFORM ┃%"",20,LEFT%┃
 
 	IF 現乳mm == 元乳mm
-		PRINTFORM  가슴 사이즈( 현재 )：{現乳mm}mm
+		PRINTFORM ・가슴 사이즈( 현재 )：{現乳mm}mm
 	ELSEIF SIGN(現乳mm - 元乳mm) == 1
-		PRINTFORM  가슴 사이즈( 현재 )：{現乳mm}mm 
+		PRINTFORM ・가슴 사이즈( 현재 )：{現乳mm}mm 
 		SETCOLOR C_PINK
 		PRINTFORM (+{現乳mm - 元乳mm }mm증)
 		RESETCOLOR
 	ELSE
-		PRINTFORM  가슴 사이즈( 현재 )：{現乳mm}mm 
+		PRINTFORM ・가슴 사이즈( 현재 )：{現乳mm}mm 
 		SETCOLOR C_L_BLUE
 		PRINTFORM ({現乳mm - 元乳mm }mm감)
 		RESETCOLOR
 	ENDIF
 	IF ENUMFILES("RESOURCES/CHARA", @"{NO:암소대상}_FACE_2*")
-		PRINT  
+		PRINT ・
 		PRINTBUTTON "ALT얼굴화상：[有]", 9002
 		PRINTFORM [설정：{CFLAG:암소대상:ALT그림 + 1}]
 	ENDIF
@@ -724,7 +829,7 @@ ELSE
 	PRINTL
 	PRINTFORM ┃%"",20,LEFT%┃
 	IF ミルクml > 0
-		PRINTFORM  우유착정량(누계)：{ミルクml}ml 
+		PRINTFORM ・우유착정량(누계)：{ミルクml}ml 
 	ENDIF
 	IF T1ミルクml > 0
 		SETCOLOR C_PINK
@@ -736,33 +841,39 @@ ELSE
 	PRINTL
 ENDIF
 
-
+;画像표시：1 (アイコンのみ、であればここまでで切り上げる)
+SIF 画像표시 == 1
+	RETURN 0
 
 IF 암소대상 != -1
 	CALL PRINT_STATE_CLOTH(암소대상)
 ELSE
+	;CSVが無いので、最低限の衣服
 	PRINTL □ 복장 □——————————————————————————————————————————————————————————————————————————————————————
-	IF GROUPMATCH(발동カードID,179557)
+	IF GROUPMATCH(紋章カードID,179557,279557)
 		PRINT 【붙인뿔（소）】
 	ELSE
 		PRINT 【붙인뿔（대）】
 	ENDIF
 	PRINTL　【소모양 비키니】
 ENDIF
+
+;★암소素質
 PRINTL
 PRINTFORML
 PRINTL □ 암소소질 □——————————————————————————————————————————————————————————————————————————————————
 PRINTFORML 
 IF 암소대상 == -1
 	SETCOLOR C_GRAY
-	PRINTFORML ["홀스"타인의 망각] - 결투종료시、암소였던 기억을 잃어버린다…
+	PRINTFORML ["호루스"타인의 망각] - 결투종료시、암소였던 기억을 잃어버린다…
 	PRINTFORML 
 	RESETCOLOR
 ENDIF
-SELECTCASE 발동カードID
+
+SELECTCASE 紋章カードID
 ;【미유】호루스타인─뷰티―――――――――――――――――――――――――――――――――――――――――――――――――
-CASE 179556	
-	PRINTFORML ["홀스"타인의 계약] - 허가없이 소모양 비키니에 만지는 자에게 재앙이 내린다。
+CASE 79556	
+	PRINTFORML ["호루스"타인의 계약] - 허가없이 소모양 비키니에 만지는 자에게 재앙이 내린다。
 	PRINTFORML 
 	PRINTFORML [암소의 링] - 귀나 코에 붙이는 암소의 피어스。사고능력을 빼앗아、암소에 상응하는 울음소리가 된다。
 	PRINTFORML 
@@ -778,56 +889,9 @@ CASE 179556
 	RESETCOLOR
 	PRINTFORML 　　[미유] - 우뚝솟은 유두가 위를 향한 아름다운 젖。유두를 잡으면 우유가 나오기 쉬워진다。
 	PRINTFORML 
-	
-	;PRINTFORML [애유] - 느긋한 커브를 그리는 사랑스러운 젖。뿌리부분부터 전체를 밀어내는듯이 만지면 우유가 멈추지않게된다。
-	;PRINTFORML 
-	
-	;PRINTFORML [지유] - 희미하게 땀으로 젖은 식욕을 돋구는 젖。강하게 만지면 우유가 뿜어져나온다。
-	;PRINTFORML 
-	
-	;PRINTFORML [EX유] - 생활에 지장을 내는 레벨의 커다란 젖。너무 크기 때문인지 자기무게로 인해 우유가 뿜어져나오고있다。
-	;PRINTFORML 
-	
-	;増量分を汎数に加算する(현재サイズを入れても良いけど、효과で正確な値が표시されるほうが良いかなって)
-	;CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",0,上書きモード)
-	
-	PRINTL □ 건강상태 □——————————————————————————————————————————————————————————————————————————————————
-	PRINTFORML 
-	PRINTFORML  모유의 양　…　 양　호
-	PRINTFORML  모유품질　…　 양　호
-	PRINTFORML  젖 감 도　…　 양　호
-	PRINTFORML  성　　욕　…　 왕　성
-	PRINTFORML  촉　　진　…　이상없음
-	PRINTFORM 　　　　　　　　　　　　
-	FONTSTYLE 8
-	PRINTFORML 　평 가：◎ 
-	FONTSTYLE 0
-	PRINTFORML 
-	PRINTL □ 특이사항 □——————————————————————————————————————————————————————————————————————————————————
-	PRINTFORML 
-	IF GETVAR(@"%듀얼리스트%_MZ_発情:場所") > 0
-		SETCOLOR C_PINK
-		PRINTFORML  발정하고있습니다。
-		PRINTFORML 　모유의 양이 많아지기에、정기적인 착유를 추천드립니다。
-		RESETCOLOR
-	ELSE
-		PRINTFORML  없음
-	ENDIF
-	PRINTFORML 
-
-	CUSTOMDRAWLINE —
-	PRINTFORMW 
-	CALL HORUSTEIN_RAND_COW_TXT(1)
-	IF GETVAR(@"%듀얼리스트%_MZ_服状:場所") >= 2
-		PRINTFORMW %암소名称%는 소모양 비키니가 없어서 안절부절하고있다…
-	ELSE
-		PRINTFORMW %암소名称%는 소모양 비키니의 위치를 고쳤다…
-	ENDIF
-	PRINTFORML 
-
 ;【애유】호루스타인―――――――――――――――――――――――――――――――――――――――――――――――――
-CASE 179557	
-	PRINTFORML ["홀스"타인의 계약] - 허가없이 소모양 비키니에 만지는 자에게 재앙이 내린다。
+CASE 79557	
+	PRINTFORML ["호루스"타인의 계약] - 허가없이 소모양 비키니에 만지는 자에게 재앙이 내린다。
 	PRINTFORML 
 	PRINTFORML [카우벨] - 암소가 있는곳을 알리는 종。종이 울릴때마다 자신이 암소라는것을 자각시킨다。
 	PRINTFORML 
@@ -841,66 +905,16 @@ CASE 179557
 		PRINTFORML
 	ENDIF
 	RESETCOLOR
-	
 	;음유
 	IF 암소대상 != -1 && TALENT:암소대상:76 >= 1
 		PRINTFORML 　　[음유] - 짜내질때마다 좋은 울음소리가 울린다…
 		PRINTFORML
 	ENDIF 
-	
 	PRINTFORML [애유] - 느긋한 커브를 그리는 사랑스러운 젖。
 	PRINTFORML 　　　　 뿌리부분부터 전체를 밀어내는듯이 만지면 우유가 멈추지않게된다。
 	PRINTFORML
-	
-	
-	PRINTL □ 건강상태 □——————————————————————————————————————————————————————————————————————————————————
-	PRINTFORML 
-	IF 現乳サイズ <= -1
-		;貧乳は모유の採取量が少ない
-		PRINTFORM  모유의양　…　 
-		SETCOLOR C_L_BLUE
-		PRINTFORML 소　량
-		RESETCOLOR
-		PRINTFORM  모유품질　…　 
-		SETCOLOR C_PINK
-		PRINTFORML 우　수
-		RESETCOLOR
-	ELSE
-		PRINTFORML  모유의양　…　 양　호
-		PRINTFORML  모유품질　…　 양　호
-	ENDIF
-	PRINTFORML  젖 감 도　…　 양　호
-	PRINTFORML  성　　욕　…　 왕　성
-	PRINTFORML  촉　　진　…　이상없음
-	PRINTFORM 　　　　　　　　　　　　
-	FONTSTYLE 8
-	PRINTFORML 　평 가：◎ 
-	FONTSTYLE 0
-	PRINTFORML 
-	PRINTL □ 특이사항 □——————————————————————————————————————————————————————————————————————————————————
-	PRINTFORML 
-	IF GETVAR(@"%듀얼리스트%_MZ_発情:場所") > 0
-		SETCOLOR C_PINK
-		PRINTFORML  발정하고있습니다。
-		PRINTFORML 　모유를 너무 모아두는건 부담이 되기 때문에、정기적인 착유를 추천드립니다。
-		RESETCOLOR
-	ELSE
-		PRINTFORML  없음
-	ENDIF
-	PRINTFORML 
-
-	CUSTOMDRAWLINE —
-	PRINTFORMW 
-	CALL HORUSTEIN_RAND_COW_TXT(1,1);1回、ひらがな鳴き
-	IF GETVAR(@"%듀얼리스트%_MZ_服状:場所") >= 2
-		PRINTFORMW %암소名称%는 소모양 마이크로 비키니가 없어서 안절부절 하고있다…
-	ELSE
-		PRINTFORMW %암소名称%는 소모양 마이크로 비키니의 위치를 고쳤다…
-	ENDIF
-	PRINTFORML 
-
 ;【지유】호루스타인―――――――――――――――――――――――――――――――――――――――――――――――――
-CASE 179558
+CASE 79558
 	PRINTFORML [젖은 계약복] - 소모양 비키니는 모유로 젖어、옷감의 하얀부분이 희미하게 비쳐보이고있다…
 	PRINTFORML 
 	PRINTFORML [관리태그] - 관리 No.{参照カードID} 암소마다 붙여지는 관리용 번호。
@@ -910,64 +924,15 @@ CASE 179558
 	PRINTFORML [모유체질] - 짜낸다면 우유가 흘러넘쳐버린다…
 	PRINTFORML
 	RESETCOLOR
-
 	;음유
 	IF 암소대상 != -1 && TALENT:암소대상:76 >= 1
 		PRINTFORML 　　[음유] - 짜내질때마다 좋은 울음소리가 울린다…
 		PRINTFORML
 	ENDIF 
-	
 	PRINTFORML [지유] - 희미하게 땀으로 젖은 식욕을 돋구는 젖。강하게 만지면 우유가 뿜어져나온다。
 	PRINTFORML 
-	
-	
-	PRINTL □ 건강상태 □——————————————————————————————————————————————————————————————————————————————————
-	PRINTFORML 
-	PRINTFORM  모유의양　…　 
-	SETCOLOR C_PINK
-	PRINTFORML 우　수
-	RESETCOLOR
-	PRINTFORM  모유품질　…　 
-	SETCOLOR C_PINK
-	PRINTFORML 우　수
-	RESETCOLOR
-	PRINTFORML  젖 감 도　…　 양　호
-	PRINTFORML  성　　욕　…　 왕　성
-	PRINTFORML  촉　　진　…　이상없음
-	PRINTFORM 　　　　　　　　　　　　
-	FONTSTYLE 8
-	PRINTFORML 　평 가：◎ 
-	FONTSTYLE 0
-	PRINTFORML 
-	PRINTL □ 특이사항 □——————————————————————————————————————————————————————————————————————————————————
-	PRINTFORML 
-	IF GETVAR(@"%듀얼리스트%_MZ_発情:場所") > 0
-		SETCOLOR C_PINK
-		PRINTFORML  발정하고있습니다。
-		PRINTFORML 　모유의양 품질을 유지하기 위해、계속적인 착유를 추천드립니다。
-		RESETCOLOR
-	ELSE
-		PRINTFORML  없음
-	ENDIF
-	PRINTFORML 
-
-	SETCOLOR C_GRAY
-	PRINTFORML  우리회사에선 왕의 의향에 의해 우수한 암소의 애프터케어에 힘을 쏟고 있습니다。
-	PRINTFORML 　우수한 암소가 스무스하게 일상생활로 돌아갈수 있도록、
-	PRINTFORML 　설비의 점검비등을 모유매수금액에서 빼고있습니다。협력 부탁드립니다。
-	PRINTFORML 
-	RESETCOLOR
-	CUSTOMDRAWLINE —
-	PRINTFORMW 
-	CALL HORUSTEIN_RAND_COW_TXT(1,2);1回、ねっとり鳴き
-	IF GETVAR(@"%듀얼리스트%_MZ_服状:場所") >= 2
-		PRINTFORMW %암소名称%는 소모양 비키니가 없어서 안절부절 하고있다…
-	ELSE
-		PRINTFORMW %암소名称%는 소모양 비키니의 위치를 고쳤다…
-	ENDIF
-	PRINTFORML 
 ;【EX유】호루스타인―――――――――――――――――――――――――――――――――――――――――――――――――
-CASE 179559
+CASE 79559
 	PRINTFORML [역설인과] - [암소의 링][카우벨][관리태그]전부를 장착하는것으로 발현한다、일종의 저주。
 	PRINTFORML 　　　　　　 "힘을 가진 자"가 젖을 지탱하면、"그 힘으로 지탱함에 상응하는 젖"으로 변모해버린다。
 	PRINTFORML 
@@ -976,88 +941,268 @@ CASE 179559
 	PRINTFORML [관리태그] - 관리 No.{参照カードID} 암소마다 붙여지는 관리용 번호。
 	PRINTFORML 　　　　　　 …이것이 붙여져있다는것은、역설적으로 암소라는것의 증명이된다。
 	PRINTFORML 
-
 	;음유
 	IF 암소대상 != -1 && TALENT:암소대상:76 >= 1
 		PRINTFORML 　　[음유] - 짜내질때마다 좋은 울음소리가 울린다…
 		PRINTFORML
-	ENDIF 
-	
+	ENDIF 	
 	SETCOLOR C_PINK
 	PRINTFORML [EX유] - 생활에 지장을 내는 레벨의 커다란 젖。만지지 않아도 자기무게로 우유가 뿜어져나오고있다…
 	PRINTFORML 
 	RESETCOLOR
-	
-	
-	PRINTL □ 건강상태 □——————————————————————————————————————————————————————————————————————————————————
-	PRINTFORML 
-	PRINTFORML  모유의양　…　 규격외
-	PRINTFORML  모유품질　…　측정불능
-	PRINTFORML  젖 감 도　…　측정불능
-	PRINTFORML  성　　욕　…　측정불능
-	PRINTFORML  촉　　진　…　측정불능
-	PRINTFORM 　　　　　　　　　　　　
-	FONTSTYLE 8
-	PRINTFORML 　평 가：EX(평가불능) 
-	FONTSTYLE 0
-	PRINTFORML 
-	PRINTL □ 특이사항 □——————————————————————————————————————————————————————————————————————————————————
-	PRINTFORML 
-	SETCOLOR C_PINK
-	PRINTFORML  젖이 너무 커서 움직일수 없는것 같습니다。
-	PRINTFORML 　"호루스타인" 몬스터를 수비표시로 하여、젖을 지탱해주도록 하죠。
-	RESETCOLOR
-	PRINTFORML 
-	PRINTFORML  한번의 착유로 전부 뽑아내지 못했습니다。정상적인 양이 얼마나되는지…실제로 짜보고 확인해주세요。
-	PRINTFORML 
-
-	CUSTOMDRAWLINE —
-	PRINTFORMW 
-	;1回、うるさい鳴き
-	CALL HORUSTEIN_RAND_COW_TXT(1,3)
-	IF GETVAR(@"%듀얼리스트%_MZ_服状:場所") >= 2
-		PRINTFORMW %암소名称%는 소모양 비키니가 없어서 안절부절하고있다…
-	ELSE
-		PRINTFORMW %암소名称%는 소모양 비키니의 위치를 고쳤다…
-	ENDIF
+CASEELSE
+	;紋章カードIDなし(암소カード以外)
+	PRINTFORML [아직모르는 암소] - 암컷인 이상、누구든지 암소가 될 소질을 갖는다。
 	PRINTFORML 
 ENDSELECT
 
+;★健康状態
+	PRINTL □ 건강상태 □——————————————————————————————————————————————————————————————————————————————————
+IF ドリップ状態 == 99554
+	PRINTFORML 
+	PRINTFORML  모유의양　… 자동계량중
+	PRINTFORML  모유품질　…　조 율 중
+	PRINTFORML  젖 감 도　…　제 어 중 
+	PRINTFORML  성　　욕　…　제 어 중
+	PRINTFORML  촉　　진　… 　없　음
+ELSEIF 특수표시 == 99555
+	;インフレ표시時
+	PRINTFORML  
+	PRINTFORML ・모유의양　…　검사대상외
+	PRINTFORML ・모유품질　…　검사대상외
+	PRINTFORM ・젖 감 도　… 
+	FONTSTYLE 4
+	PRINTFORM  검사대상외 
+	FONTSTYLE 0
+	SETCOLOR C_PINK
+	PRINTFORML  → 민감
+	RESETCOLOR
+	PRINTFORML ・성　　욕　…　검사대상외
+	PRINTFORML ・촉　　진　… 　이상없음
+ELSE
+	SELECTCASE 現乳サイズ
+	CASE IS <= -1;貧乳以下
+		;貧乳は母乳の採取量が少ない
+	PRINTFORML 
+	PRINTFORM ・모유의양　…　 
+		SETCOLOR C_L_BLUE
+		PRINTFORML 소　량
+		RESETCOLOR
+		PRINTFORM ・모유품질　…　 
+		SETCOLOR C_PINK
+		PRINTFORML 우　수
+		RESETCOLOR
+		PRINTFORML ・젖 감 도　…　 양　호
+		PRINTFORML ・성　　욕　…　 왕　성
+		PRINTFORML ・촉　　진　…　이상없음
+
+	CASE IS <= 1;巨乳以下
+		PRINTFORML 
+		PRINTFORML ・모유의 양　…　 양　호
+		PRINTFORML ・모유품질　…　 양　호
+		PRINTFORML ・젖 감 도　…　 양　호
+		PRINTFORML ・성　　욕　…　 왕　성
+		PRINTFORML ・촉　　진　…　이상없음
+	CASE IS <= 2;爆乳以下
+		PRINTFORML 
+		PRINTFORM ・모유의양　…　 양　호
+		PRINTFORM ・모유품질　…　 
+		SETCOLOR C_PINK
+		PRINTFORML 우　수
+		RESETCOLOR
+		PRINTFORML ・젖 감 도　…　 양　호
+		PRINTFORML ・성　　욕　…　 왕　성
+		PRINTFORML ・촉　　진　…　이상없음
+	CASE IS <= 4;牛乳～魔乳
+		PRINTFORML 
+		PRINTFORM ・모유의양　…　
+		SETCOLOR C_PINK
+		PRINTFORML 우　수
+		RESETCOLOR
+		PRINTFORM ・모유품질　…　 
+		SETCOLOR C_PINK
+		PRINTFORML 우　수
+		RESETCOLOR
+		PRINTFORML ・젖 감 도　…　 양　호
+		PRINTFORML ・성　　욕　…　 왕　성
+		PRINTFORML ・촉　　진　…　이상없음
+	CASEELSE ;規格外
+		PRINTFORML 
+		PRINTFORML ・모유의 양　…　 규격외
+		PRINTFORML ・모유품질　…　측정불능
+		PRINTFORML ・젖 감 도　…　측정불능
+		PRINTFORML ・성　　욕　…　측정불능
+		PRINTFORML ・촉　　진　…　측정불능
+	ENDSELECT
+ENDIF
+PRINTFORM 　　　　　　　　　　　　
+
+FONTSTYLE 8
+IF ドリップ状態 == 99554
+	PRINTFORML 　평 가：Ｓ
+ELSEIF 특수표시 == 99555
+	;インフレ표시時
+	PRINTFORML 　평 가：―
+ELSEIF 現乳サイズ >= 5
+	PRINTFORML 　평 가：EX(평가불능) 
+ELSE
+	PRINTFORML 　평 가：◎ 
+ENDIF
+	FONTSTYLE 0
+	PRINTFORML 
+	
+;インフレ표시時、カード側で処理がある為、ここで표시を切り上げる
+SIF 특수표시 == 99555
+	RETURN 0
+
+;★特記事項 
+	PRINTL □ 특이사항 □——————————————————————————————————————————————————————————————————————————————————
+PRINTFORML 
 
 
+IF ドリップ状態 == 99554
+	IF INRANGE (紋章カードID, 79556, 79559)
+		PRINTFORML ・이 드립장치는 평범한 착유와는 다른 어프로치로 젖을 짜내는 기계입니다。
+		PRINTFORML 　한번에 대량으로 짜내는것이 아닌、계속적으로 암소의 가슴에서 흘러떨어지는 젖을 수확하고있습니다。
+		PRINTFORML 　짜여진 암소의 개성이 강하게 나온、평소와는 다른풍의 맛을 즐기실수 있습니다。
+		PRINTFORML 
+		SETCOLOR C_PINK
+		PRINTFORML ・드립장치에 의해 발정을 제어할 수 있습니다。
+		PRINTFORML 　필요에 따라、암소의 "부여효과"로 수동으로 착유를 실행해주세요。
+		PRINTFORML 　이 효과로 부여된 발정으론 공격은 중단되지 않습니다。
+		PRINTFORML 
+	RESETCOLOR
+	ELSE
+		SETCOLOR C_RED
+		;ホルスタインモスターではない場合
+		PRINTFORML 【경고】
+		RESETCOLOR
+		PRINTFORML 　호루스타인 이외의 몬스터에 연결되어 있습니다。
+		PRINTFORML 　일시적으로 암소로서 사명을 심습니다만、
+		PRINTFORML 　미등록인 몬스터의 젖은 계측대상외가 됩니다。다시금 양해부탁드립니다。
+		PRINTFORML
+	ENDIF
+ENDIF
 
+IF 発情状態 > 0
+	SETCOLOR C_PINK
+	SELECTCASE 現乳サイズ
+	CASE IS <= -1;貧乳以下
+		PRINTFORML ・발정하고있습니다。
+		PRINTFORML 　모유가 너무 많이 쌓이면 부담이 되기에、정기적인 착유를 추천드립니다。
+	CASE IS <= 2;爆乳以下
+		PRINTFORML ・발정하고있습니다。
+		PRINTFORML 　모유의 양이 많아지기에、정기적인 착유를 추천드립니다。
+	CASE IS <= 4;～魔乳以下
+		PRINTFORML ・발정하고있습니다。
+		PRINTFORML 　모유의양과 품질을 유지하기 위해、계속적인 착유를 추천드립니다。
+	CASEELSE ;規格外
+		PRINTFORML ・발정하고있습니다。
+		PRINTFORML 　이 엄청나게 큰 젖은…이젠 짜낼수밖에 없기 때문에, 적극적인 착유를 추천드립니다
+	ENDSELECT
+	RESETCOLOR
+	PRINTFORML 
+ENDIF
+
+IF 現乳サイズ >= 5
+	;EX乳だった場合、動けないことを明記
+	IF 紋章カードID == 79559
+	SETCOLOR C_PINK
+	PRINTFORML ・젖이 너무 커서 움직일수 없는것 같습니다。
+	PRINTFORML 　"호루스타인" 몬스터를 수비표시로 하여、젖을 지탱해주도록 하죠。
+	PRINTFORML 
+	RESETCOLOR
+	ENDIF
+
+	PRINTFORML ・한번의 착유로 전부 뽑아내지 못했습니다。정상적인 양이 얼마나되는지…실제로 짜보고 확인해주세요。
+	PRINTFORML 
+ENDIF
+
+IF 특수표시 == 99554 
+	SETCOLOR C_PINK
+	PRINTFORMW
+	PRINTFORML ◆드립중입니다…잠시 기다려주세요…
+	PRINTFORML 　추가로、암소를 "리프레쉬"하고있습니다。
+	PRINTFORML 　이 효과로 부여된 발정으론 공격은 중단되지 않습니다。
+	PRINTFORMW 
+	RESETCOLOR
+	RETURN 0
+ENDIF
+
+IF 発情状態 == 0 && 現乳サイズ < 5 && ドリップ状態 != 99554
+	PRINTFORML ・없음
+	PRINTFORML
+ENDIF
+
+CUSTOMDRAWLINE —
+PRINTFORMW 
+
+;◆服装チェック
+IF 場所 != -1
+	CALL HORUSTEIN_RAND_COW_TXT(1,암소鳴き声)
+	IF 服状態 <= -2
+		;メッセージ無し
+	ELSEIF 服状態 >= 2
+		IF GROUPMATCH(紋章カードID,79557)
+			PRINTFORMW %암소名称%는 소모양 마이크로 비키니가 없어서 안절부절 하고있다…
+		ELSE
+			PRINTFORMW %암소名称%는 소모양 비키니가 없어서 안절부절 하고있다…
+		ENDIF
+	ELSE
+		IF GROUPMATCH(紋章カードID,79557)
+			PRINTFORMW %암소名称%는 소모양 마이크로 비키니의 위치를 고쳤다…
+		ELSE
+			PRINTFORMW %암소名称%는 소모양 비키니의 위치를 고쳤다…
+		ENDIF
+	ENDIF
+	PRINTFORML
+ENDIF
 
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 ;HORUSTEIN_GET_MILK
 ;仕様：
-;参照IDに書かれているカードIDから캐릭터IDを抽出し、
-;そのIDと同じ 카드를 마법 / 함정から확인하고、가슴사이즈等から数値を計算する？
+;「○○登録」によって生成されたカードIDを参照し、バストサイズの情報を取得。バストサイズから搾られるミルク量を算出する。
+;搾られたミルクは紋章によって保持される。
+;参照IDに書かれているカードIDから캐릭터IDを抽出し、가슴사이즈等から数値を計算する？
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-@HORUSTEIN_GET_MILK(듀얼리스트,参照カードID,乳추가,乳上書き)
+@HORUSTEIN_GET_MILK(듀얼리스트,書換先カードID,乳추가,乳上書き)
 #DIMS DYNAMIC 듀얼리스트
-#DIM DYNAMIC 参照カードID
+#DIM DYNAMIC 書換先カードID
 #DIM DYNAMIC 乳추가
 #DIM DYNAMIC 乳上書き ;(1以上で乳추가の値で書き換え)
 
 #DIM DYNAMIC ミルク量
 #DIM DYNAMIC カウンタ
 
+#DIM DYNAMIC 参照カードID
+#DIM DYNAMIC 紋章カードID
+#DIM DYNAMIC 紋章場所
+#DIM DYNAMIC 乳サイズ補正
 #DIM DYNAMIC 암소대상
 #DIMS DYNAMIC 암소名称
 #DIM DYNAMIC 現乳サイズ
 #DIM DYNAMIC 現乳mm
 
-;名称の취득
-CALL CARD_EROTICS(参照カードID)
-암소대상 = RESULT
-
-;エッチなことできる대상なら、そっちから名称を취득する
-IF 암소대상 != -1
-	암소名称 = %CALLNAME:암소대상%
+IF INRANGE (書換先カードID, 179556, 179559)
+	紋章カードID = 書換先カードID - 100000
+	CALL HORUSTEIN_GET_DATA("자신",紋章カードID)
+ELSEIF INRANGE (書換先カードID, 279556, 279559)
+	紋章カードID = 書換先カードID - 200000
+	CALL HORUSTEIN_GET_DATA("상대",紋章カードID)
 ELSE
-	TRYCALLFORM CARDNAME_{参照カードID},"略称"
-	암소名称 = %RESULTS%
+	CALL HORUSTEIN_GET_DATA("자신",書換先カードID)
 ENDIF
+
+;名称と조교に必要な情報、元のカードIDなどを取得する
+암소名称 = %RESULTS:0%
+紋章場所 = RESULT:0
+암소대상 = RESULT:1
+乳サイズ補正 = RESULT:98
+参照カードID = RESULT:99
+
+;乳추가はフィールドからの情報が入る想定だが、何も入っていなければ紋章で保存されている乳サイズを入力する
+SIF 乳추가 == 0
+	乳추가 = 乳サイズ補正
 
 ;乳サイズの취득
 CALL HORUSTEIN_GET_BUST(参照カードID,乳추가,乳上書き)
@@ -1085,15 +1230,9 @@ PRINTFORM 가 짜내졌다…
 PRINTFORML
 RESETCOLOR
 
-IF 듀얼리스트 == "자신"
-	;마법함정존에 대상의 카드가 あれば貯蓄する
-	FOR カウンタ,0,5
-		SIF GETVAR(@"자신_魔_ID:カウンタ") != 参照カードID
-			CONTINUE
-		CALL SET_FIELD_INFO(듀얼리스트,"마함",カウンタ,"T1汎数",ミルク量)
-		CALL SET_FIELD_INFO(듀얼리스트,"마함",カウンタ,"汎数",ミルク量)
-		BREAK
-	NEXT
+IF 듀얼리스트 == "자신" && 紋章場所 != -1
+	;ミルク量を加算
+	CALL CARD_ENG_EMBLEM("자신",紋章場所,ミルク量,3);No３：암소ミルクml
 ENDIF
 
 ;とりあえず경험値を入れる
@@ -1101,195 +1240,779 @@ SIF 암소대상 != -1
 	EXP:암소대상:분유경험 += 1
 
 
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+;HORUSTEIN_KOJO_BATTLE_MILK
+;仕様：
+;ホルスタインモンスターがバトルフェイズに乳を搾られる口上。
+;자신のターン、상대ターンでも搾れるので２パターン用意
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@HORUSTEIN_KOJO_BATTLE_MILK(듀얼리스트,書換先カードID,パターン)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 書換先カードID
+#DIM DYNAMIC パターン
 
+#DIMS DYNAMIC 암소名称
+#DIM DYNAMIC 암소대상
+#DIM DYNAMIC 紋章カードID
+#DIM DYNAMIC 乳サイズ
+#DIM DYNAMIC 암소鳴き声
+#DIM DYNAMIC 암소절정声
+#DIM DYNAMIC 암소弛緩声
 
+#DIMS DYNAMIC 搾手名称
+#DIM DYNAMIC 搾手
+
+;実行者によって文章の상대を切り替える
+IF 듀얼리스트 == "자신"
+	搾手名称 = %CALLNAME:MASTER%
+	搾手 = MASTER
+ELSE
+	;対戦상대
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	IF RESULT != -1
+		搾手名称 = %CALLNAME:RESULT%
+	ELSE
+		搾手名称 = "対戦者"
+	ENDIF
+	搾手 = RESULT
+ENDIF
+
+;トークンから紋章IDを取得
+IF INRANGE (書換先カードID, 179556, 179559)
+	紋章カードID = 書換先カードID - 100000
+	CALL HORUSTEIN_GET_DATA("자신",紋章カードID)
+ELSEIF INRANGE (書換先カードID, 279556, 279559)
+	紋章カードID = 書換先カードID - 200000
+	CALL HORUSTEIN_GET_DATA("상대",紋章カードID)
+ELSE
+	;カードが違うので、この後の処理は流さない
+	RETURN 0
+ENDIF
+
+;名称と조교に必要な情報、元のカードIDなどを取得する
+암소名称 = %RESULTS:0%
+암소대상 = RESULT:1
+암소鳴き声 = RESULT:2 
+암소절정声 = RESULT:3 
+암소弛緩声 = RESULT:4 
+乳サイズ = RESULT:98
+
+;乳サイズの取得
+CALL HORUSTEIN_GET_BUST(書換先カードID,乳サイズ)
+乳サイズ = RESULT:2
+
+;乳サイズによって口上を변경
+SELECTCASE 乳サイズ
+	CASE IS <= -1;並乳以下
+		IF パターン == 1
+			;1回目
+			PRINTFORMW %搾手名称%는 %암소名称%의 가슴에 손을 뻗어、손가락을 움직여 천천히 가슴을 덧그린다。
+			PRINTFORML 부풀음이 작은 가슴을 손가락으로 몇번이나 왕복하니、몇번이나 손가락이 걸리는 부분이 있는걸 알았다。
+			PRINTFORM 그 걸리는 부분 주위를 상냥하게 문지르니
+			CALL HORUSTEIN_RAND_COW_TXT(1,암소鳴き声,,2)
+			PRINTFORM 하며、실로 귀여운 목소리가 되돌아왔다。
+			PRINTFORMW
+			PRINTFORML 그런 것을 반복하니、그 작은 끝부분이 힘껏 주장하는듯이 부풀어올라、짜여지는것을 기다리는듯이 부들부들 떨고있다…。
+			PRINTFORML %搾手名称%는 그 주장에 대답해주는듯이、그 민감해진 부분을 핑…❤하고…손가락으로 튕기니、%암소名称%는 기쁜듯이 하얀 액체를 흘렸다…
+			CALL HORUSTEIN_RAND_COW_TXT(2,암소절정声,,1)
+		
+		ELSE
+			;2回目
+			PRINTFORML %搾手名称%는 %암소名称%의 가슴에 다시 손을 뻗어、민감해져있는 가슴에 손가락을 움직인다…
+			PRINTFORML 이미 한번 짜여졌지만、귀엽게 부풀은 끝부분에선 뚝뚝하며 우유가 흐르고있다…
+			CALL HORUSTEIN_RAND_COW_TXT(2,암소鳴き声)
+			PRINTFORMW %암소名称%는 힘껀 가슴을 펴、그 부풀은 끝부분을 어필하고있다…
+			PRINTFORML 
+			PRINTFORML %搾手名称%는 기대대로、끝부분을 팟 하고 튕겨주니、%암소名称%는 기뻐서 목소리를 떨고있다。
+			CALL HORUSTEIN_RAND_COW_TXT(1,암소절정声)
+			PRINTFORML %搾手名称%는「아직 우유의 양이 부족한데…」하고 짖궅은듯이 속삭이니、끝부분을 탁❤탁❤하고 연속으로 튕기기 시작했다…
+			CALL HORUSTEIN_RAND_COW_TXT(4,암소절정声,,1)
+		ENDIF
+	CASE IS <= 2;爆乳以下
+			
+		IF パターン == 1
+			;1回目
+			PRINTFORML %搾手名称%는 %암소名称%의 가슴에 손을 뻗으니、그 유륜이 변하지 않도록 손가락을 움직인다…
+			PRINTFORMW 살에서 젖으로 변화해가는 감촉을 즐기면서、서서히 그 중심부로 짜내는듯한 움직임으로 가슴을 의식시킨다。
+			PRINTFORM %암소名称%에게서
+			CALL HORUSTEIN_RAND_COW_TXT(1,암소鳴き声,,2)
+			PRINTFORM 하는 소리가 흐를때엔、%암소名称%의 젖은 우뚝솟아、그 끝부분은 뽑아줬으면 하는듯이 요염해보인다…
+			PRINTFORMW
+			PRINTFORML %搾手名称%는 꾸욱하고 손가락으로 짜내니、%암소名称%는 기쁜듯이 하얀 액체를 흘렸다…
+			CALL HORUSTEIN_RAND_COW_TXT(2,암소절정声,,1)
+			RESETCOLOR
+		ELSE
+			;2回目
+			PRINTFORML %搾手名称%는 %암소名称%의 가슴에 다시 손을 뻗으니、그 젖에 의해 하얗게 젖은 손가락을 움직인다…
+			PRINTFORML 이미 한번 짜냈는데도、손가락이 닿은것 만으로도 뾰족해진 끝부분은 뚝뚝 하몃 젖어버리고있다…
+			CALL HORUSTEIN_RAND_COW_TXT(2,암소鳴き声)
+			PRINTFORMW 상냥하게 쓰다듬는듯한 자극으론 부족한것인지、%암소名称%는 %搾手名称%의 손에 가슴을 밀어붙이기 시작했다…
+			PRINTFORML 
+			PRINTFORML %搾手名称%는 기대를 배신하는것처럼 정중하게 상냥하게 만지니、끝부분을 착하고 튕기며、고양된 성감을 한번에 해방시켰다！
+			PRINTFORML %암소名称%의 가슴은 갑작스러운 자극에 버티지 못하고、무너진 수도꼭지처럼 하얀 액체를 흘리고있다…
+			CALL HORUSTEIN_RAND_COW_TXT(2,암소절정声,,1)
+		ENDIF
+
+	CASE IS <= 4;魔乳以下
+		IF パターン == 1
+			;1回目
+			PRINTFORML %搾手名称%는 %암소名称%의 가슴에 손을 뻗으니、그 커다란 가슴을 관능하듯이 손가락을 움직인다…
+			PRINTFORMW 가슴의 묵직한 무게를 즐기면서、서서히 그 중심으로 짜내는듯함 움직임으로 가슴을"준비"시켜간다。
+			PRINTFORM %암소名称%에게서
+			CALL HORUSTEIN_RAND_COW_TXT(2,암소鳴き声,,2)
+			PRINTFORMW  …암소다운 교성이 울릴 때 즈음엔、%암소名称%의 가슴은 우뚝 솟아、그 끝부분은 짜내줬으면 하는듯이 요염해보인다…
+			PRINTFORML 
+			PRINTFORML %搾手名称%는 꾸욱하고 손가락으로 짜내니、%암소名称%는 기쁜듯이 하얀 액체를 흘렸다…
+			CALL HORUSTEIN_RAND_COW_TXT(3,암소절정声,,1)
+			RESETCOLOR
+		ELSE
+			;2回目
+			PRINTFORML %搾手名称%는 %암소名称%의 가슴에 다시 손을 뻗으니、그 젖에 의해 하얗게 젖은 손가락을 움직인다…
+			PRINTFORML 이미 한번 짜냈는데도、"손가락을 본것 만으로" 그 끝부분에서 뚝뚝하고 우유가 떨어지고있다…
+			CALL HORUSTEIN_RAND_COW_TXT(2,암소鳴き声)
+			PRINTFORMW "지금부터 짜주는 손가락"을 제대로 보여주니、%암소名称%의 촉촉하게 젖은 가슴에서 강한 우유의 향기가 풍겨온다…
+			PRINTFORML 
+			PRINTFORML %搾手名称%는 가슴이 짜내는듯이 가슴 부근에 손을 대고、한번에 짜내기 시작했다！
+			CALL HORUSTEIN_RAND_COW_TXT(2,암소절정声,,1)
+			PRINTFORML %암소名称%의 가슴은 손에 힘이 들어갈때마다 뷰웃❤뷰웃❤하며 우유를 토해내니、짜여질때마다 그 교성이 울리고있다…
+			CALL HORUSTEIN_RAND_COW_TXT(4,암소절정声,,1)
+		ENDIF
+	CASE IS >= 5 ;規格外以上
+		IF パターン == 1
+			;1回目
+			PRINTFORML %搾手名称%는 너무 커다란 %암소名称%의 가슴에 손을 뻗으니、손가락이 가슴에 삼켜졌다…
+			CALL HORUSTEIN_RAND_COW_TXT(2,암소鳴き声)
+			PRINTFORML 이미 만진다라기보단、손을 찔러넣는다는 느낌이지만……감도는 좋은 것 같다。
+			PRINTFORML %搾手名称%는 준비가 된 %암소名称%의 유두를 잡아당기니、
+			CALL HORUSTEIN_RAND_COW_TXT(1,암소절정声,,2)
+			PRINTFORMW
+			PRINTFORMW …그 자극만으로、%암소名称%는 기쁜듯이 하얀 액체를 흘렸다…
+			CALL HORUSTEIN_RAND_COW_TXT(3,암소절정声,,1)
+			RESETCOLOR
+		ELSE
+			;2回目
+			PRINTFORML 아까까지 잡아당겼던 유두에서는、이미 망가진 수도꼭지처럼 우유가 흘러넘치고있다…
+			CALL HORUSTEIN_RAND_COW_TXT(3,암소鳴き声)
+			PRINTFORMW %搾手名称%는 %암소名称%의 유두를 꾸욱하고 쥐니、커다란 교성이 울렸다…
+			CALL HORUSTEIN_RAND_COW_TXT(3,암소절정声,10)
+			CALL HORUSTEIN_RAND_COW_TXT(3,암소절정声,10,2)
+			CALL HORUSTEIN_RAND_COW_TXT(3,암소절정声,,1)
+		ENDIF
+ENDSELECT
+
+IF 암소대상 != -1
+	CALL EROTIC_MOVE("バスト조교",암소대상,搾手,300)
+ENDIF
 
 
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 ;HORUSTEIN_GET_EX_SUM
 ;仕様：
-;필드에 いるEX유の豊가슴の計算式、다른 守備표시 몬스터의 
-;攻守の合計1000毎に乳サイズ1UP
+;フィールドにいるEX乳の豊胸の計算式、自身以外の守備표시の「ホルスタイン」の攻守の合計1000毎に乳サイズ1UP
+;
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-@HORUSTEIN_GET_EX_SUM(듀얼리스트)
+@HORUSTEIN_GET_EX_SUM(듀얼리스트,場所)
 #DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 場所
 #DIMS DYNAMIC 対面者
 #DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
 #DIM DYNAMIC ステ合計
 #DIM DYNAMIC ステ合計SIZE
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 攻撃力計
+#DIM DYNAMIC 守備力計
+#DIM DYNAMIC 守備표시カウント
+#DIMS DYNAMIC 암소名称
+#DIMS DYNAMIC 듀얼리스트B
+#DIM DYNAMIC カードID
 
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 
+カードID = GETVAR(@"%듀얼리스트%_MZ_ID:場所")
+
+CALL HORUSTEIN_GET_DATA(듀얼리스트,カードID)
+암소名称 = %RESULTS:0%
+듀얼리스트B = %듀얼리스트%
+
+;自身の攻撃力を0にする
+TRYCALLFORM CARD_{カードID},"攻撃力"
+攻撃力計 = -RESULT
+TRYCALLFORM CARD_{カードID},"守備力"
+守備力計 = -RESULT
+
+FOR カウンタB,0,2
+	;2週目は対面者で処理
+	SIF カウンタB == 1
+		듀얼리스트 = %対面者%
+
 FOR カウンタ,0,5
 	;자신의 카드チェック
 	;カードIDなし、もしくは자신자신은 제외한다
-	SIF GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ") == -1 || GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ") == 179559
+	SIF GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ") == -1 || GROUPMATCH(GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ"),179559,279559)
 		CONTINUE
-	;필드의 호루스타인は全て추가カテゴリで付与してるので、以下で취득할 수 있다。
-	SIF !(GETVARS(@"%듀얼리스트%_MZ_追カテ:カウンタ") == "호루스타인" || GETVARS(@"%듀얼리스트%_MZ_追カテ2:カウンタ") == "호루스타인")
+	
+		条件達成 = 0
+		;ホルスタインカードかチェック(추가カテゴリ)
+		SIF (GETVARS(@"%듀얼리스트%_MZ_追カテ:カウンタ") == "ホルスタイン" || GETVARS(@"%듀얼리스트%_MZ_追カテ2:カウンタ") == "ホルスタイン")
+			条件達成 = 1
+		
+		;ホルスタインカードかチェック(元々のカテゴリ)
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ")},"カテゴリ"
+		SIF MATCH(RESULTS,"ホルスタイン")
+			条件達成 = 1
+		
+		PRINTFORML 条件達成{条件達成} RESULTS:1 %RESULTS:1%
+		
+		SIF 条件達成 != 1
 		CONTINUE
+			
+		攻撃力計 += GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ")
+		守備力計 += GETVAR(@"%듀얼리스트%_MZ_守:カウンタ")
+		
 	;守備표시の 카드를 参照する
 	SIF GETVAR(@"%듀얼리스트%_MZ_表:カウンタ") == 1 
 		CONTINUE
+		守備표시カウント++
+		
 	;乳支え
 	ステ合計 = 0
 	ステ合計 += GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ")
 	ステ合計 += GETVAR(@"%듀얼리스트%_MZ_守:カウンタ")
 	ステ合計SIZE += ステ合計 / 1000
 	
-	;PRINTFORML 듀얼리스트カウンタ{カウンタ} ： {ステ合計 / 1000})
+	;まだ何もリアクションをしていなければ、メッセージを표시する
+		IF GETVAR(@"%듀얼리스트%_MZ_リ数:カウンタ") == 0
+			CUSTOMDRAWLINE —
+			PRINTFORML 
+			CALL HORUSTEIN_GET_DATA(듀얼리스트,GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ"))
+			PRINTFORML %RESULTS:0%는 %암소名称%의 너무 커다란 가슴을 받치고있다…
+			IF ステ合計 / 1000 > 0
+				SETCOLOR C_PINK
+				PRINTFORML (%암소名称%의 가슴 사이즈가 {ステ合計 / 1000}량쿠 Up)
+				RESETCOLOR
+			ENDIF
+			PRINTFORML 
+			CUSTOMDRAWLINE —
+			PRINTFORMW
+		ENDIF
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"表固",1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"リ数",1)
+		;PRINTFORML 듀얼리스트カウンタ{カウンタ} ： {ステ合計 / 1000})
+NEXT
 NEXT
 
-FOR カウンタ,0,5
-	;상대의 카드チェック
-	;カードIDなし、もしくは자신자신은 제외한다
-	SIF GETVAR(@"%対面者%_MZ_ID:カウンタ") == -1 || GETVAR(@"%対面者%_MZ_ID:カウンタ") == 179559
-		CONTINUE
-	;필드의 호루스타인は全て추가カテゴリで付与してるので、以下で취득할 수 있다。
-	SIF !(GETVARS(@"%対面者%_MZ_追カテ:カウンタ") == "호루스타인" || GETVARS(@"%対面者%_MZ_追カテ2:カウンタ") == "호루스타인")
-		CONTINUE
-	;守備표시の 카드를 参照する
-	SIF GETVAR(@"%対面者%_MZ_表:カウンタ") == 1 
-		CONTINUE
-	;乳支え
-	ステ合計 = 0
-	ステ合計 += GETVAR(@"%対面者%_MZ_攻:カウンタ")
-	ステ合計 += GETVAR(@"%対面者%_MZ_守:カウンタ")
-	ステ合計SIZE += ステ合計 / 1000
-	
-	;PRINTFORML 対面者カウンタ{カウンタ} ： {ステ合計 / 1000})
-NEXT
+CALL STATCHANGE_BASIC(듀얼리스트B,"自身",場所,攻撃力計,守備力計)
+CALL STATCHANGE_EFFECT(듀얼리스트B,"自身",場所,"追戦",守備표시カウント-1)
+CALL SET_FIELD_INFO(듀얼리스트B,"필드",場所,"汎数",ステ合計SIZE,上書きモード)
 
 RETURN ステ合計SIZE
 
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+;HORUSTEIN_DRIP
+;仕様：
+;ホルスタインドリップの효과処理
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@HORUSTEIN_DRIP(듀얼리스트,書換先カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 書換先カードID
 
+#DIM DYNAMIC 紋章カードID
+#DIMS DYNAMIC 암소名称
+#DIM DYNAMIC 암소鳴き声
 
+;トークンから紋章IDを取得
+IF INRANGE (書換先カードID, 179556, 179559)
+	紋章カードID = 書換先カードID - 100000
+	CALL HORUSTEIN_GET_DATA("자신",紋章カードID)
+ELSEIF INRANGE (書換先カードID, 279556, 279559)
+	紋章カードID = 書換先カードID - 200000
+	CALL HORUSTEIN_GET_DATA("상대",紋章カードID)
+ELSE
+	;カードが違うので、この後の処理は流さない
+	RETURN 0
+ENDIF
 
+;名称と鳴き声を取得する
+암소名称 = %RESULTS:0%
+암소鳴き声 = RESULT:2 
+
+SETCOLOR C_PINK
+CUSTOMDRAWLINE —
+PRINTFORML
+PRINTFORML %암소名称%는 드립장치에 연결되어있다…
+PRINTFORML 
+CUSTOMDRAWLINE —
+RESETCOLOR
+
+PRINTFORML
+PRINTFORML %암소名称%의 가슴에 붙여진 장치가 희미하게 진동하여、흘러떨어진것이 밀크서버에 쌓여간다…
+PRINTFORML
+
+;短め鳴き
+CALL HORUSTEIN_RAND_COW_TXT(1,암소鳴き声,10)
+PRINTFORML 
+
+;搾乳する(通常よりも少量)
+CALL HORUSTEIN_GET_MILK(듀얼리스트,書換先カードID,-5)
+PRINTFORML 
+
+;乳を吸ってLP回復
+CALL LIFE_CHANGE(듀얼리스트,"増加","효과",100)
 
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+;HORUSTEIN_SET_RECONSTRUCT
+;仕様：
+;フィールド・손패・덱・묘지のカードを지정のカードIDに書き換える処理
+;EX乳(179559,279559)の場合、EX덱に이동させる。
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-;미유(임세티:어둠)
-;ステータスはそのまま
+@HORUSTEIN_SET_RECONSTRUCT(듀얼리스트,元カードID,書換先カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 元カードID
+#DIM DYNAMIC 書換先カードID
+#DIM DYNAMIC カウンタ
 
-;PRINTL 이 카드의 ②의 효과는 １턴에 １번밖에 사용할 수 없다。
-;PRINTL ①：메인 페이즈에 발동할 수 있다。이 카드의 젖을 계측한다。
-;PRINTL ②：배틀 페이즈에 발동할 수 있다。이 카드의 젖을 뽑아 발정시킨다。
-;PRINTL 그 후、이하의 효과를 적용한다。
-;PRINTL ●이 카드는 バトルフェイズ中に２回攻撃할 수 있다。
-;PRINTL ●이 턴、이 카드는 一한번만 전투 / 효과로는 파괴되어 ない。
-;PRINTL ③：発情した이 카드의 攻撃が中断された경우、발동할 수 있다。
-;PRINTL 공격 대상의 몬스터를 "호루스타인"カードとして扱い、その攻守を절반으로 한다。
-;乳を揉んで攻撃中断
+SKIPDISP 1
+;カードの書き換え
+;필드のカード
+FOR カウンタ,0,5
+	SIF GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ") != 元カードID
+		CONTINUE
+	CALL CARD_RECONSTRUCT(듀얼리스트,"필드",カウンタ,書換先カードID)
+	SIF GROUPMATCH(書換先カードID,179559,279559)
+		CALL CARD_ADD(듀얼리스트, "필드", "EX덱",カウンタ)
+NEXT
 
-;애유(케벤세누프:地)가호
-;ステータス反転、3000-元の攻守
-;PRINTL 자신 필드에 "호루스타인─밀크 팜"이 존재하는 경우、이하의 효과를 얻는다。
-;PRINTL 이 카드의 ①의 효과는 １턴에 １번밖에 발동할 수 없다。
-;PRINTL ①：이 카드가 攻撃표시の경우、자신배틀 페이즈에 발동할 수 있다。이 카드의 젖을 뽑아 발정시킨다。
-;PRINTL 그 후、이하의 효과를 適用し、상대 필드의 몬스터와 バトルを行う。
-;PRINTL ●이 턴、이 카드의 攻撃は貫通し、守備표시のまま攻撃할 수 있다。
-;PRINTL ●이 카드가 전투로 파괴된 경우、묘지에서 "호루스타인" 몬스터를 특수 소환할 수 있다。
-;PRINTL ②：이 카드의 공격이 중단된 경우엔 발동할 수 있다。
-;PRINTL 공격 대상의 몬스터를 "호루스타인"カードとして扱い、その몬스터는 공격할 수 없고、효과は無効になる。
-;PRINTL (発情し、直接攻撃付与)
-;유두を触って攻撃中断
-;中断時、상대をさいいん(カウベルからんころん？)
+;마함のカード
+FOR カウンタ,0,5
+	SIF GETVAR(@"%듀얼리스트%_魔_ID:カウンタ") != 元カードID
+		CONTINUE
+	CALL CARD_RECONSTRUCT(듀얼리스트,"마함",カウンタ,書換先カードID)
+	SIF GROUPMATCH(書換先カードID,179559,279559)
+		CALL CARD_ADD(듀얼리스트, "마함", "EX덱",カウンタ)
+NEXT
 
-;지유(하피:風)
-;ステータス 3000 - 1500
-;PRINTL 이 카드는 일반 몬스터로서 扱い、마법함정존에 置かれたカードによってステータスが결정する。(元々の攻守が1500に近い程、攻守が高くなる)
-;PRINTL ●이 카드가 존재하는 한、상대는 이 카드しか공격 대상으로할 수 없다
-;PRINTL ●이 카드가 전투 / 효과로 파괴된 경우、자신의 묘지 / 제외상태인 "호루스타인" 카드를 2장까지 패에 넣는다事が出来る。
-;PRINTL ②：이 카드의 공격이 중단된 경우엔 발동할 수 있다。
-;PRINTL 공격 대상의 몬스터를 "호루스타인"カードとして扱い、그 몬스터의 컨트롤을 얻는다。
-;자신でしゃぶって攻撃中断
-;상대에게 もしゃぶらせて
+;손패のカード
+FOR カウンタ,0,紙束最大値
+	SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") != 元カードID
+		CONTINUE
+	CALL CARD_RECONSTRUCT(듀얼리스트,"손패",カウンタ,書換先カードID)
+	SIF GROUPMATCH(書換先カードID,179559,279559)
+		CALL CARD_ADD(듀얼리스트, "손패", "EX덱",カウンタ)
+NEXT
 
-;EX유(두아무테프:水)祝福	179559
-;PRINTL "호루스타인"モンスター３体
-;PRINTL ①：L소환時に발동할 수 있다。묘지에서 "호루스타인" 몬스터를 ２장까지 수비 표시로 특수 소환한다。
-;PRINTL 이 효과로 특수 소환한 몬스터는 、このターン素材に出来ない。
-;PRINTL ②：배틀 페이즈에 발동할 수 있다。이 카드의 젖을 뽑아 발정시킨다。
-;PRINTL ●이 카드의 공격력은 필드의 "호루스타인" 몬스터의 공격력の合計と同じ値になる。
-;PRINTL ●이 카드는 필드의 守備표시の"호루스타인" 몬스터의 수まで攻撃할 수 있다。
-;PRINTL ③：発情した이 카드의 공격이 중단된 경우엔 발동할 수 있다。
-;PRINTL 공격 대상의 몬스터를 "호루스타인"カードとして扱い、守備표시로 한다。以降、その몬스터는 공격 대상이 되지 않는다。
-;PRINTL （이 효과が適用された몬스터밖에 フィールド에 존재하고ない状態での攻撃は直接攻撃になる。）
-;攻撃回避
-;상대의 LPが残ってれば、자신의 乳を直接飲ませて復活させられる。
-;이 효과의 適用時、상대는  카드의 효과が발동できなくなる
+;덱のカード
+FOR カウンタ,0,現山札数(듀얼리스트)
+	SIF GETVAR(@"%듀얼리스트%_덱:カウンタ") != 元カードID
+		CONTINUE
+	CALL CARD_RECONSTRUCT(듀얼리스트,"덱",カウンタ,書換先カードID)
+	SIF GROUPMATCH(書換先カードID,179559,279559)
+		CALL CARD_ADD(듀얼리스트, "덱", "EX덱",カウンタ)
+NEXT
 
-;임세티담당
-;PRINTL フィールド마법"호루스타인─밀크 팜"
-;PRINTL ①：バトルフェイズ、자신 메인 페이즈에 발동할 수 있다。
-;PRINTL 패를 １장 버리고、捨てたカードによって이하의 효과를 적용한다。
-;PRINTL ●일반 몬스터：그 카드가 야수족牝性 몬스터의 경우、１장 드로우한다。
-;PRINTL ●효과モンスター："호루스타인" 몬스터를 패에서 특수 소환한다。
-;PRINTL ●마법カード："호루스타인"마법 카드를 패에 넣는다。
-;PRINTL ●함정カード：묘지의 "호루스타인" 몬스터를 특수 소환한다。
+;묘지のカード
+FOR カウンタ,0,現묘지数(듀얼리스트)
+	SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") != 元カードID
+		CONTINUE
+	CALL CARD_RECONSTRUCT(듀얼리스트,"묘지",カウンタ,書換先カードID)
+	SIF GROUPMATCH(書換先カードID,179559,279559)
+		CALL CARD_ADD(듀얼리스트, "묘지", "EX덱",カウンタ)
+NEXT
 
-;함정:99553
-;애유：함정を패에 넣는다
-;PRINTL "호루스타인ポ-ト(암소導入)"
-;PRINTL 이 카드명의 ①②의 효과는 １턴에 １번밖에 발동할 수 없다。
-;PRINTL ①：메인 페이즈에 발동할 수 있다。
-;PRINTL 자신 필드의 몬스터를 패로 되돌리고、덱에서 「호루스타인」 카드를 패에 넣는다。
-;PRINTL 자신의 마법함정존에 세트된 카드가 존재하지 않을 경우、이 카드는 패에서 버리고 발동할 수 있다。
-;PRINTL ②：자신 / 상대배틀 페이즈에 발동할 수 있다。
-;PRINTL 묘지의 이 카드를 제외하고、덱에서 「호루스타인─밀크 팜」を表側で둔다。
-;PRINTL 
-;PRINTL 
-;손패はケベン+チェイム+導入のみ
-;チェイムで마법を引っ張ってきて、インポ-トで패에 チェイムで애유サーチ
-;好きな 카드를 애유化、してターンエンド
-;상대는 블루 아이즈を특수소환してバトルフェイズ、
-;묘지의 導入を제외하고 ﾐﾙｸﾌｧｰﾑ、패에서 애유버리고 回復、もう一体버리고 묘지蘇生、효과발동
-;파괴되어 ても復帰
+;EX덱のカード
+FOR カウンタ,0,現EX山札数(듀얼리스트)
+	SIF GETVAR(@"%듀얼리스트%_EX덱:カウンタ") != 元カードID
+		CONTINUE
+	CALL CARD_RECONSTRUCT(듀얼리스트,"EX덱",カウンタ,書換先カードID)
+	SIF !GROUPMATCH(書換先カードID,179559,279559)
+		CALL CARD_ADD(듀얼리스트, "EX덱", "손패",カウンタ)
+NEXT
+
+SKIPDISP 0
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+;HORUSTEIN_SET_CLOTHES
+;仕様：
+;衣装を변경する。
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@HORUSTEIN_SET_CLOTHES(듀얼리스트,紋章カードID,脱がせる人 = "セルフ")
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 紋章カードID
+#DIM DYNAMIC 암소대상
+#DIMS DYNAMIC 암소名称
+#DIMS DYNAMIC 脱がせる人
+#DIM DYNAMIC カウンタ
+
+;トークンだった場合、紋章IDを取得
+IF INRANGE (紋章カードID, 179556, 179559)
+	紋章カードID -= 100000
+	CALL HORUSTEIN_GET_DATA("자신",紋章カードID)
+ELSEIF INRANGE (紋章カードID, 279556, 279559)
+	紋章カードID = 紋章カードID - 200000
+	CALL HORUSTEIN_GET_DATA("상대",紋章カードID)
+ELSE
+	CALL HORUSTEIN_GET_DATA(듀얼리스트,紋章カードID)
+ENDIF
+
+암소名称 = %RESULTS:0%
+암소대상 = RESULT:1
+
+IF 암소대상 != -1
+	IF 紋章カードID == 79557
+		;アクセサリ&帽子：つけ角・小(2枠目を변경)
+		EQUIP:암소대상:2 = 20
+		CFLAG:암소대상:(200 + 2) = 20
+	ELSEIF INRANGE (紋章カードID, 79556, 79559)
+		;アクセサリ&帽子：つけ角・大(2枠目を변경)
+		EQUIP:암소대상:2 = 21
+		CFLAG:암소대상:(200 + 2) = 21
+	ELSE
+		;ホルスタインモンスターじゃなければ설정しない
+	ENDIF
+	
+	;靴、靴下は触らない
+	;ズボン～インナーまでは全剥き
+	FOR カウンタ,6,13
+		IF EQUIP:암소대상:カウンタ != 0
+			IF 脱がせる人 == "セルフ"
+				PRINTFORML %암소名称%는【%CLOTHNAME(カウンタ,EQUIP:암소대상:カウンタ)%】를 벗어버렸다…
+			ELSE
+				PRINTFORML %脱がせる人%는 %암소名称%의【%CLOTHNAME(カウンタ,EQUIP:암소대상:カウンタ)%】를 정중하게 벗겼다…
+			ENDIF
+			
+			EQUIP:암소대상:カウンタ = 0
+			CFLAG:암소대상:(200 + カウンタ) = 0
+		ENDIF
+	NEXT
+	
+	PRINTFORML
+	;ワンピース：소모양 비키니(マイクロビキニは無かった)
+	IF 脱がせる人 == "セルフ"
+		IF EQUIP:암소대상:カウンタ != 0
+			PRINTFORML %암소名称%는【%CLOTHNAME(カウンタ,EQUIP:암소대상:カウンタ)%】를 벗어던지고【소모양 비키니】로 갈아입었다…
+		ELSE
+			PRINTFORML %암소名称%는【소모양 비키니】로 갈아입었다…
+		ENDIF
+	ELSE
+		IF EQUIP:암소대상:カウンタ != 0
+			PRINTFORML %脱がせる人%는 %암소名称%の【%CLOTHNAME(カウンタ,EQUIP:암소대상:カウンタ)%】를 벗기고【소모양 비키니】를 입혔다…
+		ELSE
+			PRINTFORML %脱がせる人%는 %암소名称%に【소모양 비키니】를 입혔다…
+		ENDIF
+	ENDIF
+	
+	EQUIP:암소대상:15 = 33
+	CFLAG:암소대상:(200 + 15) = 33
+ELSE
+	IF 脱がせる人 == "セルフ"
+		PRINTFORML %암소名称%는【소모양 비키니】로 갈아입었다…
+	ELSE
+		PRINTFORML %脱がせる人%는 %암소名称%に【소모양 비키니】를 입혔다…
+	ENDIF
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+;HORUSTEIN_DISP_BUSTSIZE
+;仕様：
+;乳のサイズを표시する。サイズによって色を변경する(青系～ピンク～紫)
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@HORUSTEIN_DISP_BUSTSIZE(乳サイズ)
+#DIM DYNAMIC 乳サイズ
+
+SELECTCASE 乳サイズ
+	CASE IS <= -3
+		SETCOLOR 0x5654FF
+	CASE -2
+		SETCOLOR 0x0099FF
+	CASE -1
+		SETCOLOR 0x42C9FF
+	CASE 0 ;並み
+		SETCOLOR 0xF0F0FF
+	CASE 1 ;巨乳
+		SETCOLOR 0xFFCCFF
+	CASE 2 ;爆乳
+		SETCOLOR 0xFF9AD9
+	CASE 3 ;牛乳
+		SETCOLOR 0xFF69B4
+	CASE 4 ;魔乳
+		SETCOLOR 0xFF49FF
+	CASE IS >= 5 ;規格外
+		SETCOLOR 0xFF00FF
+ENDSELECT
+
+PRINTFORM  [%GET_TALENTNAME(121,乳サイズ)%] 
+RESETCOLOR
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+;HORUSTEIN_SET_BUST
+;仕様：
+;乳のサイズを변경する。(上書き플래그が설정されていなければ、加減算)
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@HORUSTEIN_SET_BUST(듀얼리스트,紋章カードID,選択カードID,乳増減,上書き플래그)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 紋章カードID
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 乳増減
+#DIM DYNAMIC 上書き플래그
+
+#DIMS DYNAMIC 암소名称
+#DIM DYNAMIC 紋章場所
+
+CALL HORUSTEIN_GET_DATA(듀얼리스트,紋章カードID)
+암소名称 = %RESULTS:0%
+
+CALL HORUSTEIN_GET_BUST(選択カードID,乳増減,上書き플래그)
+PRINTFORM %암소名称%의 가슴은
+CALL HORUSTEIN_DISP_BUSTSIZE(RESULT:0)
+IF 乳増減 != 0
+	PRINTFORM 에서
+	CALL HORUSTEIN_DISP_BUSTSIZE(RESULT:2)
+	PRINTFORML 가 되어버렸다…
+ELSE
+	PRINTFORM 에서……딱히 변동은 없던것같다……
+ENDIF
+PRINTFORMW
+
+;紋章の値の설정
+CALL CARD_GET_EMBLEM_VALUES(듀얼리스트,紋章カードID)
+紋章場所 = RESULT
+CALL CARD_ENG_EMBLEM(듀얼리스트,紋章場所,乳増減,2,上書き플래그);No２：乳サイズ
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+;HORUSTEIN_FIELD_UPDATE
+;仕様：
+;永紋章・攻紋章でホルスタインモンスターのフィールドに反映する情報を설정する。
+;속성や、紋章に保存された乳サイズの補正値を胸追に설정…など。
 ;
+;また、フィールドの乳追のサイズで紋章汎数を更新する。(ただし、EXは대상外とする)
+;減少する場合は更新しない。ホルスタインモンスターの乳は基本的に小さくならないので。
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@HORUSTEIN_FIELD_UPDATE(종류,書換先カードID)
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 書換先カードID
 
-;インポ-ﾄ【도유】先導－하피》
-;インフレ【풍유】祝福－두아무테프》
-;ｲﾝｾﾝﾃｨﾌﾞ【乳賞】가호－케벤세누프》
-;함정:99554
-;지유：호루스타인 카드를 묘지로 보る
-;PRINTL "호루스타인センティブ(암소褒賞)"
-;PRINTL 이 카드명의 ①②의 효과는 １턴에 １번밖에 발동할 수 없다。
-;PRINTL ①：배틀 페이즈에 발동할 수 있다。필드의 牝性몬스터를 選択し発情させる。
-;PRINTL 그 후、이하의 효과를 적용한다。
-;PRINTL ●선택한 몬스터の攻守は、その"乳の평가"×500ポイント올린다。
-;PRINTL ●선택한 몬스터は発情する。이 효과로 発情した몬스터는 発情で攻撃が中断されない。
-;PRINTL 자신의 마법함정존에 세트된 카드가 존재하지 않을 경우、이 카드는 패에서 버리고 발동할 수 있다。
-;PRINTL ②：バトルフェイズ 자신 메인 페이즈에 발동할 수 있다。
-;PRINTL 묘지의 이 카드를 제외하고、패 / 묘지의 "호루스타인" 몬스터를 특수 소환한다。이 효과로 특수 소환한 몬스터는 発情する。
-;PRINTL (発情確率：75%)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 紋章カードID
+#DIM DYNAMIC 参照カードID
+#DIMS DYNAMIC 암소略称
+#DIMS DYNAMIC 乳名
+#DIM DYNAMIC 乳サイズ補正
+#DIM DYNAMIC 紋章場所
+#DIMS DYNAMIC 乳소환
+#DIM DYNAMIC 암소속성
 
-;지유で묘지에 、送り
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
 
-;◇巨乳以上で質+1、+2、+3
-;121,가슴사이즈,;-3=虚가슴 -2=絶壁 -1 = 貧乳 0=並乳 1=巨乳 2=爆乳 3=ウシ乳
-;◇回復早いで質+1
-;130,회복속도,; 1=回復早い,체력回復量が多くなる
-;◇모유체질で質+1
-;149,모유체질,;분유するようになる
+IF INRANGE (書換先カードID, 179556, 179559)
+	듀얼리스트 = 자신
+	紋章カードID = 書換先カードID - 100000
+ELSE
+	듀얼리스트 = 상대
+	紋章カードID = 書換先カードID - 200000
+ENDIF
+;◆ホルスタイン情報の取得(紋章カードIDから各種情報を取得)
+CALL HORUSTEIN_GET_DATA(듀얼리스트,紋章カードID)
+암소略称 = %RESULTS:1%
+乳名 = %RESULTS:2%
+紋章場所 = RESULT:0 
+乳サイズ補正 = RESULT:98
+参照カードID = RESULT:99
 
-;함정:99555
-;EX유
-;②의 효과는 T1
-;PRINTL "호루스타인フレ-ション(암소풍유)"
-;PRINTL ①：メインフェイズ及び배틀 페이즈에 발동할 수 있다。필드의 牝性몬스터를 선택하고、発情させる。
-;PRINTL 그 후、이하의 효과에서 選択する。
-;PRINTL ●乳をひと回り大きくする。
-;PRINTL ●フィールドで一番乳の大きい몬스터와 同じ大きさになり、発情する。
-;PRINTL 자신의 마법함정존에 세트된 카드가 존재하지 않을 경우、이 카드는 패에서 버리고 발동할 수 있다。
-;PRINTL ②：자신 메인 페이즈에 발동할 수 있다。
-;PRINTL 이 카드 이외의 묘지의 「호루스타인」 카드를 제외하고、이 카드를 패에 넣는다。
+;속성(ホルスタインモンスターはフィールドに存在する場合のみ、元の속성になる)
+TRYCALLFORM CARD_{参照カードID},"속성"
+암소속성 = RESULT
 
-;PRINTL "호루스타인サイダ-(암소取引)"
-;PRINTL 이 카드명의 ①②의 효과는 １턴에 １번밖에 발동할 수 없다。
-;PRINTL ①：패의 牝性몬스터를 全て상대의 패에 넣고、そ의 수 만큼 자신의 덱에서 호루스타인 카드를 패에 넣는다。
-;PRINTL 이 효과는 자신의 마법함정존에 카드가 존재하지 않을 경우、이 카드를 패에서 버리고 발동でき、
-;PRINTL 자신의 마법함정존에 카드가 ５枚존재하는 경우、패에서 見せて발동할 수 있다。
-;PRINTL ②：자신 메인 페이즈에 발동할 수 있다。
-;PRINTL 묘지의 「호루스타인」마법 카드를 제외하고、묘지의 이 카드를 패에 넣는다。
+FOR カウンタB,0,2
+	;1週目は듀얼리스트、2週目は対面者を処理
+	SIF カウンタB == 1
+		듀얼리스트 = %対面者%
 
+	;자신・상대フィールドのカードを操作
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_MZ_ID:カウンタ") != 書換先カードID
+			CONTINUE
+		IF 종류 == 永紋章起動 
+			;変化元ID付けちゃうと、【○乳】が外れちゃうのでリネーム
+			;CALL CARD_SET_RENAME(듀얼리스트,"필드",カウンタ,암소略称)
+			;CALL STATCHANGE_EFFECT(듀얼리스트,"自身",カウンタ,"変化元ID",参照カードID)
+		ELSEIF 종류 == 永攻紋章起動 
+			;初回(個Cが未入力)であれば比較はスキップし、乳の大きさを설정する。
+			IF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:カウンタ") <= 0
+				;乳サイズを설정(貧乳にした場合、比較が走って0に上書きされるため)
+				CALL STATCHANGE_OTHER(듀얼리스트,"自身",カウンタ,"胸追",乳サイズ補正)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"個Ｃ",1,上書きモード)
+			ELSE
+				;乳サイズを比較し、大きくなってれば紋章汎数に反映する(EX乳の효과で増えた分は汎数で管理し胸追からは제외)
+				IF GETVAR(@"%듀얼리스트%_MZ_胸追:カウンタ") > 乳サイズ補正
+					乳サイズ補正 = GETVAR(@"%듀얼리스트%_MZ_胸追:カウンタ")
+					CALL CARD_ENG_EMBLEM(듀얼리스트,紋章場所,乳サイズ補正,2,上書きモード);No２：乳サイズ
+				ENDIF
+			ENDIF
+			CALL STATCHANGE_OTHER(듀얼리스트,"自身",カウンタ,"属",암소속성)
+			CALL STATCHANGE_OTHER(듀얼리스트,"自身",カウンタ,"胸追",乳サイズ補正)
+			;CALL CARD_SET_CATEGORY(듀얼리스트,"필드",カウンタ,"E.R.A")
+			;カテゴリ2は未설정なら변경する
+			;SIF GETVARS(@"%듀얼리스트%_MZ_追カテ2:カウンタ") == ""
+			;	CALL CARD_SET_CATEGORY(듀얼리스트,"필드",カウンタ,"ホルスタイン",1)
+		ENDIF
+	NEXT
+NEXT
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+;HORUSTEIN_SELL_MILK
+;仕様：
+;듀얼終了時に암소のミルクを全て売却する処理。
+;処理後はミルク量をリセットし、二度目は流れないようにする。
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@HORUSTEIN_SELL_MILK()
+#DIM DYNAMIC 紋章カードIDs,4
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+
+#DIMS DYNAMIC 암소名称
+#DIMS DYNAMIC 乳名
+#DIM DYNAMIC 암소乳サイズ
+#DIM DYNAMIC 암소ミルクml
+#DIM DYNAMIC 암소ミルク売却額
+#DIM DYNAMIC 合計암소ミルクml
+#DIM DYNAMIC 合計金額
+#DIM DYNAMIC 乳サイズ補正
+#DIM DYNAMIC 紋章場所
+#DIM DYNAMIC 参照カードID
+
+紋章カードIDs = 79556,79557,79558,79559
+FOR カウンタ,0,4
+	CALL HORUSTEIN_GET_DATA("자신",紋章カードIDs:カウンタ)
+
+	암소名称 = %RESULTS:0%
+	乳名 = %RESULTS:2%
+	紋章場所 = RESULT:0
+	암소ミルクml = RESULT:97
+	乳サイズ補正 = RESULT:98
+	参照カードID = RESULT:99
+	
+	SIF 암소ミルクml <= 0 || 紋章場所 == -1
+		CONTINUE
+	
+	FOR カウンタB,0,5
+		SIF GETVAR(@"자신_MZ_ID:カウンタB") != (紋章カードIDs:カウンタ + 100000)
+			CONTINUE
+		SIF GETVAR(@"자신_MZ_胸追:カウンタB") > 乳サイズ補正
+			乳サイズ補正 = GETVAR(@"자신_MZ_胸追:カウンタB")
+		;フィールドにEX乳が残っている場合、효과で増えた分も加算する
+		IF GETVAR(@"자신_MZ_汎数:カウンタB") > 0 && カウンタ == 3
+ 			乳サイズ補正 += GETVAR(@"자신_MZ_汎数:カウンタB")
+ 			BREAK
+ 		ENDIF
+	NEXT
+		
+	CALL HORUSTEIN_GET_BUST(参照カードID,乳サイズ補正)
+	암소乳サイズ = RESULT:2
+	
+	;ミルク量の0.8倍がベースになる
+	암소ミルク売却額 = 암소ミルクml *10
+	TIMES 암소ミルク売却額 , 0.8
+
+	CUSTOMDRAWLINE —
+	PRINTFORML 【%乳名%】%암소名称%
+	PRINTFORML 
+	SELECTCASE 암소乳サイズ
+	;貧乳の乳は高く売れる(バランス調整的な意味で)
+	CASE IS <= -3
+		TIMES 암소ミルク売却額 , 3.5
+		CALL HORUSTEIN_DISP_BUSTSIZE(암소乳サイズ)
+		PRINTFORML 의 젖은 비싸게 팔리는듯 하다…
+	CASE -2
+		TIMES 암소ミルク売却額 , 3.0
+		CALL HORUSTEIN_DISP_BUSTSIZE(암소乳サイズ)
+		PRINTFORML 의 젖은 비싸게 팔리는듯 하다…
+	CASE -1
+		TIMES 암소ミルク売却額 , 2.5
+		CALL HORUSTEIN_DISP_BUSTSIZE(암소乳サイズ)
+		PRINTFORML 의 젖은 비싸게 팔리는듯 하다…
+	CASE 0 ;並み(美乳で貧乳を대상にした時にしかならないので、ちょっと高い)
+		TIMES 암소ミルク売却額 , 1.5
+		CALL HORUSTEIN_DISP_BUSTSIZE(암소乳サイズ)
+		PRINTFORML 의 젖은 희소가치가 있는듯、조금 높은 가격에 팔리는듯 하다…
+	CASE 1 ;巨乳
+		TIMES 암소ミルク売却額 , 1.0
+		CALL HORUSTEIN_DISP_BUSTSIZE(암소乳サイズ)
+		PRINTFORML 의 젖은 기본적인 가격이다…
+	CASE 2 ;爆乳
+		TIMES 암소ミルク売却額 , 1.0
+		CALL HORUSTEIN_DISP_BUSTSIZE(암소乳サイズ)
+		PRINTFORML 의 젖은 기본적인 가격이다…
+	CASE 3 ;牛乳
+		TIMES 암소ミルク売却額 , 1.2
+		CALL HORUSTEIN_DISP_BUSTSIZE(암소乳サイズ)
+		PRINTFORML 의 젖은 양도 품질도 좋아 가격도 조금 높아지는듯 하다…
+	CASE 4 ;魔乳
+		TIMES 암소ミルク売却額 , 1.1
+		CALL HORUSTEIN_DISP_BUSTSIZE(암소乳サイズ)
+		PRINTFORML 의 젖은 품질이 좋아 가격도 조금 높아지는듯 하다…
+	CASE IS >= 5 ;規格外
+		TIMES 암소ミルク売却額 , 0.15
+		CALL HORUSTEIN_DISP_BUSTSIZE(암소乳サイズ)
+		PRINTFORML 의 젖은 판매가 어려운듯 하다…
+	ENDSELECT
+
+	PRINTFORML %암소名称%에게서 짜낸{암소ミルクml}ml의 우유를 {암소ミルク売却額}엔에 판매했다…
+	CUSTOMDRAWLINE —
+
+	MONEY += 암소ミルク売却額
+	
+	合計金額 += 암소ミルク売却額
+	合計암소ミルクml += 암소ミルクml
+	
+	;ミルクの精算が終わったので、紋章情報の削除(2度流れるの防止)
+	CALL CARD_ENG_EMBLEM("자신",紋章場所,-1,3,上書きモード);No３：암소ミルクml
+	
+NEXT
+IF 合計金額 > 0
+	PRINTFORML "호루스타인" 카드에 의한 우유 착정량과 판매금액
+	PRINTFORML 
+	PRINTFORML 총 우유 양：{合計암소ミルクml}ml
+	PRINTFORML 합계금액：{合計金額}엔
+	CUSTOMDRAWLINE —
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+;CARD_GET_EMBLEM_VALUES
+;仕様：
+;永紋章に紐づく汎数１～３をすべて取得する処理。
+;一旦こっちで管理。本来の場所は「21.カード誘発효과.ERB」
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARD_GET_EMBLEM_VALUES(듀얼리스트,カードID,永短설정)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カードID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 永短설정
+
+IF 永短설정 == 1
+	FOR カウンタ,0,99
+		SIF GETVAR(@"%듀얼리스트%_短紋章:カウンタ") != カードID
+			CONTINUE
+		;見つかったら値を설정
+		RESULT:1 = GETVAR(@"%듀얼리스트%_短紋_汎数１:カウンタ")
+		RESULT:2 = GETVAR(@"%듀얼리스트%_短紋_汎数２:カウンタ")
+		RETURN カウンタ
+	NEXT
+ELSE
+	FOR カウンタ,0,99
+		SIF GETVAR(@"%듀얼리스트%_永紋章:カウンタ") != カードID
+			CONTINUE
+		;見つかったら値を설정
+		RESULT:1 = GETVAR(@"%듀얼리스트%_永紋_汎数１:カウンタ")
+		RESULT:2 = GETVAR(@"%듀얼리스트%_永紋_汎数２:カウンタ")
+		RESULT:3 = GETVAR(@"%듀얼리스트%_永紋_汎数３:カウンタ")
+		RETURN カウンタ
+	NEXT
+ENDIF
+;見つからなかったら-1を返す
+RETURN -1

@@ -7,13 +7,13 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 듀나미스 메시아
+		RESULTS = 듀나미스 메시아
 	CASE "略称"
-RESULTS = 듀나미스
+		RESULTS = 듀나미스
 		CASE "カテゴリ"
-RESULTS:0 = 메시아
-RESULTS:1 = 링크 조커
-RESULTS:4 = 뱅가드
+		RESULTS:0 = 메시아
+		RESULTS:1 = 링크 조커
+		RESULTS:4 = 뱅가드
 ENDSELECT
 
 
@@ -86,6 +86,27 @@ ELSEIF 종류 == 지속효과
 	SIF ゾーン != "필드"
 		RETURN 0	
 	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 裏側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	IF !MATCH(RESULTS,"링크 조커")
+		RETURN 0
+	ENDIF
+	RETURN 1
 ELSEIF 종류 == ライフ変強制誘発
 	SIF 발동済_2(듀얼리스트,36155)
 		RETURN 0	
@@ -131,25 +152,19 @@ IF 종류 == 손패起動
 	ENDIF
 ELSEIF 종류 == 지속효과
 	CALL FULLRESET
-	효과条件표시 = 3
-	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"攻避",3)
-
-	CALL FULLRESET
-	효과範囲상대필드 = 1
 	효과条件표시 = 裏側표시
-	효과条件CNT = 1
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	条件カード数 = RESULT
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"攻避",3)
 
 	CALL FULLRESET
 	효과範囲상대필드 = 1
 	효과条件표시 = 表側표시
 	효과条件CNT = 1
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	IF RESULT <= 0  && 条件カード数 >= 1
+	IF RESULT == 0
 		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直攻")
-		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ半化",1,1)
 	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ半化",3,1)
 ELSEIF 종류 == ライフ変強制誘発
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,36154,2)
 	IF RESULT == 0

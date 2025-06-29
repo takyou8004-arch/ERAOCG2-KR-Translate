@@ -1,0 +1,143 @@
+﻿@CARDNAME_29077,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 時械神ハイロン
+	CASE "略称"
+		RESULTS = 時械神ハイロン
+	CASE "カテゴリ"
+		RESULTS:0 = 時械神
+ENDSELECT
+
+
+@CARD_29077(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "추가日"
+		RETURN 250630
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29077(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,효과소환)
+PRINTL ①：자신フィールドにモンスターが存在しない場合、このカードはリリースなしで소환できる。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：このカードは戦闘・효과では破壊されず、このカードの戦闘で発生する자신への戦闘ダメージは０になる。
+CALLFORM CARD_ABLE(0,バトル終了時)
+PRINTL ③：このカードが戦闘を行ったバトルフェイズ終了時に발동できる。
+PRINTL 자신のLPと상대のLPの差の数値分だけ상대にダメージを与える。
+CALLFORM CARD_ABLE(0,ターン開始時強制)
+PRINTL ④：자신スタンバイフェイズに발동する。このカードを持ち主の덱の一番下に戻す。
+
+
+@CARDCAN_29077(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 選択カード名前
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29077)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과소환
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時強制
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 無限光アイン・ソフ・オウル
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == バトル終了時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所") == 0
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") == GETVAR(@"ライフ_%対面者%")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_29077(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과소환
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ無効",1)
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"T1汎数",1)
+ELSEIF 종류 == ターン開始時強制
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,덱行き)
+ELSEIF 종류 == バトル終了時
+	IF GETVAR(@"ライフ_%対面者%") > GETVAR(@"ライフ_%듀얼리스트%")
+		カウンタ = GETVAR(@"ライフ_%対面者%") - GETVAR(@"ライフ_%듀얼리스트%")
+	ELSE
+		カウンタ = GETVAR(@"ライフ_%듀얼리스트%") - GETVAR(@"ライフ_%対面者%")
+	ENDIF
+	CALL LIFE_CHANGE(듀얼리스트,"減少","효과",カウンタ,1)
+ENDIF
+

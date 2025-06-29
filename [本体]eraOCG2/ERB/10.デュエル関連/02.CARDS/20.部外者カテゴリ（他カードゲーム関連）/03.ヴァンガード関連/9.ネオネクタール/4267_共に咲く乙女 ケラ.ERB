@@ -1,0 +1,165 @@
+﻿@CARDNAME_4267,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 共に咲く乙女 ケラ
+	CASE "略称"
+		RESULTS = ケラ
+	CASE "カテゴリ"
+		RESULTS:0 = ネオネクタール
+		RESULTS:4 = ヴァンガード
+ENDSELECT
+
+
+@CARD_4267(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 식물족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4267(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①の효과１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：덱から「ネオネクタール」カード１枚を묘지へ送って발동できる。
+PRINTL このカードを손패から특수소환する。このターン、자신は식물족モンスターしか특수소환できない。
+CALLFORM CARD_ABLE(2,지속효과)
+PRINTL ②：このカードは자신フィールドの「共に咲く乙女 ケラ」の数によって以下の효과を得る。
+PRINTL ●２体以上：このカードの攻撃力は１０００アップする。
+PRINTL ●３体以上：このカードは破壊耐性を得る。
+PRINTL ●４体以上：このカードがフィールドに存在する限り、
+PRINTL 상대は자신フィールドの他の「ネオネクタール」モンスターを攻撃대상に選択できない。
+
+
+@CARDCAN_4267(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 효과使用불가,3
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4267)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,4267)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,4267,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = ネオネクタール
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 共に咲く乙女 ケラ
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4267(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 효과使用불가,3
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 開花数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4267,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = ネオネクタール
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+			SS소환可能종족 = 식물족
+			CALL CARD_SS_RESTRICTION(듀얼리스트)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 共に咲く乙女 ケラ
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	開花数 = RESULT
+	IF 開花数 >= 3
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+	ENDIF
+	IF 開花数 >= 4
+		CALL FULLRESET
+		효과条件カテゴリ = ネオネクタール
+		효과条件他所 = 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"攻避")
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,1000)
+ENDIF
+

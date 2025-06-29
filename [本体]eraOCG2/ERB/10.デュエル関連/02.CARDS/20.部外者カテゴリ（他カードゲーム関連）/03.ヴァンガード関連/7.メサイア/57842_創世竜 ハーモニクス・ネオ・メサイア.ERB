@@ -7,14 +7,14 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 창세룡 하모닉스 네오 메시아
+		RESULTS = 창세룡 하모닉스 네오 메시아
 	CASE "略称"
-RESULTS = 하모닉스
+		RESULTS = 하모닉스
 	CASE "カテゴリ"
-RESULTS:0 = 얼터-에고
-RESULTS:1 = 메시아
-RESULTS:2 = 링크 조커
-RESULTS:4 = 뱅가드
+		RESULTS:0 = 얼터 에고
+		RESULTS:1 = 메시아
+		RESULTS:2 = 링크 조커
+		RESULTS:4 = 뱅가드
 ENDSELECT
 
 
@@ -42,6 +42,8 @@ SELECTCASE 参照先
 		RETURN 0
 	CASE "특수불가"
 		RETURN 1
+	CASE "レア度"
+		RETURN ULR
 
 ENDSELECT
 
@@ -58,7 +60,7 @@ RETURN 0
 
 CALL RESETCONDITION_MAT
 必要素材数 = 1
-素材条件カテゴリ = オルタ-エゴ
+素材条件カテゴリ = 얼터 에고
 
 IF EX参照 == 1
 	CALL STRIDECAN(듀얼리스트,소환カード,57842) 
@@ -69,7 +71,7 @@ ENDIF
 @CARD_EXPLANATION_57842(종류)
 #DIM DYNAMIC 종류
 
-PRINTL 『초월』 "얼터-에고" 몬스터
+PRINTL 『초월』 "얼터 에고" 몬스터
 PRINTL (자신의 패에서 몬스터 1장을 제외하여 발동할 수 있다.
 PRINTL 　EX덱의 이 카드를, 자신 필드의 지정된 몬스터 1체 위에 겹쳐서 『초월』한다.
 PRINTL  『초월』한 이 카드의 이름은 겹친 몬스터와 같은 이름으로 취급하고,
@@ -114,6 +116,13 @@ IF 종류 == 攻撃時誘発
 	SIF 발동済_1(듀얼리스트,57842)
 		RETURN 0
 	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 링크 조커
+	효과条件종류 = 초차원
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
 	효과範囲필드 = 1
 	효과範囲상대필드 = 1
 	효과条件표시 = 裏側표시
@@ -124,6 +133,27 @@ IF 종류 == 攻撃時誘発
 ELSEIF 종류 == 지속효과
 	SIF ゾーン != "필드"
 		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 裏側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	IF !MATCH(RESULTS,"링크 조커")
+		RETURN 0
+	ENDIF
 	RETURN 1
 ELSEIF 종류 == 攻守変動
 	SIF ゾーン != "필드"
@@ -154,56 +184,54 @@ IF 종류 == 攻撃時誘発
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57842,1)
 	IF RESULT == 0
 		CALL FULLRESET
-		효과範囲필드 = 1
-		효과範囲상대필드 = 1
-		효과条件표시 = 裏側표시
-		효과条件CNT = 1
-		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",1000*RESULT)
-		IF RESULT >= 5
-			CALL CARD_RESERV(듀얼리스트,57842)
-		ENDIF
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 링크 조커
+		효과条件종류 = 초차원
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과範囲상대필드 = 1
+				효과条件표시 = 裏側표시
+				효과条件CNT = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",1000*RESULT)
+			IF RESULT >= 5
+				CALL CARD_RESERV(듀얼리스트,57842)
+			ENDIF
 
-		FOR カウンタ,0,5
-			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
-				CONTINUE
-			SIF GETVAR(@"%듀얼리스트%_MZ_表:カウンタ") != 3
-				CONTINUE
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"表",1,1)
-		NEXT
-		FOR カウンタ,0,5
-			SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
-				CONTINUE
-			SIF GETVAR(@"%対面者%_MZ_表:カウンタ") != 3
-				CONTINUE
-			CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"表",1,1)
-		NEXT
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+					CONTINUE
+				SIF GETVAR(@"%듀얼리스트%_MZ_表:カウンタ") != 3
+					CONTINUE
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"表",1,1)
+			NEXT
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+					CONTINUE
+				SIF GETVAR(@"%対面者%_MZ_表:カウンタ") != 3
+					CONTINUE
+				CALL SET_FIELD_INFO(対面者,"필드",カウンタ,"表",1,1)
+			NEXT
+		ENDIF
 	ENDIF
 ELSEIF 종류 == 지속효과
-	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"不材")
-	SIF ターンプレイヤー == 듀얼리스트
-	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦阻")
-
 	CALL FULLRESET
-	효과条件표시 = 3
-	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"攻避",3)
-
-	CALL FULLRESET
-	효과範囲상대필드 = 1
 	효과条件표시 = 裏側표시
-	효과条件CNT = 1
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	条件カード数 = RESULT
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"攻避",3)
 
 	CALL FULLRESET
 	효과範囲상대필드 = 1
 	효과条件표시 = 表側표시
 	효과条件CNT = 1
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	IF RESULT <= 0  && 条件カード数 >= 1
+	IF RESULT == 0
 		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直攻")
-		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ半化",1,1)
 	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ半化",3,1)
 ELSEIF 종류 == 攻守変動
 	CALL FULLRESET
 	효과条件他所 = 1

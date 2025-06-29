@@ -1,0 +1,128 @@
+﻿@CARDNAME_74421,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 大腕の沙汰
+	CASE "略称"
+		RESULTS = 大腕の沙汰
+	CASE "カテゴリ"
+		RESULTS:0 = ナイトメア・クラス
+		RESULTS:4 = Shadowverse
+ENDSELECT
+
+
+@CARD_74421(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250628
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_74421(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①の효과は１ターンに１枚しか使用できない。
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：자신の손패のモンスター１体を破壊し、
+PRINTL 자신の묘지に同名モンスターが存在する「ナイトメア・クラス」モンスターを２体まで손패に加える。
+PRINTL （同名モンスターは１体まで）
+
+
+@CARDCAN_74421(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,74421)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,74421)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = ナイトメア・クラス
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_74421(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 存在カード,100
+#DIMS DYNAMIC 存在カード名,100
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,74421,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") == -1
+					CONTINUE
+				TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")},"カテゴリ"
+				SIF !MATCH(RESULTS,"ナイトメア・クラス")
+					CONTINUE
+				TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")},"종류"
+				SIF !INRANGE(RESULT,1,3)
+					CONTINUE
+				選択カード = GETVAR(@"%듀얼리스트%_묘지:カウンタ")
+				SIF MATCH(存在カード,選択カード)
+					CONTINUE
+				存在カード:カウンタB = 選択カード
+				カウンタB ++
+			NEXT
+			CALL FULLRESET
+			효과範囲덱 = 1
+			FOR カウンタ,0,30
+				효과条件ID:カウンタ = 存在カード:カウンタ
+			NEXT
+			효과条件複数 = 98
+			효과条件固名前選択 = 1
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

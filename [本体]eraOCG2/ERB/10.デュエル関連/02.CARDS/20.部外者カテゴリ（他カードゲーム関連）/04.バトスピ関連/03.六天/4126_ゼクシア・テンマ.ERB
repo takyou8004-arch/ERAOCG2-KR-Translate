@@ -1,0 +1,307 @@
+﻿@CARDNAME_4126,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC カード主
+
+カード主 = NO_TO_CHARANUM(4126)
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ゼクシア・テンマ
+	CASE "略称"
+		RESULTS = ゼクシア
+	CASE "カテゴリ"
+		RESULTS:0 = 詩姫
+		IF TALENT:カード主:연모
+			RESULTS:1 = 天魔王
+		ENDIF
+		IF TALENT:カード主:애처
+			RESULTS:2 = 契約
+		ENDIF
+		RESULTS:4 = バトルスピリッツ
+ENDSELECT
+
+
+@CARD_4126(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RESULT:1 = 바람속성
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4126(종류)
+#DIM DYNAMIC 종류
+#DIM DYNAMIC カード主
+
+カード主 = NO_TO_CHARANUM(4126)
+
+IF TALENT:カード主:애처
+	PRINTL このカードの속성は風としても扱う。
+	PRINTL このカード名の①③の효과はそれぞれ１ターンに１度しか使用できない。
+	CALLFORM CARD_ABLE(1,손패起動)
+	PRINTL ①：자신フィールドのコア카운터を１つ取り除いて발동できる。
+	PRINTL このカードを손패から특수소환する。
+	CALLFORM CARD_ABLE(0,지속효과)
+	PRINTL ②：자신の묘지のいずれかのモンスターと同じ속성を持つ자신のモンスターは破壊耐性を得る。
+	PRINTL 자신の마법・함정ゾーンの「創界神」に置かれたコア카운터の数が１０個以上の場合、
+	PRINTL 자신ターンに、자신フィールドのモンスターは完全耐性を得る。
+	CALLFORM CARD_ABLE(3,필드起動)
+	PRINTL ③：자신の마법・함정ゾーンの「創界神」にコア카운터を２つ置くことで발동できる。
+	PRINTL 상대フィールドのモンスター１体を選択できる。
+	PRINTL そのモンスターの攻撃力を자신フィールドのモンスターの속성の종류×１０００ポイントダウンする。
+	PRINTL この효과で攻撃力、または守備力が０になった場合、さらにそのモンスターを묘지に送る。
+ELSE
+	PRINTL このカードの속성は風としても扱う。
+	CALLFORM CARD_ABLE(0,지속효과)
+	PRINTL ①：자신の묘지のいずれかのモンスターと同じ속성を持つ자신のモンスターは破壊耐性を得る。
+ENDIF
+
+@CARDCAN_4126(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC カード主
+
+カード主 = NO_TO_CHARANUM(4126)
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4126)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	IF TALENT:カード主:애처
+		SIF 발동済_1(듀얼리스트,4126)
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		CALL CARD_SS_CHECK(듀얼리스트,4126,"손패")
+		SIF RESULT == 1
+			RETURN 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = バトルスピリッツ
+		효과条件표시 = 表側표시
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT:9 < 1
+			RETURN 0
+	ELSE
+		RETURN 0	
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	IF TALENT:カード主:애처
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		SIF 발동済_3(듀얼리스트,4126)
+			RETURN 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件표시 = 表側표시
+		효과条件カテゴリ = 創界神
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		RETURN 1
+	ELSE
+		RETURN 0	
+	ENDIF
+ENDIF
+
+@CARDEFFECT_4126(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 軽減数
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC カード主
+
+カード主 = NO_TO_CHARANUM(4126)
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4126,1)
+	IF RESULT == 0
+		PRINTL コア카운터を取り除くカードを選択
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = バトルスピリッツ
+		효과条件표시 = 表側표시
+		효과条件個Ｃ所持 = 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			PRINTL コアが取り除かれました
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"個Ｃ",-1)
+
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 바람속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件속성 = 바람속성
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 화염속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件속성 = 화염속성
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 땅속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件속성 = 땅속성
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 물속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件속성 = 물속성
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 빛속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件속성 = 빛속성
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 어둠속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件속성 = 어둠속성
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件속성 = 神속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件속성 = 神속성
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
+	ENDIF
+
+	IF TALENT:カード主:애처
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件カテゴリ = 創界神
+		효과条件표시 = 表側표시
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT:9 < 10
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"モ耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"魔耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"함정耐")
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4126,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件カテゴリ = 創界神
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			CALL SET_FIELD_INFO(듀얼리스트,参照先（CS）,選択カード（CS）,"個Ｃ",2)
+		ENDIF
+
+		CALL FULLRESET
+		CALL FIELD_INFO_COUNT(듀얼리스트,"属")
+		攻撃力修正 = RESULT * 1000
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과추가종류 = 11
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"永攻DOWN",攻撃力修正)
+	ENDIF
+ENDIF
+

@@ -1,0 +1,205 @@
+﻿@CARDNAME_4415,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 双魂の久遠・ケリドウェン
+	CASE "略称"
+		RESULTS = ケリドウェン
+	CASE "カテゴリ"
+		RESULTS:0 = ナイトメア・クラス
+		RESULTS:4 = Shadowverse
+ENDSELECT
+
+
+@CARD_4415(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "추가日"
+		RETURN 250628
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4415(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①：このカードの발동時の효과処理として、자신の손패のモンスター１体を破壊できる。
+PRINTL 破壊したら、상대モンスターを１体まで破壊でき、자신は１枚ドローする。
+CALLFORM CARD_ABLE(0,효과後強制誘発)
+PRINTL ②：このカードが마법＆함정ゾーンに存在する状態で、자신のモンスターが破壊される度にこのカードに카운터を置く。
+PRINTL このカードの카운터が４個以上になった場合、このカードを破壊する。
+PRINTL その後、자신の묘지からレベル４以下の언데드족モンスター１体を특수소환する。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,EX덱起動)
+PRINTL ①：EX덱に存在するこのカードは、자신フィールドのレベル２以上の언데드족モンスター１体を破壊する事で특수소환できる。
+CALLFORM CARD_ABLE(2,소환時,특수소환時)
+PRINTL ②：このカードが소환・특수소환した場合に발동できる。
+PRINTL 자신の묘지から「双魂の久遠・ケリドウェン」を除く、언데드족モンスター１体を특수소환する。
+
+
+
+@CARDCAN_4415(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4415)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,4415)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,4415,"EX덱")
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 언데드족
+	효과条件除去種 = 묘지
+	CALLFORM 효과条件レベル_ADV(2,"以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,4415)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종족 = 언데드족
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	효과条件固名前 = 双魂の久遠・ケリドウェン
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4415(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 守備力修正
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4415)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件종류 = モン全般
+			효과条件行先플래그 = 破壊行き
+			효과条件任意 = 1
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲상대필드 = 1
+				효과条件除去種 = 묘지
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF RESULT == 1
+					CALL FULLRESET
+					효과条件任意 = 1
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+				ENDIF
+				CALL CARDDRAW_BASIC(듀얼리스트,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後強制誘発
+	PRINTFORML 
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",1)
+	IF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") >= 4
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件종족 = 언데드족
+			CALLFORM 효과条件レベル_ADV(4,"以下")
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4415,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件行先플래그 = 破壊行き
+		효과条件종족 = 언데드족
+		CALLFORM 효과条件レベル_ADV(2,"以上")
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,"EX덱",場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4415,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 언데드족
+		효과条件固名前 = 双魂の久遠・ケリドウェン
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

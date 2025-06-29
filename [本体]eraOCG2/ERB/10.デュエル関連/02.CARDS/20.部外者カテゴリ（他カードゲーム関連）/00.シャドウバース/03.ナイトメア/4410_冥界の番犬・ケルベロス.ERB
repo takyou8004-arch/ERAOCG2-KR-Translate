@@ -1,0 +1,395 @@
+﻿@CARDNAME_4410,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 冥界の番犬・ケルベロス
+	CASE "略称"
+		RESULTS = ケルベロス
+	CASE "カテゴリ"
+		RESULTS:0 = ナイトメア・クラス
+		RESULTS:4 = Shadowverse
+ENDSELECT
+
+
+@CARD_4410(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250628
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4410(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①：손패・묘지のこのカードは자신フィールドのモンスター１体を破壊して특수소환できる。
+CALLFORM CARD_ABLE(2,소환時,특수소환時)
+PRINTL ②：このカードが소환・특수소환した場合に발동できる。
+PRINTL 덱外から「番犬の右腕・ミミ」と「番犬の左腕・ココ」を１体ずつ可能な限り특수소환する。
+PRINTL その後、자신の묘지のカードを６枚제외する事で、자신フィールドの他のモンスター全ての攻撃力を1000アップする。
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ③：このカードは자신メインフェイズ・バトルフェイズに１度だけ「進化」できる。
+PRINTL そうした場合、このカードの攻撃力・守備力は８００アップし、묘지からレベル１の언데드족モンスターを２体まで특수소환できる。
+PRINTL 「進化(覚醒)」は１ターンに１度しか行えない。
+
+
+
+@CARDCAN_4410(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4410)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,4410)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,4410,ゾーン,1)
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,4410)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") != 0
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,覚醒발동)
+		RETURN 0
+	;SIF メインフェイズ != 1
+	;	RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+; ELSEIF 종류 == チェーン可否
+; 	SIF !GROUPMATCH(チェーン可否종류,손패起動,묘지起動)
+; 		RETURN 0
+; 	RETURN 1
+ENDIF
+
+@CARDEFFECT_4410(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 守備力修正
+
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4410,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)			
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4410,2)
+	IF RESULT == 0
+		CALL CARD_GENERATE(듀얼리스트,104410)
+		CALL CARD_GENERATE(듀얼리스트,204410)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = モン全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT >= 6
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件行先플래그 = 제외行き
+			효과条件複数 = 6
+			효과条件任意 = 1
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과条件他所 = 1
+				CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"永攻",1000)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,覚醒발동,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",800)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",800)
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종족 = 언데드족
+		효과条件複数 = 98
+		효과条件レベル = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+
+@CARDNAME_104410,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 番犬の右腕・ミミ
+	CASE "略称"
+		RESULTS = 番犬の右腕・ミミ
+	CASE "カテゴリ"
+		RESULTS:0 = ナイトメア・クラス
+ENDSELECT
+
+
+@CARD_104410(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 500
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_104410(종류)
+#DIM DYNAMIC 종류
+
+PRINTL モンスターゾーンのこのカードは특수소환の素材にできない。
+CALLFORM CARD_ABLE(0,破壊→묘지)
+PRINTL ①：このカードが破壊された場合に발동できる。
+PRINTL 상대に1000ダメージを与える。
+
+
+@CARDCAN_104410(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,104410)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 破壊→묘지
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_104410(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 破壊→묘지
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,104410)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		SETCOLOR C_FUSE_PUR
+		PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+		PRINTL
+		PRINTFORML 「引っ掻いてやるワン！」
+		PRINTL
+		CUSTOMDRAWLINE ―
+		RESETCOLOR
+		;WAIT
+		PRINTL
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",1000,1)
+		
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"不材",3,1)
+ENDIF
+
+
+
+@CARDNAME_204410,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 番犬の左腕・ココ
+	CASE "略称"
+		RESULTS = 番犬の左腕・ココ
+	CASE "カテゴリ"
+		RESULTS:0 = ナイトメア・クラス
+ENDSELECT
+
+
+@CARD_204410(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 1000
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_204410(종류)
+#DIM DYNAMIC 종류
+
+PRINTL モンスターゾーンのこのカードは특수소환の素材にできない。
+CALLFORM CARD_ABLE(0,破壊→묘지)
+PRINTL ①：このカードが破壊された場合に발동できる。
+PRINTL 자신は1000LP回復する。
+
+
+@CARDCAN_204410(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,204410)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 破壊→묘지
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_204410(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 破壊→묘지
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,204410)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		SETCOLOR C_FUSE_PUR
+		PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+		PRINTL
+		PRINTFORML 「噛んでやるワン！」
+		PRINTL
+		CUSTOMDRAWLINE ―
+		RESETCOLOR
+		;WAIT
+		PRINTL
+		CALL LIFE_CHANGE(듀얼리스트,"増加","효과",1000)
+		
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"不材",3,1)
+ENDIF
