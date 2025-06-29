@@ -7,11 +7,11 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 디반 블로잉
+RESULTS = 바람을 횡사, 바다를 종사로
 	CASE "略称"
 RESULTS = 바람의 심판
 	CASE "カテゴリ"
-RESULTS:0 = 아쿠아 포스
+RESULTS:0 = 아쿠아포스
 RESULTS:1 = 창람
 RESULTS:4 = 뱅가드
 ENDSELECT
@@ -37,122 +37,103 @@ RETURN 0
 #DIM DYNAMIC 종류
 
 PRINTL 이 카드명의 카드는 1턴에 1장밖에 발동할 수 없다.
-PRINTL 자신 필드에 물속성 몬스터가 존재할 경우, 이 카드는 패에서도 발동할 수 있다.
-PRINTL ①: 자신 필드에 "메일스트롬" 몬스터 카드가 존재할 경우, 이하의 효과를 발동할 수 있다.
-CALLFORM CARD_ABLE(1,발동誘発)
-PRINTL ●상대 몬스터의 효과가 발동했을 때에 발동할 수 있다.
-PRINTL 그 발동을 무효로 하고 파괴한다.
-CALLFORM CARD_ABLE(1,소환誘発)
-PRINTL ●상대가 몬스터를 특수 소환했을 때에 발동할 수 있다.
-PRINTL 그 특수 소환을 무효로 하고, 그 몬스터를 파괴한다.
+CALL CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①: 자신의 손패・필드의 몬스터를 융합재료로 하여, 수속성 융합 몬스터 1체를 융합 소환한다.
+PRINTL 자신 필드에 수속성 몬스터가 존재하는 경우,
+PRINTL 자신의 마법 / 함정 존의 몬스터 카드도 재료로 할 수 있다.
+PRINTL 그 후, 덱에서 1장 드로우하고, 상대 필드의 카드 1장을 선택하여 파괴한다.
+
 
 @CARDCAN_91621(듀얼리스트,종류,ゾーン,場所)
 #DIMS DYNAMIC 듀얼리스트
 #DIMS DYNAMIC ゾーン
 #DIM DYNAMIC 종류
 #DIM DYNAMIC 場所
-#DIMS DYNAMIC 対面者
 #DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
 
-CALL 対面者판정(듀얼리스트)
-対面者 = %RESULTS%
 
 CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91621)
 SIF RESULT == 1
 	RETURN 0
 
-IF 종류 == 소환誘発
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
 	SIF 발동済_1(듀얼리스트,91621)
 		RETURN 0
-	IF ゾーン == "손패"
-		CALL FULLRESET
-		효과範囲필드 = 1
-		효과条件속성 = 물속성
-		효과条件종류 = モン全般
-		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-		SIF RESULT != 1
-			RETURN 0
-	ELSEIF ゾーン == "마함"
-		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
-			RETURN 0
-	ELSE
-		RETURN 0
-	ENDIF
-	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
 		RETURN 0
 	CALL FULLRESET
 	효과範囲필드 = 1
-	효과範囲마함 = 1
-	효과条件カテゴリ = 메일스트롬
+	효과条件속성 = 물속성
 	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件達成 = 1
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	素材範囲손패 = 1
+	SIF 条件達成 == 1
+		素材範囲마함 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	효과条件속성 = 물속성
+	효과条件소환可 = 2
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
-	SIF 最終소환決者 == 듀얼리스트
-		RETURN 0
-	SIF !GROUPMATCH(最終소환타입,"특수","EX특수")
-		RETURN 0
-	RETURN 1
-ELSEIF 종류 == 발동誘発
-	SIF 발동済_1(듀얼리스트,91621)
-		RETURN 0
-	IF ゾーン == "손패"
-		CALL FULLRESET
-		효과範囲필드 = 1
-		효과条件속성 = 물속성
-		효과条件종류 = モン全般
-		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-		SIF RESULT != 1
-			RETURN 0
-	ELSEIF ゾーン == "마함"
-		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
-			RETURN 0
-	ELSE
-		RETURN 0
-	ENDIF
-	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
-		RETURN 0
-	CALL FULLRESET
-	효과範囲필드 = 1
-	효과範囲마함 = 1
-	효과条件カテゴリ = 메일스트롬
-	효과条件표시 = 表側표시
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	SIF RESULT != 1
-		RETURN 0
-	CALL FULLRESET
-	효과条件종류 = モン全般
-	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
-	SIF RESULT != 1
-		RETURN 0
+	CALL CARD_DRAW_CHECK
 	RETURN 1
 ENDIF
 
+
+
 @CARDEFFECT_91621(듀얼리스트,종류,ゾーン,場所)
 #DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
 #DIMS DYNAMIC ゾーン
 #DIM DYNAMIC 종류
 #DIM DYNAMIC 場所
-#DIM DYNAMIC 묘지送カード,5
-#DIM DYNAMIC カウンタ
-#DIM DYNAMIC 효과先
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード종류
+#DIM DYNAMIC 選択カードID
 
-IF 종류 == 소환誘発
-	;カード발동確認
-	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91621,1)
-	IF RESULT == 0
-		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
-		효과先 = 最終소환場所
-		CALL FULLRESET
-		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",最終소환場所,"完全묘지")
-	ENDIF
-ELSEIF 종류 == 발동誘発
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91621,1)
 	IF RESULT == 0
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
 		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件속성 = 물속성
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件達成 = 1
+
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		素材範囲손패 = 1
+		SIF 条件達成 == 1
+			素材範囲마함 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件속성 = 물속성
+		효과条件소환可 = 2
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL FUSSUMMON(듀얼리스트, 選択カード,2)
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+			CALL FULLRESET
 		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
-		RETURN 1
+		ENDIF
 	ENDIF
-	RETURN 0
 ENDIF

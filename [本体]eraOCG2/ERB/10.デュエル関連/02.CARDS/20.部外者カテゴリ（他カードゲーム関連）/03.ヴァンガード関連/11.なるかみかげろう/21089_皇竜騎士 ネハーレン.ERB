@@ -7,12 +7,12 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 황룡기사 네하렌
+		RESULTS = 황룡기사 네하렌
 	CASE "略称"
-RESULTS = 네하렌
+		RESULTS = 네하렌
 	CASE "カテゴリ"
-RESULTS:0 = 카게로우
-RESULTS:4 = 뱅가드
+		RESULTS:0 = 카게로우
+		RESULTS:4 = 뱅가드
 ENDSELECT
 
 
@@ -53,9 +53,10 @@ PRINTL ①: 자신 필드에 몬스터가 존재하지 않는 경우, 또는 "�
 PRINTL 자신, 상대의 메인 페이즈에 발동할 수 있다.
 PRINTL 이 카드를 패에서 특수 소환한다.
 CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
-PRINTL ②: 자신 필드에 "오버로드" 몬스터가 존재하는 경우, 자신, 상대 턴에 발동할 수 있다.
-PRINTL 상대 필드의 몬스터 1장을 고르고 파괴한다. 그 후,
-PRINTL 이 카드의 공격력은 턴 종료시까지 1000 올린다.
+PRINTL ②: 자신 필드에 "오버로드" 몬스터가 존재하는 경우, 
+PRINTL 자신, 상대 턴에 패를 2장 버리고 이 카드를 릴리스하여 발동할 수 있다.
+PRINTL 그 후 EX덱에서 "오버로드" 몬스터 1장을 특수 소환한다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 "오버로드" 몬스터밖에 EX덱에서 특수 소환할 수 없다.
 
 @CARDCAN_21089(듀얼리스트,종류,ゾーン,場所)
 #DIMS DYNAMIC 듀얼리스트
@@ -83,7 +84,7 @@ IF 종류 == 손패起動 || (종류 == フリー誘発 && ゾーン == "손패"
 
 	CALL FULLRESET
 	효과範囲필드 = 1
-	효과条件カテゴリ = 카게로
+	효과条件カテゴリ = 카게로우
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT == 1
 		条件달성 ++
@@ -102,10 +103,13 @@ ELSEIF 종류 == 필드起動 || (종류 == フリー誘発 && ゾーン == "필
 		RETURN 0
 	SIF 발동済_2(듀얼리스트,21089)
 		RETURN 0
+	SIF 손패数(듀얼리스트) < 2
+		RETURN 0
 	CALL FULLRESET
 	효과範囲상대필드 = 1
+	효과条件カテゴリ = 오버로드
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	SIF RESULT != 1
+	SIF RESULT == 1
 		RETURN 0
 	CALL FULLRESET
 	효과範囲필드 = 1
@@ -139,8 +143,17 @@ IF 종류 == 손패起動 || (종류 == フリー誘発 && ゾーン == "손패"
 ELSEIF 종류 == 필드起動 || (종류 == フリー誘発 && ゾーン == "필드")
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21089,2)
 	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
 		CALL FULLRESET
-		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
-		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",1000)
+		효과範囲손패 = 1
+		효과条件複数 = 2
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲EX덱 = 1
+			효과条件カテゴリ = 오버로드
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			CALL CARD_EX_RESTRICTION(듀얼리스트,"오버로드")
+		ENDIF
 	ENDIF
 ENDIF

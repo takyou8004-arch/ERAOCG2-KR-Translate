@@ -42,6 +42,8 @@ SELECTCASE 参照先
 		RETURN 0
 	CASE "특수불가"
 		RETURN 1
+	CASE "レア度"
+		RETURN ULR
 
 ENDSELECT
 
@@ -58,7 +60,7 @@ RETURN 0
 
 CALL RESETCONDITION_MAT
 必要素材数 = 1
-素材条件カテゴリ = 카오스ブレイカ-
+素材条件カテゴリ = 카오스 브레이커
 
 IF EX参照 == 1
 	CALL STRIDECAN(듀얼리스트,소환カード,50762) 
@@ -75,10 +77,10 @@ PRINTL 　EX덱의 이 카드를, 자신 필드의 지정된 몬스터 1장 위�
 PRINTL  『초월』한 이 카드의 이름은 겹친 몬스터와 같은 이름으로 취급하며,
 PRINTL 　겹친 몬스터의 공격력 수비력만큼, 이 카드의 공격력 수비력을 올린다.
 PRINTL  『초월』은 1턴에 1번밖에 할 수 없으며, 선공 1턴째에는 사용할 수 없다)
+PRINT 이 카드명의 ①의 효과는 1턴에 1번밖에 사용할 수 없다.
 CALLFORM CARD_ABLE(11,필드起動)
 PRINTL ①：『G 브레이크』 "3"（이 효과는 3턴째까지는 사용할 수 없다.)
-PRINTL 이 카드가 필드에 앞면 표시로 존재하는 한 1번만,
-PRINTL 자신 메인 페이즈에 손패를 1장 묘지로 보내고 발동할 수 있다.
+PRINTL 이 카드가 필드에 앞면 표시로 존재하는 한 1번만, 자신 메인 페이즈에 손패를 1장 묘지로 보내고 발동할 수 있다.
 PRINTL 상대는 몬스터 2장을 패에서 주박 상태로 특수 소환한다.
 PRINTL 그 후, 상대 필드의 주박 상태의 몬스터 1장을 파괴함으로써,
 PRINTL 상대에게 1500 데미지를 주고, 덱에서 1장 드로우한다.
@@ -105,14 +107,44 @@ IF 종류 == 지속효과
 	SIF ゾーン != "필드"
 		RETURN 0
 	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 裏側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	IF !MATCH(RESULTS,"링크 조커")
+		RETURN 0
+	ENDIF
+	RETURN 1
 ELSEIF 종류 == 필드起動
-	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+	SIF 발동済_1(듀얼리스트,50762)
+		RETURN 0
+	SIF メインフェイズ２ == 1
 		RETURN 0
 	SIF ターン数 < 3
 		RETURN 0
 	SIF メインフェイズ != 1
 		RETURN 0
 	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 링크 조커
+	효과条件종류 = 초차원
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
 		RETURN 0
 	SIF 손패数(듀얼리스트) <= 1
 		RETURN 0
@@ -138,45 +170,48 @@ CALL 対面者판정(듀얼리스트)
 
 IF 종류 == 지속효과
 	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"不材")
-	CALL FULLRESET
-	효과条件표시 = 3
-	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"攻避",3)
 
 	CALL FULLRESET
-	효과範囲상대필드 = 1
 	효과条件표시 = 裏側표시
-	효과条件CNT = 1
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	条件カード数 = RESULT
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"攻避",3)
 
 	CALL FULLRESET
 	효과範囲상대필드 = 1
 	효과条件표시 = 表側표시
 	효과条件CNT = 1
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	IF RESULT <= 0  && 条件カード数 >= 1
+	IF RESULT == 0
 		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直攻")
-		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ半化",1,1)
 	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ半化",3,1)
 ELSEIF 종류 == 필드起動
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50762,11)
 	IF RESULT == 0
 		CALL FULLRESET
-		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 링크 조커
+		효과条件종류 = 초차원
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
 		IF RESULT == 1
-			REPEAT 2
-				CALL FULLRESET
-				효과範囲손패 = 1
-				CALL CARD_SP_SUMMON_ADV(対面者,ゾーン,場所,"裏側守備표시")
-			REND
-
 			CALL FULLRESET
-			효과条件표시 = 裏側표시
-			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지",50762)
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
 			IF RESULT == 1
-				CALL CARDDRAW_BASIC(듀얼리스트,1)
-				ダメージ量 = 1500
-				CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+				REPEAT 2
+					CALL FULLRESET
+					효과範囲손패 = 1
+					CALL CARD_SP_SUMMON_ADV(対面者,ゾーン,場所,"裏側守備표시")
+				REND
+
+				CALL FULLRESET
+				효과条件표시 = 裏側표시
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지",50762)
+				IF RESULT == 1
+					CALL CARDDRAW_BASIC(듀얼리스트,1)
+					ダメージ量 = 1500
+					CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+				ENDIF
 			ENDIF
 		ENDIF
 	ENDIF

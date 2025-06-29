@@ -7,13 +7,13 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 여 신재림
+		RESULTS = 여신재림
 	CASE "略称"
-RESULTS = 여 신재림
+		RESULTS = 여신재림
 	CASE "カテゴリ"
-RESULTS:0 = 제네시스
-RESULTS:1 = 신기
-RESULTS:4 = 뱅가드
+		RESULTS:0 = 제네시스
+		RESULTS:1 = 신기
+		RESULTS:4 = 뱅가드
 ENDSELECT
 
 
@@ -42,6 +42,7 @@ PRINTL ①: 패 / 필드에서 '신기' 카드 1장을 제외하고,
 PRINTL 이하의 효과 중에서 1개를 선택하여 발동할 수 있다.
 PRINTL  ●자신의 제외 상태의 '신기' 몬스터 1장을 선택하여 특수 소환한다.
 PRINTL  ●상대 필드의 몬스터 1장을 선택하여 파괴한다.
+PRINTL  ●'신기' S 몬스터 1장의 S 소환을 한다.
 CALLFORM CARD_ABLE(2,제외時)
 PRINTL ②: 이 카드가 제외되었을 경우에 발동할 수 있다.
 PRINTL 자신의 필드에 '신기' 토큰 1장을 특수 소환한다.
@@ -104,11 +105,16 @@ ENDIF
 #DIM DYNAMIC 종류
 #DIM DYNAMIC 場所
 #DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件達成,3
+#DIM DYNAMIC 選択효과
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC 소환カードID
 
 IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71091,1)
 	IF RESULT == 0
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		
 		CALL FULLRESET
 		효과範囲손패 = 1
 		효과範囲필드 = 1
@@ -118,16 +124,80 @@ IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
 		효과条件行先플래그 = 제외行き
 		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
 		IF RESULT == 1
-PRINTL 효과를 선택해 주세요.
-			CALL YN_CHOICE(듀얼리스트,"●「신기」몬스터를 특수 소환한다。","●몬스터를 파괴한다。")
-			IF RESULT == 0
+			CALL FULLRESET
+			효과範囲제외 = 1
+			효과条件カテゴリ = 신기
+			효과条件종류 = モン全般
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件達成:0 = 1
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件達成:1 = 1
+			CALL FULLRESET
+			효과範囲EX덱 = 1
+			효과条件カテゴリ = 신기
+			효과条件종류 = 싱크로
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+			条件達成:2 = 1
+
+			IF 듀얼리스트 == "자신"
+				PRINTL 효과を選択してください
+				PRINTL 
+				IF 条件達成:0 == 1
+					PRINTL [1] - 자신の제외状態の「신기」モンスター１体を選んで특수소환する。
+				ELSE
+					SETCOLOR C_GRAY
+					PRINTL ［X］- 제외状態の「신기」モンスターがいません。
+					RESETCOLOR
+				ENDIF
+				IF 条件達成:1 == 1
+					PRINTL [2] - 상대フィールドのモンスター１体を選んで破壊する。
+				ELSE
+					SETCOLOR C_GRAY
+					PRINTL ［X］- 상대フィールドにモンスターがいません。
+					RESETCOLOR
+				ENDIF
+				IF 条件達成:2 == 1
+					PRINTL [3] - 「신기」Sモンスター１体のS소환を行う。
+				ELSE
+					SETCOLOR C_GRAY
+					PRINTL ［X］- EX덱に「신기」Sモンスターがいません。
+					RESETCOLOR
+				ENDIF
+				BINPUT
+				選択효과 = RESULT
+			ELSE
+				CALL FULLRESET
+				選択효과 = 1
+			ENDIF
+			IF 選択효과 == 1
 				CALL FULLRESET
 				효과範囲제외 = 1
 				효과条件カテゴリ = 신기
 				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
-			ELSEIF RESULT == 1
+			ELSEIF 選択효과 == 2
 				CALL FULLRESET
 				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지",71091)
+			ELSEIF 選択효과 == 3
+				CALL FULLRESET
+				효과範囲EX덱 = 1
+				효과条件カテゴリ = 신기
+				효과条件종류 = 싱크로
+				효과条件소환可 = 1
+				CALL CARD_CHOOSE_BASIC(듀얼리스트, "EX덱",ゾーン,場所)	
+				소환カード = RESULT
+				IF 소환カード != 9999
+					소환カードID = RESULT:99
+					CALLFORM CARD_{소환カードID}, "종류"
+					IF RESULT == 싱크로
+						TRYCALLFORM CARDSUMMON_{소환カードID}(듀얼리스트,소환カード)
+						CALL SYNSUMMON(듀얼리스트, 소환カード)	
+					ENDIF
+				ENDIF
 			ENDIF
 		ENDIF
 	ENDIF

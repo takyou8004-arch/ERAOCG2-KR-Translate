@@ -7,14 +7,14 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 각성한 룡황 루아드
+		RESULTS = 각성한 룡황 루아드
 	CASE "略称"
-RESULTS = 각성 루아드
+		RESULTS = 각성 루아드
 	CASE "カテゴリ"
-RESULTS:0 = 루아드
-RESULTS:1 = 룡각
-RESULTS:2 = 섀도우 팔라딘
-RESULTS:4 = 뱅가드
+		RESULTS:0 = 루아드
+		RESULTS:1 = 룡각
+		RESULTS:2 = 섀도우 팔라딘
+		RESULTS:4 = 뱅가드
 ENDSELECT
 
 
@@ -45,6 +45,10 @@ SELECTCASE 参照先
 		RETURN 雄性
 	CASE "특수불가"
 		RETURN 1
+	CASE "レア度"
+		RETURN ULR
+	CASE "連動ID"
+		RETURN 4047
 
 ENDSELECT
 
@@ -78,7 +82,7 @@ PRINTL 　EX덱의 이 카드를, 자신 필드의 지정된 몬스터 1장 위�
 PRINTL  '초월'한 이 카드의 이름은 겹친 몬스터와 같은 이름으로 취급하고,
 PRINTL 　겹친 몬스터의 공격력 수비력만큼, 이 카드의 공격력 수비력을 올린다.
 PRINTL  '초월'은 1턴에 1번밖에 할 수 없으며, 선공 1턴째에는 사용할 수 없다)
-CALLFORM CARD_ABLE(11,필드起動)
+CALLFORM CARD_ABLE(2,필드起動)
 PRINTL ①: 이 카드가 필드에 앞면 표시로 존재하는 한 1번만, 자신 메인 페이즈에 발동할 수 있다.
 PRINTL 자신 필드의 이 카드 이외의 몬스터 2장을 파괴하고,
 PRINTL 손패를 임의의 매수만큼 고르고, 파괴한다.
@@ -103,7 +107,32 @@ CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50091)
 SIF RESULT == 1
 	RETURN 0
 
-IF 종류 == 지속효과
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,50091)
+ 		RETURN 0
+	SIF ゾーン != "EX덱"
+		 RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+ 	SIF ターンプレイヤー != 듀얼리스트
+ 		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 루아드
+	CALL CARD_CHECK_ADV(듀얼리스트)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 초차원
+	효과条件カテゴリ = 뱅가드
+	CALL CARD_CHECK_ADV(듀얼리스트)
+	SIF RESULT == 1
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,4047) == 0 && 발동済_2(듀얼리스트,14047) == 0 
+		RETURN 0
+ 	RETURN 1
+ELSEIF 종류 == 지속효과
 	SIF ゾーン != "필드"
 		RETURN 0
 	RETURN 1
@@ -136,11 +165,35 @@ ENDIF
 #DIM DYNAMIC 選択カード
 #DIM DYNAMIC 효과先
 #DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 選択カードID
 
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 
-IF 종류 == 지속효과
+IF 종류 == EX덱起動
+ 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50091,1)
+ 	IF RESULT == 0
+	CALL FULLRESET
+	효과条件カテゴリ = 루아드
+	효과条件行先플래그 = 消滅行き
+	효과条件任意 = 1
+	CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT == 1
+			選択カードID = RESULT:1
+			CALL CARD_LOADUP
+			PRINTFORML
+			PRINTFORML
+			PRINTFORML 超越《ストライド》、ジェネレーション！
+			CALL PRINT_STATE_DUEL(カードID)
+			CALL FULLRESET
+			CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",場所,"攻撃표시")
+			SETVAR @"%듀얼리스트%_MZ_変化元ID:カード소환先", 選択カードID
+		ELSE
+			RETURN 0
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 지속효과
 	CALL FULLRESET
 	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"不材")
 ELSEIF 종류 == 필드起動
@@ -171,10 +224,11 @@ ELSEIF 종류 == 필드起動
 				ENDIF
 			REND
 
-			REPEAT カウンタ
-				CALL FULLRESET
-				CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지",50091)
-			REND
+			CALL FULLRESET
+			효과条件任意 = 1
+			효과条件複数 = 100 - カウンタ
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지",50091)
+			
 			攻撃力修正 = カウンタ * 300
 			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",攻撃力修正)
 			CALL CARD_RESERV(듀얼리스트,50091,短紋章予約)

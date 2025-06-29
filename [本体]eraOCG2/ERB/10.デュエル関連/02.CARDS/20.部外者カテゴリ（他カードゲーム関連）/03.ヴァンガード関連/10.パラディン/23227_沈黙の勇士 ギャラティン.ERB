@@ -7,15 +7,15 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 침묵의 용사 갈라틴
+		RESULTS = 침묵의 용사 갈라틴
 	CASE "略称"
-RESULTS = 갈라틴
+		RESULTS = 갈라틴
 	CASE "カテゴリ"
-RESULTS:0 = 로열 팔라딘
-RESULTS:1 = 성기사
-RESULTS:4 = 골드 팔라딘
-RESULTS:5 = 해방자
-RESULTS:6 = 뱅가드
+		RESULTS:0 = 로열 팔라딘
+		RESULTS:1 = 성기사
+		RESULTS:4 = 골드 팔라딘
+		RESULTS:5 = 해방자
+		RESULTS:6 = 뱅가드
 ENDSELECT
 
 
@@ -54,9 +54,10 @@ PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 
 CALLFORM CARD_ABLE(1,손패起動,묘지起動)
 PRINTL ①: 자신 필드에 "로열 팔라딘" 또는 "성기사" 몬스터가 존재할 경우, 이 카드는 손패 묘지에서 특수 소환할 수 있다.
 PRINTL 묘지에서 특수 소환했을 경우, 이 카드는 필드를 벗어날 경우 제외된다.
-CALLFORM CARD_ABLE(2,묘지起動)
-PRINTL ②: 묘지의 이 카드를 제외하고 발동할 수 있다.
-PRINTL 덱에서 "성검" 마법 / 함정 카드 1장을 패에 추가한다.
+CALLFORM CARD_ABLE(2,戦破壊→묘지)
+PRINTL ②: 이 카드가 필드에서 묘지로 보내졌을 경우에 발동할 수 있다.
+PRINTL 덱에서 "성검" 마법 / 함정 카드 1장을 패에 넣을 수 있다.
+PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 전사족 / 마법사족 / 드래곤족 / 야수족 / 천사족 몬스터밖에 특수 소환할 수 없다.
 
 
 @CARDCAN_23227(듀얼리스트,종류,ゾーン,場所)
@@ -88,14 +89,10 @@ IF 종류 == 손패起動 || 종류 == 묘지起動
 	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
-ELSEIF 종류 == 묘지起動
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"リリース","破壊","戦闘破壊")
+		RETURN 0
 	SIF 발동済_2(듀얼리스트,23227)
-		RETURN 0
-	SIF メインフェイズ != 1
-		RETURN 0
-	SIF ターンプレイヤー != 듀얼리스트
-		RETURN 0
-	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
 		RETURN 0
 	CALL FULLRESET
 	효과範囲덱 = 1
@@ -128,15 +125,20 @@ IF 종류 == 손패起動 || 종류 == 묘지起動
 			효과추가종류:0 = 効追除処
 		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
 	ENDIF
-ELSEIF 종류 == 묘지起動
+ELSEIF 종류 == 戦破壊→묘지
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23227,2)
 	IF RESULT == 0
-		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
 		CALL FULLRESET
 		효과範囲덱 = 1
 		효과条件カテゴリ = 성검
 		효과条件종류 = 마함全般
 		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		SS소환可能종족:0 = 전사족
+		SS소환可能종족:1 = 마법사족
+		SS소환可能종족:2 = 드래곤족
+		SS소환可能종족:3 = 야수족
+		SS소환可能종족:4 = 천사족
+		CALL CARD_SS_RESTRICTION(듀얼리스트)
 	ENDIF
 ENDIF
 

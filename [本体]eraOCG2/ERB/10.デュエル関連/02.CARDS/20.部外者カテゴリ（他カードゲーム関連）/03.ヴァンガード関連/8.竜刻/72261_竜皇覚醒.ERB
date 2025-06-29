@@ -7,14 +7,14 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 룡황각성
+		RESULTS = 룡황각성
 	CASE "略称"
-RESULTS = 룡황각성
+		RESULTS = 룡황각성
 	CASE "カテゴリ"
-RESULTS:0 = 의식마법
-RESULTS:1 = 룡각
-RESULTS:2 = 섀도우 팔라딘
-RESULTS:4 = 뱅가드
+		RESULTS:0 = 의식마법
+		RESULTS:1 = 룡각
+		RESULTS:2 = 섀도우 팔라딘
+		RESULTS:4 = 뱅가드
 ENDSELECT
 
 
@@ -38,9 +38,9 @@ RETURN 0
 
 PRINTL 이 카드명의 ①②의 효과는 1턴에 각각 1번밖에 사용할 수 없다.
 CALLFORM CARD_ABLE(0,마함起動,손패起動)
-PRINTL ①: 자신 묘지의 레벨 2 몬스터 4장을 제외하고,
+PRINTL ①: 자신 묘지의 어둠속성 / 코스트 3 몬스터 4장을 제외하고,
 PRINTL 자신의 덱 제외 상태의 의식 몬스터 1장을 의식 소환한다.
-PRINTL 자신 필드의 레벨 2 몬스터 1장당, 이 효과로 제외하는 몬스터의 수가 1장 줄어든다. (최소 1장)
+PRINTL 자신 필드의 어둠속성 / 코스트 3 몬스터 1장당, 이 효과로 제외하는 몬스터의 수가 1장 줄어든다.
 CALLFORM CARD_ABLE(2,묘지起動)
 PRINTL ②: 이 카드가 묘지에 존재할 경우, 자신 필드의 레벨 2 몬스터 1장을 대상으로 하고 발동할 수 있다.
 PRINTL 그 몬스터를 파괴하고, 이 카드를 패에 넣는다.
@@ -54,6 +54,7 @@ PRINTL 그 몬스터를 파괴하고, 이 카드를 패에 넣는다.
 #DIM DYNAMIC 条件달성,5
 #DIM DYNAMIC 素材候補数
 #DIM DYNAMIC 素材軽減数
+#DIM DYNAMIC 발동불가,2
 
 CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72261)
 SIF RESULT == 1
@@ -67,15 +68,15 @@ IF 종류 == 마함起動 || 종류 == 손패起動
 		RETURN 0
 	CALL FULLRESET
 	효과範囲필드 = 1
-	효과条件レベル = 2
-	효과条件종류 = レベル持ち
+	효과条件レベル = 3
+	효과条件속성 = 어둠속성
 	효과条件CNT = 1
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	素材軽減数 = RESULT
 	CALL FULLRESET
 	효과範囲묘지 = 1
-	효과条件レベル = 2
-	효과条件종류 = レベル持ち
+	효과条件レベル = 3
+	효과条件속성 = 어둠속성
 	효과条件CNT = 1
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	素材候補数 = RESULT
@@ -91,6 +92,14 @@ IF 종류 == 마함起動 || 종류 == 손패起動
 		RETURN 0
 	ENDIF
 
+	SIF 素材軽減数 > 4
+		발동불가:1 = 1
+	SIF 素材軽減数 < 4
+		발동불가:0 = 1
+	SIF 발동불가:0 == 1 && 발동불가:1 == 1
+		RETURN 0
+
+	CALL FULLRESET
 	효과範囲덱 = 1
 	효과範囲제외 = 1
 	효과条件종류 = 의식
@@ -109,7 +118,8 @@ ELSEIF 종류 == 묘지起動
 		RETURN 0
 	CALL FULLRESET
 	효과範囲필드 = 1
-	효과条件レベル = 2
+	효과条件レベル = 3
+	효과条件속성 = 어둠속성
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
@@ -130,8 +140,10 @@ ENDIF
 #DIM DYNAMIC 選択済カード
 #DIM DYNAMIC レベル合計
 #DIM DYNAMIC 必要제외
+#DIM DYNAMIC 素材候補数
 #DIM DYNAMIC 素材軽減数
 #DIMS DYNAMIC 出所
+#DIM DYNAMIC 발동불가,2
 
 IF 종류 == 마함起動 || 종류 == 손패起動
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72261,1)
@@ -139,11 +151,35 @@ IF 종류 == 마함起動 || 종류 == 손패起動
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
 		CALL FULLRESET
 		효과範囲필드 = 1
-		효과条件レベル = 2
-		효과条件종류 = レベル持ち
+		효과条件レベル = 3
+		효과条件속성 = 어둠속성
 		효과条件CNT = 1
 		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 		素材軽減数 = RESULT
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件レベル = 3
+		효과条件속성 = 어둠속성
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		素材候補数 = RESULT
+
+		CALL FULLRESET
+		IF 素材軽減数 == 0 && 素材候補数 < 4
+			발동불가:1 = 1
+		ELSEIF 素材軽減数 == 1 && 素材候補数 < 3
+			발동불가:1 = 1
+		ELSEIF 素材軽減数 == 2 && 素材候補数 < 2
+			발동불가:1 = 1
+		ELSEIF 素材軽減数 == 3 && 素材候補数 < 1
+			발동불가:1 = 1
+		ENDIF
+
+		SIF 素材軽減数 < 4
+			발동불가:0 = 1
+		SIF 素材軽減数 >= 4
+			발동불가:1 = 1
 
 		CALL FULLRESET
 		IF 素材軽減数 >= 3
@@ -156,27 +192,72 @@ IF 종류 == 마함起動 || 종류 == 손패起動
 			必要제외 = 4
 		ENDIF
 
-		효과範囲덱 = 1
-		효과範囲제외 = 1
-		효과条件종류 = 의식
-		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
-		選択カード = RESULT
-		SIF 選択カード == 9999
-			RETURN 0
+		IF 듀얼리스트 == "자신"
+			PRINTL 효과を選択してください
+			PRINTL
+			IF 발동불가:0 != 1
+				PRINTL [0] - ●ノーコストで의식소환する。
+			ELSE
+				SETCOLOR C_GRAY
+				PRINTL ［X］- 발동条件を満たしていません！
+				RESETCOLOR
+			ENDIF
+			IF 발동불가:1 != 1
+				PRINTL [1] - ●モンスターを破壊して의식소환する。
+			ELSE
+				SETCOLOR C_GRAY
+				PRINTL ［X］- 발동条件を満たしていません！
+				RESETCOLOR
+			ENDIF
+			BINPUT
+		ELSE
+			IF 발동불가:0 != 1
+				RESULT = 0
+			ELSEIF 발동불가:1 != 1
+				RESULT = 1
+			ENDIF
+		ENDIF
 
-		CALL CARD_SELECT(듀얼리스트,選択カード)
-		選択カード = RESULT
-		出所 = %参照先（CS）%
-		IF 選択カード != 9999
+		IF RESULT == 0
 			CALL FULLRESET
-			효과範囲묘지 = 1
-			효과条件レベル = 2
-			효과条件종류 = レベル持ち
-			효과条件複数 = 必要제외
-			효과条件行先플래그 = 제외行き
-			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
-			IF RESULT == 1
+			효과範囲덱 = 1
+			효과範囲제외 = 1
+			효과条件종류 = 의식
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			選択カード = RESULT
+			SIF 選択カード == 9999
+				RETURN 0
+
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = RESULT
+			出所 = %参照先（CS）%
+			IF 選択カード != 9999
 				TRYCALLFORM RITSUMMON(듀얼리스트, 選択カード,出所,1)
+			ENDIF
+
+		ELSEIF RESULT == 1
+			효과範囲덱 = 1
+			효과範囲제외 = 1
+			효과条件종류 = 의식
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			選択カード = RESULT
+			SIF 選択カード == 9999
+				RETURN 0
+
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = RESULT
+			出所 = %参照先（CS）%
+			IF 選択カード != 9999
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件レベル = 3
+				효과条件속성 = 어둠속성
+				효과条件複数 = 必要제외
+				효과条件行先플래그 = 제외行き
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+				IF RESULT == 1
+					TRYCALLFORM RITSUMMON(듀얼리스트, 選択カード,出所,1)
+				ENDIF
 			ENDIF
 		ENDIF
 	ENDIF
@@ -185,7 +266,8 @@ ELSEIF 종류 == 묘지起動
 	IF RESULT == 0
 		CALL FULLRESET
 		효과範囲필드 = 1
-		효과条件レベル = 2
+		효과条件レベル = 3
+		효과条件속성 = 어둠속성
 		효과条件行先플래그 = 破壊行き
 		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
 		SIF RESULT == 1

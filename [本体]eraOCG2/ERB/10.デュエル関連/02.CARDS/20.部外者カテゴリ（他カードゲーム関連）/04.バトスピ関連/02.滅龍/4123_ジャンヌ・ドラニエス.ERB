@@ -1,0 +1,260 @@
+﻿@CARDNAME_4123,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC カード主
+
+カード主 = NO_TO_CHARANUM(4123)
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+RESULTS = 잔느 드라니에스
+	CASE "略称"
+RESULTS = 잔느
+	CASE "カテゴリ"
+		RESULTS:0 = 시희
+		IF TALENT:カード主:연모
+			RESULTS:1 = 멸룡
+		ENDIF
+		IF TALENT:カード主:애처
+			RESULTS:2 = 계약
+		ENDIF
+		RESULTS:4 = 배틀 스피리츠
+ENDSELECT
+
+
+@CARD_4123(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1300
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4123(종류)
+#DIM DYNAMIC 종류
+#DIM DYNAMIC カード主
+
+カード主 = NO_TO_CHARANUM(4123)
+
+IF TALENT:カード主:애처
+PRINTL 이 카드명의 ①②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+	CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 자신 필드의 코어 카운터를 2개 제거하고 발동할 수 있다.
+PRINTL 이 카드를 손패에서 특수 소환한다.
+	CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 자신 필드에 "시희" 몬스터 또는 화염 속성 몬스터가 소환/특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 덱/묘지에서 "레이 오버" 1체를 특수 소환한다.
+PRINTL 이미 자신 필드에 "레이 오버"가 존재할 경우, 상대 필드의 카드 1장을 고르고 파괴한다.
+	CALLFORM CARD_ABLE(3,필드起動)
+PRINTL ③: 자신의 마법/함정 존의 "창계신"에 코어 카운터를 1개 놓는 것으로 발동할 수 있다.
+PRINTL 소환권을 1개 얻는다.
+ELSE
+PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번밖에 사용할 수 없다.
+	CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 자신 필드에 "레이 오버"가 존재할 경우에 발동할 수 있다.
+PRINTL 이 카드를 손패에서 특수 소환한다.
+	CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②: 자신 필드에 "시희" 몬스터 또는 화염 속성 몬스터가 소환/특수 소환되었을 경우에 발동할 수 있다.
+PRINTL 덱/묘지에서 "레이 오버" 1체를 특수 소환한다.
+PRINTL 이미 자신 필드에 "레이 오버"가 존재할 경우, 상대 필드의 카드 1장을 고르고 파괴한다.
+ENDIF
+
+@CARDCAN_4123(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC カード主
+
+カード主 = NO_TO_CHARANUM(4123)
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4123)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	IF TALENT:カード主:애처
+		SIF 발동済_1(듀얼리스트,4123)
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		CALL CARD_SS_CHECK(듀얼리스트,4123,"손패")
+		SIF RESULT == 1
+			RETURN 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = 배틀 스피리츠
+		효과条件표시 = 表側표시
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT:9 < 2
+			RETURN 0
+	ELSE
+		SIF 발동済_1(듀얼리스트,4123)
+			RETURN 0
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		CALL CARD_SS_CHECK(듀얼리스트,4123,"손패")
+		SIF RESULT == 1
+			RETURN 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件名前 = 레이 오버
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0	
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,4123)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件속성 = 화염속성
+	효과条件スーパーカテゴリ = 시희
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件名前 = 레이 오버
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	IF TALENT:カード主:애처
+		SIF メインフェイズ != 1
+			RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+		SIF 발동済_3(듀얼리스트,4123)
+			RETURN 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件カテゴリ = 창계신
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		RETURN 1
+	ELSE
+		RETURN 0	
+	ENDIF
+ENDIF
+
+@CARDEFFECT_4123(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 軽減数
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC カード主
+
+カード主 = NO_TO_CHARANUM(4123)
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4123,1)
+	IF RESULT == 0
+		IF TALENT:カード主:애처
+			PRINTL コア카운터を取り除くカードを選択
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과条件カテゴリ = 배틀 스피리츠
+			효과条件표시 = 表側표시
+			효과条件個Ｃ所持 = 1
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+PRINTL 코어가 제거되었습니다
+				CALL CARD_SELECT(듀얼리스트,RESULT)
+				CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード（CS）,"個Ｃ",-2)
+
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ELSE
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4123,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件名前 = 레이 오버
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		ELSE
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과範囲묘지 = 1
+			효과条件名前 = 레이 오버
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4123,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件カテゴリ = 창계신
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			CALL SET_FIELD_INFO(듀얼리스트,参照先（CS）,選択カード（CS）,"個Ｃ",1)
+		ENDIF
+		소환権 ++
+	ENDIF
+ENDIF
+

@@ -7,13 +7,13 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 순청의 오버로드
+		RESULTS = 순청의 오버로드
 	CASE "略称"
-RESULTS = 순청 오버로
+		RESULTS = 순청 오버로
 	CASE "カテゴリ"
-RESULTS:0 = 카게로
-RESULTS:1 = 오버로드
-RESULTS:4 = 뱅가드
+		RESULTS:0 = 카게로우
+		RESULTS:1 = 오버로드
+		RESULTS:4 = 뱅가드
 ENDSELECT
 
 
@@ -38,8 +38,10 @@ RETURN 0
 
 PRINTL 이 카드명의 ①②의 효과는 １턴에 １번밖에 사용할 수 없다.
 CALLFORM CARD_ABLE(1,마함起動 ,フリー誘発)
-PRINTL ①：묘지 / 제외 상태인 "순청의 오버로드" 이외의 "오버로드" 마법 / 함정 카드 １장을 대상으로 발동할 수 있다.
-PRINTL 그 카드를 패에 더한다.
+PRINTL ①：자신 필드에 "카게로우" 몬스터가 존재하는 경우, 상대 필드의 카드 1장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 카드를 파괴한다.
+PRINTL 그 후, 자신 필드에 "오버로드" 몬스터가 존재하는 경우, 추가로 상대 필드의 카드 1장을 파괴할 수 있다.
+PRINTL 그 후, 자신 필드에 "오버로드" 초차원 몬스터가 존재하는 경우, 추가로 상대 필드의 카드 1장을 파할 수 있다.
 CALLFORM CARD_ABLE(2,묘지起動)
 PRINTL ②：자신 필드에 몬스터가 존재하지 않는 경우, 자신의 메인 페이즈에 묘지의 이 카드를 제외하고 발동할 수 있다.
 PRINTL "오버로드" 몬스터 １장을 자신의 묘지에서 특수 소환한다.
@@ -65,11 +67,15 @@ IF 종류 == 마함起動 || 종류 == フリー誘発
 	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
 		RETURN 0
 	CALL FULLRESET
-	효과範囲묘지 = 1
-	효과範囲제외 = 1
-	효과条件カテゴリ = 오버로드
-	효과条件固名前 = 순청의 오버로드
-	효과条件종류 = 마함全般
+	효과範囲필드 = 1
+	효과条件カテゴリ = 카게로우
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
@@ -117,12 +123,40 @@ IF 종류 == 마함起動 || 종류 == 손패起動
 	IF RESULT == 0
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
 		CALL FULLRESET
-		효과範囲묘지 = 1
-		효과範囲제외 = 1
-		효과条件カテゴリ = 오버로드
-		효과条件固名前 = 순청의 오버로드
-		효과条件종류 = 마함全般
-		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+		IF RESULT == 1
+
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ = 오버로드
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 1
+				RETURN 0
+			SIF 듀얼리스트 == "자신"
+				PRINTL カードを破壊しますか？
+			CALL YN_CHOICE(듀얼리스트)
+
+			IF RESULT == はい
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+			ENDIF
+
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件종류 = 초차원
+			효과条件カテゴリ = 오버로드
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 1
+				RETURN 0
+			SIF 듀얼리스트 == "자신"
+				PRINTL カードを破壊しますか？
+			CALL YN_CHOICE(듀얼리스트)
+
+			IF RESULT == はい
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"묘지")
+			ENDIF
+		ENDIF
 	ENDIF
 ELSEIF 종류 == 묘지起動
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92883,2)

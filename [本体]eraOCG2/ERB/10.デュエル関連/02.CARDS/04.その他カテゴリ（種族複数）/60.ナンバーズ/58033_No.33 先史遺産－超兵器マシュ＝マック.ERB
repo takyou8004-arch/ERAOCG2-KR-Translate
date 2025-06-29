@@ -7,11 +7,11 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = No.33 오파츠－초병기 마슈마크
+		RESULTS = No.33 오파츠－초병기 마슈마크
 	CASE "略称"
-RESULTS = #33 마슈마크
+		RESULTS = #33 마슈마크
 	CASE "カテゴリ"
-RESULTS:0 = 넘버즈
+		RESULTS:0 = 넘버즈
 		RESULTS:1 = 오파츠
 ENDSELECT
 
@@ -114,7 +114,7 @@ ENDIF
 #DIM DYNAMIC 選択カード
 #DIM DYNAMIC 選択カード_ID
 #DIM DYNAMIC ダメージ修正
-
+#DIM DYNAMIC 攻撃力修正
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 
@@ -127,19 +127,19 @@ IF 종류 == 필드起動
 		IF RESULT == 1
 			選択カード = RESULT:1
 			選択カード_ID = RESULT:99
-
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",(GETVAR(@"%対面者%_MZ_攻:選択カード") / 2))
-
 			TRYCALLFORM CARD_{選択カード_ID},"攻撃力"
-			SIF RESULT == GETVAR(@"%対面者%_MZ_攻:選択カード")
+			攻撃力修正 = RESULT
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",攻撃力修正 / 2)
+
+			SIF 攻撃力修正 == GETVAR(@"%対面者%_MZ_攻:選択カード")
 				RETURN 0
 			IF RESULT > GETVAR(@"%対面者%_MZ_攻:選択カード")
 				ダメージ修正 = RESULT - GETVAR(@"%対面者%_MZ_攻:選択カード")
+				CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ修正,1)
 			ELSEIF RESULT < GETVAR(@"%対面者%_MZ_攻:選択カード")
-				ダメージ修正 = GETVAR(@"%対面者%_MZ_攻:選択カード") - RESULT
+				ダメージ修正 = GETVAR(@"%対面者%_MZ_攻:選択カード") - 攻撃力修正
+				CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ修正,1)
 			ENDIF
-
-			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ修正,1)
 		ENDIF
 	ENDIF
 ENDIF
