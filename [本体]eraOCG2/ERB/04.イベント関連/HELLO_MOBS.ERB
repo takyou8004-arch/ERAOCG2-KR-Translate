@@ -1,4 +1,7 @@
-﻿@HELLO_MOBS(MOB_NO)
+﻿;----------------------------------------------------------------
+;モブ生成関数
+;----------------------------------------------------------------
+@HELLO_MOBS(MOB_NO)
 #DIM DYNAMIC 캐릭터_ID
 #DIM DYNAMIC 能力値
 #DIM DYNAMIC 설정캐릭터_ID
@@ -10,8 +13,24 @@
 설정캐릭터_ID = CHARANUM
 ADDCHARA 9100 + MOB_NO
 
-;とりあえず確定で女の子
-TALENT:설정캐릭터_ID:성별 = 1
+;MOB_NO
+;1=マジシャン(魔法使い), 2=スケバン(ドラゴン), 3=オカマニ(アンデッド), 4=バイト戦士(戦士), 5=メカニック(機械),
+;6=農家さん(獣), 7=ヒップホッパー(鳥獣),8=B級マニア(鱗獣), 9=地雷ガール(悪魔), 10=シスター(天使), 
+;11=ガールスカウト(昆虫), 12=錬金術師(元素霊), 13=フローリスト(植物), 14=自称宇宙人(サイキック), 15=ハイスコアガール(サイバース),
+;16=水着ギャル(海生), 17=超常リポ(未確認), 20=アカデミア, 31=魔法少女, 32=獄道
+;33=幽霊, 34=オフィスレディ, 39=メスガキ, 40=セキュリティ, 41=バニー
+;800=モンスター
+
+;牝性,ふたなり,낭자애
+SELECTCASE RAND:100
+	CASE IS <= 5 ;5%で낭자애
+		TALENT:설정캐릭터_ID:성별 = 雄性
+		TALENT:설정캐릭터_ID:낭자애 = 1
+	CASE IS <= 10 ;5%でふたなり
+		TALENT:설정캐릭터_ID:성별 = ふたなり
+	CASEELSE
+		TALENT:설정캐릭터_ID:성별 = 牝性
+ENDSELECT
 NO:설정캐릭터_ID = 모브知合数 + 9100
 BASE:설정캐릭터_ID:사정 = 0
 BASE:설정캐릭터_ID:발기 = 0
@@ -33,17 +52,10 @@ TCVAR:설정캐릭터_ID:A삽입관리플래그 = -1
 TCVAR:설정캐릭터_ID:질내사정대상 = -1
 TCVAR:설정캐릭터_ID:애널사정대상 = -1
 
-
-
 CALL NAME_RANDOM(설정캐릭터_ID)
-CALL SET_CHARA_RAND(설정캐릭터_ID)
-IF MOB_NO == 0
-	설정値 = -1
-ELSE
-	설정値 = RAND:3 -1
-ENDIF
+;素質決定
+CALL SET_CHARA_RAND(설정캐릭터_ID,MOB_NO)
 TALENT:설정캐릭터_ID:듀얼리스트 = 1
-TALENT:설정캐릭터_ID:연령 = 설정値
 TALENT:설정캐릭터_ID:모브 = MOB_NO
 
 CALL SET_CHARA_DECK(TALENT:설정캐릭터_ID:종족)
@@ -52,12 +64,14 @@ CFLAG:설정캐릭터_ID:초기설정덱 = RESULT
 모브知合数 += 1
 RETURN 설정캐릭터_ID
 
+;----------------------------------------------------------------
+;モブのデッキ決定
+;----------------------------------------------------------------
 @SET_CHARA_DECK(설정종족)
 #DIM DYNAMIC MOB_NO
 #DIM DYNAMIC 설정덱
 #DIM DYNAMIC 설정종족
 
-;PRINTFORML 설정 종족 = {설정종족}
 SELECTCASE 설정종족
 CASE 마법사족
 	SELECTCASE RAND:3
@@ -214,497 +228,863 @@ ENDSELECT
 
 RETURN 설정덱
 
-
-
-@SET_CHARA_RAND(설정캐릭터_ID)
-#DIM DYNAMIC 캐릭터_ID
-#DIM DYNAMIC 能力値
+;----------------------------------------------------------------
+;モブの素質決定
+;----------------------------------------------------------------
+@SET_CHARA_RAND(설정캐릭터_ID, MOB_NO)
 #DIM DYNAMIC 설정캐릭터_ID
 #DIM DYNAMIC ガチャ結果
 #DIM DYNAMIC 구상OP
 #DIM DYNAMIC 子供用番号
 #DIM DYNAMIC MOB_NO
 #DIM DYNAMIC 설정値
+#DIM DYNAMIC 増減値
+#DIM DYNAMIC 増減値２
 
+;先に体格とかの素質を決める
+CALL SET_CHARA_RAND_BODY(설정캐릭터_ID, MOB_NO)
+;감각素質決定
+CALL SET_CHARA_RAND_SENSE(설정캐릭터_ID, MOB_NO)
 
-FOR 能力値,10,137
-	SIF TALENTNAME:能力値 == ""
-		CONTINUE
-	SELECTCASE 能力値
-	CASE 10 TO 14, 23, 24, 26, 30, 31, 33, 40, 41, 50, 70, 100 TO 105
-		설정値 = RAND:100
-		IF INRANGE(설정値,0,30)
-			설정値 = -1	
-		ELSEIF INRANGE(설정値,31,70)
-			설정値 = 0
-		ELSEIF INRANGE(설정値,71,100)
-			설정値 = 1	
-		ENDIF
-	;성별嗜好
-	CASE 81
-		설정値 = RAND:100
-		IF INRANGE(설정値,0,50)
-			설정値 = RAND:5 - 1
-		ELSE
-			설정値 = 0
-		ENDIF
-	;おっぱいとふともも
-	CASE 121, 122
-		설정値 = RAND:100
-		IF INRANGE(설정値,0,50)
-			설정値 = 0
-		ELSEIF INRANGE(설정値,51,80)
-			설정値 = 1
-		ELSEIF INRANGE(설정値,81,94)
-			설정値 = 2
-		ELSEIF INRANGE(설정値,95,99)
-			설정値 = 3
-		ENDIF
-	CASE 27, 29, 34, 36, 57, 73 TO 77, 84, 85, 90 TO 94, 106 TO 108, 120, 123 TO 127, 117, 131, 132
-		CONTINUE
-	CASEELSE
-		설정値 = RAND:100
-		IF INRANGE(설정値,0,30)
-			설정値 = 1
-		ELSE
-			설정値 = 0
-		ENDIF
-	ENDSELECT
-	TALENT:설정캐릭터_ID:能力値 = 설정値
-NEXT
+増減値 = 0
+増減値２ = 0
 ;연령
-설정値 = RAND:4 -2
-TALENT:설정캐릭터_ID:연령 = 설정値
+SELECTCASE MOB_NO
+	CASE 2 ;スケバン 学生固定
+		TALENT:설정캐릭터_ID:연령 = -1
+	CASE 20 ;アカデミア 学生固定
+		TALENT:설정캐릭터_ID:연령 = -1
+	CASE 34 ;オフィスレディ 若者~大人
+		TALENT:설정캐릭터_ID:연령 = RAND:2
+	CASEELSE
+		;学生~大人
+		TALENT:설정캐릭터_ID:연령 = RAND:3 - 1
+ENDSELECT
 
+
+;배짱(臆病/気丈)
+SELECTCASE MOB_NO
+	;スケバンは気丈確率増加
+	CASE 2
+		増減値 = 48
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 10, MAX(12 + -(増減値), 5), MAX(12 + 増減値, 5))
+;태도(素直/反抗的)
+SELECTCASE MOB_NO
+	;スケバンは反抗的確率増加
+	CASE 2
+		増減値 = 60
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 11, MAX(20 + -(増減値), 5), MAX(20 + 増減値, 5))
+;반응(大人しい/生意気) 태도によって確率増減
+増減値 = TALENT:설정캐릭터_ID:태도 * 4
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 	Q, 8 + -(増減値), 8 + 増減値)
+;프라이드(高い/低い) 배짱・태도によって確率増減
+増減値 = TALENT:설정캐릭터_ID:배짱 * 4 + TALENT:설정캐릭터_ID:태도 * 4
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 	W, 8 + -(増減値), 8 + 増減値)
+;ツン/デレ 배짱・태도によって確率増減
+増減値 = TALENT:설정캐릭터_ID:배짱 * 2 + TALENT:설정캐릭터_ID:태도 * 4
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 14, MAX(1 + -(増減値),5), 8 + 増減値)
+;쾌감반응(否定/素直)
+SELECTCASE MOB_NO
+	;シスターは否定確率増加
+	CASE 10
+		増減値 = -25
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 70, MAX(5 + -(増減値), 3), MAX(9 + 増減値, 3))
+;자제심 
+SELECTCASE MOB_NO
+	;シスターは確率増加
+	CASE 10
+		増減値 = 13
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+;快感に素直と同居しない
+SIF TALENT:설정캐릭터_ID:쾌감반응 <= 0
+	CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 20, 7 + 増減値)
+;성적흥미(保守的/好奇心)
+SELECTCASE MOB_NO
+	;シスターは保守的確率増加
+	CASE 10
+		増減値 = -44
+	;ガールスカウト,超常リポは好奇心確率増加
+	CASE 11,17
+		増減値 = 7
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 23, MAX(6 + -(増減値), 3), MAX(13 + 増減値, 5))
+;양기／음기 
+SELECTCASE MOB_NO
+	;水着さんは양기確率増加
+	CASE 16
+		増減値 = 42
+	;オカマニ,地雷系は음기確率増加
+	CASE 3,9
+		増減値 = -22
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+;배짱によって確率増減
+増減値 += TALENT:설정캐릭터_ID:배짱 * 4
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 24, MAX(8 + -(増減値), 3), MAX(8 + 増減値, 3))
+;일선넘지않음
+SELECTCASE MOB_NO
+	;シスターは確率増加
+	CASE 10
+		増減値 = 24
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 25 + -(増減値), 6 + 増減値)
+;자기과시욕(引っ込み思案/目立ちたがり) 
+SELECTCASE MOB_NO
+	;マジシャン,ヒップホッパー,水着さんは目立ちたがり確率増加
+	CASE 1,7,16
+		増減値 = 42
+	;オカマニは引っ込み思案確率増加
+	CASE 3
+		増減値 = -22
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+;배짱によって確率増減
+増減値 += TALENT:설정캐릭터_ID:배짱 * 4
+;양기／음기 によって確率増減
+増減値 += TALENT:설정캐릭터_ID:양기／음기  * 4
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 26, MAX(8 + -(増減値), 3), MAX(8 + 増減値, 3))
+;정조(정조無頓着/정조観念)
+SELECTCASE MOB_NO
+	;シスターは確率増加
+	CASE 10,11
+		増減値 = 40
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 30, MAX(6 + -(増減値), 5), MAX(10 + 増減値, 5))
+;수치심(恥薄い/恥じらい)
+SELECTCASE MOB_NO
+	;マジシャン,ヒップホッパー,水着さんは恥薄い確率増加
+	CASE 1,7,16
+		増減値 = -42
+	;シスターは恥じらい確率増加
+	CASE 3
+		増減値 = 5
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+;자기과시욕によって確率増減
+増減値 = TALENT:설정캐릭터_ID:자기과시욕 * -4
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 33, MAX(8 + -(増減値), 3), MAX(8 + 増減値, 3))
+;무관심
+;好奇心・目立ちたがり・恥じらいと排反
+SIF TALENT:설정캐릭터_ID:성적흥미 <= 0 && TALENT:설정캐릭터_ID:자기과시욕 <= 0 && TALENT:설정캐릭터_ID:수치심 < 1
+	CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 21, 7)
+;감정부족함 一部素質と排反
+;臆病・生意気・ツンデレ・好奇心・目立ちたがり・恥じらいと排反
+SIF  TALENT:설정캐릭터_ID:배짱 > -1 && TALENT:설정캐릭터_ID:반응 < 1 && TALENT:설정캐릭터_ID:츤／데레 < 1 && TALENT:설정캐릭터_ID:성적흥미 < 1 && TALENT:설정캐릭터_ID:자기과시욕 < 1 && TALENT:설정캐릭터_ID:수치심 < 1
+	CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 22, 7)
+;자기해(抑圧/解放) 一部素質と排反
+増減値 = 1
+増減値２ = 1
+;抑圧は生意気・好奇心・양기・目立ちたがり・快感に素直と排反
+SIF  TALENT:설정캐릭터_ID:반응 == 1 || TALENT:설정캐릭터_ID:성적흥미 == 1 || TALENT:설정캐릭터_ID:양기／음기 == 1 || TALENT:설정캐릭터_ID:자기과시욕 == 1 || TALENT:설정캐릭터_ID:쾌감반응 == 1
+	増減値 = 0
+;解放は臆病・ツンデレ・자제심・감정부족함・保守的・음기・일선넘지않음・정조観念・引っ込み思案・恥じらい・快感の否定と排反
+SIF  TALENT:설정캐릭터_ID:배짱 == -1 || TALENT:설정캐릭터_ID:츤／데레 == 1 || TALENT:설정캐릭터_ID:자제심 || TALENT:설정캐릭터_ID:성적흥미 == -1 || TALENT:설정캐릭터_ID:양기／음기 == -1 || TALENT:설정캐릭터_ID:일선넘지않음 || TALENT:설정캐릭터_ID:자기과시욕 == -1 || TALENT:설정캐릭터_ID:수치심 == -1 || TALENT:설정캐릭터_ID:쾌감반응 == -1
+	増減値２ = 0
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 31, 6 * 増減値, 12 * 増減値２)
+;痛覚(強い/弱い)
+SELECTCASE MOB_NO
+	;スケバン,酪農家,ガールスカウト,超常リポは強い確率増加
+	CASE 1,6,11,17
+		増減値 = -20
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 40, MAX(5 + -(増減値), 3), MAX(5 + 増減値, 3))
+;濡れやすさ(にくい/やすい)
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 41, 5, 8)
+;습득속도(遅い/早い)
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 50, 5, 8)
+;솜씨좋은손가락
+SELECTCASE MOB_NO
+	;マジシャン,メカニック,酪農家,ガールスカウト,フローリスト,ハイスコアガールは確率増加
+	CASE 1,5,6,11,13,15
+		増減値 = 10
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 51, 5 + 増減値)
+;혀사용자
+SELECTCASE MOB_NO
+	;ヒップホッパーは確率増加
+	CASE 7
+		増減値 = 10
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 52, 5 + 増減値)
+;自慰しやすい
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 60, 7)
+;악취내성(敏感/鈍感)
+SELECTCASE MOB_NO
+	;フローリストは敏感確率増加
+	CASE 13
+		増減値 = -5
+	;メカニック,ガールスカウト,錬金術師,ハイスコアガール,超常リポは鈍感確率増加
+	CASE 5,11,12,15,17
+		増減値 = 5
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 61, MAX(8 + -(増減値), 3), MAX(8 + 増減値, 3))
+;악취내성が付いたなら、さらに1/4で汚れ無視、潔癖症に(つまり実質2%で+-2、6%で+-1)
+SIF TALENT:설정캐릭터_ID:악취내성 != 0 && RAND:4 == 0
+	TALENT:설정캐릭터_ID:악취내성 *= 2
+;献身的
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 62, 9)
+;中毒しやすい
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 71, 8)
+;倒錯的
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 80, 8)
+;性的趣向(両刀-1/男嫌い1/女嫌い2/人間不信3)
+;両刀(女性は少し確率高め、ふたなりは確率高め、낭자애は確率がさらに高い)
+IF TALENT:설정캐릭터_ID:성별 == 雄性 && TALENT:설정캐릭터_ID:낭자애
+	増減値 = 25
+ELSEIF TALENT:설정캐릭터_ID:성별 == ふたなり
+	増減値 = 15
+ELSEIF TALENT:설정캐릭터_ID:성별 == 牝性
+	増減値 = 8
+		ENDIF
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 81, 5 + 増減値, -1)
+;両刀がつかなかった場合のみ人間不信判定
+SIF !(TALENT:설정캐릭터_ID:성별기호)
+	CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 81, 1, 3)
+;両刀も人間不信もつかなかった場合のみ異性嫌い判定
+IF !(TALENT:설정캐릭터_ID:성별기호)
+	IF TALENT:설정캐릭터_ID:성별 == 雄性
+		;낭자애は異性嫌いの確率低め&男嫌いがつく場合あり
+		IF TALENT:설정캐릭터_ID:낭자애
+			CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 81, 5, 5, 1, 2)
+		ELSE
+			CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 81, 5, 2)
+		ENDIF
+	ELSEIF TALENT:설정캐릭터_ID:성별 == 牝性 || TALENT:설정캐릭터_ID:성별 == ふたなり
+		CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 81, 5)
+	ENDIF
+ENDIF
+;サド、マゾ
+CALL RCHARA_TALENT_OPPOSE(설정캐릭터_ID, 82, 83, 8, 8)
+;魅力
+;낭자애、女性は確率高め
+SIF TALENT:설정캐릭터_ID:성별 == 雄性 && !TALENT:설정캐릭터_ID:낭자애
+	増減値 = 7
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 92, 10 - 増減値)
+;매혹
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 93, 8)
+;수수께끼의매력
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 94, 2)
+;回復速度(遅い/早い)
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 130, 7, 8)
+;幼稚
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 151, 3)
+;酒耐性
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 58, 6)
+;データ캐릭터
+SELECTCASE MOB_NO
+	;メカニック,ハイスコアガールは確率増加
+	CASE 5,15
+		増減値 = 22
+	;ガールスカウトは微増
+	CASE 11
+		増減値 = 8
+	CASEELSE
+		増減値 = 0
+	ENDSELECT
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 109, MAX(3 + 増減値, 3))
+;페이스배분
+;臆病・反抗的・目立ちたがり・프라이드低い・ツンデレ・恥じらいで確率増加、大人しい・恥薄い・무관심・감정부족함で確率低下
+増減値 = 0
+SIF TALENT:설정캐릭터_ID:배짱 < 0
+	増減値 += 3
+SIF TALENT:설정캐릭터_ID:태도 > 0
+	増減値 += 5
+SIF TALENT:설정캐릭터_ID:반응 < 0
+	増減値 -= 3
+SIF TALENT:설정캐릭터_ID:프라이드 < 0
+	増減値 += 3
+SIF TALENT:설정캐릭터_ID:츤／데레 > 0
+	増減値 += 10
+SIF TALENT:설정캐릭터_ID:무관심
+	増減値 -= 30
+SIF TALENT:설정캐릭터_ID:감정부족함
+	増減値 -= 30
+SIF TALENT:설정캐릭터_ID:자기과시욕 > 0
+	増減値 += 3
+増減値 += TALENT:설정캐릭터_ID:수치심 * 3
+CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 28, MAX(5 + -(増減値), 5), MAX(5 + 増減値, 5))
+;抵抗
+;快感に素直・好奇心とは同居しない
+SIF TALENT:설정캐릭터_ID:성적흥미 < 1 && TALENT:설정캐릭터_ID:쾌감반응 < 1
+	CALL RCHARA_TALENT_DUAL(설정캐릭터_ID, 29, 3)
+;メスガキ
+増減値 = 0
+;연령で確率増減
+SELECTCASE TALENT:설정캐릭터_ID:연령
+	CASE IS < 0 ;学生以下
+		増減値 = 2
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+;체형で確率増減
+SELECTCASE TALENT:설정캐릭터_ID:체형
+	CASE IS < 0 ;小柄以下
+		増減値 += 2
+	CASE IS > 0 ;長身以上
+		増減値 -= 2
+ENDSELECT
+;프라이드低い,무관심,감정부족함,引っ込み思案,抑圧とは排反
+SIF TALENT:설정캐릭터_ID:프라이드 > -1 && !TALENT:설정캐릭터_ID:무관심 && !TALENT:설정캐릭터_ID:감정부족함 && TALENT:설정캐릭터_ID:자기과시욕 > -1 && TALENT:설정캐릭터_ID:자기해 > -1
+	CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 87, MAX(3 + 増減値, 1))
+;即堕ち
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 72, 3)
+;筋肉質
+SELECTCASE MOB_NO
+	;スケバン,農家は確率増加
+	CASE 2,6
+		増減値 = 2
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 106, MAX(3 + 増減値, 1))
+;褐色肌
+SELECTCASE MOB_NO
+	;水着は確率増加
+	CASE 16
+		増減値 = 50
+	CASEELSE
+		増減値 = 0
+ENDSELECT
+CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 108, MAX(10 + 増減値, 1))
+
+;捕食者
+増減値 = 0
+SIF TALENT:설정캐릭터_ID:프라이드 > 0 ;프라이드高い
+	増減値 += 3
+SIF TALENT:설정캐릭터_ID:성적흥미 > 0 ;양기
+	増減値 += 3
+SIF TALENT:설정캐릭터_ID:페이스배분 < 0 ;マイペース
+	増減値 += 3
+SIF TALENT:설정캐릭터_ID:정조 < 0 ;정조無頓着
+	増減値 += 3
+SIF TALENT:설정캐릭터_ID:자기해 > 0 ;解放
+	増減値 += 10
+SIF TALENT:설정캐릭터_ID:습득속도 > 0 ;習得早い
+	増減値 += 3
+SIF TALENT:설정캐릭터_ID:솜씨좋은손가락
+	増減値 += 2
+SIF TALENT:설정캐릭터_ID:혀사용자
+	増減値 += 2
+SIF TALENT:설정캐릭터_ID:매혹
+	増減値 += 3
+SIF TALENT:설정캐릭터_ID:수수께끼의매력
+	増減値 += 2
+SIF TALENT:설정캐릭터_ID:절륜
+	増減値 += 5
+;臆病・ツンデレ・자제심・감정부족함・保守的・음기・일선넘지않음・정조観念・引っ込み思案・恥じらい・快感の否定と排反
+SIF  TALENT:설정캐릭터_ID:배짱 > -1 && !TALENT:설정캐릭터_ID:자제심 && TALENT:설정캐릭터_ID:성적흥미 > -1 && TALENT:설정캐릭터_ID:양기／음기 > -1 && !TALENT:설정캐릭터_ID:일선넘지않음 && TALENT:설정캐릭터_ID:자기과시욕 > -1 && TALENT:설정캐릭터_ID:수치심 > -1 && TALENT:설정캐릭터_ID:쾌감반응 > -1
+	CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 35, MAX(3 + 増減値, 1))
+
+;竿持ちは攻撃力と절륜判定
+IF GETBIT(TALENT:설정캐릭터_ID:성별,1)
+	SELECTCASE RAND:100
+		;神
+		CASE IS < 3
+			TALENT:설정캐릭터_ID:형태 = 8
+		;メスチンポ
+		CASE IS < 6
+			TALENT:설정캐릭터_ID:형태 = 1
+		;危機感感じる
+		CASE IS < 16
+			TALENT:설정캐릭터_ID:형태 = 7
+		;未成熟
+		CASE IS < 26
+			TALENT:설정캐릭터_ID:형태 = 2
+		;ごんぶと
+		CASE IS < 41
+			TALENT:설정캐릭터_ID:형태 = 6
+		;粗チン
+		CASE IS < 56
+			TALENT:설정캐릭터_ID:형태 = 3
+		;おおきめ
+		CASE IS < 78
+			TALENT:설정캐릭터_ID:형태 = 5
+		;普通
+		CASEELSE
+			TALENT:설정캐릭터_ID:형태 = 4
+	ENDSELECT
+	;절륜(おおきめ以上なら確率増加)
+	CALL RCHARA_TALENT_SINGLE(설정캐릭터_ID, 129, MAX((TALENT:설정캐릭터_ID:형태 - 4) * 25, 5))
+	TALENT:설정캐릭터_ID:동정 = 0
+ENDIF
 
 TALENT:설정캐릭터_ID:키스미경험 = 1
-TALENT:설정캐릭터_ID:처녀 = 1
+SIF TALENT:설정캐릭터_ID:성별 != 雄性
+	TALENT:설정캐릭터_ID:처녀 = 1
 
 CFLAG:설정캐릭터_ID:키스상실상대 = -1
-; CALL SHOP_BUST_RESET(설정캐릭터_ID)
-; CALL SHOP_BUTT_RESET(설정캐릭터_ID)
 CALL SET_BODYSIZE(설정캐릭터_ID,0,1)
+
+;以下暫定
+SELECTCASE MOB_NO
+	CASE 1 ;マジシャン
+		増減値 = 229
+	CASE 2 ;スケバン
+		増減値 = 129
+	CASE 3 ;オカマニ
+		増減値 = 114
+	CASE 4 ;バイト戦士
+		増減値 = 508
+	CASE 5 ;メカニック
+		増減値 = 158
+	CASE 6 ;農家さん
+		増減値 = 406
+	CASE 7 ;ヒップホッパー
+		増減値 = 313
+	CASE 8 ;Ｂ級マニア
+		増減値 = 313
+	CASE 9 ;地雷ガール
+		増減値 = 128
+	CASE 10 ;シスター
+		増減値 = 162
+	CASE 11 ;ガールスカウト
+		増減値 = 160
+	CASE 12 ;錬金術師
+		増減値 = 136
+	CASE 13 ;フローリスト
+		増減値 = 510
+	CASE 14 ;自称宇宙人
+		増減値 = 117
+	CASE 15 ;ハイスコアガール
+		増減値 = 405
+	CASE 16 ;水着ギャル
+		増減値 = 193
+	CASE 17 ;不思議レポ
+		増減値 = 197
+	CASEELSE
+		増減値 = 0
+ENDSELECT
 CALL CLOTHES_SETTING(설정캐릭터_ID)
 
+;----------------------------------------------------------------
+;モブの体格決定
+;----------------------------------------------------------------
+@SET_CHARA_RAND_BODY(설정캐릭터_ID, MOB_NO)
+#DIM DYNAMIC 설정캐릭터_ID
+#DIM DYNAMIC MOB_NO
+;체형
+IF TALENT:설정캐릭터_ID:성별 == 雄性 && TALENT:설정캐릭터_ID:낭자애
+	;낭자애は小型と普通の２択
+	SELECTCASE RAND:100
+		CASE IS < 20
+			TALENT:설정캐릭터_ID:체형 = 0
+		CASEELSE
+			TALENT:설정캐릭터_ID:체형 = -1
+	ENDSELECT
+ELSEIF MOB_NO != 800 ;モンスター以外
+;通常50%,小柄20%,長身20%,大柄10%
+	SELECTCASE RAND:10
+		CASE 0
+			TALENT:설정캐릭터_ID:체형 = 2
+		CASE IS < 3
+			TALENT:설정캐릭터_ID:체형 = 1
+		CASE IS < 5
+			TALENT:설정캐릭터_ID:체형 = -1
+		CASEELSE
+			TALENT:설정캐릭터_ID:체형 = 0
+	ENDSELECT
+ELSE
+;通常60%, 小柄10%,幼児7%,長身10%,大柄7%,巨大6%
+	SELECTCASE RAND:100
+		CASE 0 TO 60
+			TALENT:설정캐릭터_ID:체형 = 0
+		CASE 61 TO 70
+			TALENT:설정캐릭터_ID:체형 = -1
+		CASE 71 TO 80
+			TALENT:설정캐릭터_ID:체형 = 1
+		CASE 81 TO 87
+			TALENT:설정캐릭터_ID:체형 = -2
+		CASE 88 TO 94
+			TALENT:설정캐릭터_ID:체형 = 2
+		CASEELSE
+			TALENT:설정캐릭터_ID:체형 = 3
+	ENDSELECT
+ENDIF
 
+IF TALENT:설정캐릭터_ID:성별 != 雄性
+	;バスト
+	;体格関係なし、普26%,貧18%,巨乳18%,絶12%,爆乳12%,虚7%,ウシ乳7%
+	SELECTCASE RAND:100
+		CASE IS < 7
+			TALENT:설정캐릭터_ID:가슴사이즈 = 3
+		CASE IS < 14
+			TALENT:설정캐릭터_ID:가슴사이즈 = -3
+		CASE IS < 26
+			TALENT:설정캐릭터_ID:가슴사이즈 = 2
+		CASE IS < 38
+			TALENT:설정캐릭터_ID:가슴사이즈 = -2
+		CASE IS < 56
+			TALENT:설정캐릭터_ID:가슴사이즈 = 1
+		CASE IS < 74
+			TALENT:설정캐릭터_ID:가슴사이즈 = -1
+	ENDSELECT
+ELSE
+	TALENT:설정캐릭터_ID:가슴사이즈 = -3
+ENDIF
+;ヒップ
+;体格関係なし、並32%,貧21%,安産22%,デカ15%質量兵器10%
+SELECTCASE RAND:100
+	CASE IS < 10
+		TALENT:설정캐릭터_ID:엉덩이사이즈 = 3
+	CASE IS < 25
+		TALENT:설정캐릭터_ID:엉덩이사이즈 = 2
+	CASE IS < 47
+		TALENT:설정캐릭터_ID:엉덩이사이즈 = 1
+	CASE IS < 68
+		TALENT:설정캐릭터_ID:엉덩이사이즈 = -1
+ENDSELECT
+;太腿
+;60%でケツと同じ太さ。20%で-1, 20%で+1
+TALENT:설정캐릭터_ID:허벅지사이즈 = TALENT:설정캐릭터_ID:엉덩이사이즈
+SELECTCASE RAND:10
+	CASE IS < 2
+		TALENT:설정캐릭터_ID:허벅지사이즈--
+	CASE IS < 4
+		TALENT:설정캐릭터_ID:허벅지사이즈++
+ENDSELECT
+TALENT:설정캐릭터_ID:허벅지사이즈 = LIMIT(TALENT:설정캐릭터_ID:허벅지사이즈,-1,3)
+
+;----------------------------------------------------------------
+;モブの감각素質決定
+;----------------------------------------------------------------
+@SET_CHARA_RAND_SENSE(설정캐릭터_ID, MOB_NO)
+#DIM DYNAMIC 설정캐릭터_ID
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC MOB_NO
+
+;尻穴狂いはなんか名前的につけない
+;キス魔は一括키스미경험なのでつけない
+
+SELECTCASE RAND:1000
+	;全身雑魚&敏感(0.1%)
+	CASE IS < 1
+		TALENT:설정캐릭터_ID:음호 = 1
+		;巨乳以上は음유もつく
+		SIF TALENT:설정캐릭터_ID:가슴사이즈 > 0
+			TALENT:설정캐릭터_ID:음유 = 1
+		TALENT:설정캐릭터_ID:허접클리 = 1
+		TALENT:설정캐릭터_ID:허접유두 = 1
+		FOR カウンタ, 101,105 
+			TALENT:설정캐릭터_ID:カウンタ = 1
+		NEXT
+	;雑魚(計5%)
+	;1雑魚+1敏感(2.5%)
+	CASE IS < 26
+		CALL SET_CHARA_RAND_SENSE_PRETTYWEAK(설정캐릭터_ID, MOB_NO)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+	;1雑魚+1鈍感(2.5%)
+	CASE IS < 51
+		CALL SET_CHARA_RAND_SENSE_PRETTYWEAK(설정캐릭터_ID, MOB_NO)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;4敏感(計5%)
+	;4敏感+1鈍感(5%)
+	CASE IS < 101
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;3敏感(計10%)
+	;3敏感(2%)
+	CASE IS < 121
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+	;3敏感+2鈍感(5%)
+	CASE IS < 171
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;3敏感+1鈍感(3%)
+	CASE IS < 201
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;2敏感(計30%)
+	;2敏感+3鈍感(5%)
+	CASE IS < 251
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;2敏感+2鈍感(10%)
+	CASE IS < 351
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;2敏感+1鈍感(10%)
+	CASE IS < 451
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;2敏感(5%)
+	CASE IS < 501
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)	
+	;1敏感(計40%)
+	;1敏感+4鈍感(3%)
+	CASE IS < 531
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;1敏感+3鈍感(5%)
+	CASE IS < 581
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)	
+	;1敏感+2鈍感(10%)
+	CASE IS < 681
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)	
+	;1敏感+1鈍感(17%)
+	CASE IS < 851
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)	
+	;1敏感(10%)
+	CASE IS < 951
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 1)
+	;1鈍感(3%)
+	CASE IS < 981
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;2鈍感(1%)
+	CASE IS < 991
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;3鈍感(0.5%)
+	CASE IS < 996
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;4鈍感(0.3%)
+	CASE IS < 999
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+		CALL SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, -1)
+	;全身鈍感(0.1%)
+	CASEELSE
+		FOR カウンタ, 101,105 
+			TALENT:설정캐릭터_ID:カウンタ = -1
+		NEXT
+ENDSELECT
+
+SIF TALENT:설정캐릭터_ID:성별 == 雄性
+	TALENT:설정캐릭터_ID:Ｖ감도 = 0
+
+;----------------------------------------------------------------
+;モブの超敏感감각素質決定
+;----------------------------------------------------------------
+@SET_CHARA_RAND_SENSE_PRETTYWEAK(설정캐릭터_ID, MOB_NO)
+#DIM DYNAMIC 설정캐릭터_ID
+#DIM DYNAMIC MOB_NO
+
+SELECTCASE RAND:3
+CASE 0
+	TALENT:설정캐릭터_ID:음호 = 1
+		TALENT:설정캐릭터_ID:Ｖ감도 = 1
+CASE 1
+	;巨乳以上は음유が付く可能性もある
+		IF TALENT:설정캐릭터_ID:가슴사이즈 > 0
+			SELECTCASE RAND:5
+				CASE IS < 1
+					TALENT:설정캐릭터_ID:음유 = 1
+					TALENT:설정캐릭터_ID:허접유두 = 1
+					TALENT:설정캐릭터_ID:Ｂ감도 = 1
+				CASE IS < 3
+					TALENT:설정캐릭터_ID:음유 = 1
+					TALENT:설정캐릭터_ID:Ｂ감도 = 1
+				CASEELSE
+					TALENT:설정캐릭터_ID:허접유두 = 1
+					TALENT:설정캐릭터_ID:Ｂ감도 = 1
+			ENDSELECT
+		ELSE
+			TALENT:설정캐릭터_ID:허접유두 = 1
+			TALENT:설정캐릭터_ID:Ｂ감도 = 1
+		ENDIF
+CASE 2
+	TALENT:설정캐릭터_ID:허접클리 = 1
+		TALENT:설정캐릭터_ID:Ｃ감도 = 1
+ENDSELECT
+
+;----------------------------------------------------------------
+;モブの감각素質を１つ決定
+;----------------------------------------------------------------
+@SET_CHARA_RAND_SENSE_SINGLE(설정캐릭터_ID, MOB_NO, 설정値)
+#DIM DYNAMIC 설정캐릭터_ID
+#DIM DYNAMIC MOB_NO
+#DIM DYNAMIC 설정値
+#DIM DYNAMIC 空き감각, 5
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+
+FOR カウンタ, 101,105 
+	IF TALENT:설정캐릭터_ID:カウンタ == 0
+		空き감각:カウンタB = カウンタ
+		カウンタB++
+	ENDIF
+NEXT
+
+IF カウンタB < 1
+	RETURN
+ELSEIF カウンタB == 1
+	TALENT:설정캐릭터_ID:空き감각 = 설정値
+ELSE
+	TALENT:설정캐릭터_ID:(空き감각:(RAND:カウンタB)) = 설정値
+ENDIF
+
+;----------------------------------------------------------------
+;モブの名前決定
+;----------------------------------------------------------------
 @NAME_RANDOM(캐릭터_ID)
 #DIM DYNAMIC 캐릭터_ID
 #DIMS DYNAMIC 選択苗字
 #DIMS DYNAMIC 選択名前
-
-選択苗字 = RAND:50
-選択名前 = RAND:50
-
-SELECTCASE RAND:50
-CASE 0
-	選択苗字 = 아이
-CASE 1
-	選択苗字 = 아이카
-CASE 2
-	選択苗字 = 아이노
-CASE 3
-	選択苗字 = 아오바
-CASE 4
-	選択苗字 = 아키노
-CASE 5
-	選択苗字 = 아케미
-CASE 6
-	選択苗字 = 아즈사
-CASE 7
-	選択苗字 = 아사카
-CASE 8
-	選択苗字 = 아마네
-CASE 9
-	選択苗字 = 아마노
-CASE 10
-	選択苗字 = 아미
-CASE 11
-	選択苗字 = 아야노
-CASE 12
-	選択苗字 = 아와네
-CASE 13
-	選択苗字 = 안나
-CASE 14
-	選択苗字 = 이스즈
-CASE 15
-	選択苗字 = 이부키
-CASE 16
-	選択苗字 = 이리나
-CASE 17
-	選択苗字 = 우츠호
-CASE 18
-	選択苗字 = 에리
-CASE 19
-	選択苗字 = 오오바
-CASE 20
-	選択苗字 = 카가미
-CASE 21
-	選択苗字 = 카구라
-CASE 22
-	選択苗字 = 카사네
-CASE 23
-	選択苗字 = 카자리
-CASE 24
-	選択苗字 = 카나메
-CASE 25
-	選択苗字 = 카하루
-CASE 26
-	選択苗字 = 키사키
-CASE 27
-	選択苗字 = 키라리
-CASE 28
-	選択苗字 = 키라
-CASE 29
-	選択苗字 = 키리노
-CASE 30
-	選択苗字 = 쿠미
-CASE 31
-	選択苗字 = 크리스
-CASE 32
-	選択苗字 = 쿠루미
-CASE 33
-	選択苗字 = 쿠레
-CASE 34
-	選択苗字 = 쿠레하
-CASE 35
-	選択苗字 = 클로에
-CASE 36
-	選択苗字 = 코즈에
-CASE 37
-	選択苗字 = 코마치
-CASE 38
-	選択苗字 = 사쿠라
-CASE 39
-	選択苗字 = 사사메
-CASE 40
-	選択苗字 = 사토미
-CASE 41
-	選択苗字 = 사라
-CASE 42
-	選択苗字 = 시온
-CASE 43
-	選択苗字 = 시즈미
-CASE 44
-	選択苗字 = 시노부
-CASE 45
-	選択苗字 = 시바루
-CASE 46
-	選択苗字 = 타츠키
-CASE 47
-	選択苗字 = 타마키
-CASE 48
-	選択苗字 = 치아키
-CASE 49
-	選択苗字 = 토가메
-CASE 50
-	選択苗字 = 토키메
-CASE 51
-	選択苗字 = 토키와
-CASE 52
-	選択苗字 = 토모에
-CASE 53
-	選択苗字 = 나츠케
-CASE 54
-	選択苗字 = 나기
-CASE 55
-	選択苗字 = 나나세
-CASE 56
-	選択苗字 = 나나미
-CASE 57
-	選択苗字 = 나루미
-CASE 58
-	選択苗字 = 하루나
-CASE 59
-	選択苗字 = 히이라기
-CASE 60
-	選択苗字 = 히나타
-CASE 61
-	選択苗字 = 히비키
-CASE 62
-	選択苗字 = 히무로
-CASE 63
-	選択苗字 = 히로에
-CASE 64
-	選択苗字 = 후타바
-CASE 65
-	選択苗字 = 후미노
-CASE 66
-	選択苗字 = 호즈미
-CASE 67
-	選択苗字 = 마이
-CASE 68
-	選択苗字 = 마오
-CASE 69
-	選択苗字 = 마키
-CASE 70
-	選択苗字 = 마키노
-CASE 71
-	選択苗字 = 마리코
-CASE 72
-	選択苗字 = 미우라
-CASE 73
-	選択苗字 = 미키
-CASE 74
-	選択苗字 = 미쿠니
-CASE 75
-	選択苗字 = 미사키
-CASE 76
-	選択苗字 = 미코토
-CASE 77
-	選択苗字 = 미쿠리
-CASE 78
-	選択苗字 = 미즈키
-CASE 79
-	選択苗字 = 미소노
-CASE 80
-	選択苗字 = 미즈키
-CASE 81
-	選択苗字 = 미토리
-CASE 82
-	選択苗字 = 미나기
-CASE 83
-	選択苗字 = 미나미
-CASE 84
-	選択苗字 = 미호노
-CASE 85
-	選択苗字 = 미야코
-CASE 86
-	選択苗字 = 미츠리
-CASE 87
-	選択苗字 = 메구미
-CASE 88
-	選択苗字 = 모모에
-CASE 89
-	選択苗字 = 야쿠모
-CASE 90
-	選択苗字 = 야요이
-CASE 91
-	選択苗字 = 유이
-CASE 92
-	選択苗字 = 유카리
-CASE 93
-	選択苗字 = 유키노
-CASE 94
-	選択苗字 = 유키
-CASE 95
-	選択苗字 = 유사
-CASE 96
-	選択苗字 = 유즈키
-CASE 97
-	選択苗字 = 유라
-CASE 98
-	選択苗字 = 유메
-CASE 99
-	選択苗字 = 와카바
-ENDSELECT
-
-
-SELECTCASE RAND:50
-CASE 0
-	選択名前 = 히메나
-CASE 1
-	選択名前 = 미토
-CASE 2
-	選択名前 = 치카
-CASE 3
-	選択名前 = 카에데
-CASE 4
-	選択名前 = 호무라
-CASE 5
-	選択名前 = 미후유
-CASE 6
-	選択名前 = 하구무
-CASE 7
-	選択名前 = 츠쿠요
-CASE 8
-	選択名前 = 츠카사
-CASE 9
-	選択名前 = 스즈네
-CASE 10
-	選択名前 = 리아
-CASE 11
-	選択名前 = 리카
-CASE 12
-	選択名前 = 코코로
-CASE 13
-	選択名前 = 메루
-CASE 14
-	選択名前 = 렌
-CASE 15
-	選択名前 = 카나키
-CASE 16
-	選択名前 = 레이라
-CASE 17
-	選択名前 = 나츠키
-CASE 18
-	選択名前 = 아이미
-CASE 19
-	選択名前 = 주리
-CASE 20
-	選択名前 = 마사라
-CASE 21
-	選択名前 = 산
-CASE 22
-	選択名前 = 아오
-CASE 23
-	選択名前 = 란
-CASE 24
-	選択名前 = 카즈미
-CASE 25
-	選択名前 = 하루카
-CASE 26
-	選択名前 = 마도카
-CASE 27
-	選択名前 = 유우나
-CASE 28
-	選択名前 = 에미
-CASE 29
-	選択名前 = 테마리
-CASE 30
-	選択名前 = 히카루
-CASE 31
-	選択名前 = 사키
-CASE 32
-	選択名前 = 세이카
-CASE 33
-	選択名前 = 마나카
-CASE 34
-	選択名前 = 키리카
-CASE 35
-	選択名前 = 유우나
-CASE 36
-	選択名前 = 미쿠라
-CASE 37
-	選択名前 = 쿄오코
-CASE 38
-	選択名前 = 요즈루
-CASE 39
-	選択名前 = 토우카
-CASE 40
-	選択名前 = 나유타
-CASE 41
-	選択名前 = 호나
-CASE 42
-	選択名前 = 이즈루
-CASE 43
-	選択名前 = 치사토
-CASE 44
-	選択名前 = 코노하
-CASE 45
-	選択名前 = 아키라
-CASE 46
-	選択名前 = 사쿠야
-CASE 47
-	選択名前 = 카즈미
-CASE 48
-	選択名前 = 이로하
-CASE 49
-	選択名前 = 우이
-CASE 50
-	選択名前 = 리코
-CASE 51
-	選択名前 = 란카
-CASE 52
-	選択名前 = 유마
-CASE 53
-	選択名前 = 모모코
-CASE 54
-	選択名前 = 시즈카
-CASE 55
-	選択名前 = 나나카
-CASE 56
-	選択名前 = 마미
-CASE 57
-	選択名前 = 카코
-CASE 58
-	選択名前 = 스즈코
-CASE 59
-	選択名前 = 유키카
-CASE 60
-	選択名前 = 야치요
-CASE 61
-	選択名前 = 아리사
-CASE 62
-	選択名前 = 코노미
-CASE 63
-	選択名前 = 네무
-CASE 64
-	選択名前 = 마츠리 
-CASE 65
-	選択名前 = 메구루
-CASE 66
-	選択名前 = 라비
-CASE 67
-	選択名前 = 치하루
-CASE 68
-	選択名前 = 사나
-CASE 69
-	選択名前 = 사유리
-CASE 70
-	選択名前 = 시즈쿠
-CASE 71
-	選択名前 = 아카리
-CASE 72
-	選択名前 = 히미카
-CASE 73
-	選択名前 = 카오루
-CASE 74
-	選択名前 = 쿠미
-CASE 75
-	選択名前 = 아야카
-CASE 76
-	選択名前 = 아사히
-CASE 77
-	選択名前 = 오리코
-CASE 78
-	選択名前 = 아야메
-CASE 79
-	選択名前 = 츠바키
-CASE 80
-	選択名前 = 우미카
-CASE 81
-	選択名前 = 카린
-CASE 82
-	選択名前 = 레이
-CASE 83
-	選択名前 = 사사라
-CASE 84
-	選択名前 = 레나
-CASE 85
-	選択名前 = 세이라
-CASE 86
-	選択名前 = 히나노
-CASE 87
-	選択名前 = 시구레
-CASE 88
-	選択名前 = 미츠네
-CASE 89
-	選択名前 = 모에카
-CASE 90
-	選択名前 = 나기사
-CASE 91
-	選択名前 = 미카게
-CASE 92
-	選択名前 = 미타마
-CASE 93
-	選択名前 = 카노코
-CASE 94
-	選択名前 = 츠루노
-CASE 95
-	選択名前 = 카나에
-CASE 96
-	選択名前 = 마리아
-CASE 97
-	選択名前 = 호토리
-CASE 98
-	選択名前 = 하즈키
-CASE 99
-	選択名前 = 호타루
-ENDSELECT
-
+{
+#DIMS CONST 苗字リスト = 
+	"아이우라","아이노","아오하","아키노","아사카",
+	"아사히","아즈사","아즈마","아마네","아마노",
+	"아마미야","아야노","아야하라","이스즈","이치노세",
+	"이부키","우르마","에나미","오오바","카에데",
+	"카가미","카구라","카사네","카나에","카나메",
+	"키자키","키리노","쿠레","쿠로에","코코로",
+	"코즈에","사쿠라","사사메","시이카","시오미",
+	"시미즈","스즈네","스즈노하","세노가미","타카나시",
+	"타츠키","타마키","치하루","츠키미","츠유리",
+	"츠바키","츠루노","텐도","토키메","토키노",
+	"토키와","토키츠카","토마리","토모에","토리하라",
+	"토리유미","나기리","나츠키","나츠메","나나세",
+	"나루미야","노마","하루카","히이라기","히토토세",
+	"히무로","후미노","호즈미","호조미","호무라",
+	"마키노","마시타","미우라","미카게","미쿠니",
+	"미스루기","미사키","미즈키","미소노","미타마",
+	"미즈키","미토","미토리","미나기","미나미",
+	"미후유","미호노","미야코","모모에","모모세",
+	"야에노","야쿠모","유키노","유사","유즈키",
+	"유모리","유라","유루기","요루미","와카바"
+}
+{
+#DIMS CONST 名前リスト = 
+	"아이","아이카","아이미","아카리","아키라",
+	"아케미","아사카","아사히","아즈사","아마네",
+	"아미","아야카","아야네","아야노","아야메",
+	"아리사","안나","이스즈","이부키","이로하",
+	"우이","우미카","에미","에리","오리코",
+	"카에데","카오루","카구라","카코","카즈미",
+	"카스미","카나에","카나메","카노코","카린",
+	"쿄코","키라라","키라리","키리카","키리노",
+	"쿠미","구미","크리스","쿠루미","쿠레하",
+	"쿠로에","코코로","코즈에","코노하","코노미",
+	"코마치","사키","사쿠야","사쿠라","사사라",
+	"사토미","사나","사유리","사라","시이카",
+	"시온","시구레","시즈카","시즈쿠","시노부",
+	"쥬리","스즈코","스즈네","스바루","세이카",
+	"세이라","타츠키","타마키","치아키","치카",
+	"치사토","치하루","츠카사","츠쿠요","츠바키",
+	"테마리","토우카","토키메","토마리","토모에",
+	"나기","나기사","나구사","나츠키","나츠메",
+	"나나카","나나세","나나미","나루미","네무",
+	"하즈키","하루카","하루나","히카루","히나타",
+	"히나노","히비키","히미카","히메나","후타바",
+	"호타루","호무라","마이","마오","마키",
+	"마키노","마츠리 ","마도카","마나카","마미",
+	"마리아","마리코","미키","미쿠리","미코토",
+	"미사키","미즈키","미소노","미타마","미즈키",
+	"미나미","미후유","미호노","미야코","메구미",
+	"메구루","메루","모에카","모모에","모모코",
+	"야스나","야치요","야요이","유이","유우나",
+	"유카리","유키","유키카","유키노","유즈키",
+	"유마","유메","란","란카","리아",
+	"리카","리코","레이","레이라","레나","렌"
+}
+選択苗字 = %苗字リスト:(RAND:(VARSIZE("苗字リスト")))%
+選択名前 = %名前リスト:(RAND:(VARSIZE("名前リスト")))%
 
 NAME:캐릭터_ID = %選択苗字%・%選択名前%
 CALLNAME:캐릭터_ID = %選択名前%
 
+;以下eratohoKより引用
+;-------------------------
+;ランダム캐릭터に特定の素質を指定の確率で持たせる関数
+;-------------------------
+@RCHARA_TALENT_SINGLE(캐릭터_ID, 素質_ID, 確率, 素質値)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 素質_ID
+#DIM DYNAMIC 確率
+#DIM DYNAMIC 素質値
 
+LOCAL:0 = RAND:100
+IF LOCAL:0 < 確率
+	TALENT:캐릭터_ID:素質_ID = 素質値 != 0 ? 素質値 # 1
+ENDIF
 
+;-------------------------
+;ランダム캐릭터に相反する２つの素質を指定の確率で持たせる関数
+;-------------------------
+@RCHARA_TALENT_OPPOSE(캐릭터_ID, 素質１_ID, 素質２_ID, 確率_素質１, 確率_素質２)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 素質１_ID
+#DIM DYNAMIC 素質２_ID
+#DIM DYNAMIC 確率_素質１
+#DIM DYNAMIC 確率_素質２
+
+LOCAL:0 = RAND:100
+IF LOCAL:0 < 確率_素質１
+	TALENT:캐릭터_ID:素質１_ID = 1
+ELSEIF 99 - LOCAL:0 < 確率_素質２
+	TALENT:캐릭터_ID:素質２_ID = 1
+ENDIF
+
+;-------------------------
+;ランダム캐릭터に-1/1で설정する素質を指定の確率で持たせる関数
+;-------------------------
+@RCHARA_TALENT_DUAL(캐릭터_ID, 素質_ID, 確率_－１, 確率_＋１, 素質値１, 素質値２)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 素質_ID
+#DIM DYNAMIC 確率_－１
+#DIM DYNAMIC 確率_＋１
+#DIM DYNAMIC 素質値１
+#DIM DYNAMIC 素質値２
+
+LOCAL:0 = RAND:100
+IF LOCAL:0 < 確率_－１
+	TALENT:캐릭터_ID:素質_ID = 素質値１ != 0 ? 素質値１ # -1
+ELSEIF 99 - LOCAL:0 < 確率_＋１
+	TALENT:캐릭터_ID:素質_ID = 素質値２ != 0 ? 素質値２ # 1
+ENDIF
