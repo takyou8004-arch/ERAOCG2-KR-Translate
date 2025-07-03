@@ -300,6 +300,47 @@ SELECTCASE 효과範囲
 				ENDIF
 			NEXT
 		ENDIF
+				IF 효과範囲묘지 == 1
+			FOR カウンタ,0,紙束最大値
+				CALL CARD_REMOVAL_ABLE(듀얼리스트,듀얼리스트,"単体",カウンタ,除去種,カードID,2)
+				IF RESULT == 0 
+					CONTINUE
+				ELSEIF RESULT == 1
+					条件달성 = 1
+				ENDIF
+				IF 듀얼리스트 == "자신"
+					VARSET 대상カードID
+					대상カードID = GETVAR(@"%듀얼리스트%_묘지:カウンタ")
+					CALL CARD_SETCOLOR(듀얼리스트,"묘지",カウンタ)
+					CALLFORM CARD_KANPRINT("묘지",カウンタ + 200,대상カードID)
+				ELSEIF 듀얼리스트 == "상대"
+					IF 選択カード == 9999
+						選択カード = カウンタ + 200
+					ENDIF
+				ENDIF
+			NEXT
+		ENDIF
+		IF 효과範囲상대묘지 == 1
+			FOR カウンタ,0,紙束最大値
+				CALL CARD_REMOVAL_ABLE(対面者,듀얼리스트,"単体",カウンタ,除去種,カードID,2)
+				IF RESULT == 0 
+					CONTINUE
+				ELSEIF RESULT == 1
+					条件달성 = 1
+				ENDIF
+				IF 듀얼리스트 == "자신"
+					VARSET 대상カードID
+					대상カードID = GETVAR(@"%対面者%_묘지:カウンタ")
+					CALL CARD_SETCOLOR(対面者,"묘지",カウンタ)
+					CALLFORM CARD_KANPRINT("상대묘지",カウンタ + 2200,대상カードID)
+				ELSEIF 듀얼리스트 == "상대"
+					IF 選択カード == 9999
+						選択カード = カウンタ + 2200
+					ENDIF
+				ENDIF
+			NEXT
+		ENDIF
+
 
 		RESETCOLOR
 		IF 듀얼리스트 == "자신"
@@ -313,7 +354,7 @@ SELECTCASE 효과範囲
 				PRINTL 　(9999) - 돌아간다(선택할 수 있는 카드가 없습니다)
 				RESETCOLOR
 			ELSE
-				PRINTL 　[9999] - 돌아간다
+				PRINTFORM 　%"[9999] - 돌아간다",41,LEFT%
 			ENDIF
 			PRINTL
 			BINPUT
@@ -371,8 +412,11 @@ SELECTCASE 효과範囲
 					CONTINUE
 
 				CALL CARD_SELECT(듀얼리스트,選択カード:カウンタ)
-				SIF 参照先（CS） == "마함"
+				IF 参照先（CS） == "마함"
 					마법함정플래그 = 1
+				ELSEIF 参照先（CS） == "묘지"
+					마법함정플래그 = 2
+				ELSE
 				CALL CARD_REMOVAL_AFTERMATH(대상者（CS）,듀얼리스트,選択カード（CS）,除去種,カードID,修正値,마법함정플래그)
 				SIF RESULT != 1
 					RETURN 0
@@ -383,11 +427,16 @@ SELECTCASE 효과範囲
 			他参照選択カードID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:選択カード（CS）")
 			他参照選択カード = 選択カード:複数カウンタ
 			IF 除去種 == "選択"
+				RESULT:99 = 他参照選択カードID
+				RESULT:10 = 選択カード
 				RESULT:1 = 選択カード:複数カウンタ
 				RETURN 1
 			ENDIF
-			SIF 参照先（CS） == "마함"
+			IF 参照先（CS） == "마함"
 				마법함정플래그 = 1
+			ELSEIF 参照先（CS） == "묘지"
+				마법함정플래그 = 2
+			ENDIF
 			CALL CARD_REMOVAL_AFTERMATH(대상者（CS）,듀얼리스트,選択カード（CS）,除去種,カードID,修正値,마법함정플래그)
 			SIF RESULT != 1
 				RETURN 0

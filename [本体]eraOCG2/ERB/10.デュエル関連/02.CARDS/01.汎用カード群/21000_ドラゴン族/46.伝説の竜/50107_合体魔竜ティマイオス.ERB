@@ -1,0 +1,167 @@
+﻿@CARDNAME_50107,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 合体魔竜ティマイオス
+	CASE "略称"
+		RESULTS = 合体魔竜
+	CASE "カテゴリ"
+		RESULTS:0 = 전설의 용
+		RESULTS:1 = 블랙 매지션
+		RESULTS:2 = 블랙 매지션 걸
+ENDSELECT
+
+
+@CARD_50107(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 1800
+	CASE "추가日"
+		RETURN 250628
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_50107(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「블랙 매지션」か「블랙 매지션 걸」＋드래곤족・마법사족モンスター
+PRINTL このカード名の②③の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：EX덱から특수소환されたこのカードは完全耐性を持つ。
+CALLFORM CARD_ABLE(1,攻撃時誘発)
+PRINTL ②：このカードが戦闘を行う場合、발동できる。
+PRINTL このカードの攻撃力は、お互いの묘지・제외状態の마법カードの数×１００アップする。
+CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ③：상대ターンに、상대フィールドの마법・함정カード１枚を대상として발동できる。
+PRINTL そのカードを破壊する。
+
+
+@CARDSUMMON_50107(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+    素材条件名前:0 = 블랙 매지션
+	素材条件名前:1 = 블랙 매지션 걸
+ELSEIF EX参照 >= 10
+    素材条件종족:0 = 드래곤족
+	素材条件종족:1 = 마법사족
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,50106) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_50107(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50107)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種EX덱
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,50107)
+		RETURN 0	
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,50107)
+		RETURN 0
+	SIF ターンプレイヤー != 対面者
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대마함 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+	
+@CARDEFFECT_50107(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50107,1)
+	IF RESULT == 0
+	    CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲상대묘지 = 1
+		효과範囲제외 = 1
+		효과範囲상대제외 = 1
+		효과条件종류 = 마법全般
+		효과条件CNT = 1			
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		攻撃力修正 = RESULT * 100
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",攻撃力修正)
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50107,2)
+	IF RESULT == 0
+        CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,"묘지")
+	ENDIF
+ENDIF
+

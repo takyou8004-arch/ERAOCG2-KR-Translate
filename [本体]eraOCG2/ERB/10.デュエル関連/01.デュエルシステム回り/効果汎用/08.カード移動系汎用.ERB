@@ -123,7 +123,7 @@ IF 実行出処 == "필드"
 				CALLFORM CARDNAME_{GETVAR(@"%保有者%_필드:選択カード")},"名前"
 				이동カード名 = %RESULTS%
 				SETVAR @"%保有者%_EX덱:カード추가先", GETVAR(@"%保有者%_필드:選択カード")
-				PRINTFORM %保有者%의 %出処% 에서%이동カード名%가EX덱으로 돌아가、
+				PRINTFORM %保有者%의 %出処%『{選択カード}』에서%이동カード名%가EX덱으로 돌아가、
 				SETVAR @"%保有者%_필드:選択カード", カードID
 				CALLFORM CARDNAME_{カードID},"名前"
 				이동カード名 = %RESULTS%
@@ -928,7 +928,7 @@ IF 듀얼리스트 == "상대"
 	CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,2,カードID,10)
 ENDIF
 CALLFORM CARDNAME_{カードID}, "名前"
-PRINTFORML %듀얼리스트%는 %RESULTS%를 특수소환 했습니다。
+PRINTFORML %듀얼리스트%는 %RESULTS%를 특수 소환 했습니다。
 PRINTFORMW
 
 
@@ -1401,6 +1401,9 @@ FOR カウンタ,0,紙束最大値
 	VARSET 소환可能
 	SIF GETVAR(@"%듀얼리스트%_EX덱:カウンタ") == -1
 		CONTINUE
+	SIF フィールド표시中 == 1
+		GOTO INPUT_SKIP
+
 	TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_EX덱:カウンタ")}, "종류"
 	IF GROUPMATCH(RESULT, 싱크로, 엑시즈, 링크, 초차원)
 		TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:カウンタ")}(듀얼리스트,カウンタ,1)
@@ -1443,6 +1446,9 @@ FOR カウンタ,0,紙束最大値
 		ELSEIF 소환可能 == 1
 			SETCOLOR C_G_YELLOW
 			PRINT (소)
+		ELSEIF フィールド표시中 == 1
+			$INPUT_SKIP
+			PRINT (　)
 		ELSE
 			SETCOLOR C_GRAY
 			PRINT (　)
@@ -1481,7 +1487,14 @@ ELSEIF INRANGE(選択カード, 0,紙束最大値)
 	確認場所 = 選択カード
 	確認ゾーン = EX덱
 	TRYCALLFORM CARD_UI(選択カード_ID,2);　カード生成からくるUI（受け渡し必要：듀얼리스트情報のみ）
-
+	IF フィールド표시中 == 1
+		PRINTL [1] - 돌아간다
+		BINPUT
+		IF RESULT == 1
+			PRINTFORMW 돌아갑니다。
+			GOTO INPUT_LOOP_EXDECK
+		ENDIF
+	ENDIF
 	TRYCALLFORM CARD_{選択カード_ID}("종류")
 	SELECTCASE RESULT
 	CASE 싱크로

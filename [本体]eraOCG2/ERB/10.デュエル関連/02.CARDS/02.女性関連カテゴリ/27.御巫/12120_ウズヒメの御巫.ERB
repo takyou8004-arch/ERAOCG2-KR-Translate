@@ -1,0 +1,173 @@
+﻿@CARDNAME_12120,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 우즈히메의 미캉코
+	CASE "略称"
+		RESULTS = 우즈히메
+	CASE "カテゴリ"
+		RESULTS:0 = 미캉코
+ENDSELECT
+
+
+@CARD_12120(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 엑시즈
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	;牝性/雄性があるよ
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		SELECTCASE RAND:2
+			CASE 0
+				RESULT:1 = 2121
+				RETURN 2120
+			CASE 1
+				RESULT:1 = 2120
+				RETURN 2121
+		ENDSELECT
+	CASE "추가日"
+		RETURN 250628
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_12120(종류)
+#DIM DYNAMIC 종류
+
+PRINTL レベル３「미캉코」モンスター×２
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：このカードが특수소환した場合に발동できる。
+PRINTL 자신の덱・묘지から装備마법カード１枚を손패に加える。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：このカードは戦闘では破壊されず、
+PRINTL このカードの戦闘で発生する자신への戦闘ダメージは代わりに상대が受ける。
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ③：このカードが攻撃を行ったダメージステップ終了時、このカードのX素材を１つ取り除いて발동できる。
+PRINTL このカードはもう１度攻撃できる。
+
+
+@CARDSUMMON_12120(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 3
+素材条件カテゴリ = 미캉코
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,12120) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_12120(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,12120)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,12120)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲덱 = 1
+    효과条件종류 = 装備마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_12120(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,12120,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲덱 = 1
+		효과条件종류 = 装備마법
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 攻撃時強制誘発
+    CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ反射",1)
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,12120,,X消費1)
+	IF RESULT == 0
+	    CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",1)
+	ENDIF
+
+ENDIF
+

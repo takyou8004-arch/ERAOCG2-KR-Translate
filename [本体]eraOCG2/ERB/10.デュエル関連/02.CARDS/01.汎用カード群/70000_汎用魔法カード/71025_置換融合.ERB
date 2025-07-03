@@ -1,0 +1,131 @@
+﻿@CARDNAME_71025,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 置換융합
+	CASE "略称"
+		RESULTS = 置換융합
+	CASE "カテゴリ"
+		RESULTS:0 = 융합
+ENDSELECT
+
+
+@CARD_71025(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "別途ID"
+		RETURN 71010
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_71025(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカードのカード名はルール上「융합」として扱う。
+CALLFORM CARD_ABLE(0,마함起動,손패起動)
+PRINTL ①：자신フィールドのモンスターを융합素材とし、융합モンスター１体を융합소환する。
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ②：묘지のこのカードを제외して발동できる。
+PRINTL 자신の묘지の융합モンスター１体をEX덱に戻す。その後、자신は１枚ドローする。
+
+@CARDCAN_71025(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71025)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲필드 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 융합
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 융합
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71025(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 묘지送カード,10
+#DIM DYNAMIC 손패묘지送カード,10
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択済カード
+;융합소환
+VARSET 묘지送カード, 35
+VARSET 손패묘지送カード, 35
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71025)
+	IF RESULT == 0
+		;마법カードを묘지送り
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL RESETAREA_MAT
+		素材範囲필드 = 1
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			;カードの条件を読み込む：
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			;素材処理を読み込む
+			CALL FUSSUMMON(듀얼리스트, 選択カード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71025)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		SIF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ENDIF

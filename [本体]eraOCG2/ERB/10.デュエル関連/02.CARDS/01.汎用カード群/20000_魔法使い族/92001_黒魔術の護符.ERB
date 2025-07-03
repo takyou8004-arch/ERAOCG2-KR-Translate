@@ -1,0 +1,147 @@
+﻿@CARDNAME_92001,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 黒魔術の護符
+	CASE "略称"
+		RESULTS = 黒魔術の護符
+	CASE "カテゴリ"
+		RESULTS:0 = 블랙 매지션
+ENDSELECT
+
+
+@CARD_92001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250628
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92001(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカードは손패の마법사족モンスター１体を상대に見せ、セットしたターンに발동する事もできる。
+CALLFORM CARD_ABLE(0,발동誘発)
+PRINTL ①：「블랙 매지션」カードの효과の발동にチェーンして、상대モンスターの효과が발동した時に발동できる。
+PRINTL その효과を無効にし、このターン、そのモンスターと元々のカード名が同じモンスターが발동した효과は無効化される。
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②：このカードが묘지に存在する状態で、자신が「블랙 매지션」を특수소환した場合、
+PRINTL ２５００LPを払って발동できる。このカードを자신フィールドにセットする。
+
+@CARDCAN_92001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92001)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	IF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종족 = 마법사족
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	SIF 効後_カウンタ < 2
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	TRYCALLFORM CARDNAME_{効後_효과ID:(効後_カウンタ - 2)},"カテゴリ"
+	SIF !MATCH(RESULTS,"블랙 매지션")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과条件名前 = 블랙 매지션
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 2500
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_92001(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 설정禁止
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 효과先
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 발동誘発 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92001)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종족 = 마법사족
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT != 9999
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+			IF RESULT:1 != 0
+				설정禁止 = RESULT:1
+				CALL CARD_EFFECT_PROHIB(듀얼리스트,설정禁止,2,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 발동誘発 && GETVAR(@"%듀얼리스트%_魔_表:場所") != 3
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92001)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+		IF RESULT:1 != 0
+			설정禁止 = RESULT:1
+			CALL CARD_EFFECT_PROHIB(듀얼리스트,설정禁止,2,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92001)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",2500)
+		CALL FULLRESET
+		효과条件名前 = 黒魔術の護符
+		CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF
+

@@ -1,0 +1,145 @@
+﻿@CARDNAME_71210,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 회멸の都オブシディム
+	CASE "略称"
+		RESULTS = 회멸の都
+	CASE "カテゴリ"
+		RESULTS:0 = 회멸
+ENDSELECT
+
+
+@CARD_71210(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+	CASE "추가日"
+		RETURN 250630
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71210(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신フィールドは「회멸の都」となる。
+PRINTL このカード名の②③の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,지속효과)
+;期間と範囲をアッパー
+PRINTL ①：フィールドの특수소환された表側표시モンスターは원소정령족になる。
+CALLFORM CARD_ABLE(2,ターン終了時)
+PRINTL ②：자신エンドフェイズに발동できる。
+PRINTL 자신の묘지の「회멸」カード１枚を덱の一番下に戻す。その後、자신は１枚ドローする。
+CALLFORM CARD_ABLE(3,필드→戦離)
+PRINTL ③：フィールドのこのカードが、破壊された場合または제외された場合に발동できる。
+PRINTL 덱から「회멸」モンスター１体を특수소환する。
+
+@CARDCAN_71210(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71210)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,71210)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 회멸
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 필드→戦離
+	SIF 발동済_3(듀얼리스트,71210)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 회멸
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71210(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件達成
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71210)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트,"회멸の都")
+	CALL FULLRESET
+	효과条件召種 = 召種全특수
+	CALL STATCHANGE_OTHER(듀얼리스트,"필드",場所,"種",원소정령족)
+	CALL FULLRESET
+	효과条件召種 = 召種全특수
+	CALL STATCHANGE_OTHER(듀얼리스트,"상대필드",場所,"種",원소정령족,71210)
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71210,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 회멸
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드→戦離
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71210,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 회멸
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

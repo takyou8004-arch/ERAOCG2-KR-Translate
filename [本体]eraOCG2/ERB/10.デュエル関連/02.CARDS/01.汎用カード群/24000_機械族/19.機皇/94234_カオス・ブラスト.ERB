@@ -1,0 +1,117 @@
+﻿@CARDNAME_94234,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 카오스 블래스트
+	CASE "略称"
+		RESULTS = 카오스 블래스트
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+ENDSELECT
+
+
+@CARD_94234(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250602
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_94234(종류)
+
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動 ,フリー誘発)
+PRINTL ①：자신 필드에 "기황" 몬스터가 존재하는 경우、
+PRINTL 덱에서 기계족 / 레벨 １ 몬스터 ３장을 묘지로 보내고 발동할 수 있다。
+PRINTL 자신 / 상대 필드에 존재하는、"기황제" 이외의 레벨 ４이하의 몬스터를 전부 파괴한다。
+PRINTL 
+
+@CARDCAN_94234(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과制限達成
+#DIM DYNAMIC カウンタ
+
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,94234)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALLFORM 효과条件レベル_ADV(4,"以下")
+	효과条件固カテゴリ = 기황제
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 기황
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 기계족
+	효과条件レベル = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_94234(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,94234)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종족 = 기계족
+		효과条件レベル = 1
+		효과条件複数 = 3
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件표시 = 表側표시
+			CALLFORM 효과条件レベル_ADV(4,"以下")
+			효과条件固カテゴリ = 기황제
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드全体",場所,"묘지")
+		ENDIF
+	ENDIF
+ENDIF

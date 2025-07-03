@@ -43,7 +43,6 @@ CALL COLOR_LINE(설정カラー)
 PRINTFORML ■ 카드 상세설명
 CALL COLOR_LINE(설정カラー)
 VARSET RESULTS
-; スプライト画像(○○〇〇_DUEL.png)の표시
 CALL PRINT_STATE_DUEL(選択カード_ID)
 SIF RESULT == 1
 	CALL COLOR_LINE(설정カラー)
@@ -376,8 +375,6 @@ FOR カウンタB,0,10
 			IF GETVAR(@"%듀얼리스트%_MZ_表:カウンタ") == 3
 				설정色２ = C_L_GRAY
 			ENDIF
-
-
 		ENDIF
 		IF !GROUPMATCH(カウンタB,0,9)
 			VARSET RESULT
@@ -2588,6 +2585,8 @@ ELSEIF RESULT == 1000
 	WAIT
 ELSE
 	$SKIP_BUTTONS
+	SIF SKIP플래그 == 2
+		WAIT
 	RETURN RESULT
 ENDIF
 
@@ -2597,8 +2596,439 @@ GOTO INPUTLOOP
 
 
 
+@CARD_UI_RESET
+VARSET 確認듀얼리스트
+VARSET 確認종류,-1
+VARSET 確認ゾーン
+VARSET 確認場所
+VARSET フリー確認
+;VARSET 確認지속
 
-@DUEL_PLAYER_UI(ARG,이벤트起動)
+
+@CARD_ABLE(효과番号,종류:0,종류:1,종류:2,종류:3,종류:4,종류:5,종류:6,종류:7,종류:8,종류:9,종류:10)
+#DIM DYNAMIC 종류,99
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カード_ID
+#DIM DYNAMIC 효과番号
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 確認지속
+
+SIF 検索플래그 == 1
+	RETURN 0
+
+듀얼리스트 = %確認듀얼리스트%
+ゾーン = %確認ゾーン%
+場所 = 確認場所
+
+;PRINTFORML ここ通過１
+SIF 듀얼리스트 == "" || ゾーン == ""
+	RETURN 0
+SIF ゾーン == "효과処理"
+	RETURN 1
+
+SIF GROUPMATCH(종류, 지속효과, 攻守変動, 常在無効)
+	確認지속 = 1
+
+;PRINTFORML ここ通過２
+カード_ID = GETVAR(@"%듀얼리스트%_%ゾーン%:場所")
+IF フリー確認 == 1 && 確認지속 == 1
+	TRYCALLFORM CARDCAN_{カード_ID}(듀얼리스트,지속효과,ゾーン,場所)
+	SIF RESULT == 1
+		条件達成 = 1
+	TRYCALLFORM CARDCAN_{カード_ID}(듀얼리스트,攻守変動,ゾーン,場所)
+	SIF RESULT == 1
+		条件達成 = 1
+
+	TRYCALLFORM CARDCAN_{カード_ID}(듀얼리스트,常在無効,ゾーン,場所)
+	SIF RESULT == 1
+		条件達成 = 1
+
+	IF 条件達成 == 1
+		SETCOLOR C_GREEN
+		PRINT (適用中)
+		RESETCOLOR
+		RETURN 1
+	ENDIF
+ENDIF
+;PRINTFORML ここ通過３
+
+
+VARSET 条件達成
+SELECTCASE 효과番号
+CASE 1
+	SIF 발동済_1(듀얼리스트,カード_ID)
+		条件達成 = 1
+CASE 2
+	SIF 발동済_2(듀얼리스트,カード_ID)
+		条件達成 = 1
+CASE 3
+	SIF 발동済_3(듀얼리스트,カード_ID)
+		条件達成 = 1
+CASE 10
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		条件達成 = 1
+CASE 11
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		条件達成 = 1
+CASE 20
+	SIF 발동済_D1(듀얼리스트,カード_ID)
+		条件達成 = 1
+CASE 21
+	SIF 발동済_D2(듀얼리스트,カード_ID)
+		条件達成 = 1
+ENDSELECT
+
+IF 条件達成 == 1
+	SETCOLOR C_GRAY
+	PRINT (발동済)
+	RESETCOLOR
+	RETURN 1
+ENDIF
+
+SIF !MATCH(종류, 確認종류)
+	RETURN 0
+종류 = 確認종류
+TRYCALLFORM CARDCAN_{カード_ID}(듀얼리스트,종류,ゾーン,場所)
+IF RESULT == 1
+	SETCOLOR C_YELLOW
+	PRINT (발동可)
+	RESETCOLOR
+	RETURN 1
+ENDIF
+
+
+RETURN 0
+
+@DIPLAY_BOARD(설정플래그)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 勝利판정
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 덱選択
+#DIM DYNAMIC 상대덱選択
+#DIM DYNAMIC 攻撃誘導플래그
+#DIM DYNAMIC イベント플래그
+#DIM DYNAMIC 連戦플래그
+#DIM DYNAMIC 발동カード_ID
+#DIM DYNAMIC 裏側플래그
+#DIM DYNAMIC 先攻설정
+#DIMS DYNAMIC 名前ボタン
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 설정플래그
+
+;PRINTFORML チェック！효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
+SIF 설정플래그 == 2
+	フィールド표시中 = 1
+
+CALL DISPLAY_CARDS_ONBOARD()
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;SETCOLOR C_L_RED
+
+PRINTPLAIN ┌─────────────────────────────────────>E<────────────────────────────────────
+PRINTBUTTON "●",8888
+RESETCOLOR
+
+CALL CARD_MAGINFO("상대")
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;SETCOLOR C_L_BLUE
+PRINTPLAIN └┬─────────────────────────────────>
+;SETCOLOR C_L_RED
+PRINTPLAIN MAGIC / TRAPS<────────────────────────────────┬┘
+RESETCOLOR
+
+CALL CARD_SUMINFO("상대")
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;SETCOLOR C_L_BLUE
+PRINTFORM 　｜
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+PRINTFORM 　┏──%"",20%
+SETCOLOR C_L_BLUE
+名前ボタン = 【%CALLNAME:MASTER,17,LEFT%】
+PRINTBUTTON @"%名前ボタン%",1101
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;8削減
+PRINTFORM ——————— ／
+IF 자신_フィールド名 != "" && 상대_フィールド名 != ""
+	SETCOLOR C_L_BLUE
+	SUBSTRING 자신_フィールド名, 0, 12
+	PRINTFORM %RESULTS,12,LEFT%
+	IF ターンプレイヤー == "자신"
+		SETCOLOR C_L_BLUE
+	ELSE
+		SETCOLOR C_L_RED
+	ENDIF
+	PRINTFORM ／
+	SETCOLOR C_L_RED
+	SUBSTRING 상대_フィールド名, 0, 12
+	PRINTFORM %RESULTS,12,LEFT%
+ELSEIF 자신_フィールド名 != ""
+	SETCOLOR C_L_BLUE
+	PRINTFORM %자신_フィールド名,26,LEFT%
+ELSEIF 상대_フィールド名 != ""
+	SETCOLOR C_L_RED
+	PRINTFORM %상대_フィールド名,26,RIGHT%
+ELSE
+	PRINTFORM %"",26%
+ENDIF
+	
+PRINTFORM ＼──%"",20%
+
+
+RESETCOLOR
+
+PRINTFORM 
+
+SETCOLOR C_L_RED
+IF OPPOSER == -1
+	IF OPPOSER名 != ""
+		名前ボタン = 【%OPPOSER名,17,LEFT%】
+	ELSE
+		名前ボタン = 【OPPOSER　　　　　】
+	ENDIF
+	PRINTBUTTON @"%名前ボタン%",1100
+ELSE
+	名前ボタン = 【%CALLNAME:OPPOSER,17,LEFT%】
+	PRINTBUTTON @"%名前ボタン%",1100
+ENDIF
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+PRINTFORM —————————┓　
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;SETCOLOR C_L_RED
+PRINTFORML ｜
+RESETCOLOR
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;SETCOLOR C_L_BLUE
+PRINTFORM 　｜
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+PRINTFORM 　┣──%"",20%
+;PRINTFORM 　┣———————————————
+
+SETCOLOR C_L_BLUE
+IF ライフ_자신 >= 99999
+	PRINTBUTTON @"【PLAYER  LP:99999+】",1101
+;	PRINTFORM 【PLAYER  LP:99999+】
+ELSE
+	SIF ライフ_자신 <= 2000
+		SETCOLOR C_RED
+	PRINTBUTTON @"【PLAYER  LP:{ライフ_자신,6}】",1101
+;	PRINTFORM 【PLAYER  LP: {ライフ_자신,5}】
+ENDIF
+
+
+RESETCOLOR
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+;	PRINTFORM ——————————————— │
+	PRINTFORM —————— │
+
+	FONTSTYLE 8
+	PRINTFORM  TURN【{ターン数,2}】/【PLAYER  TURN】
+	FONTSTYLE 0
+	PRINTFORM │———%"",20%
+ELSE
+	SETCOLOR C_L_RED
+;	PRINTFORM ——————————————— │
+	PRINTFORM —————— │
+	FONTSTYLE 8	
+	PRINTFORM  TURN【{ターン数,2}】/【OPPOSER TURN】
+	FONTSTYLE 0
+	PRINTFORM │———%"",20%
+ENDIF
+RESETCOLOR
+SETCOLOR C_L_RED
+IF ライフ_상대 >= 99999
+	PRINTBUTTON @"【OPPOSER LP:99999+】",1100
+ELSEIF ライフ_상대 <= -99999
+	PRINTBUTTON @"【OPPOSER LP:-99999】",1100
+
+ELSE
+	SIF ライフ_상대 <= 2000
+		SETCOLOR C_RED
+
+	PRINTBUTTON @"【OPPOSER LP:{ライフ_상대,6}】",1100
+ENDIF
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;PRINTFORM ———————————┫　
+PRINTFORM —————————┫　
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;SETCOLOR C_L_RED
+PRINTFORML ｜
+RESETCOLOR
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;SETCOLOR C_L_BLUE
+PRINTFORM 　｜
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+
+PRINTFORM 　┗──%"",20%
+;PRINTFORM 　┗———————————————
+
+SETCOLOR C_L_BLUE
+PRINTFORM 【De:{現山札数("자신"),2}/Ha:{손패数("자신"),2}/Gy:{묘지数("자신"),2}】
+
+
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+
+;PRINTFORM ———————————————— ＼
+PRINTFORM ——————— ＼
+
+FONTSTYLE 8
+PRINTFORM —————【
+
+IF メインフェイズ２ == 1
+	PRINTFORM MAIN  PHASE2
+ELSEIF メインフェイズ == 1
+	PRINTFORM MAIN  PHASE1
+ELSEIF バトルフェイズ == 1
+	SETCOLOR C_RED
+	PRINTFORM BATTLE PHASE
+ELSEIF スタンバイフェイズ == 1
+	PRINTFORM    STANDBY  
+
+ELSEIF ドローフェイズ == 1
+	PRINTFORM  DRAW  PHASE
+ELSEIF エンドフェイズ == 1
+	PRINTFORM  END   PHASE
+ENDIF
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+
+PRINTFORM 】—————
+FONTSTYLE 0
+PRINTFORM ／──%"",20%
+
+
+SETCOLOR C_L_RED
+PRINTFORM 【De:{現山札数("상대"),2}/Ha:{손패数("상대"),2}/Gy:{묘지数("상대"),2}】
+RESETCOLOR
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+PRINTFORM —————————┛　
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;SETCOLOR C_L_RED
+PRINTFORML ｜
+
+RESETCOLOR
+
+CALL CARD_SUMINFO("자신")
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;SETCOLOR C_L_BLUE
+PRINTPLAIN ┌┴─────────────────────────────────>MAGIC / TRAPS
+;SETCOLOR C_L_RED
+PRINTPLAIN <────────────────────────────────┴┐
+RESETCOLOR
+
+CALL CARD_MAGINFO("자신")
+
+IF ターンプレイヤー == "자신"
+	SETCOLOR C_L_BLUE
+ELSE
+	SETCOLOR C_L_RED
+ENDIF
+;SETCOLOR C_L_BLUE
+PRINTBUTTON "◎",8888
+PRINTPLAIN ─────────────────────────────────────>P<────────────────────────────────────┘
+RESETCOLOR
+;PRINTFORML チェック！AF_DUEL_UI 효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
+CALL DUEL_PLAYER_UI(설정플래그)
+IF 설정플래그 == 2 && RESULT != 9999
+	RESTART
+ENDIF
+;PRINTFORML チェック！AF_DUEL_UI 효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
+フィールド표시中 = 0
+RETURN RESULT
+
+
+
+
+@DUEL_PLAYER_UI(설정플래그)
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC カウンタB
 #DIM DYNAMIC カウンタC
@@ -2614,7 +3044,11 @@ GOTO INPUTLOOP
 #DIM DYNAMIC 설정_ボタン,99
 #DIM DYNAMIC 選択カード
 #DIMS DYNAMIC 표시形式
-#DIM DYNAMIC 이벤트起動
+#DIM DYNAMIC 설정플래그
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 발동カード_ID
+#DIM DYNAMIC 裏側플래그
+#DIM DYNAMIC 攻撃誘導플래그
 #DIM 初期値
 
 #DIM DYNAMIC 손패実数
@@ -2630,6 +3064,8 @@ PRINTL
 VARSET 묘지起動可
 VARSET EX起動可
 FOR カウンタB,0,紙束最大値
+	SIF 설정플래그 == 2
+		CONTINUE
 	SIF 자신_EX덱:カウンタB == -1
 		CONTINUE
 	VARSET RESULT
@@ -2650,6 +3086,8 @@ FOR カウンタB,0,紙束最大値
 	ENDIF
 NEXT
 FOR カウンタB,0,紙束最大値
+	SIF 설정플래그 == 2
+		CONTINUE
 	SIF 자신_묘지:カウンタB == -1
 		CONTINUE
 	VARSET RESULT
@@ -2674,6 +3112,7 @@ NEXT
 
 
 
+;PRINTFORML チェック！B4_HAND_UI 효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
 
 PRINTPLAINFORM ┏━━
 FONTSTYLE 8
@@ -2723,12 +3162,17 @@ FOR カウンタ,0,20
 			SIF RESULT != 0
 				소환可能 = 1
 			VARSET RESULT
-			TRYCALLFORM CARDSUMMON_{설정_손패:実カウンタ}("자신",설정_ボタン:実カウンタ,1)
-			SIF RESULT == 1
-				MAX可能 ++
+			TRYCALLFORM CARD_{설정_손패:実カウンタ}("맥시멈")	
+			IF RESULT >= 1
+				VARSET RESULT
+				TRYCALLFORM CARDSUMMON_{설정_손패:実カウンタ}("자신",설정_ボタン:実カウンタ,1)
+				SIF RESULT == 1
+					MAX可能 ++
+			ENDIF
 		ENDIF
 		VARSET RESULT
-		TRYCALLFORM CARDCAN_{설정_손패:実カウンタ}("자신",손패起動,"손패",설정_ボタン:実カウンタ)
+		SIF 설정플래그 != 2
+			TRYCALLFORM CARDCAN_{설정_손패:実カウンタ}("자신",손패起動,"손패",설정_ボタン:実カウンタ)
 		SIF RESULT == 1
 			발동可能 ++
 		IF MAX可能 >= 1
@@ -2818,6 +3262,8 @@ PRINTPLAIN ┃
 RESETCOLOR
 
 PRINTL
+;PRINTFORML チェック！AF_HAND_UI 효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
+
 PRINT 　
 FONTSTYLE 8
 PRINTFORM %" 게임진행 :",12,LEFT%
@@ -2839,40 +3285,43 @@ PRINTPLAIN ┃
 RESETCOLOR
 
 PRINTL
-IF ターンプレイヤー == "자신"
-	VARSET RESULT
-	TRYCALLFORM IRAI_DUEL_CONDVIC_{이벤트起動}
-	IF 이벤트起動 >= 1 && RESULT == 1
-		SETCOLOR C_GOLD
-		PRINTFORM %"　[9013] - 승리조건달성",64,LEFT%
-		RESETCOLOR
-	ELSE
-		IF (メインフェイズ == 1 && ターン数 == 1) || メインフェイズ２ == 1
-			PRINTFORM %"　[1000] - 턴 종료",64,LEFT%
-		ELSEIF メインフェイズ == 1 && メインフェイズ２ != 1
-			PRINTFORM %"　[900] - 배틀 개시　　　　　　　[1000] - 턴 종료",64,LEFT%
-		ELSEIF バトルフェイズ == 1
-			PRINTFORM %"　[950] - 메인2이행 　　　　　　[1000] - 턴 종료",64,LEFT%
+IF 설정플래그 == 0
+	IF ターンプレイヤー == "자신"
+		VARSET RESULT
+		TRYCALLFORM IRAI_DUEL_CONDVIC_{이벤트起動}
+		IF 이벤트起動 >= 1 && RESULT == 1
+			SETCOLOR C_GOLD
+			PRINTFORM %"　[9013] - 승리조건달성",64,LEFT%
+			RESETCOLOR
+		ELSE
+			IF (メインフェイズ == 1 && ターン数 == 1) || メインフェイズ２ == 1
+				PRINTFORM %"　[1000] - 턴 종료",64,LEFT%
+			ELSEIF メインフェイズ == 1 && メインフェイズ２ != 1
+				PRINTFORM %"　[900] - 배틀 개시　　　　　　　[1000] - 턴 종료",64,LEFT%
+			ELSEIF バトルフェイズ == 1
+				PRINTFORM %"　[950] - 메인2이행 　　　　　　[1000] - 턴 종료",64,LEFT%
+			ENDIF
+		ENDIF
+	ELSEIF ターンプレイヤー == "상대"
+		IF 상대ターン終了 == 1 || ERA起動 == 2
+			PRINTFORM %"　[1000] - 행동없음:（턴 엔드）",64,LEFT%
+		ELSEIF メインフェイズ２移行 == 1
+			PRINTFORM %"　[950] - 행동없음:（메인２개시）",64,LEFT%
+		ELSEIF バトルフェイズ移行 == 1
+			PRINTFORM %"　[900] - 행동없음:（배틀 페이즈 개시）",64,LEFT%
+		ELSE
+			PRINTFORM %"　[700] - 상대턴을 진행한다（▷▷)",64,LEFT%
 		ENDIF
 	ENDIF
-ELSEIF ターンプレイヤー == "상대"
-	IF 상대ターン終了 == 1 || ERA起動 == 2
-		PRINTFORM %"　[1000] - 행동없음:（턴 엔드）",64,LEFT%
-	ELSEIF メインフェイズ２移行 == 1
-		PRINTFORM %"　[950] - 행동없음:（메인２개시）",64,LEFT%
-	ELSEIF バトルフェイズ移行 == 1
-		PRINTFORM %"　[900] - 행동없음:（배틀 페이즈 개시）",64,LEFT%
+
+	IF ERA起動 == 2
+		PRINTFORM %"[9013] - 듀얼을 종료한다",64,LEFT%
 	ELSE
-		PRINTFORM %"　[700] - 상대턴을 진행한다（▷▷)",64,LEFT%
+		PRINTFORM %"[999] - 항복한다",64,LEFT%
 	ENDIF
-ENDIF
-
-IF ERA起動 == 2
-	PRINTFORM %"[9013] - 듀얼을 종료한다",64,LEFT%
 ELSE
-	PRINTFORM %"[999] - 항복한다",64,LEFT%
+	PRINTFORM %"[9999] - 확인종료",128,LEFT%
 ENDIF
-
 SIF 묘지起動可 || EX起動可
 	SETCOLOR C_YELLOW
 PRINTPLAIN ┃
@@ -2894,30 +3343,33 @@ SIF 묘지起動可 || EX起動可
 PRINTPLAINFORM ┗━━━━━━━━━━┛
 RESETCOLOR
 PRINTL
-IF 이벤트起動 >= 1
-	VARSET RESULT
-	TRYCALLFORM IRAI_DUEL_MESSAGE_{이벤트起動}(1)
-	IF RESULT == 1	
-		SETCOLOR C_YELLOW
-		PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
-		RESETCOLOR
-		TRYCALLFORM IRAI_DUEL_MESSAGE_{이벤트起動}
-		SETCOLOR C_YELLOW
-		CUSTOMDRAWLINE ―
-		RESETCOLOR
+;PRINTFORML チェック！BF G_イベ起動　효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
+IF 설정플래그 == 0
+	IF 이벤트起動 >= 1
+		VARSET RESULT
+		TRYCALLFORM IRAI_DUEL_MESSAGE_{이벤트起動}(1)
+		IF RESULT == 1	
+			SETCOLOR C_YELLOW
+			PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+			RESETCOLOR
+			TRYCALLFORM IRAI_DUEL_MESSAGE_{이벤트起動}
+			SETCOLOR C_YELLOW
+			CUSTOMDRAWLINE ―
+			RESETCOLOR
+		ELSE
+			;Anonym추가
+			SIF オプション_デュエル中待機メッセージ == 1
+				TRYCALLFORM DUEL_MESSAGE("자신")
+			CUSTOMDRAWLINE —
+		ENDIF
 	ELSE
 		;Anonym추가
 		SIF オプション_デュエル中待機メッセージ == 1
 			TRYCALLFORM DUEL_MESSAGE("자신")
 		CUSTOMDRAWLINE —
 	ENDIF
-ELSE
-	;Anonym추가
-	SIF オプション_デュエル中待機メッセージ == 1
-		TRYCALLFORM DUEL_MESSAGE("자신")
-	CUSTOMDRAWLINE —
 ENDIF
-IF デバッグコマンド == 1
+IF デバッグコマンド == 1 && 설정플래그 == 0
 	PRINTFORML 
 	PRINTL 디버그 커맨드：
 	PRINTL 소환권：{소환権}/추가소환권：{追소환権}
@@ -2934,6 +3386,7 @@ REPEAT 0
 	カウンタ ++
 	PRINTFORML 수：{カウンタ}
 REND
+;PRINTFORML チェック！BF確認終了 효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
 
 BINPUT
 IF RESULT == 9090
@@ -3120,7 +3573,7 @@ ELSEIF RESULT == 9007
 		ELSEIF RESULT == 2
 			표시形式 = 守備표시
 		ELSEIF RESULT == 3
-			표시形式 = 裏側표시
+			표시形式 = 裏側守備표시
 		ENDIF
 		;패에서 소환
 		IF INRANGE (選択カード,100,199)
@@ -3171,7 +3624,7 @@ ELSEIF RESULT == 9008
 		ELSEIF RESULT == 2
 			표시形式 = 守備표시
 		ELSEIF RESULT == 3
-			표시形式 = 裏側표시
+			표시形式 = 裏側守備표시
 		ENDIF
 		;패에서 소환
 		IF INRANGE (選択カード,100,199)
@@ -3204,7 +3657,8 @@ ELSEIF RESULT == 9010
 			SIF RESULTS == ""
 				CONTINUE
 			SETVAR @"자신_묘지:6", カウンタ
-			TRYCALLFORM CARDCAN_{자신_묘지:6}("자신",カウンタB,"묘지",6)
+			SIF 설정플래그 != 2	
+				TRYCALLFORM CARDCAN_{자신_묘지:6}("자신",カウンタB,"묘지",6)
 			TRYCALLFORM CARDNAME_{カウンタ}("名前")
 			PRINTFORML 『{カウンタ}』 - %RESULTS%　PASS！
 		NEXT
@@ -3243,116 +3697,645 @@ ELSEIF RESULT == 999 || (詰め플래그 && RESULT == 1000)
 ELSEIF RESULT == 777
 	オプション_略표시 ^= 1
 ELSE
-	RETURN RESULT
+	;손패のカード발동・소환処理――――――――――――――――――――――――
+	IF INRANGE (RESULT, 0, 100)
+		選択カード = RESULT
+		選択カード_ID = 자신_손패:選択カード
+		$INPUT_TEFUDA_LOOP
+		CALL CARD_UI_RESET
+		確認듀얼리스트 = 자신
+		確認종류 = 손패起動
+		確認ゾーン = 손패
+		確認場所 = 選択カード
+		フリー確認 = 1
+		TRYCALLFORM CARD_UI(選択カード_ID,2); 自由確認での손패確認（受け渡し必要：듀얼리스트情報のみ）
+		IF 설정플래그 == 0
+			SIF 설정플래그 != 2
+				TRYCALLFORM CARDCAN_{選択カード_ID}("자신",손패起動,"손패",選択カード)
+			IF RESULT == 1 
+				SETCOLOR C_G_YELLOW
+				PRINT 　[3] - 효과 발동　　　　
+				RESETCOLOR
+				ENDIF
+VARSET RESULT
+
+			IF メインフェイズ == 1 && ターンプレイヤー == "자신"
+				TRYCALLFORM CARD_{選択カード_ID}, "종류"
+				IF RESULT <= 通常モン
+					SETCOLOR C_GRAY
+					CALL CARD_NS_CHECK_OK("자신",選択カード)
+					IF RESULT != 0				
+						IF RESULT == 1 || RESULT == 3
+							SETCOLOR C_AQUA_2
+							PRINT 　[1] - 일반 소환　　　　
+							SIF 소환権 >= 1
+								PRINT 　[2] - 카드세트　　
+						ENDIF
+						IF RESULT == 2 || RESULT == 3
+							VARSET RESULT
+							TRYCALLFORM CARDCAN_{選択カード_ID}("자신",효과소환,"손패",選択カード)
+							IF RESULT == 1 
+								SETCOLOR C_AQUA_2
+								PRINT 　[4] - 효과 소환　　　　
+							ENDIF
+						ENDIF
+						RESETCOLOR
+					ENDIF
+					VARSET RESULT
+					TRYCALLFORM CARD_{選択カード_ID}, "맥시멈"
+					IF RESULT >= 1
+						;PRINTFORML 選択カード:{選択カード}/選択カード_ID:{選択カード_ID}
+						TRYCALLFORM CARDSUMMON_{選択カード_ID}("자신",選択カード,1)
+						IF RESULT >= 1
+							SETCOLOR C_RED
+							PRINT 　[5] - 맥시멈 소환！！
+							RESETCOLOR
+						ELSE
+							SETCOLOR C_GRAY
+							PRINT 　<5> - 맥시멈 소환　
+							RESETCOLOR
+						ENDIF
+					ENDIF
+				ENDIF
+				IF RESULT > 마법全般
+					SIF 現마함("자신") == 5
+						SETCOLOR C_GRAY
+					PRINT 　[2] - 카드 세트　　
+					RESETCOLOR
+				ENDIF
+			ENDIF
+		ENDIF
+		RESETCOLOR
+		PRINTL
+		PRINTL
+		PRINTL 　[100] - 돌아간다
+		BINPUT
+		IF RESULT == 100
+			PRINTL 
+		ELSEIF RESULT == 1000
+			CALL PRINT_STATE_DUEL(選択カード_ID,2)
+			WAIT
+			GOTO INPUT_TEFUDA_LOOP
+		ELSEIF RESULT == 1
+			IF 자신_手_召可:選択カード >= 1
+				CALL CARD_SUMMON_SHORI("자신",選択カード,"攻撃표시",3)
+			ELSE
+				CALL CARD_SUMMON_SHORI("자신",選択カード,"攻撃표시")
+			ENDIF
+		ELSEIF RESULT == 2
+			CALLFORM CARD_{選択カード_ID}("종류")
+			IF RESULT > 20
+				IF 現마함("자신") == 5
+					PRINTFORMW 마법 함정 존이 가득차서 세트할 수 없습니다。
+				ELSE
+					PRINTFORMW 리버스 카드 세트！
+					CALL CARD_ADD("자신", "손패", "마함", 選択カード,"裏側표시")
+				ENDIF
+			ELSEIF RESULT < 20
+				CALL CARD_SUMMON_SHORI("자신",選択カード,"裏側守備표시")
+			ENDIF
+		ELSEIF RESULT == 4
+			IF 자신_手_召可:選択カード >= 1
+				CALL CARD_SUMMON_SHORI("자신",選択カード,"攻撃표시",4)
+			ELSE	
+				CALL CARD_SUMMON_SHORI("자신",選択カード,"攻撃표시",2)
+			ENDIF
+		ELSEIF RESULT == 3
+			발동カード_ID = 選択カード_ID
+			CALLFORM CARDNAME_{발동カード_ID}("名前")
+			PRINTFORMW 당신은 패에서『{選択カード}』%RESULTS%의 효과 발동 선언을 했습니다！
+			CALLFORM CARD_STANBY(발동カード_ID,"자신",손패起動,"손패",選択カード)
+			CALL CARD_FINAL(ターンプレイヤー);자신ターン손패の起動後のチェック
+
+		ELSEIF RESULT == 5
+			CALLFORM CARDNAME_{選択カード_ID}("名前")
+			PRINTFORMW 당신은 패에서『{選択カード}』%RESULTS%의 맥시멈 선언을 했습니다！
+			CALL MAXSUMMON("자신", 選択カード, "손패")
+		ENDIF
+	;フィールド上のモンスター발동・攻撃処理・状態변경処理――――――――――――――――――――――――
+	ELSEIF INRANGE (RESULT, 2000, 2005)
+		選択カード = RESULT -2000
+		CALL CARD_UI_RESET
+		確認듀얼리스트 = 자신
+		確認종류 = 필드起動
+		確認ゾーン = 필드
+		確認場所 = 選択カード
+		フリー確認 = 1
+
+		TRYCALLFORM CARD_UI_FIELD("자신",選択カード,설정플래그);フィールドの情報（受け渡し必要：듀얼리스트、필드（ゾーン）、場所）
+		
+		IF RESULT == 100
+			PRINTL
+		ELSEIF RESULT == 1
+			IF 자신_MZ_表:選択カード == 1
+				PRINTW 수비 표시로 했습니다
+				CALL SET_FIELD_INFO("자신","필드",選択カード,"表",2,1)
+			ELSEIF 자신_MZ_表:選択カード >= 2
+				PRINTW 공격 표시로 했습니다
+				CALL SET_FIELD_INFO("자신","필드",選択カード,"表",1,1)
+			ENDIF
+			자신_MZ_表変:選択カード = 0
+		ELSEIF RESULT == 3
+			;효과발동処理
+			발동カード_ID = 자신_필드:選択カード
+			CALLFORM CARDNAME_{발동カード_ID}("名前")
+			PRINTFORMW 당신은 몬스터 존에서『{選択カード}』%RESULTS%의 효과 발동 선언을 했습니다！
+			CALLFORM CARD_STANBY(발동カード_ID,"자신",필드起動,"필드",選択カード)
+			CALL CARD_FINAL(ターンプレイヤー);자신ターン필드の起動後のチェック
+		ELSEIF RESULT == 4
+			;효과발동処理
+			TRYCALLFORM CARDEFFECT_{자신_MZ_특수状態:選択カード}("자신",필드起動付与,"필드",選択カード)
+
+		ELSEIF RESULT == 69
+			CALL CARD_REACT("자신",選択カード,"필드")
+
+		;―――――――――――――――――――【戦闘】――――――――――――――――――――――
+		ELSEIF RESULT == 5
+			CALL BATTLE_SETUP("자신",選択カード)
+			VARSET 攻撃誘導플래그
+
+			;攻撃モンスター選択
+			CUSTOMDRAWLINE —
+			PRINTFORML 「공격 몬스터 선택 화면」
+			CUSTOMDRAWLINE —
+			PRINTL
+			FOR カウンタ,0,5
+				SIF 상대_필드:カウンタ == -1
+					CONTINUE
+				SIF 상대_MZ_攻誘:カウンタ == 0
+					CONTINUE
+				攻撃誘導플래그 ++
+			NEXT
+
+			IF 攻撃誘導플래그 == 0
+				FOR カウンタ,0,5
+					VARSET 裏側플래그
+					SIF 상대_필드:カウンタ == -1
+						CONTINUE
+					SIF 상대_필드:カウンタ == 使用불가ゾーン
+						CONTINUE
+
+					裏側플래그 = 상대_MZ_表:カウンタ
+					IF 상대_MZ_攻避:カウンタ >= 1
+						SETCOLOR C_GRAY
+						TRYCALLFORM CARDNAME_{상대_필드:カウンタ}, "名前"
+						CALLFORM CARD_KANPRINT("상대필드",カウンタ,상대_필드:カウンタ,6,裏側플래그)
+					ELSE
+						CALL CARD_SETCOLOR("상대","필드",カウンタ,裏側플래그)
+						CALLFORM CARD_KANPRINT("상대필드",カウンタ,상대_필드:カウンタ,,裏側플래그)
+					ENDIF
+					RESETCOLOR
+				NEXT
+			ELSEIF 攻撃誘導플래그 == 1
+				FOR カウンタ,0,5
+					VARSET 裏側플래그
+					裏側플래그 = 상대_MZ_表:カウンタ
+					SIF 상대_필드:カウンタ == -1
+						CONTINUE
+					SIF 상대_필드:カウンタ == 使用불가ゾーン
+						CONTINUE
+
+					IF 상대_MZ_攻誘:カウンタ == 0 || 상대_MZ_攻避:カウンタ >= 1
+						SETCOLOR C_GRAY
+						CALLFORM CARD_KANPRINT("상대필드",カウンタ,상대_필드:カウンタ,6,裏側플래그)
+					ELSE
+						SETCOLOR C_RED
+						CALLFORM CARD_KANPRINT("상대필드",カウンタ,상대_필드:カウンタ,,裏側플래그)
+						RESETCOLOR
+					ENDIF
+					RESETCOLOR
+				NEXT
+			ENDIF
+			PRINTL
+			IF 자신_直接無効 >= 1
+				SETCOLOR C_GRAY
+				PRINTFORML 전투『{99,2}』: 직접공격 효과중。
+			ELSEIF 자신_MZ_直無:자신_戦闘カード >= 1
+				SETCOLOR C_GRAY
+				PRINTFORML 전투『{99,2}』: 직접공격불가。
+			ELSE
+				IF  자신_MZ_直攻:자신_戦闘カード >= 1
+					PRINTFORML 전투[{99,2}] : 다이렉트 어택
+				ELSE
+					CALL FULLRESET
+					효과範囲상대필드 = 1
+					효과条件攻撃可 = 1
+					CALL CARD_CHECK_ADV("자신")
+					IF RESULT == 1
+						SETCOLOR C_GRAY
+						PRINTFORML 전투『{99,2}』: 몬스터가 존재하지 않습니다。
+					ELSE
+						PRINTFORML 전투[{99,2}] : 다이렉트 어택
+					ENDIF
+				ENDIF
+			ENDIF
+			RESETCOLOR
+			PRINTL
+			CUSTOMDRAWLINE —
+			PRINTL
+			PRINTL [100] - 돌아간다
+			BINPUT
+			CALL CARD_FIGHT("자신",選択カード,RESULT)
+			IF バトル強制終了 == 1
+				バトル強制終了 = 0
+				GOTO INPUT_MAIN2
+			ENDIF
+		ENDIF
+
+	;――――――――――――フィールド上の마법함정발동・状態변경処理――――――――――――
+	ELSEIF INRANGE (RESULT, 3000, 3005)
+		選択カード = RESULT -3000
+		CALL CARD_UI_RESET
+		確認듀얼리스트 = 자신
+		確認종류 = 마함起動
+		確認ゾーン = 마함
+		確認場所 = 選択カード
+		フリー確認 = 1
+		TRYCALLFORM CARD_UI_MAGIC("자신",選択カード,설정플래그);フィールドの情報（受け渡し必要：듀얼리스트、마함（ゾーン）、場所）
+		IF RESULT == 100
+			PRINTL
+		ELSEIF RESULT == 3
+			발동カード_ID = 자신_마함:選択カード
+			CALLFORM CARDNAME_{발동カード_ID}("名前")
+			PRINTFORMW 당신은 마법・함정 존에서『{選択カード}』%RESULTS%의 효과 발동 선언을 했습니다！
+			CALLFORM CARD_STANBY(발동カード_ID,"자신",마함起動,"마함",選択カード)
+			CALL CARD_FINAL(ターンプレイヤー);자신ターン마함の起動後のチェック
+
+		ELSEIF RESULT == 69
+			CALL CARD_REACT("자신",選択カード,"마함")
+		ENDIF
+	;――――――――――――상대フィールド上のカード状態確認――――――――――――
+	ELSEIF INRANGE (RESULT, 5000, 5005)
+		選択カード = RESULT -5000
+		IF デバッグコマンド == 1
+			PRINTL [200] - 표시 형식을 변경
+		ENDIF
+		CALL CARD_UI_RESET
+		確認듀얼리스트 = 상대
+		確認ゾーン = 필드
+		確認場所 = 選択カード
+		フリー確認 = 1
+		TRYCALLFORM CARD_UI_FIELD("상대",選択カード,설정플래그);フィールドの情報（受け渡し必要：듀얼리스트、필드（ゾーン）、場所）
+		IF RESULT == 100
+			PRINTL
+		ELSEIF RESULT == 200
+			IF 상대_MZ_表:選択カード == 1
+				PRINTW 수비 표시로 했습니다
+				상대_MZ_表:選択カード = 2
+			ELSEIF 상대_MZ_表:選択カード >= 2
+				PRINTW 공격 표시로 했습니다
+				상대_MZ_表:選択カード = 1
+			ENDIF
+		ELSEIF RESULT == 4
+			TRYCALLFORM CARDEFFECT_{상대_MZ_특수状態:選択カード}("상대",상대起動付与,"필드",選択カード)
+		ELSEIF RESULT == 69
+			CALL CARD_REACT("상대",選択カード,"필드")
+		ENDIF
+	;――――――――――――상대フィールド上の마함状態변경処理――――――――――――
+	ELSEIF INRANGE (RESULT, 6000, 6005)
+		選択カード = RESULT -6000
+		CALL CARD_UI_RESET
+		確認듀얼리스트 = 자신
+		確認ゾーン = 마함
+		確認場所 = 選択カード
+		フリー確認 = 1
+		TRYCALLFORM CARD_UI_MAGIC("상대",選択カード,설정플래그);フィールドの情報（受け渡し必要：듀얼리스트、마함（ゾーン）、場所）
+		IF RESULT == 100
+			PRINTL
+		ENDIF
+	;――――――――――――묘지のカード確認――――――――――――
+	ELSEIF RESULT == 400
+		CUSTOMDRAWLINE =
+		PRINTFORML 「（자신）묘지 확인 화면」
+		CUSTOMDRAWLINE =
+		PRINTL
+		FOR カウンタ,0,紙束最大値
+			SIF 자신_묘지:カウンタ == -1
+				CONTINUE
+			VARSET RESULT
+			SIF 설정플래그 != 2
+				TRYCALLFORM CARDCAN_{자신_묘지:カウンタ}("자신",묘지起動,"묘지",カウンタ)
+			IF RESULT == 1
+				SETCOLOR C_G_YELLOW
+			ELSE
+				CALL CARD_SETCOLOR("자신","묘지",カウンタ)
+			ENDIF
+
+			CALLFORM CARD_KANPRINT("묘지",カウンタ,자신_묘지:カウンタ)
+			RESETCOLOR
+		NEXT
+		CUSTOMDRAWLINE —
+		PRINTL
+		PRINTL [100] - 돌아간다
+		BINPUT
+		選択カード = RESULT
+		;돌아간다
+		IF 選択カード != 100
+			CALL CARD_UI_RESET
+			確認듀얼리스트 = 자신
+			確認종류 = 묘지起動
+			確認ゾーン = 묘지
+			確認場所 = 選択カード
+			フリー確認 = 1
+			TRYCALLFORM CARD_UI(자신_묘지:選択カード,2); 自由確認での묘지確認（受け渡し必要：듀얼리스트情報のみ）
+			TRYCALLFORM CARDCAN_{자신_묘지:選択カード}("자신",묘지起動,"묘지",選択カード)
+			SETCOLOR C_G_YELLOW
+			SIF RESULT == 1 && 설정플래그 == 0
+				PRINT [3] - 효과발동
+			RESETCOLOR	
+			PRINTL
+			PRINTL [100] - 돌아간다
+			BINPUT
+			IF RESULT == 100
+				PRINTL 
+			ELSEIF RESULT == 3
+				발동カード_ID = 자신_묘지:選択カード
+				CALLFORM CARDNAME_{발동カード_ID}("名前")
+				PRINTFORMW 당신은 묘지에서『{選択カード}』%RESULTS%의 효과 발동 선언을 했습니다！
+				CALLFORM CARD_STANBY(발동カード_ID,"자신",묘지起動,"묘지",選択カード)
+				CALL CARD_FINAL(ターンプレイヤー);자신ターン묘지の起動後のチェック
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 499
+		CUSTOMDRAWLINE =
+		PRINTFORML 「（상대）묘지 확인 화면」
+		CUSTOMDRAWLINE =
+		PRINTL
+		FOR カウンタ,0,紙束最大値
+			SIF 상대_묘지:カウンタ == -1
+				CONTINUE
+			VARSET RESULT	
+			CALL CARD_SETCOLOR("상대","묘지",カウンタ)
+			CALLFORM CARD_KANPRINT("묘지",カウンタ,상대_묘지:カウンタ)
+			RESETCOLOR	
+		NEXT
+		CUSTOMDRAWLINE —
+		PRINTL
+		PRINTL [100] - 돌아간다
+		BINPUT
+		選択カード = RESULT
+		;돌아간다
+		IF 選択カード != 100
+			CALL CARD_UI_RESET
+			確認듀얼리스트 = 상대
+			確認ゾーン = 묘지
+			確認場所 = 選択カード
+			フリー確認 = 1
+			TRYCALLFORM CARD_UI(상대_묘지:選択カード,2); 自由確認での상대묘지確認（受け渡し必要：듀얼리스트情報のみ）
+			RESETCOLOR	
+			PRINTL
+			PRINTL [100] - 돌아간다
+			BINPUT
+			IF RESULT == 100
+				PRINTL 
+			ENDIF
+		ENDIF
+
+	;――――――――――――제외のカード確認――――――――――――
+	ELSEIF RESULT == 600
+		CUSTOMDRAWLINE =
+		PRINTFORML 「（자신）제외 확인 화면」
+		CUSTOMDRAWLINE =
+		PRINTL
+		FOR カウンタ,0,紙束最大値
+			SIF 자신_제외:カウンタ == -1
+				CONTINUE
+
+			VARSET RESULT		
+			CALL CARD_SETCOLOR("자신","제외",カウンタ)
+			CALLFORM CARD_KANPRINT("제외",カウンタ,자신_제외:カウンタ)
+			RESETCOLOR	
+		NEXT
+		CUSTOMDRAWLINE —
+		PRINTL
+		PRINTL [100] - 돌아간다
+		BINPUT
+		選択カード = RESULT
+		;돌아간다
+		IF 選択カード != 100
+			CALL CARD_UI_RESET
+			確認듀얼리스트 = 자신
+			確認ゾーン = 제외
+			確認場所 = 選択カード
+			フリー確認 = 1
+			TRYCALLFORM CARD_UI(자신_제외:選択カード,2); 自由確認での자신제외確認（受け渡し必要：듀얼리스트情報のみ）
+			PRINTL
+			PRINTL [100] - 돌아간다
+			BINPUT
+			IF RESULT == 100
+				PRINTL 
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 699
+		CUSTOMDRAWLINE =
+		PRINTFORML 「（상대）제외 확인 화면」
+		CUSTOMDRAWLINE =
+		PRINTL
+		FOR カウンタ,0,紙束最大値
+			SIF 상대_제외:カウンタ == -1
+				CONTINUE
+			VARSET RESULT	
+			CALL CARD_SETCOLOR("상대","제외",カウンタ)
+			TRYCALLFORM CARDNAME_{상대_제외:カウンタ}, "名前"
+			PRINTFORM 제외[{カウンタ,2}] %RESULTS%
+			PRINTL
+			RESETCOLOR	
+		NEXT
+		CUSTOMDRAWLINE —
+		PRINTL
+		PRINTL [100] - 돌아간다
+		BINPUT
+		選択カード = RESULT
+		;돌아간다
+		IF 選択カード != 100
+			CALL CARD_UI_RESET
+			確認듀얼리스트 = 상대
+			確認ゾーン = 제외
+			確認場所 = 選択カード
+			フリー確認 = 1
+			TRYCALLFORM CARD_UI(상대_제외:選択カード,2); 自由確認での상대제외確認（受け渡し必要：듀얼리스트情報のみ）
+			RESETCOLOR	
+			PRINTL
+			PRINTL [100] - 돌아간다
+			BINPUT
+			IF RESULT == 100
+				PRINTL 
+			ENDIF
+		ENDIF
+	;――――――――――――ターン進行――――――――――――
+	ELSEIF RESULT == 700
+		;GOTO INPUT_LOOP_ENEMY
+		CALL ENEMYTURN_BASIC
+
+	;――――――――――――EX덱確認――――――――――――
+	ELSEIF RESULT == 800
+		CALL CARD_EXDECK("자신")
+
+	;――――――――――――バトルフェイズ移行――――――――――――
+	ELSEIF RESULT == 900
+		メインフェイズ = 0
+		バトルフェイズ = 1
+		バトルフェイズ移行 = 0
+		CALL CARD_REACTION_EFFECT
+		CALL RESET_FIELD_CONDITION(ターンプレイヤー,5,1)
+
+		IF GETVAR(@"%ターンプレイヤー%_バトルスキップ") >= 1
+			$INPUT_MAIN2
+			SETVAR @"%ターンプレイヤー%_バトルスキップ", 0
+			PRINTFORMW 『배틀 페이즈』는 스킵되었습니다。
+			メインフェイズ = 1
+			メインフェイズ２ = 1
+			バトルフェイズ = 0
+		ENDIF
+		PRINTFORMW 『배틀 페이즈』
+		CALL CARD_TIMERLOOP("バトル開始時")
+		CALL CARD_FINAL(ターンプレイヤー);バトルフェイズ移行のフリーチェック
+		IF バトル強制終了 == 1
+			PRINTFORMW 배틀 페이즈가 강제종료 되었습니다。
+			バトル強制終了 = 0
+			メインフェイズ = 1
+			メインフェイズ２ = 1
+			バトルフェイズ = 0
+		ENDIF
+	ELSEIF RESULT == 950
+		CALL CARD_CHECK_ATK_ABLE("자신")
+		IF ターンプレイヤー == "자신" && メインフェイズ２ != 1
+			IF RESULT == 2
+				CUSTOMDRAWLINE —
+				PRINTL
+				PRINTL 아직 공격하지 않은 전투광이 된 몬스터가 존재하고 있습니다。
+				PRINTL
+				CUSTOMDRAWLINE —
+				PRINTW
+			ELSEIF RESULT == 573
+				CUSTOMDRAWLINE —
+				PRINTL
+				PRINTL 아직 공격하지 않은 몬스터가 존재합니다만 턴을 종료하시겠습니까？
+				PRINTL
+				CUSTOMDRAWLINE —
+				PRINTL [0] - 예
+				PRINTL [1] - 아니오
+				BINPUT
+				SIF RESULT == 1
+					RETURN 0
+			ENDIF
+		ENDIF
+		バトルフェイズ = 0
+		メインフェイズ = 1
+		メインフェイズ２ = 1
+		メインフェイズ２移行 = 0
+		CALL CARD_REACTION_EFFECT
+		CALL RESET_FIELD_CONDITION(ターンプレイヤー,5,1)
+		PRINTFORMW 『메인 페이즈２』
+		CALL CARD_TIMERLOOP("バトル終了時")
+		CALL CARD_FINAL(ターンプレイヤー);メインフェイズ２移行のフリーチェック
+
+
+	;――――――――――――ターン終了――――――――――――
+	ELSEIF RESULT == 1000
+		CALL CARD_REACTION_EFFECT
+		CALL CARD_CHECK_ATK_ABLE("자신")
+		IF ターンプレイヤー == "자신" && メインフェイズ２ != 1
+			IF RESULT == 2
+				CUSTOMDRAWLINE —
+				PRINTL
+				PRINTL 아직 공격하지 않은 전투광이 된 몬스터가 존재하고 있습니다。
+				PRINTL
+				CUSTOMDRAWLINE —
+				PRINTW
+			ELSEIF RESULT == 573
+				CUSTOMDRAWLINE —
+				PRINTL
+				PRINTL 아직 공격하지 않은 몬스터가 존재합니다만 턴을 종료하시겠습니까？
+				PRINTL
+				CUSTOMDRAWLINE —
+				PRINTL [0] - 예
+				PRINTL [1] - 아니오
+				BINPUT
+				SIF RESULT == 1
+					RETURN 0
+			ENDIF
+		ENDIF
+		
+		CALL CARD_ENDPHASE
+		;GOTO INPUTTURN_LOOP
+		RETURN 1000
+	ELSEIF RESULT == 1100
+		$INPUT_LOOP_OPCHECK
+		IF OPPOSER != -1
+			CALL PRINT_STATE(OPPOSER,3)
+			IF 상대_接可 >= 1 || オプション_いつでも触れる == 1
+				SETCOLOR C_PINK
+				PRINT [69] - 상대 플레이어를 만진다
+				RESETCOLOR
+			ENDIF
+		ELSE
+			PRINTFORML 【랜덤한 플레이어】
+		ENDIF
+		PRINTL
+		IF 상대_薬Ｃ > 0
+			SETCOLOR C_FUSE_PUR
+			RESULTS = 【薬物カウンタ】:{상대_薬Ｃ}
+			PRINTBUTTON @"%RESULTS,12,LEFT%", 9071
+			RESETCOLOR
+		ENDIF
+		PRINTL
+		PRINTL [100] - 돌아간다
+		BINPUT
+		IF RESULT == 100
+			PRINTL 
+		ELSEIF RESULT == 69
+			CALL CARD_REACT("자신",OPPOSER,"プレイヤー")
+			GOTO INPUT_LOOP_OPCHECK
+		ELSEIF 9010
+			CALL PRINT_STATE_DUEL(NO:OPPOSER,2,1)
+			WAIT
+		ELSEIF 9011
+			CALL PRINT_STATE_DUEL(NO:OPPOSER,2)
+			WAIT
+		ELSEIF RESULT == 9071
+			PRINTFORML 【드러그 카운터】:{상대_薬Ｃ}
+			PRINTL 약에 대한 중독도・오염도。
+			PRINTL 
+			PRINTW
+			GOTO INPUT_LOOP_OPCHECK
+		ENDIF
+	ELSEIF RESULT == 1101
+		$INPUT_LOOP_MASCHECK
+		CALL PRINT_STATE(MASTER,3)
+		PRINTL
+		IF 상대_薬Ｃ > 0
+			SETCOLOR C_FUSE_PUR
+			RESULTS = 【약물 카운터】:{자신_薬Ｃ}
+			PRINTBUTTON @"%RESULTS,12,LEFT%", 9071
+			RESETCOLOR
+		ENDIF
+		PRINTL
+		PRINTL [100] - 돌아간다
+		BINPUT
+		IF RESULT == 100
+			PRINTL 
+		ELSEIF RESULT == 69
+			CALL CARD_REACT("자신",OPPOSER,"プレイヤー")
+			GOTO INPUT_LOOP_OPCHECK
+		ELSEIF RESULT == 9071
+			PRINTFORML 【드러그 카운터】:{상대_薬Ｃ}
+			PRINTL 약에 대한 중독도・오염도。
+			PRINTL 
+			PRINTW
+			GOTO INPUT_LOOP_MASCHECK
+		ENDIF
+	;――――――――――――リセット処理――――――――――――
+	ELSEIF RESULT == 9006
+		RETURN 9006
+	ELSEIF RESULT == 9999
+		;PRINTFORML チェック！確認終了 효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
+		RETURN 9999		
+	ENDIF
+;	RETURN RESULT
 ENDIF
 RETURN -1
 
 
 
 
-
-
-@CARD_UI_RESET
-VARSET 確認듀얼리스트
-VARSET 確認종류,-1
-VARSET 確認ゾーン
-VARSET 確認場所
-VARSET フリー確認
-;VARSET 確認지속
-
-
-@CARD_ABLE(효과番号,종류:0,종류:1,종류:2,종류:3,종류:4,종류:5,종류:6,종류:7,종류:8,종류:9,종류:10)
-#DIM DYNAMIC 종류,99
-#DIMS DYNAMIC 듀얼리스트
-#DIMS DYNAMIC ゾーン
-#DIM DYNAMIC 場所
-#DIM DYNAMIC カード_ID
-#DIM DYNAMIC 효과番号
-#DIM DYNAMIC 条件달성
-#DIM DYNAMIC 確認지속
-
-SIF 検索플래그 == 1
-	RETURN 0
-
-듀얼리스트 = %確認듀얼리스트%
-ゾーン = %確認ゾーン%
-場所 = 確認場所
-
-;PRINTFORML ここ通過１
-SIF 듀얼리스트 == "자신" || ゾーン == ""
-	RETURN 0
-SIF ゾーン == "효과処理"
-	RETURN 1
-
-SIF GROUPMATCH(종류, 지속효과, 攻守変動, 常在無効)
-	確認지속 = 1
-
-;PRINTFORML ここ通過２
-カード_ID = GETVAR(@"%듀얼리스트%_%ゾーン%:場所")
-IF フリー確認 == 1 && 確認지속 == 1
-	TRYCALLFORM CARDCAN_{カード_ID}(듀얼리스트,지속효과,ゾーン,場所)
-	SIF RESULT == 1
-		条件달성 = 1
-	TRYCALLFORM CARDCAN_{カード_ID}(듀얼리스트,攻守変動,ゾーン,場所)
-	SIF RESULT == 1
-		条件달성 = 1
-
-	TRYCALLFORM CARDCAN_{カード_ID}(듀얼리스트,常在無効,ゾーン,場所)
-	SIF RESULT == 1
-		条件달성 = 1
-
-	IF 条件달성 == 1
-		SETCOLOR C_GREEN
-		PRINT (적용중)
-		RESETCOLOR
-		RETURN 1
-	ENDIF
-ENDIF
-;PRINTFORML ここ通過３
-
-
-VARSET 条件달성
-SELECTCASE 효과番号
-CASE 1
-	SIF 발동済_1(듀얼리스트,カード_ID)
-		条件달성 = 1
-CASE 2
-	SIF 발동済_2(듀얼리스트,カード_ID)
-		条件달성 = 1
-CASE 3
-	SIF 발동済_3(듀얼리스트,カード_ID)
-		条件달성 = 1
-CASE 10
-	SIF 효과발동済(듀얼리스트,場所,ゾーン)
-		条件달성 = 1
-CASE 11
-	SIF 효과발동済(듀얼리스트,場所,ゾーン)
-		条件달성 = 1
-CASE 20
-	SIF 발동済_D1(듀얼리스트,カード_ID)
-		条件달성 = 1
-CASE 21
-	SIF 발동済_D2(듀얼리스트,カード_ID)
-		条件달성 = 1
-ENDSELECT
-
-IF 条件달성 == 1
-	SETCOLOR C_GRAY
-	PRINT (발동됨)
-	RESETCOLOR
-	RETURN 1
-ENDIF
-
-SIF !MATCH(종류, 確認종류)
-	RETURN 0
-종류 = 確認종류
-TRYCALLFORM CARDCAN_{カード_ID}(듀얼리스트,종류,ゾーン,場所)
-IF RESULT == 1
-	SETCOLOR C_YELLOW
-	PRINT (발동가능)
-	RESETCOLOR
-	RETURN 1
-ENDIF
-
-
-RETURN 0

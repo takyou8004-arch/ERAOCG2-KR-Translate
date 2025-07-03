@@ -1,0 +1,147 @@
+﻿@CARDNAME_55556,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 회멸せし成れの果て
+	CASE "略称"
+		RESULTS = 회멸せし成の果て
+	CASE "カテゴリ"
+		RESULTS:0 = 회멸
+ENDSELECT
+
+
+@CARD_55556(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RESULT:1 = 화염속성
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250630
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_55556(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 원소정령족モンスター×２
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,EX소환時)
+PRINTL ①：このカードが융합소환した場合に발동できる。
+PRINTL 자신の묘지のフィールド마법カード１枚を손패に加える。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：このカードが상대の원소정령족モンスターと戦闘を行う攻撃宣言時に발동できる。
+PRINTL その상대モンスターを破壊する。
+PRINTL この효과を자신ターンに발동した場合、このカードはもう１度だけ続けて攻撃できる。
+
+
+@CARDSUMMON_AA_55556
+
+
+@CARDSUMMON_55556(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件종족 = 원소정령족
+
+IF EX参照 == 0 || EX参照 == 1
+ELSEIF EX参照 >= 10
+ENDIF
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(듀얼리스트,소환カード,55556) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_55556(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,55556)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,55556)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = フィールド
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF 발동済_2(듀얼리스트,55556)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_55556(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55556,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = フィールド
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,55556,2)
+	IF RESULT == 0
+		選択カード = 戦闘場所(듀얼리스트,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"손패")
+		SIF RESULT == 1 && ターンプレイヤー == 듀얼리스트
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",1)
+	ENDIF
+ENDIF
+
+

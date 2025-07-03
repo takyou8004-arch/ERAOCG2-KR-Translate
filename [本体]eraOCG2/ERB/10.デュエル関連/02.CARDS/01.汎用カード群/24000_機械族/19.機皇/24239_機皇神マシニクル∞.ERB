@@ -1,0 +1,224 @@
+﻿@CARDNAME_24239,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 기황신 마시니클∞
+	CASE "略称"
+		RESULTS = 마시니클∞
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+		RESULTS:1 = 기황신
+ENDSELECT
+
+
+@CARD_24239(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 4000
+	CASE "守備力"
+		RETURN 4000
+	CASE "추가日"
+		RETURN 250626
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24239(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(0,손패起動,묘지起動)
+PRINTL ①：자신의 묘지에서 이 카드 이외의 "기황" 몬스터 ３장을 제외하고 발동할 수 있다。
+PRINTL "기황신 마시니클∞" １장을 패 / 묘지에서 특수 소환한다。
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ②：자신 / 상대턴에、상대 필드의 Ｓ 몬스터 １장을 대상으로 하고 발동할 수 있다。
+PRINTL 그 상대Ｓ 몬스터를 이 카드에 장착한다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드는 대상내성을 갖고、이 카드의 공격력은 자신의 효과로 장착한 몬스터의 공격력 만큼 올린다。
+CALLFORM CARD_ABLE(0,ターン終了時)
+PRINTL ④：자신 / 상대 엔드 페이즈에、자신의 마법＆함정 존의 Ｓ 몬스터 １장을 묘지로 보내고 발동할 수 있다。
+PRINTL 그 몬스터의 공격력 만큼의 데미지를 상대에게 준다。
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ⑤：이 카드가 전투 / 효과로 파괴될 경우、
+PRINTL 대신에 묘지에서 기계족 몬스터 １장을 제외할 수 있다。
+
+
+@CARDCAN_24239(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24239)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24239,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+			RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 기황
+	효과条件他所 = 1
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件종류 = 싱크로
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件종족 = 기계족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,24239)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 싱크로
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24239(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件達成,2
+#DIM DYNAMIC 選択カード_ID
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24239)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 기황
+		효과条件他所 = 1
+		효과条件종류 = モン全般
+		효과条件複数 = 3
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件名前 = 기황신 마시니클∞
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24239)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件종류 = 싱크로
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		選択カード_ID = RESULT:99
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			CALL CARD_DISPOSE(대상者（CS）,参照先（CS）,選択カード（CS）,묘지行き)
+			CALLFORM CARD_{選択カード_ID}, "攻撃力"
+			IF RESULT > 0
+				CALL LIFE_CHANGE(듀얼리스트,"減少","효과",RESULT,1)
+				RETURN 1
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24239)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종족 = 기계족
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24239,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件종류 = 싱크로
+		효과条件표시 = 表側표시
+		CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,場所,1,24239)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+ENDIF

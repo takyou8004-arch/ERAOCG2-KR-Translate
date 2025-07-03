@@ -1,0 +1,141 @@
+﻿@CARDNAME_93371,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 메탈포제・카운터
+	CASE "略称"
+		RESULTS = MF카운터
+	CASE "カテゴリ"
+		RESULTS:0 = 메탈포제
+ENDSELECT
+
+
+@CARD_93371(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250630
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93371(종류)
+#DIM DYNAMIC 종류
+PRINTL このカード名の①②の효과は１ターンに１度、いずれか１つしか使用できない。
+CALLFORM CARD_ABLE(1,발동誘発)
+PRINTL ①：자신フィールドに「메탈포제」カードが存在し、상대が효과を발동した場合に발동できる。
+PRINTL その발동を無効にする。その後、자신フィールドの「메탈포제」モンスターカード１体を破壊する。
+
+CALLFORM CARD_ABLE(1,묘지起動,フリー誘発)
+PRINTL ②：묘지のこのカードを제외して발동できる。
+PRINTL 자신のEX덱からEX以外の「메탈포제」Pモンスター１体を손패に加える。
+
+@CARDCAN_93371(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,93371)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,93371)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,93371)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 메탈포제
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	SIF 발동済_1(듀얼리스트,93371)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,93371)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = EX以外全般
+	효과条件カテゴリ = 메탈포제
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_93371(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 묘지送カード,5
+
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93371,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 메탈포제
+		효과条件行先플래그 = 破壊行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93371,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종류 = EX以外全般
+		효과条件カテゴリ = 메탈포제
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

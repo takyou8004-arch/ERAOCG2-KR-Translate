@@ -1,0 +1,177 @@
+﻿@CARDNAME_24323,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 기황신룡 애스터리스크
+	CASE "略称"
+		RESULTS = 기황신룡＊
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+		RESULTS:1 = 기황신
+ENDSELECT
+
+
+@CARD_24323(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "추가日"
+		RETURN 250626
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24323(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①：자신 필드에 "기황" 몬스터가 ３장 이상 존재하는 경우에 발동할 수 있다。
+PRINTL 이 카드를 패에서 특수 소환한다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드는 대상내성과 공격유도를 가지며、
+PRINTL 이 카드의 공격력은 자신 필드의 "기황신" 이외의 "기황" 몬스터의 공격력의 합계만큼 올린다。
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ③：상대 필드에 Ｓ몬스터가 특수 소환될 경우에 발동할 수 있다。
+PRINTL 상대에게 １０００ 데미지를 준다。
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ④：이 카드가 전투 / 효과로 파괴될 경우、
+PRINTL 대신 패 / 필드에서 다른 기계족 몬스터 카드 １장을 묘지로 보낼 수 있다。
+
+
+@CARDCAN_24323(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24323)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24323,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 기황
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 싱크로
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般",2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件종류 = モン全般
+	효과条件종족 = 기계족
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24323(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件達成,2
+#DIM DYNAMIC 選択カード_ID
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24323)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24323)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件종류 = モン全般
+		효과条件종족 = 기계족
+		효과条件他所 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24323)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",1000,1)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻誘")
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 기황
+	효과条件固カテゴリ = 기황신
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,(RESULT:3))
+ENDIF

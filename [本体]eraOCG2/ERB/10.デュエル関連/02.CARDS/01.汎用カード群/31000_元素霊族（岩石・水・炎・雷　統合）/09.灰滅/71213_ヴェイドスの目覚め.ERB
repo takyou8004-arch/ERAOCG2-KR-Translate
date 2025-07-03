@@ -1,0 +1,116 @@
+﻿@CARDNAME_71213,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ヴェイドスの目覚め
+	CASE "略称"
+		RESULTS = ヴェイドス目覚め
+	CASE "カテゴリ"
+		;アッパー入れて회멸としても扱うように
+		RESULTS:0 = 회멸
+ENDSELECT
+
+
+@CARD_71213(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "추가日"
+		RETURN 250630
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71213(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名のカードは１ターンに１枚しか발동できない。
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+;설치場所を상대フィールドに固定
+PRINTL ①：덱から「회멸の都オブシディム」１枚を상대のフィールドに表側표시で置く。
+PRINTL その後、덱からレベル５以上の원소정령족・어둠속성モンスター１体を손패に加える事ができる。
+PRINTL このカードの발동後、ターン終了時まで자신は원소정령족モンスターしか특수소환できない。
+
+
+@CARDCAN_71213(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71213)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,71213)
+		RETURN 0
+	SIF 마함数(対面者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件名前 = 회멸の都オブシディム
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71213(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件達成
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71213,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件名前 = 회멸の都オブシディム
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시",2)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件종족 = 원소정령족
+			효과条件속성 = 어둠속성
+			CALLFORM 효과条件レベル_ADV(5,"以上")
+			효과条件任意 = 1
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		ENDIF
+		SS소환可能종족 = 원소정령족
+		CALL CARD_SS_RESTRICTION(듀얼리스트)
+	ENDIF
+ENDIF
+
