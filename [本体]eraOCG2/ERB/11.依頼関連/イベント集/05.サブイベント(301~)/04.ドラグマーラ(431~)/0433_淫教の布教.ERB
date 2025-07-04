@@ -8,7 +8,7 @@ VARSET RESULTS
 
 
 SELECTCASE 参照先
-	CASE  "名前"
+	CASE "名前"
 		RESULTS = (CP-DMR3)음교의 포교
 	CASE "이벤트種"
 ;		RETURN 이벤트_ＲＥ
@@ -16,14 +16,18 @@ SELECTCASE 参照先
 	CASE "依頼先"
 		RETURN 場所_教会
 	CASE "詳細"
-PRINTL 40000엔의 비용이 있다면, 새로운 신도를 권유할 수 있다.
-PRINTL 준비가 되면, 교회에 가자.
+		PRINTL 40000엔의 비용이 있다면, 새로운 신도를 권유할 수 있다.
+		PRINTL 준비가 되면, 교회에 가자.
 		PRINTL 
 		PRINTL 
 	CASE "条件"
 		SIF 依頼_完了횟수:432 == 0
 			RETURN 0
 		RETURN 1
+	CASE "利用制限"
+		SIF 依頼플래그:433 != 0
+			RETURN 3
+		RETURN 0
 ENDSELECT
 
 RETURN 0
@@ -38,12 +42,12 @@ RETURN 0
 이벤트主:0 = NO_TO_CHARANUM(1883);クエム
 
 IF MONEY < 40000
-PRINTFORMW 새로운 신도를 권유하는 데는 40000엔의 비용이 필요하다.
-PRINTFORMW 돈이 모이면 다시 오자.
+	PRINTFORMW 새로운 신도를 권유하는 데는 40000엔의 비용이 필요하다.
+	PRINTFORMW 돈이 모이면 다시 오자.
 	RETURN 1
 ENDIF
 PRINTFORMW 돈이 모였으니, 교회에서 크엠을 불렀다.
-PRINTFORMW 「네, 당신. 바로 새로운 신도 후보를 준비하겠습니다」
+PRINTFORMW "네, 당신. 바로 새로운 신도 후보를 준비하겠습니다"
 SETCOLOR C_YELLOW
 PRINTFORMW 40000엔을 지불했습니다.
 CALL MONEY_GET(-40000)
@@ -56,56 +60,56 @@ CALL COUNT_EVENT433
 $INPUTLOOP1
 이벤트主:1 = RAND:CHARANUM
 IF 信徒数 >= 12
-PRINTFORMW 「누구를 권유하겠습니까?」
+	PRINTFORMW "누구를 권유하겠습니까?"
 	CALL MONSTER_LIST(19)
 	IF RESULT >= 0
 		이벤트主:1 = RESULT
 		이벤트主ID = NO:(이벤트主:1)
 		TRYCALLFORM CARDNAME_{이벤트主ID},"名前"
 		IF RESULTS == ""
-PRINTFORMW 「죄송합니다. 그 사람은 저희 사정으로 인해 권유할 수 없는 것 같습니다. 다른 상대를 선택해주세요」
-PRINTFORMW 　「남성입니까……. 여성 신도를 사용하면 권유할 수 없지는 않습니다만, 괜찮겠습니까?」
+			PRINTFORMW "죄송합니다. 그 사람은 저희 사정으로 인해 권유할 수 없는 것 같습니다"
+			PRINTFORMW "　다른 상대를 선택해주세요"
 			VARSET RESULT
 			VARSET RESULTS
 			GOTO INPUTLOOP1
 		ELSE
 			IF TALENT:(이벤트主:1):성별 != 1
 				CALL PRINT_STATE(이벤트主:1)
-PRINTFORMW 「알겠습니다. 바로 준비하겠습니다」
+				PRINTFORMW "남성입니까……. 여성 신도를 사용하면 권유할 수 없지는 않습니다만, 괜찮겠습니까?"
 				PRINTFORML
-PRINTFORML 상관없다
-PRINTFORML 그것은 좋지 않다
+				PRINTFORML [0] - 상관없다
+				PRINTFORML [1] - 그것은 좋지 않다
 				BINPUT
 				IF RESULT == 0
-PRINTFORMW 40000엔을 지불했습니다.
+					PRINTFORMW "알겠습니다. 바로 준비하겠습니다"
 					SETCOLOR C_YELLOW
-PRINTFORMW 권유를 위한 것이라고는 해도, 여성 신도를 사용하고 싶지 않다.
+					PRINTFORMW 40000엔을 지불했습니다.
 					CALL MONEY_GET(-40000)
 					RESETCOLOR
 					CALL IRAI_ACT_434(이벤트主:1)
 					RETURN RESULT
 
 				ELSEIF RESULT == 1
-PRINTFORMW 「알겠습니다. 그럼 다른 후보를 선택해주세요」
-PRINTFORMW 「《%NAME:(이벤트主:1)%》이지요?」
+					PRINTFORMW 권유를 위한 것이라고는 해도, 여성 신도를 사용하고 싶지 않다.
+					PRINTFORMW "알겠습니다. 그럼 다른 후보를 선택해주세요"
 					VARSET RESULT
 					VARSET RESULTS
 					GOTO INPUTLOOP1
 				ENDIF
 			ENDIF
 			CALL PRINT_STATE(이벤트主:1)
-PRINTFORMW 「알겠습니다. 잠시 기다려주세요」
+			PRINTFORMW "《%NAME:(이벤트主:1)%》이지요?"
 			PRINTFORML
-PRINTFORML 결정하다
-PRINTFORML 다시 생각하다
+			PRINTFORML [0] - 결정하다
+			PRINTFORML [1] - 다시 생각하다
 			BINPUT
 			IF RESULT == 0
-PRINTFORMW 아니, 다른 아이로 할까……?
+				PRINTFORMW "알겠습니다. 잠시 기다려주세요"
 				GOTO INPUTLOOPEND
 			ELSEIF RESULT == 1
-PRINTFORMW 「당신, 기다리셨습니다」
-PRINTFORML 다른 후보를 선택하다
-				PRINTFORML [1] - 무작위로 お任せする
+				PRINTFORMW 아니, 다른 아이로 할까……?
+				PRINTFORML [0] - 다른 후보를 선택하다
+				PRINTFORML [1] - 무작위로 맡긴다
 				BINPUT
 				IF RESULT == 0
 					VARSET RESULT
@@ -165,27 +169,27 @@ ENDIF
 
 $INPUTLOOPEND
 
-PRINTFORMW 모집 비용이 마련되면 다시 오자.
+PRINTFORMW ………...
 PRINTFORMW ………
-PRINTFORMW ……
+PRINTFORMW ………
+PRINTFORMW "당신, 기다리셨습니다"
 PRINTFORMW 땅 아래 교육실에서 잠시 기다리자, 크엠이 %NAME:(이벤트主:1)%을/를 데리고 방으로 들어왔다.
-PRINTFORMW 아무래도 %CALLNAME:(이벤트主:1)%는 신도에게 속아서 영문도 모른 채로 끌려온 것 같다.
 CALL SYOTAIMEN(이벤트主:1)
+PRINTFORMW 아무래도 %CALLNAME:(이벤트主:1)%는 신도에게 속아서 영문도 모른 채로 끌려온 것 같다.
 PRINTFORMW 하지만 어떤 이유에서든 여기에 왔으니 더는 놓치지 않을 것이다.
 PRINTFORMW %NAME:MASTER%는 듀얼 디스크를 들었다.
-PRINTFORMW 이겼다.
 TARGET = 이벤트主:1
 CALL DUEL_SYSTEM(1,432,,2)
 
 IF RESULT == 1
-PRINTFORMW 졌다……
+	PRINTFORMW 이겼다.
 ELSE
-PRINTFORMW %CALLNAME:(이벤트主:1)%는 그 틈을 타서 방에서 도망쳐버렸다.
-PRINTFORMW 다음은 실패하지 않도록 조심하자……
-PRINTFORMW 교육이 완료된 %CALLNAME:(이벤트主:1)%는 음교의 충실한 신도가 되었다.
+	PRINTFORMW 졌다……
+	PRINTFORMW %CALLNAME:(이벤트主:1)%는 그 틈을 타서 방에서 도망쳐버렸다.
+	PRINTFORMW 다음은 실패하지 않도록 조심하자……
 	RETURN 3
 ENDIF
-PRINTFORMW 「수고하셨습니다. 신도의 수가 늘어난 것으로, 앞으로는 속성의 제한 없이 권유할 수 있게 되었습니다」
+PRINTFORMW 교육이 완료된 %CALLNAME:(이벤트主:1)%는 음교의 충실한 신도가 되었다.
 CFLAG:(이벤트主:1):소유함 = 1
 TALENT:(이벤트主:1):음교의신도 = 1
 TALENT:(이벤트主:1):굴복됨 = 1
@@ -209,21 +213,21 @@ CALL COUNT_EVENT433
 信徒数 = RESULT
 
 IF 信徒数 == 3
-PRINTFORMW 「수고하셨습니다. 신도의 수가 늘어난 것으로, 앞으로는 종족의 제한 없이 권유할 수 있게 되었습니다」
+	PRINTFORMW "수고하셨습니다. 신도의 수가 늘어난 것으로, 앞으로는 속성의 제한 없이 권유할 수 있게 되었습니다"
 ELSEIF 信徒数 == 6
-PRINTFORMW 「수고하셨습니다. 신도의 수가 늘어난 것으로, 앞으로는 듀얼리스트도 권유할 수 있게 되었습니다」
+	PRINTFORMW "수고하셨습니다. 신도의 수가 늘어난 것으로, 앞으로는 종족의 제한 없이 권유할 수 있게 되었습니다"
 ELSEIF 信徒数 == 9
-PRINTFORMW 「수고하셨습니다. 신도의 수가 늘어난 것으로, 앞으로는 원하시는 상대를 권유할 수 있게 되었습니다」
+	PRINTFORMW "수고하셨습니다. 신도의 수가 늘어난 것으로, 앞으로는 듀얼리스트도 권유할 수 있게 되었습니다"
 ELSEIF 信徒数 == 12
-PRINTFORMW 「그뿐만 아니라, 당신에게 신의 화신이 깃든 것 같습니다」
+	PRINTFORMW "수고하셨습니다. 신도의 수가 늘어난 것으로, 앞으로는 원하시는 상대를 권유할 수 있게 되었습니다"
 	IF TALENT:MASTER:매지컬자지 == 0
-PRINTFORMW 「그럼 오늘의 교육은 이것으로 종료됩니다」
+		PRINTFORMW "그뿐만 아니라, 당신에게 신의 화신이 깃든 것 같습니다"
 		TALENT:MASTER:매지컬자지 = 1
 	ENDIF
 ENDIF
+PRINTFORMW "그럼 오늘의 교육은 이것으로 종료됩니다"
 PRINTFORMW 여기서 할 수 있는 것은 더는 없는 것 같으니, 교회에서 나왔다.
 PRINTFORMW 권유 비용이 준비되면, 다시 오자.
-PRINTFORMW 勧誘費用が用意できたら、また来よう。
 TIME += 60
 RETURN 2
 
