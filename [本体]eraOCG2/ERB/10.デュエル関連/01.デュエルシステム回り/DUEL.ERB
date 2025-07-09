@@ -20,6 +20,7 @@ IF TARGET >= 1
 ELSE
 	OPPOSER = -1
 ENDIF
+G_イベ起動 = 이벤트起動
 
 $MYDECK_INPUT
 SIF 詰め플래그
@@ -31,7 +32,6 @@ IF 連戦플래그 >= 1
 	GOTO SKIPDECK
 ENDIF
 
-G_イベ起動 = 이벤트起動
 듀얼モード = 1
 
 IF 이벤트起動 >= 1
@@ -398,6 +398,67 @@ IF デバッグコマンド == 1
 ENDIF
 CALL DIPLAY_BOARD
 IF RESULT == 1000
+	CALL CHECK_VICTORY
+	IF RESULT != 0
+		勝利판정 = RESULT
+		VARSET RESULT
+		IF G_イベ起動 >= 1 && 勝利판정 == 1
+			CUSTOMDRAWLINE —
+			PRINTL 
+			VARSET RESULT
+			TRYCALLFORM IRAI_DUEL_VIC_{G_イベ起動}
+			PRINTL 
+			CUSTOMDRAWLINE —
+			PRINTW
+			IF RESULT == 1
+				GOTO RECHECK_VICTORY
+			ENDIF
+		ENDIF
+
+	IF 詰め플래그 == 0
+		PRINTL
+		IF ERA起動 != 2
+			CALL CHECK_DP_GET(勝利판정,이벤트플래그)
+			SIF 상대_듀얼패배플래그 >= 1 && オプション_カード友 == 1
+				CALL DUEL_RESULT_BOND(덱選択,RESULT)		
+		ENDIF
+		PRINTBUTTON "　[듀얼종료]",0
+		듀얼モード = 0
+		;이벤트はOFF/ERA起動中/대상상대は-1/ライフダメージによる패배
+		IF 이벤트起動 == 0 && ERA起動 == 1 && OPPOSER != -1 && 상대_듀얼패배플래그 == 1
+			SETCOLOR C_RED
+			PRINTBUTTON "　　E.R.A　[강제적으로 속행한다]",999
+			RESETCOLOR
+		ENDIF
+		BINPUT
+		IF RESULT == 999
+			ERA起動 = 2
+			勝利판정 = 0
+		ENDIF
+	ELSE
+		詰め플래그 = 0
+	ENDIF
+
+		IF 勝利판정 == 1
+			IF G_イベ起動 >= 1
+				CUSTOMDRAWLINE —
+				PRINTL 
+				TRYCALLFORM IRAI_DUEL_ENDING_{G_イベ起動}
+				PRINTL 
+				CUSTOMDRAWLINE —
+				PRINTW
+			ENDIF
+			듀얼モード = 0
+			RETURN 1
+		ELSEIF 勝利판정 == 2
+			듀얼モード = 0
+			RETURN 2
+		ELSEIF 勝利판정 == 3
+			듀얼モード = 0
+			RETURN 3
+		ENDIF
+	ENDIF
+
 	GOTO INPUTTURN_LOOP
 ELSEIF RESULT == 9006
 	PRINTFORML 듀얼을 리셋하시겠습니까？
