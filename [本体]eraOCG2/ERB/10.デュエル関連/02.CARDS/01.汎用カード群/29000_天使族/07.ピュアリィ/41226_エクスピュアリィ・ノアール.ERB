@@ -155,27 +155,6 @@ ELSEIF 종류 == ターン開始時
 		RETURN 0
 	CALL CARD_DRAW_CHECK
 	RETURN 1
-
-;●퓨어리 프리티메모리：エンドフェイズ時に발동할 수 있다。상대 필드의 카드 １장을 選び패로 되돌린다。
-ELSEIF 종류 == ターン終了時
-	SIF ゾーン != "필드"
-		RETURN 0
-	SIF ターンプレイヤー != 듀얼리스트
-		RETURN 0
-	CALL FULLRESET
-	효과範囲묘지 = 1
-	효과条件名前 = 퓨어리 프리티메모리
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	SIF RESULT != 1
-		RETURN 0
-
-	CALL FULLRESET
-	효과範囲상대필드 = 1
-	효과範囲상대마함 = 1
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	SIF RESULT != 1
-		RETURN 0
-	RETURN 1
 ENDIF
 
 
@@ -239,20 +218,23 @@ ELSEIF 종류 == 攻撃後強制誘発
 	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",-99,1)
 ;●퓨어리 딜리셔스메모리：이 카드의 공격력 / 수비력은 、이 카드의 엑시즈 소재의 수×３００ 올린다。
 ELSEIF 종류 == 攻守変動
-	攻撃力修正 = (GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") + 1) * 300
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 퓨어리 딜리셔스메모리
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = (GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") + 1) * (300 * RESULT)
 	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正,攻撃力修正)
 ;●퓨어리 슬리피메모리：상대 스탠바이 페이즈에 발동할 수 있다。は덱에서 １장 드로우한다。
 ELSEIF 종류 == ターン開始時
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41226)
 	IF RESULT == 0
-		CALL CARDDRAW_BASIC(듀얼리스트,1)
-	ENDIF
-;●퓨어리 프리티메모리：エンドフェイズ時に발동할 수 있다。상대 필드의 카드 １장을 選び패로 되돌린다。
-ELSEIF 종류 == ターン終了時
-	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,41226)
-	IF RESULT == 0
 		CALL FULLRESET
-		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"덱")
+		효과範囲묘지 = 1
+		효과条件名前 = 퓨어리 슬리피메모리
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		CALL CARDDRAW_BASIC(듀얼리스트,RESULT)
 	ENDIF
 ENDIF
 
