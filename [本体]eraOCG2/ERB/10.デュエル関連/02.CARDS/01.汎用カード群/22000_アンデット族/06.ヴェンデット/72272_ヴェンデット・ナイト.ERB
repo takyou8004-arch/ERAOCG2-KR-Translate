@@ -1,0 +1,165 @@
+﻿@CARDNAME_72272,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 벤데드 나이트
+	CASE "略称"
+		RESULTS = VD.Nights
+	CASE "カテゴリ"
+		RESULTS:0 = 벤데드
+ENDSELECT
+
+
+@CARD_72272(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN フィールド
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72272(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 自分フィールドは「Vendread Nights」となる。
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,魔罠起動)
+PRINTL ①：自分メインフェイズに発動できる。
+PRINTL デッキからこのカード名以外の「벤데드」カード１枚を手札に加え、手札を１枚捨てる。
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ②：自分の「벤데드」モンスターが戦闘でモンスターを破壊した場合に発動できる。
+PRINTL 自分の墓地からアンデット族モンスター１体を除外し、このターンそのモンスターはもう１度攻撃できる。
+
+@CARDCAN_72272(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,72272)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_1(決闘者,72272)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 벤데드
+	効果条件固名前 = 벤데드 나이트
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所,72272)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 攻撃後誘発
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(決闘者)},"カテゴリ"
+	SIF !MATCH(RESULTS,"벤데드")
+		RETURN 0
+	SIF 直前戦闘破壊ID(決闘者) != 0
+		RETURN 0
+	SIF 直前戦闘破壊ID(決闘者,1) == 0
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件種族 = アンデット族
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所,72272)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_72272(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件達成,3
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,72272,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 벤데드
+		効果条件固名前 = 벤데드 나이트
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲手札 = 1
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 攻撃後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,72272)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果条件種族 = アンデット族
+		効果条件行先フラグ = 除外行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL SET_FIELD_INFO(決闘者,"戦場",戦闘場所(決闘者),"戦",1)
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,72272)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+
+ELSEIF 種類 == 永続効果
+	CALL SET_FIELD_MAGIC_INFO(決闘者,"Vendread Nights")
+ENDIF

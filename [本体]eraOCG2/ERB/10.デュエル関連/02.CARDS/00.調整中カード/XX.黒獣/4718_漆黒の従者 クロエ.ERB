@@ -1,0 +1,171 @@
+@CARDNAME_4718,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 漆黒の従者 クロエ
+	CASE "略称"
+		RESULTS = 従者クロエ
+	CASE "カテゴリ"
+		RESULTS:0 = 黒獣
+ENDSELECT
+
+@CARD_4718(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 戦士族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 0
+	CASE "性別"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_4718(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①③の効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,召喚時,特殊召喚時)
+PRINTL ①：このカードが召喚・特殊召喚した場合に発動できる。
+PRINTL このカードの攻撃力をターン終了時まで４００アップする。
+PRINTL その後、 自分フィールド・ＥＸデッキに「漆黒の女王 オリガ」が存在しない場合、
+PRINTL デッキ・墓地から「漆黒の女王 オリガ」１体をＥＸデッキに送ることができる。
+CALL CARD_ABLE(0,永続効果)
+PRINTL ②：自分フィールドの「漆黒の女王 オリガ」は対象耐性を得る。
+CALL CARD_ABLE(2,戦場→墓地 ,手札→墓地 ,デッキ→墓地 ,破壊→墓地 ,戦闘→墓地)
+PRINTL ③：このカードが墓地に送られた場合に、自分フィールド・ＥＸデッキに「漆黒の女王 オリガ」が存在するなら発動できる。
+PRINTL 手札を１枚捨てて、墓地のこのカードを特殊召喚する。
+
+
+@CARDCAN_4718(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,4718)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果範囲EXデッキ = 1
+	効果条件名前 = 漆黒の女王 オリガ
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_1(決闘者,4718)
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場→墓地 || 種類 == 手札→墓地 || 種類 == デッキ→墓地 || 種類 == 破壊→墓地 || 種類 == 戦闘→墓地
+	SIF 発動済_2(決闘者,4718)
+		RETURN 0
+	SIF 手札数(決闘者) < 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果範囲EXデッキ = 1
+	効果条件名前 = 漆黒の女王 オリガ
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件名前 = 漆黒の従者 クロエ
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4718(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+#DIM DYNAMIC 選択効果
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 永続効果
+	CALL FULLRESET
+	効果条件名前 = 漆黒の女王 オリガ
+	CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"対耐")
+	CALL STATCHANGE_EFFECT(決闘者,"魔罠",場所,"対耐")
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4718,1)
+	IF RESULT == 0
+		CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"一攻",400)
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲魔罠 = 1
+		効果範囲EXデッキ = 1
+		効果条件名前 = 漆黒の女王 オリガ
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		IF RESULT != 1
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果範囲墓地 = 1
+			効果条件名前 = 漆黒の女王 オリガ
+			効果条件行先フラグ = EXデッキ行き
+			効果条件任意 = 1
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 戦場→墓地 || 種類 == 手札→墓地 || 種類 == デッキ→墓地 || 種類 == 破壊→墓地 || 種類 == 戦闘→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4718,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(決闘者,"手札",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲墓地 = 1
+			効果条件名前 = 漆黒の従者 クロエ
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

@@ -67,6 +67,7 @@ ENDIF
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
 @RESETAREA_MAT
+;PRINTFORML エリアリセット！
 VARSET 素材範囲필드
 VARSET 素材範囲손패
 VARSET 素材範囲묘지
@@ -350,7 +351,7 @@ ENDIF
 IF カードID >= 0
 	CALLFORM CHAIN_CAN(듀얼리스트,ゾーン,場所,カードID)
 	IF RESULT == 1
-		PRINTFORMW 이 카드의 효과 중、상대는 효과를 발동할 수 없습니다！
+		PRINTFORMW 이 카드의 효과 중、%듀얼리스트%는 효과를 발동할 수 없습니다！
 		無効불가 = 1
 	ENDIF
 ENDIF
@@ -360,6 +361,10 @@ IF ゾーン != "효과処理" && 종류 != 戦破壊→묘지
 	IF RESULT == 1
 		効後_발동無:処理中番号 = 無効行き
 	ENDIF
+ENDIF
+IF ゾーン == "효과処理" && GROUPMATCH(カードID,50992,50950)
+	PRINTFORMW 무한 루프의 위험성이 있기 때문에 강제종료합니다。（카피 효과를 카피한다）
+	RETURN 1
 ENDIF
 
 IF 듀얼리스트 == "자신" 
@@ -562,7 +567,7 @@ IF 듀얼리스트 == "상대"
 	RETURN 0
 ELSE
 	IF 選択:1 != ""
-		PRINTFORML 효과를 선택해주세요。
+		PRINTFORML 효과를 선택해 주세요。
 	ENDIF
 	IF 選択:1 == ""
 		PRINTL [0] - 예
@@ -683,6 +688,12 @@ IF !GROUPMATCH(종류, 攻守変動, 지속효과, 攻紋章起動, 短紋章起
 		SIF RESULT >= 20
 			RETURN 1
 	ENDIF
+	IF GETVAR(@"%듀얼리스트%_モン효과無効") >= 1
+		TRYCALLFORM CARD_{カードID}("종류")
+		SIF RESULT <= モン全般
+			RETURN 1
+	ENDIF
+
 
 	IF GETVAR(@"%듀얼리스트%_魔無効") >= 1
 		TRYCALLFORM CARD_{カードID}("종류")
@@ -797,11 +808,7 @@ IF !GROUPMATCH(종류, 攻守変動, 지속효과, 攻紋章起動, 短紋章起
 	ENDIF
 
 
-	IF GETVAR(@"%듀얼리스트%_モン효과無効") >= 1
-		TRYCALLFORM CARD_{カードID}("종류")
-		SIF RESULT <= モン全般
-			RETURN 1
-	ENDIF
+
 ENDIF
 
 
@@ -1232,6 +1239,22 @@ IF SS소환可能종족 >= 1
 ENDIF
 VARSET SS소환可能종족, -1
 
+
+IF SS소환可能성별 >= 1
+	FOR カウンタ,1,3
+		VARSET 条件달성
+		FOR カウンタB,0,3
+			IF カウンタ == SS소환可能성별:カウンタB
+				条件달성 = 1
+				CONTINUE
+			ENDIF
+		NEXT
+		SIF 条件달성 == 1
+			CONTINUE
+		SETVAR @"%듀얼리스트%_SS可성별番号:{カウンタ}", 0
+	NEXT
+ENDIF
+VARSET SS소환可能성별, -1
 
 IF SS소환可能レベル >= 1
 	FOR カウンタ,1,20
@@ -3239,6 +3262,19 @@ CALLFORM CARDNAME_{カードID},"名前"
 PRINTFORMW %듀얼리스트%의 덱에%RESULTS%가 추가되었다！
 
 
+;ザポルグ追記20250712
+@CARD_GENERATE_DECK_EX(듀얼리스트,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カードID
+#DIM DYNAMIC コピー先
+
+コピー先 = 現EX山札数(듀얼리스트)
+SETVAR @"%듀얼리스트%_EX덱:コピー先",カードID
+
+CALLFORM CARDNAME_{カードID},"名前"
+PRINTFORMW %듀얼리스트%의 ＥＸ덱에 %RESULTS%가 추가되었다！
+
+
 ;ザポルグ追記20250122
 @CARD_GENERATE_GY(듀얼리스트,カードID)
 #DIMS DYNAMIC 듀얼리스트
@@ -4329,6 +4365,25 @@ SIF MATCH(カード追カテ,カテゴリ)
 	RETURN 1
 RETURN 0
 
+@GET_FIELD_NAME(듀얼리스트,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC カテゴリ
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC リザルト
+#DIM DYNAMIC 場所
+
+VARSET 選択カード名前
+TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_戦場:場所")}, "名前"
+選択カード名前 = %RESULTS%
+SIF 選択カード名前 == ""
+	RETURN 0
+
+SIF GETVARS(@"%듀얼리스트%_MZ_改名:場所") != ""
+    選択カード名前 = %GETVARS(@"%듀얼리스트%_MZ_改名:場所") %
+
+RESULTS = %選択カード名前%
+RETURN 1
 
 ;--------------------------------------------------------------------------------------------------
 ;코인토스

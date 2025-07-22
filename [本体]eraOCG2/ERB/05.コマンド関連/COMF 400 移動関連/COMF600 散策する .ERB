@@ -15,6 +15,8 @@ ELSEIF INRANGE(CFLAG:MASTER:현재위치,101,149)
 	マップモード = 1
 ELSEIF INRANGE(CFLAG:MASTER:현재위치,150,200)
 	マップモード = 2
+ELSEIF INRANGE(CFLAG:MASTER:현재위치,200,250)
+	マップモード = 3
 ENDIF
 
 $INPUT_LOOP
@@ -28,6 +30,9 @@ ELSEIF マップモード == 1
 ELSEIF マップモード == 2
 	C_開始 = 151
 	C_終了 = 200
+ELSEIF マップモード == 3
+	C_開始 = 201
+	C_終了 = 250
 ENDIF
 
 FOR 依頼_ID_C,0,1000
@@ -53,6 +58,8 @@ ELSEIF マップモード == 1
 	CALLFORM MAP_PRINT_CENTER
 ELSEIF マップモード == 2
 	CALLFORM MAP_PRINT_OUTSKIRTS
+ELSEIF マップモード == 3
+	CALLFORM MAP_PRINT_KAIBALAND
 ENDIF
 
 CUSTOMDRAWLINE ―
@@ -133,7 +140,24 @@ ELSEIF マップモード == 2
 			CONTINUE
 		SIF GETPLACENAME(カウンタ) == ""
 			CONTINUE
-
+		CALL GETMAP(カウンタ,1)
+		PRINTFORM [{カウンタ,3}] - %GETPLACENAME(カウンタ),20,LEFT%	
+		RESETCOLOR
+		IF 施設アリ:カウンタ == 1
+			SETCOLOR C_ORANGE
+			PRINT (！)
+			RESETCOLOR
+		ELSE
+			PRINTFORM %"",4%
+		ENDIF
+		PRINTFORM / 
+	NEXT
+ELSEIF マップモード == 3
+	FOR カウンタ,201,250
+		SIF CFLAG:MASTER:현재위치 == カウンタ
+			CONTINUE
+		SIF GETPLACENAME(カウンタ) == ""
+			CONTINUE
 		CALL GETMAP(カウンタ,1)
 		PRINTFORM [{カウンタ,3}] - %GETPLACENAME(カウンタ),20,LEFT%	
 		RESETCOLOR
@@ -171,7 +195,7 @@ IF RESULT == 99
 	RETURN 0
 ELSEIF RESULT == 9999
 	マップモード += 1
-	SIF マップモード >= 3
+	SIF マップモード >= 4
 		マップモード = 0
 	GOTO INPUT_LOOP
 ELSEIF RESULT == 8888
@@ -190,12 +214,15 @@ ELSE
 	IF GROUPMATCH(マップモード,1,2)
 		SIF RESULT <= 100
 		RESULT += 100
+	ELSEIF GROUPMATCH(マップモード,3,4)
+		SIF RESULT <= 200
+			RESULT += 200
 	ENDIF
 	選択行先 = RESULT
 
 	IF RESULT == 22
 		IF 데이트_ホテル플래그 == 0
-			PRINTFORML 휴게소 이용은8000円을 지불해야 하는데 괜찮습니까？
+			PRINTFORML 휴게소 이용은8000엔을 지불해야 하는데 괜찮습니까？
 			PRINTL [1] - 예
 			PRINTL [0] - 아니오
 		ELSE

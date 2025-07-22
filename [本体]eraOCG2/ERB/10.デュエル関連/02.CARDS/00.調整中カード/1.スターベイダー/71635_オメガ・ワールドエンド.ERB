@@ -1,0 +1,266 @@
+@CARDNAME_71635,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = “Ω”・ワールドエンド
+	CASE "略称"
+		RESULTS = Ωワールドエンド
+	CASE "カテゴリ"
+		RESULTS:0 = グレンディオス
+		RESULTS:1 = 星輝兵
+		RESULTS:2 = リンクジョーカー
+		RESULTS:4 = ヴァンガード
+ENDSELECT
+
+@CARD_71635(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN フィールド
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_71635(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_71635(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 自分フィールドは「Ωワールドエンド」となる。
+PRINTL このカード名の①②③の効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,手札起動,魔罠起動)
+PRINTL ①：このカードの発動時の効果処理として、デッキから「星輝兵」または「Я」モンスター１体を手札に加える。
+PRINTL この効果を発動するターン、自分は「グレンディオス」モンスターしかＥＸデッキから特殊召喚できない。
+CALL CARD_ABLE(2,魔罠起動)
+PRINTL ②：自分メインフェイズに以下の効果から１つを選択して発動できる。
+PRINTL ●手札から「星輝兵」カード１枚を捨てて、デッキから「Я」モンスター１体を手札に加える。
+PRINTL ●手札から「Я」モンスター１体を捨てて、デッキからこのカード名以外の「星輝兵」カード１枚を手札に加える。
+CALL CARD_ABLE(3,ターン開始時)
+PRINTL ③：自分スタンバイフェイズに、自分のＬＰが１０００以下で、
+PRINTL 自分フィールドに「グレンディオス」モンスターが存在し、相手フィールドに呪縛状態のモンスターが５体存在する場合に発動できる。
+PRINTL 自分はデュエルに勝利する。
+
+@CARDCAN_71635(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+
+#DIM DYNAMIC 条件達成
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,71635)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_2(決闘者,71635)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果条件カテゴリ = 星輝兵
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = Я
+		効果条件種類 = モン全般
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT == 1
+			条件達成++
+	ENDIF
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果条件カテゴリ = Я
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 星輝兵
+		効果条件固名前 = “Ω”・ワールドエンド
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT == 1
+			条件達成++
+	ENDIF
+	SIF 条件達成 < 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF 発動済_1(決闘者,71635)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ:0 = 星輝兵
+	効果条件カテゴリ:1 = Я
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果条件固カテゴリ = グレンディオス
+	CALL CARD_CHECK_FIN_DATA(決闘者,"EX履歴")
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン開始時
+	SIF 発動済_3(決闘者,71635)
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = グレンディオス
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"ライフ_%決闘者%") > 1000
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果条件表示 = 裏側表示
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+    RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71635(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+#DIM DYNAMIC 選択効果
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,71635,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果条件カテゴリ = 星輝兵
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件カテゴリ = Я
+			効果条件種類 = モン全般
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			SIF RESULT == 1
+				条件Ａ++
+		ENDIF
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果条件カテゴリ = Я
+		効果条件種類 = モン全般
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件カテゴリ = グレンディオス
+			効果条件種類 = 魔罠全般
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			SIF RESULT == 1
+				条件Ｂ++
+		ENDIF
+		IF 条件Ａ == 1 && 条件Ｂ == 1
+			CALL YN_CHOICE(決闘者,"●手札から「星輝兵」カード１枚を捨てて、デッキから「Я」モンスター１体を手札に加える。。","●手札から「Я」モンスター１体を捨てて、デッキからこのカード名以外の「星輝兵」カード１枚を手札に加える。")
+			選択効果 = RESULT
+		ELSEIF 条件Ａ == 1 && 条件Ｂ == 0
+			選択効果 = はい
+		ELSEIF 条件Ａ == 0 && 条件Ｂ == 1
+			選択効果 = いいえ
+		ENDIF
+		IF 選択効果 == はい
+			CALL FULLRESET
+			効果範囲手札 = 1
+			効果条件カテゴリ = 星輝兵
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				効果範囲デッキ = 1
+				効果条件カテゴリ = Я
+				効果条件種類 = モン全般
+				CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+			ENDIF
+		ELSEIF 選択効果 == いいえ
+			CALL FULLRESET
+			効果範囲手札 = 1
+			効果条件カテゴリ = Я
+			効果条件種類 = モン全般
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				効果範囲デッキ = 1
+				効果条件カテゴリ = 星輝兵
+				効果条件固名前 = “Ω”・ワールドエンド
+				CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,71635,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ:0 = 星輝兵
+		効果条件カテゴリ:1 = Я
+		効果条件種類 = モン全般
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		CALL CARD_EX_RESTRICTION(決闘者,"グレンディオス")
+	ENDIF
+ELSEIF 種類 == ターン開始時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,71635,3)
+	IF RESULT == 0
+		CALL SET_PLAYER_INFO(決闘者,"決闘敗北フラグ",4,1)
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL SET_FIELD_MAGIC_INFO(決闘者,"Ωワールドエンド")
+ENDIF

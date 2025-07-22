@@ -1,0 +1,137 @@
+﻿@CARDNAME_1761,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 헬 임프레스 데몬
+	CASE "略称"
+		RESULTS = 헬 임프레스
+	CASE "カテゴリ"
+		RESULTS:0 = 데몬
+ENDSELECT
+
+
+@CARD_1761(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 悪魔族
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 2100
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1761(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,身代効果)
+PRINTL ①：このカード以外の自分フィールドの悪魔族・闇属性モンスター１体が破壊される場合、
+PRINTL 代わりに自分の墓地の悪魔族・闇属性モンスター１体をゲームから除外する事ができる。
+CALLFORM CARD_ABLE(0,戦破壊→墓地)
+PRINTL ②：フィールドのこのカードが破壊された場合に発動できる。
+PRINTL 「헬 임프레스 데몬」以外の自分の墓地の悪魔族・闇属性・レベル６以上のモンスター１体を特殊召喚する。
+PRINTL 
+
+@CARDCAN_1761(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,1761)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 身代効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF !GROUPMATCH(破壊種類,"効果","戦闘")
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	TRYCALLFORM CARD_{破壊対象ID}("種族")
+	SIF RESULT != 悪魔族
+		RETURN 0
+	TRYCALLFORM CARD_{破壊対象ID}("属性")
+	SIF RESULT != 闇属性
+		RETURN 0
+	SIF 破壊対象ゾーン != "戦場"
+		RETURN 0
+	SIF 破壊対象場所 == 場所
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件種族 = 悪魔族
+	効果条件属性 = 闇属性
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦破壊→墓地
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件固名前 = 헬 임프레스 데몬
+	効果条件種族 = 悪魔族
+	効果条件属性 = 闇属性
+	効果条件種類 = モン全般
+	CALLFORM 効果条件レベル_ADV(6,"以上")
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1761(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 種類 == 身代効果
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,1761)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件種族 = 悪魔族
+		効果条件属性 = 闇属性
+		効果条件種類 = モン全般
+		CALL CARD_ADD_GY_BASIC(決闘者,"墓地",ゾーン,場所)
+		IF RESULT == 1
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+ELSEIF 種類 == 戦破壊→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,1761)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件固名前 = 헬 임프레스 데몬
+		効果条件種族 = 悪魔族
+		効果条件属性 = 闇属性
+		効果条件種類 = モン全般
+		CALLFORM 効果条件レベル_ADV(6,"以上")
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ENDIF
+

@@ -6,7 +6,8 @@
 #DIM DYNAMIC 효과종류
 #DIM DYNAMIC 설정カラー
 #DIM DYNAMIC 캐릭터番号
-
+#DIM DYNAMIC トークン보존,10
+#DIM DYNAMIC カウンタ
 SIF 덱플래그 != 2
 	CALLFORM CARD_UI_RESET
 
@@ -249,18 +250,25 @@ CALL COLOR_LINE(설정カラー)
 IF 덱플래그 == 1
 	VARSET RESULTS
 	PRINTFORM [0] - 돌아간다　　　　　
-	TRYCALLFORM CARDNAME_{選択カード_ID + 100000}, "名前"
-	SIF RESULTS != ""
-		PRINTFORM [1] - 관련 토큰 확인　　　　　
-	SIF 選択カード_ID >= 100000
-		PRINTFORM [2] - 원래 카드 확인
+	VARSET RESULT
+	TRYCALLFORM CARD_{選択カード_ID}, "生成カード"
+	SIF RESULT >= 1
+		PRINTFORM [1] - 관련 카드 확인
 	PRINTL
 	BINPUT
 	IF RESULT == 1
-		選択カード_ID += 100000
-		GOTO RESETVIEW
-	ELSEIF RESULT == 2
-		選択カード_ID -= 100000
+		TRYCALLFORM CARD_{選択カード_ID}, "生成カード"
+		トークン보존:0 = RESULT
+		トークン보존:1 = RESULT:1
+		トークン보존:2 = RESULT:2
+		トークン보존:3 = RESULT:3
+		トークン보존:4 = RESULT:4
+		FOR カウンタ,0,5
+			IF トークン보존:カウンタ >= 1
+				TRYCALLFORM CARD_UI(トークン보존:カウンタ,2)
+				WAIT
+			ENDIF
+		NEXT
 		GOTO RESETVIEW
 	ELSEIF RESULT == 1000
 		CALL PRINT_STATE_DUEL(選択カード_ID,2)
@@ -1269,7 +1277,7 @@ IF 種別 == "戦闘" || 種別 == "直接戦闘"
 				CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,11)
 			ENDIF
 		SETVAR @"%대상者%_変動値_保" , 変動値
-		SETVAR @"%대상者%_回復者_保" , 1
+		SETVAR @"%대상者%_회복者_保" , 1
 	ENDIF
 
 ELSEIF 種別 == "효과"
@@ -1327,7 +1335,7 @@ ELSEIF 種別 == "효과"
 		ENDIF
 		SETVAR @"ライフ_%대상者%", GETVAR(@"ライフ_%대상者%") + 変動値
 		SETVAR @"%대상者%_変動値_保" , 変動値
-		SETVAR @"%대상者%_回復者_保" , 1
+		SETVAR @"%대상者%_회복者_保" , 1
 	ENDIF
 ELSEIF 種別 == "コスト"
 	PRINTFORMW %대상者%는 라이프 코스트를{変動値}포인트 지불했습니다。
@@ -2159,6 +2167,8 @@ ELSEIF RESULT == 1000
 	WAIT
 ELSE
 	$SKIP_BUTTONS
+	SIF SKIP플래그 == 2
+		WAIT
 	RETURN RESULT
 ENDIF
 
@@ -2459,7 +2469,14 @@ IF GETVAR(@"%듀얼리스트%_魔_無効:選択カード") != 0
 	RESETCOLOR
 ENDIF
 
-IF GETVAR(@"%듀얼리스트%_魔_除処:選択カード") != 0
+IF GETVAR(@"%듀얼리스트%_魔_無効:選択カード") != 0
+	SETCOLOR C_CREAM
+	RESULTS = 【발동불가】
+	PRINTBUTTON @"%RESULTS,12,LEFT%", 9027
+	RESETCOLOR
+ENDIF
+
+IF GETVAR(@"%決闘者%_魔_除処:選択カード") != 0
 	SETCOLOR C_CREAM
 	RESULTS = 【제외처리】
 	PRINTBUTTON @"%RESULTS,12,LEFT%", 9026
@@ -2531,7 +2548,7 @@ IF RESULT >= 9000
 		PRINTL (선택하지 않는 조건 효과, 랜덤한 제거, 전체 파괴 효과 등은 적용받는다)
 	ELSEIF RESULT == 9017
 		PRINTL 【일시 파괴 내성】
-		PRINTL 이 카드는 1턴에 1번만 카드 효과로 파괴되지 않는다.
+		PRINTL 이 카드는 1턴에 1번만 카드 효과/전투에 의해선 파괴되지 않는다.
 
 	ELSEIF RESULT == 9020
 		PRINTL 【효과 무효】
@@ -2561,6 +2578,10 @@ IF RESULT >= 9000
 	ELSEIF RESULT == 9026
 		PRINTL 【제외 처리】
 		PRINTL 이 카드는 묘지로 보내질 때, 대신 제외된다.
+		PRINTL 
+	ELSEIF RESULT == 9027
+		PRINTL 【발동무효】
+		PRINTL 이 카드의 효과는 발동할 수 없다.
 		PRINTL 
 	ELSEIF RESULT == 9030
 		PRINTL 【마력카운터】
@@ -2720,8 +2741,6 @@ RETURN 0
 ;PRINTFORML チェック！효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
 SIF 설정플래그 == 2
 	フィールド표시中 = 1
-
-CALL DISPLAY_CARDS_ONBOARD()
 
 IF ターンプレイヤー == "자신"
 	SETCOLOR C_L_BLUE
@@ -3016,6 +3035,10 @@ ENDIF
 PRINTBUTTON "◎",8888
 PRINTPLAIN ─────────────────────────────────────>P<────────────────────────────────────┘
 RESETCOLOR
+
+; DISPLAY CARDS IMAGE
+CALL DISPLAY_CARDS_ONBOARD()
+
 ;PRINTFORML チェック！AF_DUEL_UI 효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
 CALL DUEL_PLAYER_UI(설정플래그)
 IF 설정플래그 == 2 && RESULT != 9999
@@ -3222,14 +3245,14 @@ FOR カウンタ,0,20
 	IF カウンタ == 4
 		SIF 묘지起動可
 			SETCOLOR C_YELLOW
-		PRINT [400] 묘지를 확인　 
+		PRINT [801] 묘지를 확인　 
 		RESETCOLOR
 	ELSEIF カウンタ == 9
-		PRINT [600] 제외를 확인　 
+		PRINT [802] 제외를 확인　 
 	ELSEIF カウンタ == 14
-		PRINT [499] 상대 묘지 확인
+		PRINT [803] 상대 묘지 확인
 	ELSEIF カウンタ == 19
-		PRINT [699] 상대 제외 확인
+		PRINT [804] 상대 제외 확인
 	ELSEIF カウンタ == 20
 
 
@@ -3252,9 +3275,9 @@ PRINTPLAIN ┃
 RESETCOLOR
 ;PRINTFORM %"",20%
 IF オプション_略표시 != 1
-	PRINTFORM %"[777] 약칭표시",20,LEFT%
+	PRINTFORM %"[810] 약칭표시",20,LEFT%
 ELSE
-	PRINTFORM %"[777] 약칭표시중",20,LEFT%
+	PRINTFORM %"[810] 약칭표시중",20,LEFT%
 ENDIF
 SIF 묘지起動可 || EX起動可
 	SETCOLOR C_YELLOW
@@ -3266,7 +3289,7 @@ PRINTL
 
 PRINT 　
 FONTSTYLE 8
-PRINTFORM %" 게임진행 :",12,LEFT%
+PRINTFORM %"게임진행 :",12,LEFT%
 FONTSTYLE 0
 PRINTFORM %"",114,LEFT%
 
@@ -3320,17 +3343,16 @@ IF 설정플래그 == 0
 		PRINTFORM %"[999] - 항복한다",64,LEFT%
 	ENDIF
 ELSE
+	SETCOLOR C_YELLOW
 	PRINTFORM %"[9999] - 확인종료",128,LEFT%
+	RESETCOLOR
 ENDIF
 SIF 묘지起動可 || EX起動可
 	SETCOLOR C_YELLOW
 PRINTPLAIN ┃
 RESETCOLOR
-IF オプション_フリチェ != 1
-	PRINTFORM %"[555] 듀얼리스트사전",20,LEFT%
-ELSE
-	PRINTFORM %"[555] 듀얼리스트사전",20,LEFT%
-ENDIF
+	PRINTFORM %"[812] 듀얼리스트사전",20,LEFT%
+
 SIF 묘지起動可 || EX起動可
 	SETCOLOR C_YELLOW
 PRINTPLAIN ┃
@@ -3374,11 +3396,11 @@ IF デバッグコマンド == 1 && 설정플래그 == 0
 	PRINTL 디버그 커맨드：
 	PRINTL 소환권：{소환権}/추가소환권：{追소환権}
 
-	PRINTL 　　[9000] - 카드를 뽑는다　　　　　　 [9001] - 서치/회수　　　　　　[9002] - 상대 서치/회수　　　
-	PRINTL 　　[9003] - 덱을 확인한다　　　　 [9004] - 묘지 보내기 처리　　　　 [9005] - 상대 묘지 보내기 처리
-	PRINTL 　　[9006] - 리셋　　　　　　　　 [9007] - 몬스터 소환　　　　 [9008] - 상대 몬스터 소환
-	PRINTL 　　[9009] - 상황 프리셋　　　　　 [9010] - 자유TEST　　　　　　　 [9011] - 서로의 라이프를 리셋
-	PRINTL 　　[9012] - 셔플처리　　　　　 [9013] - 자동승리
+	PRINTL 　　[9000] - 카드를 뽑는다　　　　 [9001] - 서치/회수　　　　　　[9002] - 상대 서치/회수　　　
+	PRINTL 　　[9003] - 덱을 확인한다　　　　 [9004] - 묘지 보내기 처리　　 [9005] - 상대 묘지 보내기 처리
+	PRINTL 　　[9006] - 리셋　　　　　　　　 [9007] - 몬스터 소환　　　　  [9008] - 상대 몬스터 소환
+	PRINTL 　　[9009] - 상황 프리셋　　　　　 　　　　　　　　　　　　　　  [9011] - 서로의 라이프를 리셋
+	PRINTL 　　[9012] - 셔플처리　　　　　　 [9013] - 자동승리
 	PRINTL 　　[1000] - 강제 턴 종료
 ENDIF
 VARSET カウンタ
@@ -3676,11 +3698,11 @@ ELSEIF RESULT == 9012
 ELSEIF RESULT == 9013
 	상대_듀얼패배플래그 = 999
 
-ELSEIF RESULT == 888
+ELSEIF RESULT == 811
 	オプション_フリチェ ^= 1
 
 
-ELSEIF RESULT == 555
+ELSEIF RESULT == 812
 	CALL COM456
 ELSEIF RESULT == 8888
 	デバッグコマンド ^= 1
@@ -3694,7 +3716,7 @@ ELSEIF RESULT == 999 || (詰め플래그 && RESULT == 1000)
 		;PRINTFORML テスト終了
 		자신_듀얼패배플래그 = 3
 	ENDIF
-ELSEIF RESULT == 777
+ELSEIF RESULT == 810
 	オプション_略표시 ^= 1
 ELSE
 	;손패のカード발동・소환処理――――――――――――――――――――――――
@@ -4004,10 +4026,10 @@ VARSET RESULT
 			PRINTL
 		ENDIF
 	;――――――――――――묘지のカード確認――――――――――――
-	ELSEIF RESULT == 400
-		CUSTOMDRAWLINE =
+	ELSEIF RESULT == 801
+		CUSTOMDRAWLINE —
 		PRINTFORML 「（자신）묘지 확인 화면」
-		CUSTOMDRAWLINE =
+		CUSTOMDRAWLINE —
 		PRINTL
 		FOR カウンタ,0,紙束最大値
 			SIF 자신_묘지:カウンタ == -1
@@ -4056,10 +4078,10 @@ VARSET RESULT
 				CALL CARD_FINAL(ターンプレイヤー);자신ターン묘지の起動後のチェック
 			ENDIF
 		ENDIF
-	ELSEIF RESULT == 499
-		CUSTOMDRAWLINE =
+	ELSEIF RESULT == 803
+		CUSTOMDRAWLINE —
 		PRINTFORML 「（상대）묘지 확인 화면」
-		CUSTOMDRAWLINE =
+		CUSTOMDRAWLINE —
 		PRINTL
 		FOR カウンタ,0,紙束最大値
 			SIF 상대_묘지:カウンタ == -1
@@ -4092,10 +4114,10 @@ VARSET RESULT
 		ENDIF
 
 	;――――――――――――제외のカード確認――――――――――――
-	ELSEIF RESULT == 600
-		CUSTOMDRAWLINE =
+	ELSEIF RESULT == 802
+		CUSTOMDRAWLINE —
 		PRINTFORML 「（자신）제외 확인 화면」
-		CUSTOMDRAWLINE =
+		CUSTOMDRAWLINE —
 		PRINTL
 		FOR カウンタ,0,紙束最大値
 			SIF 자신_제외:カウンタ == -1
@@ -4126,10 +4148,10 @@ VARSET RESULT
 				PRINTL 
 			ENDIF
 		ENDIF
-	ELSEIF RESULT == 699
-		CUSTOMDRAWLINE =
+	ELSEIF RESULT == 804
+		CUSTOMDRAWLINE —
 		PRINTFORML 「（상대）제외 확인 화면」
-		CUSTOMDRAWLINE =
+		CUSTOMDRAWLINE —
 		PRINTL
 		FOR カウンタ,0,紙束最大値
 			SIF 상대_제외:カウンタ == -1
@@ -4162,6 +4184,67 @@ VARSET RESULT
 				PRINTL 
 			ENDIF
 		ENDIF
+	ELSEIF RESULT == 555
+		CUSTOMDRAWLINE —
+		PRINTFORML 「머신 성능」
+		CUSTOMDRAWLINE —
+		PRINTL
+		VARSET RESULT
+		TRYCALLFORM CARDNAME_{자신_エンジン}, "名前"
+		PRINTFORML ENGINE[ 1] - %RESULTS%
+		VARSET RESULT
+		TRYCALLFORM CARDNAME_{자신_シャーシ}, "名前"
+		PRINTFORML CHASIS[ 2] - %RESULTS%
+		VARSET RESULT
+		TRYCALLFORM CARDNAME_{자신_ブースト}, "名前"
+		PRINTFORML BOOST [ 3] - %RESULTS%
+
+		CUSTOMDRAWLINE —
+		PRINTL
+		PRINTL [100] - 돌아간다
+		BINPUT
+		選択カード = RESULT
+		;돌아간다
+		IF 選択カード != 100
+			IF 選択カード == 1
+				CALL CARD_UI_RESET
+				TRYCALLFORM CARD_UI(자신_エンジン,2)
+				RESETCOLOR	
+				PRINTL
+				PRINTL [100] - 돌아간다
+				BINPUT
+				IF RESULT == 100
+					PRINTL 
+				ENDIF
+			ELSEIF 選択カード == 2
+				CALL CARD_UI_RESET
+				TRYCALLFORM CARD_UI(자신_シャーシ,2)
+				RESETCOLOR	
+				PRINTL
+				PRINTL [100] - 돌아간다
+				BINPUT
+				IF RESULT == 100
+					PRINTL 
+				ENDIF
+			ELSEIF 選択カード == 3
+				CALL CARD_UI_RESET
+				TRYCALLFORM CARD_UI(자신_ブースト,2)
+				TRYCALLFORM CARDCAN_{자신_ブースト}("자신",ブースト起動,"")
+				SETCOLOR C_G_YELLOW
+				SIF RESULT == 1 && 설정플래그 == 0
+					PRINT [3] - 효과발동
+				RESETCOLOR	
+				PRINTL
+				PRINTL [100] - 돌아간다
+				BINPUT
+				IF RESULT == 100
+					PRINTL 
+				ELSEIF RESULT == 3
+					TRYCALLFORM CARDEFFECT_{자신_ブースト}("자신",ブースト起動,"")
+				ENDIF
+			ENDIF
+		ENDIF
+
 	;――――――――――――ターン進行――――――――――――
 	ELSEIF RESULT == 700
 		;GOTO INPUT_LOOP_ENEMY
@@ -4258,7 +4341,6 @@ VARSET RESULT
 		ENDIF
 		
 		CALL CARD_ENDPHASE
-		;GOTO INPUTTURN_LOOP
 		RETURN 1000
 	ELSEIF RESULT == 1100
 		$INPUT_LOOP_OPCHECK

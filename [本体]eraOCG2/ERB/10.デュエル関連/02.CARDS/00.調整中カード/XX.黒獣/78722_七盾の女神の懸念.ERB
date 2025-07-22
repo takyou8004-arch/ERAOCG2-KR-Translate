@@ -1,0 +1,213 @@
+@CARDNAME_78722,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 七盾の女神の懸念
+	CASE "略称"
+		RESULTS = 七盾の女神の懸念
+	CASE "カテゴリ"
+		RESULTS:0 = 七盾同盟
+		RESULTS:1 = 黒獣
+ENDSELECT
+
+@CARD_78722(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 速攻魔法
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_78722(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_78722(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 自分フィールドに「七盾同盟の象徴 セレスティン」が存在する場合、このカードは相手ターンでも手札から発動できる。
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,魔罠起動,手札起動,フリー誘発)
+PRINTL ①：手札・フィールドの「七盾同盟の象徴 セレスティン」以外の「七盾同盟」Ｐモンスターカード１体をＥＸデッキに送り、
+PRINTL ＥＸデッキからそのカード名以外かつＥＸモンスター以外の「七盾同盟」Ｐモンスター１体を特殊召喚する。
+CALL CARD_ABLE(2,身代効果)
+PRINTL ②：自分フィールドの「七盾同盟の象徴 セレスティン」以外の「七盾同盟」モンスターが戦闘・効果によって破壊される場合、
+PRINTL 代わりに墓地のこのカードを除外できる。
+
+@CARDCAN_78722(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+#DIM DYNAMIC 候補除外ID, VARSIZE("効果条件固ID")
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC カウンタB
+#DIMS DYNAMIC 対象ゾーン
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,78722)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	IF ゾーン == "手札"
+		IF ターンプレイヤー != 決闘者
+			RETURN 0
+		ENDIF
+	ELSEIF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 発動済_1(決闘者,78722)
+		RETURN 0
+	FOR カウンタ, 0, 現EX山札数(決闘者)
+		選択カードID = GETVAR(@"%決闘者%_EXデッキ:カウンタ")
+		IF 選択カードID != -1
+			TRYCALLFORM CARD_{選択カードID}, "種類"
+			SIF GROUPMATCH(RESULT, 융합, シンクロ, エクシーズ, リンク, 超次元)
+				CONTINUE
+			TRYCALLFORM CARD_{選択カードID}, "分割"
+			SIF RESULT != ペンデュラム
+				CONTINUE
+			VARSET 条件達成
+			TRYCALLFORM CARDNAME_{選択カードID}, "カテゴリ"
+			IF MATCH(RESULTS, "七盾同盟")
+				候補除外ID:カウンタB = 選択カードID
+				カウンタB++
+				SIF カウンタB >= VARSIZE("効果条件固ID")
+					BREAK
+			ENDIF
+		ENDIF
+	NEXT
+	SIF カウンタB < 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	IF モンスター数(決闘者) < 5
+		効果範囲手札 = 1
+		効果範囲魔罠 = 1
+	ENDIF
+	効果条件分割 = ペンデュラム
+	効果条件固名前 = 七盾同盟の象徴 セレスティン
+	FOR カウンタ, 0, カウンタB
+		効果条件固ID:カウンタ = 候補除外ID:カウンタ
+	NEXT
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 身代効果
+	SIF 発動済_2(決闘者,78722)
+		RETURN 0
+	SIF ゾーン != "墓地"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	IF 破壊対象ゾーン == "戦場"
+		対象ゾーン = MZ
+	ELSE
+		対象ゾーン = 魔
+	ENDIF
+	IF 対象ゾーン != ""
+		SIF 破壊対象ID == 4716 || GETVAR(@"%決闘者%_%対象ゾーン%_変化元ID:破壊対象場所") == 4716
+			RETURN 0
+	ENDIF
+	SIF !GROUPMATCH(破壊種類,"効果","戦闘")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_78722(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 候補除外ID, VARSIZE("効果条件固ID")
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC カウンタB
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,78722,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		FOR カウンタ, 0, 現EX山札数(決闘者)
+			選択カードID = GETVAR(@"%決闘者%_EXデッキ:カウンタ")
+			IF 選択カードID != -1
+				TRYCALLFORM CARD_{選択カードID}, "種類"
+				SIF GROUPMATCH(RESULT, 융합, シンクロ, エクシーズ, リンク, 超次元)
+					CONTINUE
+				TRYCALLFORM CARD_{選択カードID}, "分割"
+				SIF RESULT != ペンデュラム
+					CONTINUE
+				VARSET 条件達成
+				TRYCALLFORM CARDNAME_{選択カードID}, "カテゴリ"
+				IF MATCH(RESULTS, "七盾同盟")
+					候補除外ID:カウンタB = 選択カードID
+					カウンタB++
+					SIF カウンタB >= VARSIZE("効果条件固ID") - 1
+						BREAK
+				ENDIF
+			ENDIF
+		NEXT
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		IF モンスター数(決闘者) < 5
+			効果範囲手札 = 1
+			効果範囲魔罠 = 1
+		ENDIF
+		効果条件分割 = ペンデュラム
+		効果条件固名前 = 七盾同盟の象徴 セレスティン
+		FOR カウンタ, 0, カウンタB
+			効果条件固ID:カウンタ = 候補除外ID:カウンタ
+		NEXT
+		効果条件行先フラグ = EXデッキ行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		選択カードID = RESULT:1
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲EXデッキ = 1
+			効果条件種類 = EX以外全般
+			効果条件分割 = ペンデュラム
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 身代効果
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,78722,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

@@ -1,0 +1,112 @@
+﻿@CARDNAME_38370,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 문장수 레오
+	CASE "略称"
+		RESULTS = 문장수 레오
+	CASE "カテゴリ"
+		RESULTS:0 = 문장수
+ENDSELECT
+
+
+@CARD_38370(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;効果モン/通常モン/儀式/融合/シンクロ/エクシーズ/リンク/超次元
+	CASE "種類"
+		RETURN 効果モン
+	;闇属性/光属性/地属性/水属性/炎属性/風属性
+	CASE "属性"
+		RETURN 地属性
+	CASE "種族"
+		RETURN 獣族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1000
+	CASE "追加日"
+		RETURN 250713
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_38370(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の②の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,召喚時強制)
+PRINTL ①：このカードが召喚した場合、発動する。
+PRINTL このターンのエンドフェイズ時、このカードを破壊する。
+CALLFORM CARD_ABLE(1,戦場→墓地 ,手札→墓地 ,デッキ→墓地 ,破壊→墓地 ,戦闘→墓地)
+PRINTL ②：このカードが墓地へ送られた場合に発動できる。
+PRINTL デッキから「문장수 레오」以外の「문장수」モンスター１体を手札に加える。
+
+@CARDCAN_38370(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,38370)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 召喚時強制
+	RETURN 1
+
+ELSEIF 種類 == 戦場→墓地 || 種類 == 手札→墓地 || 種類 == デッキ→墓地 || 種類 == 破壊→墓地 || 種類 == 戦闘→墓地
+	SIF 発動済_1(決闘者,38370)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 문장수
+	効果条件固名前 = 문장수 레오
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+
+ENDIF
+
+@CARDEFFECT_38370(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 召喚時強制
+    CALL SET_FIELD_INFO(決闘者,"戦場",場所,"終処",破壊行き)
+
+ELSEIF 種類 == 戦場→墓地 || 種類 == 手札→墓地 || 種類 == デッキ→墓地 || 種類 == 破壊→墓地 || 種類 == 戦闘→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,38370,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件カテゴリ = 문장수
+		効果条件固名前 = 문장수 레오
+		効果条件種類 = モン全般
+		CALL CARD_ADD_BASIC(決闘者,"デッキ",ゾーン,場所)
+	ENDIF
+
+
+	
+ENDIF

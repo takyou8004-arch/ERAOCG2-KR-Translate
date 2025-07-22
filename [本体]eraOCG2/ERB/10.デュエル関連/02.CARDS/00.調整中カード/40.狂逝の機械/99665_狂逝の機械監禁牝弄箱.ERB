@@ -1,0 +1,235 @@
+﻿@CARDNAME_99665,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ィークギア・プリズナーコンテナ
+	CASE "略称"
+		RESULTS = 狂逝牝壊弄箱
+	CASE "カテゴリ"
+		RESULTS:0 = 狂逝の機械
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99665(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 永続罠
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99665(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL
+PRINTL このカード名の②③の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,攻守変動)
+PRINTL ①：このカードが魔法・罠ゾーンに存在する限り、相手バトルフェイズの間、相手フィールドの全ての媚薬カウンターを持つモンスターは、
+PRINTL 攻撃表示になり、攻撃可能な場合は攻撃しなければならない。
+CALLFORM CARD_ABLE(2,魔罠起動)
+PRINTL ②：自分・相手のメインフェイズに、フィールド上の性別を持つモンスター１体を対象に発動できる。
+PRINTL そのモンスターに媚薬カウンターを１つ置く。
+CALLFORM CARD_ABLE(3,発動誘発)
+PRINTL ③：自分・相手のバトルフェイズ中に相手がモンスター効果を発動した時、自分フィールド上の「狂逝の機械」モンスター１体を破壊して発動できる。
+PRINTL その発動を無効にする。
+PRINTL
+SETCOLOR C_RED
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー警告ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+CALLFORM CARD_ABLE(4,ターン終了時)
+PRINTL ④：自分のターン終了時に発動できる。
+PRINTL 機械城に捕らえられている牝穴たちを犯し、機械を活性化させつづけ、
+PRINTL 相手プレイヤーの手札に強制力を持つ手札を加えさせる。
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー注意ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL
+RESETCOLOR
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_99665(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 調教対象
+#DIM DYNAMIC 効果条件フラグ = 0
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,99665)
+SIF RESULT == 1
+RETURN 0
+
+IF 種類 == 攻守変動
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF 発動済_2(決闘者,99665)
+		RETURN 0
+    SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+    効果範囲相手戦場 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所,99665)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 発動誘発
+	SIF 発動済_3(決闘者,99665)
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 狂逝の機械
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_START_DATA(決闘者,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == ターン終了時
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF 発動済_4(決闘者,99665)
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 魔罠起動 
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99665(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 調教対象
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 戦闘カードID
+#DIM DYNAMIC 効果条件フラグ = 0
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99665,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲戦場 = 1
+        効果範囲相手戦場 = 1
+		CALL CARD_REMOVAL_BASIC(決闘者,"両戦場単体",場所,"選択")
+		IF RESULT == 1
+			選択カード = RESULT:1
+			CALL CARD_SELECT(決闘者,選択カード)
+			CALL SET_FIELD_INFO(対象者（CS）,"戦場",選択カード（CS）,"薬Ｃ",1) 
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 発動誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99665,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件カテゴリ = 狂逝の機械
+        効果条件行先フラグ = 破壊行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"発動無効",場所,"無効")
+			RETURN 1
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 攻守変動
+	CALL SET_FIELD_MAGIC_INFO(決闘者, "機械監禁牝弄箱")
+	CALL FULLRESET
+	効果条件薬Ｃ所持 = 1
+	CALL STATCHANGE_EFFECT(決闘者,"相手戦場",場所,"表",1,99665)
+    CALL FULLRESET
+    効果条件薬Ｃ所持 = 1
+	CALL STATCHANGE_EFFECT(決闘者,"相手戦場",場所,"戦狂",1,99665)
+
+	ELSEIF 種類 == 魔罠起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99665)
+	IF RESULT == 0
+	ENDIF
+
+ELSEIF 種類 == ターン終了時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99665,2)
+    	IF RESULT == 0
+        	CALL CARD_EROTICS(相手プレイヤー,決闘者)
+			調教対象 = RESULT
+            IF 調教対象 != -1 && TALENT:調教対象:性別 == 1
+				PRINTFORMW 場に充満する淫らな成分を含めている蒸気が牝弄箱に溜まり、
+				PRINTFORMW %CALLNAME:調教対象%の手札に一つのカードを形成する……
+				SELECTCASE RAND:9
+					CASE 0
+						CALL CARD_GENERATE_HAND(対面者,79840)
+					CASE 1
+						CALL CARD_GENERATE_HAND(対面者,79841)
+					CASE 2
+						CALL CARD_GENERATE_HAND(対面者,79842)
+					CASE 3
+						CALL CARD_GENERATE_HAND(対面者,79843)
+					CASE 4
+						CALL CARD_GENERATE_HAND(対面者,79844)
+					CASE 5
+						CALL CARD_GENERATE_HAND(対面者,79845)
+					CASE 6
+						CALL CARD_GENERATE_HAND(対面者,79846)
+					CASE 7
+						CALL CARD_GENERATE_HAND(対面者,79847)
+					CASE 8
+						CALL CARD_GENERATE_HAND(対面者,79848)
+				ENDSELECT
+            ENDIF
+
+        ENDIF
+
+ENDIF
+
+
+
+

@@ -1,0 +1,326 @@
+﻿@CARDNAME_51062,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 벤데드 배스터드
+	CASE "略称"
+		RESULTS = VD.Battlelord
+	CASE "カテゴリ"
+		RESULTS:0 = 벤데드
+ENDSELECT
+
+
+@CARD_51062(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 儀式
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN アンデット族 
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2700
+	CASE "守備力"
+		RETURN 0
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_51062(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 出処
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 7
+
+IF EX参照 == 1
+	CALL RITCAN(決闘者,召喚カード,51062) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_51062(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 「벤데드」儀式魔法カードにより降臨。
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,戦場起動)
+PRINTL ①：自分の墓地から「벤데드」カード１枚を除外し、カードの種類（モン스타 魔法・罠）を宣言して発動できる。
+PRINTL このモンスターがフィールドに存在する限り、このターン、相手は宣言した種類のカードの効果を発動できない。
+CALL CARD_ABLE(2,戦破壊→墓地)
+PRINTL ②：フィールドのこのカードが戦闘・効果で破壊された場合に発動できる。
+PRINTL デッキから儀式モンスター１体を手札に加え、デッキから「벤데드」モンスター１体を墓地へ送る。
+
+
+@CARDCAN_51062(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 発動不可,3
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,51062)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 戦場起動 || 種類 == フリー誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	
+	;バスタード
+	SIF 発動済_1(決闘者,51062)
+		発動不可:2 = 1
+	SIF メインフェイズ != 1
+		発動不可:2 = 1
+	SIF ターンプレイヤー != 決闘者
+		発動不可:2 = 1
+	SIF 種類 == フリー誘発
+		発動不可:2 = 1
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件種族 = アンデット族
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		発動不可:2 = 1
+	
+	;レヴナント
+	SIF GETBIT(GETVAR(@"%決闘者%_MZ_汎数:場所"),1) != 1
+		発動不可:0 = 1
+	SIF 発動済_3(決闘者,51062)
+		発動不可:0 = 1
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果条件召種 = 召種全特殊
+	効果条件除去種 = 除外
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		発動不可:0 = 1
+
+	;ヘルハン
+	SIF GETBIT(GETVAR(@"%決闘者%_MZ_汎数:場所"),2) != 1
+		発動不可:1 = 1
+	SIF 発動済_4(決闘者,51062)
+		発動不可:1 = 1
+	CALL FULLRESET
+	効果範囲相手魔罠 = 1
+	効果条件除去種 = 除外
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		発動不可:1 = 1
+
+	SIF 発動不可:0 == 1 && 発動不可:1 == 1 && 発動不可:2 == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 戦破壊→墓地
+	SIF 発動済_2(決闘者,51062)
+		RETURN 0
+	SIF !GROUPMATCH(墓地送り種類,"戦闘破壊","破壊")
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件種類 = 儀式
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 벤데드
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_MZ_T1汎数:場所") < 1
+		RETURN 0
+	RETURN 1
+
+;ストリゲスの付与効果
+ELSEIF 種類 == 攻撃後誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 場所
+		RETURN 0
+	SIF 戦闘場所(決闘者,1) == 5
+		RETURN 0
+	SIF GETBIT(GETVAR(@"%決闘者%_MZ_汎数:場所"),3) != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51062(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 発動不可,3
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 戦場起動 || 種類 == フリー誘発
+	;バスタード
+	SIF 発動済_1(決闘者,51062)
+		発動不可:2 = 1
+	SIF メインフェイズ != 1
+		発動不可:2 = 1
+	SIF ターンプレイヤー != 決闘者
+		発動不可:2 = 1
+	SIF 種類 == フリー誘発
+		発動不可:2 = 1
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件種族 = アンデット族
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		発動不可:2 = 1
+	
+	;レヴナント
+	SIF GETBIT(GETVAR(@"%決闘者%_MZ_汎数:場所"),1) != 1
+		発動不可:0 = 1
+	SIF 発動済_3(決闘者,51062)
+		発動不可:0 = 1
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果条件召種 = 召種全特殊
+	効果条件除去種 = 除外
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		発動不可:0 = 1
+
+	;ヘルハン
+	SIF GETBIT(GETVAR(@"%決闘者%_MZ_汎数:場所"),2) != 1
+		発動不可:1 = 1
+	SIF 発動済_4(決闘者,51062)
+		発動不可:1 = 1
+	CALL FULLRESET
+	効果範囲相手魔罠 = 1
+	効果条件除去種 = 除外
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		発動不可:1 = 1
+
+	IF 決闘者 == "自分"
+		PRINTL 使用する効果を選択してください
+		PRINTL 
+		SIF 発動不可:0 != 1
+			PRINTL [0] - ●レヴナント
+		SIF 発動不可:1 != 1
+			PRINTL [1] - ●ヘルハウンド
+		SIF 発動不可:2 != 1
+			PRINTL [2] - ●バスタード
+	ELSE
+		SIF 発動不可:1 != 1
+			RESULT = 1
+		SIF 発動不可:0 != 1
+			RESULT = 0
+		SIF 発動不可:2 != 1
+			RESULT = 2
+	ENDIF
+
+	IF RESULT == 0
+		CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,51062,3)
+		IF RESULT == 0
+			CALL FULLRESET
+			効果条件召種 = 召種全特殊
+			CALL CARD_REMOVAL_BASIC(決闘者,"戦場単体",場所,"除外")
+		ENDIF
+
+	ELSEIF RESULT == 1
+		CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,51062,4)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"魔罠単体",場所,"除外")
+		ENDIF
+
+	ELSEIF RESULT == 2
+		CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,51062,1)
+		IF RESULT == 0
+			CALL FULLRESET
+			効果範囲墓地 = 1
+			効果条件種族 = アンデット族
+			効果条件行先フラグ = 除外行き
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+			IF RESULT == 1
+				IF 決闘者 == "自分"
+					PRINTL 宣言する種類を選んでください
+					PRINTL
+					PRINTL [1] - モンスター
+					PRINTL [2] - 魔法
+					PRINTL [3] - 罠
+					BINPUT
+				ELSE
+					RESULT = 1
+				ENDIF
+
+				CALL SET_FIELD_INFO(決闘者,ゾーン,場所,"T1汎数",RESULT,1)
+			ENDIF
+		ENDIF
+	ENDIF
+
+
+ELSEIF 種類 == 戦破壊→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,51062,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件種類 = 儀式
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件カテゴリ = 벤데드
+			効果条件種類 = モン全般
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 永続効果
+	SELECTCASE GETVAR(@"%決闘者%_MZ_T1汎数:場所")
+		CASE 1
+			CALL SET_PLAYER_INFO(決闘者,"モン効果無効",3,1)
+		CASE 2
+			CALL SET_PLAYER_INFO(決闘者,"魔無効",3,1)
+		CASE 3
+			CALL SET_PLAYER_INFO(決闘者,"罠無効",3,1)
+	ENDSELECT
+
+ELSEIF 種類 == 攻撃後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,51062)
+	IF RESULT == 0
+		CALL URARA_CHANCE(決闘者,処理中_効果ID,"雑多")
+		IF RESULT == 0
+			CALL CARDDRAW_BASIC(決闘者,2)
+			CALL FULLRESET
+			効果範囲手札 = 1
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

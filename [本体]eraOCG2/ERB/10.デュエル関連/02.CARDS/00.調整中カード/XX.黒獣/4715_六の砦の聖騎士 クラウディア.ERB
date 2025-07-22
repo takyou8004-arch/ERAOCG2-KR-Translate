@@ -1,0 +1,221 @@
+@CARDNAME_4715,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 六の砦の聖騎士 クラウディア
+	CASE "略称"
+		RESULTS = クラウディア
+	CASE "カテゴリ"
+		RESULTS:0 = 七盾同盟
+		RESULTS:1 = 黒獣
+ENDSELECT
+
+@CARD_4715(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 戦士族
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 2600
+	CASE "性別"
+		RETURN 牝性
+	CASE "分割"
+		RETURN ペンデュラム
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_4715(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名の①②のＰ効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,魔罠起動)
+PRINTL ①：自分メインフェイズに自分フィールドに「七盾同盟の象徴 セレスティン」が存在しないなら発動できる。
+PRINTL このカードをＥＸデッキに送り、デッキ・ＥＸデッキから「七盾同盟の象徴 セレスティン」１体を魔法＆罠ゾーンに表側表示で置く。
+CALL CARD_ABLE(2,効果後誘発)
+PRINTL ②：このカード名以外のモンスターが特殊召喚された場合に、自分フィールドに「七盾同盟の象徴 セレスティン」が存在するなら発動できる。
+PRINTL このカードを特殊召喚する。
+PRINTL その後、ＥＸデッキから「七の砦の聖騎士団長 クラウディア」をこのカードの上に重ねてＸ召喚できる。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL このカード名のモンスター効果は１ターンに１度しか使用できない。
+CALL CARD_ABLE(4,戦場起動,フリー誘発)
+PRINTL ①：自分・相手ターンに、自分フィールドに「七盾同盟の象徴 セレスティン」が存在するなら発動できる。
+PRINTL このカードを自分の魔法＆罠ゾーンに表側表示で置く。
+PRINTL その後、魔法＆罠ゾーンのこのカード名以外の「七盾同盟」Ｐモンスター１体を特殊召喚できる。
+
+
+@CARDCAN_4715(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,4715)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_1(決闘者,4715)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件名前 = 七盾同盟の象徴 セレスティン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果範囲EXデッキ = 1
+	効果条件名前 = 七盾同盟の象徴 セレスティン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 効果後誘発
+	SIF 発動済_2(決闘者,4715)
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") > 1
+		RETURN 0
+	CALL FULLRESET
+	効果条件種類 = モン全般
+	効果条件固名前 = 六の砦の聖騎士 クラウディア
+	CALL CARD_CHECK_FIN_DATA(決闘者,"特殊召喚",2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件名前 = 七盾同盟の象徴 セレスティン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場起動 || 種類 == フリー誘発
+	SIF 発動済_4(決闘者,4715)
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件名前 = 七盾同盟の象徴 セレスティン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4715(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 対象者
+#DIMS DYNAMIC 対象ゾーン
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4715)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4715,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,EXデッキ行き)
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果範囲EXデッキ = 1
+		効果条件名前 = 七盾同盟の象徴 セレスティン
+		CALL CARD_SET_ADV(決闘者,ゾーン,場所,"表側表示")
+	ENDIF
+ELSEIF 種類 == 効果後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4715,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			PRINTL 「七の砦の聖騎士団長 クラウディア」をこのカードを上に重ねてＸ召喚しますか？
+			CALL YN_CHOICE(決闘者)
+			IF RESULT == はい
+				CALL FULLRESET
+				効果条件名前 = 七の砦の聖騎士団長 クラウディア
+				CALL CARD_CHOOSE_BASIC(決闘者,"EXデッキ",ゾーン,場所)
+				選択カード = RESULT
+				IF 選択カード != 9999
+					CALL FULLRESET
+					CALL RESETCONDITION_MAT
+					必要素材数 = 1
+					重ねてＸ = 1
+					素材条件固定 = カード召喚先
+					TRYCALLFORM XYZSUMMON(決闘者,選択カード)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 戦場起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4715,4)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲魔罠 = 1
+			効果条件固名前 = 六の砦の聖騎士 クラウディア
+			効果条件分割 = ペンデュラム
+			効果条件カテゴリ = 七盾同盟
+			効果条件任意 = 1
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

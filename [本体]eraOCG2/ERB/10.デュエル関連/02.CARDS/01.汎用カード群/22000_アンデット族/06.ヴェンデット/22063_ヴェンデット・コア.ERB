@@ -1,0 +1,142 @@
+﻿@CARDNAME_22063,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 벤데드 코어
+	CASE "略称"
+		RESULTS = VD.Core
+	CASE "カテゴリ"
+		RESULTS:0 = 벤데드
+ENDSELECT
+
+
+@CARD_22063(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN アンデット族
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 500
+	CASE "儀式代用カテゴリ"
+		RESULTS = 벤데드
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_22063(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 「벤데드」儀式モンスター１体を儀式召喚する場合、
+PRINTL このカード１枚で儀式召喚に必要なレベル分のリリースとして使用できる。
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,墓地起動)
+PRINTL ①：自分の墓地からこのカード名以外のアンデット族モンスター１体を除外して発動できる。
+PRINTL このカードを墓地から特殊召喚する。
+PRINTL この効果で特殊召喚したこのカードは、フィールドから離れた場合に除外される。
+CALLFORM CARD_ABLE(2,R素材時効果)
+PRINTL ②：このカードが儀式召喚の素材となった場合、
+PRINTL 自分フィールドの「벤데드」儀式モンスター１体を対象として発動できる。
+PRINTL そのモンスターは以下の効果を得る。
+PRINTL ●このカードは相手の効果の対象にならない。
+
+@CARDCAN_22063(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,22063)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 墓地起動
+	SIF 発動済_1(決闘者,22063)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,22063,"墓地")
+	SIF RESULT == 1
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件種族 = アンデット族
+	効果条件固名前 = 벤데드 코어
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == R素材時効果
+	SIF 発動済_2(決闘者,22063)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 벤데드
+	効果条件種類 = 儀式
+	効果条件表示 = 表側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_22063(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 選択カード
+
+IF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,22063,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果条件種族 = アンデット族
+		効果条件固名前 = 벤데드 코어
+		効果条件行先フラグ = 除外行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲墓地 = 1
+			効果条件名前 = 벤데드 코어
+			効果追加種類 = 効追除処
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == R素材時効果
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,22063,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件カテゴリ = 벤데드
+		効果条件種類 = 儀式
+		効果条件表示 = 表側表示
+		CALL CARD_GRANT_ADV(決闘者,ゾーン,場所,"対耐",2)
+	ENDIF
+ENDIF

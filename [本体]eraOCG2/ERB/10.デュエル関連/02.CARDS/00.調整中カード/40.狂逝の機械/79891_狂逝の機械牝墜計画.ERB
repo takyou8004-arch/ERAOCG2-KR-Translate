@@ -1,0 +1,214 @@
+﻿@CARDNAME_79891,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ィークギア・スレイブカスタムプラン
+	CASE "略称"
+		RESULTS = 狂逝牝墜計画
+	CASE "カテゴリ"
+		RESULTS:0 = 狂逝の機械
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79891(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79891(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,魔罠起動,手札起動)
+PRINTL ①：デッキから「狂逝の機械」カードを２枚手札に加える。
+PRINTL その後、自分の手札を１枚選んで捨てる。
+CALLFORM CARD_ABLE(2,攻撃時誘発)
+PRINTL ②：相手モンスターの攻撃宣言時に、墓地のこのカードを除外して発動できる。
+PRINTL その攻撃を無効にし、その相手モンスターの攻撃力を半分にする。
+PRINTL その後、フィールド上の性別を持つモンスター全てを発情させ媚薬カウンターを１つ乗せる。
+PRINTL この効果で発情した「狂逝の機械」モンスターは必ず攻撃できる。
+PRINTL 
+SETCOLOR C_RED
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー警告ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL ■のカードを発動した時、ラ■■ム■相手デッキ内の■性モンスターを選択す■■
+PRINTL そのモンスタ■■捕ら■、狂逝の機械に■■■■、動力■する。
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー注意ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL
+RESETCOLOR
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79891(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 調教対象
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,79891)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF 発動済_1(決闘者,79891)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 狂逝の機械
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 攻撃時誘発
+	SIF 発動済_2(決闘者,79891)
+		RETURN 0
+	SIF ゾーン != "墓地"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79891(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 調教対象
+#DIM DYNAMIC 選択結果
+#DIM DYNAMIC 捕縛対象
+#DIM DYNAMIC 捕縛候補,紙束最大値
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 絶頂횟수
+#DIM DYNAMIC 選択カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,79891,1)
+	IF RESULT == 0
+	CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 狂逝の機械
+		効果条件複数 = 2
+		CALL CARD_ADD_BASIC(決闘者,"デッキ",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_ADD_GY_BASIC(決闘者,"手札",ゾーン,場所)
+			IF RESULT == 1
+				FOR カウンタ,0,現山札数(対面者)
+					捕縛対象 = GETVAR(@"%対面者%_デッキ:カウンタ") ;0→カウンタ
+					SIF 捕縛対象 == -1 ;念のため-1の場合は次へ
+						CONTINUE
+					CALLFORM CARD_{捕縛対象},"性別"
+					SIF RESULT == 無性 || RESULT == 雄性
+						CONTINUE
+						CALL CARD_EROTICS(捕縛対象)
+					SIF RESULT < 1 ;CSV持ち以外は除外
+						CONTINUE
+					捕縛候補:カウンタB = 捕縛対象 ;牝性を候補に格納
+					カウンタB ++ ;候補数加算
+				NEXT
+				SIF カウンタB < 1 ;カウンタが0以下=候補0
+					RETURN
+				捕縛対象 = 捕縛候補:(RAND:カウンタB) ;カウンタBまでの乱数で捕縛候補の中からランダムに捕縛対象を決定
+				CALL CARD_EROTICS(捕縛対象) ;必ずCARD_EROTICSを挟む
+				調教対象 = RESULT
+				IF 調教対象 > 0 ;調教対象条件はあなたを想定しないなら>0で
+					SELECTCASE RAND:4
+						CASE 0
+							PRINTFORML
+							PRINTFORML 強大な機械兵を動かすための糧を得るべく、牝穴たちは加工され尽くされた肉体を犯され続けている、
+							PRINTFORML 捕らえられている%CALLNAME:調教対象%も気づけばその１つとされていた。
+							PRINTFORMW 機械城の施設の１つである密閉され媚薬が詰め込まれたカプセルの中で、%CALLNAME:調教対象%は凌辱され続けている……
+						CASE 1
+							PRINTFORML
+							PRINTFORML 大型の狂逝の機械を動かすためのエネルギーを得るべく、%CALLNAME:調教対象%を含めた牝肉は犯され続けていた
+							PRINTFORML 絶頂と発狂を繰り返し、精神が壊れそうになれば無理矢理に補強され正気を保たされ続ける。
+							PRINTFORMW %CALLNAME:調教対象%は、終わる事のない性的蹂躙に絶頂と喘ぎ声を返し、狂逝の機械に捧げている……
+						CASE 2
+							PRINTFORML
+							PRINTFORML %CALLNAME:調教対象%は大型の狂逝の機械を作動させるためのエネルギー源を生み出すために、
+							PRINTFORML 四肢を切断され、機械城の施設の中で延々と犯されるための牝穴として組み込まれてしまっていた。
+							PRINTFORMW %CALLNAME:調教対象%を含めた無数の牝穴たちの喘ぎ声が機械城に響き渡る……
+
+						CASE 3
+							PRINTFORML
+							PRINTFORML 既に捕縛されていた牝の１つが機械兵として手元に写される
+							PRINTFORML 手足を切断され、責め苦を与えられ続ける機械に頼らないと動くこともできない、そんな牝肉。
+							PRINTFORMW %CALLNAME:調教対象%、機械に組み込まれた牝の腹部にその中が刻まれていた。
+					ENDSELECT
+					FOR カウンタ,0,4
+						PRINTFORML 
+						CALL MADORGASM_RAND_ROB_TXT(1,0)
+						CALL MADORGASM_RAND_ROB_TXT(1,4)
+						PRINTFORML
+						CALL EROTIC_MOVE("全身凌辱",調教対象,MASTER,500)
+					NEXT
+					CALL MADORGASM_RAND_ROB_TXT(1,4);うるさい鳴き声
+					PRINTFORML %CALLNAME:調教対象%は体中から体液を耐え流し、涙を溢れさせながら必死に救いを求めている。
+					PRINTFORMW その代わりに手札に加えた狂逝の機械は動くための糧を得ていつでも動けるようだ、決闘の盤面に置いても効果を発揮するだろう
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 攻撃時誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,79891,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		調教対象 = 戦闘場所(決闘者,1)
+		CALL SET_FIELD_INFO(対面者,"戦場",調教対象,"一攻",- GETVAR(@"%対面者%_MZ_攻:調教対象") / 2)
+		CALL EVADE_ATTACK(決闘者)
+		CALL CARD_EROTICS(調教対象)
+		IF 調教対象 != -1
+			PRINTFORML 狂逝の機械に犯された%CALLNAME:調教対象%は身も心も蜜のようにトロトロにされた。
+			CALL EROTIC_MOVE("全身凌辱",調教対象,-1,800)
+		ENDIF
+		CALL FULLRESET
+		効果条件性別 = 性別在
+		CALL CARD_REMOVAL_BASIC(決闘者,"両戦場全体",場所,"発情",2)
+		CALL FULLRESET
+        効果範囲戦場 = 1
+    	効果条件種類 = モン全般
+		効果条件カテゴリ = 狂逝の機械
+        CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"発情",100)
+	ENDIF
+ENDIF
+
+
+
+

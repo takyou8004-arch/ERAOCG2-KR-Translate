@@ -9,6 +9,7 @@
 #DIM DYNAMIC 환락강도
 #DIM DYNAMIC 정복강도
 #DIM DYNAMIC 반감강도
+#DIM DYNAMIC 수동강도
 #DIM DYNAMIC カウンタ
 
 CUSTOMDRAWLINE ―
@@ -35,15 +36,6 @@ ENDIF
 PRINTFORML %CALLNAME:MASTER%는 %ITEMNAME:RESULT%을 붓고 %CALLNAME:TARGET%에게 건네주었다…
 ;暫定的に成功플래그を立てる
 TFLAG:SELECTCOM분기 = 0
-[SKIPSTART]
-IF !TALENT:TARGET:연모 && CFLAG:TARGET:만취강간 == 1
-	PRINTFORML %CALLNAME:TARGET%는 이미 %CALLNAME:MASTER%과는 술을 마실 생각이 없는것 같다…
-	SOURCE:반감 += 3000
-	BASE:무드 = 0
-	BASE:분노 = 1500
-	RETURN -1
-ENDIF
-[SKIPEND]
 IF BASE:TARGET:술기운 >= 1200
 	PRINTFORML %CALLNAME:TARGET%는 이 이상 마실 생각이 없는것 같다
 	RETURN -1
@@ -63,7 +55,7 @@ ELSEIF TALENT:TARGET:술내성 == -2
 			TFLAG:SELECTCOM분기 = 12
 		ELSE
 			PRINTFORML %CALLNAME:MASTER%가 무슨말을 하든、 %CALLNAME:TARGET%는 술에 입을 대지 않았다…
-			SOURCE:반감 += 500
+			반감 += 500
 			BASE:무드 /= 2
 			TFLAG:호감도마이너스 = 1
 			TFLAG:SELECTCOM분기 = -1
@@ -114,21 +106,21 @@ ENDIF
 SIF 환락강도 < 0
 	환락강도 = 0
 
-SOURCE:수동 = 200 + 100 * ABL:순종
+수동강도 = 200 + 100 * ABL:순종
 정복강도 = 200 + 100 * ABL:새드끼
 
 IF TFLAG:SELECTCOM분기 == -1
 	TIMES 환락강도 , 0.10
 	TIMES 정복강도 , 0.50
-	TIMES SOURCE:수동 , 0.50
+	TIMES 수동강도 , 0.50
 ELSEIF TFLAG:SELECTCOM분기 == 0
 	TIMES 환락강도 , 1.00
 	TIMES 정복강도 , 1.00
-	TIMES SOURCE:수동 , 1.00
+	TIMES 수동강도 , 1.00
 ELSE
 	TIMES 환락강도 , 2.00
 	TIMES 정복강도 , 2.00
-	TIMES SOURCE:수동 , 2.00
+	TIMES 수동강도 , 2.00
 ENDIF
 
 CALL DRUNKEN(TARGET,選択酒)
@@ -136,10 +128,12 @@ CALL FAVOR_DRINK(TARGET,選択酒)
 
 환락강도 = 환락강도 * 味보정
 정복강도 = 정복강도 * 味보정
-;SOURCE:수동 = SOURCE:수동 * 味보정
+수동강도 = 수동강도 * 味보정
 CALL SOURCE_CALC_환락(TARGET, MASTER, 환락강도)
 CALL SOURCE_CALC_정복(TARGET, MASTER, 정복강도)
 CALL SOURCE_CALC_반감(TARGET, MASTER, 반감강도)
+CALL SOURCE_CALC_수동(TARGET, MASTER, 수동강도)
+
 TIME += 30
 RETURN 1
 

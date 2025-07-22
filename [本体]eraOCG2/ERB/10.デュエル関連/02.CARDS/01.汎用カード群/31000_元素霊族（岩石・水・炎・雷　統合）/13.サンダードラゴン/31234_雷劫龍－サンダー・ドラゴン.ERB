@@ -1,0 +1,209 @@
+﻿@CARDNAME_31234,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 뇌겁룡－썬더 드래곤
+	CASE "略称"
+		RESULTS = 뇌겁룡
+	CASE "カテゴリ"
+		RESULTS:0 = 썬더 드래곤
+ENDSELECT
+
+
+@CARD_31234(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 元素霊族
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 0
+	CASE "召喚不可"
+		RETURN 1
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_31234(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカードは通常召喚できない。
+CALLFORM CARD_ABLE(0,手札起動)
+PRINTL 自分の墓地から光属性と闇属性のモンスターを１体ずつ除外した場合に特殊召喚できる。
+CALLFORM CARD_ABLE(1,効果後誘発)
+PRINTL ①：１ターンに１度、モンスターの効果が手札で発動した場合に発動する。
+PRINTL このカードの攻撃力はターン終了時まで３００アップする。
+CALLFORM CARD_ABLE(2,攻撃後誘発)
+PRINTL ②：このカードが戦闘で相手モンスターを破壊した時に発動できる。
+PRINTL 自分の墓地からカード１枚を除外し、デッキから元素霊族モンスター１体を手札に加える。
+CALLFORM CARD_ABLE(3,ターン終了時)
+PRINTL ③：相手エンドフェイズに発動できる。
+PRINTL 除外されている自分のカード１枚を手札に加える。
+
+
+@CARDCAN_31234(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,31234)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,31234,"手札")
+	SIF RESULT == 1
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件属性 = 光属性
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件属性 = 闇属性
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 効果後誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_FIN_DATA(決闘者,"効果発動",2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 攻撃後誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(決闘者,1) == 0
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件種族 = 元素霊族
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン終了時
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲除外 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31234(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件達成
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,31234)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果条件属性 = 光属性
+		効果条件種類 = モン全般
+		効果条件行先フラグ = 除外行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲墓地 = 1
+			効果条件属性 = 闇属性
+			効果条件種類 = モン全般
+			効果条件行先フラグ = 除外行き
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(決闘者,"手札",場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 効果後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,31234)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(決闘者,"戦場",場所,"一攻",300)
+	ENDIF
+ELSEIF 種類 == 攻撃後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,31234)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件種族 = 元素霊族
+			効果条件種類 = モン全般
+			CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == ターン終了時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,31234)
+IF RESULT == 0
+		CALL FULLRESET
+		効果範囲除外 = 1
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+

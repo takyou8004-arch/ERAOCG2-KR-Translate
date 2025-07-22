@@ -1,0 +1,150 @@
+﻿@CARDNAME_51679,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = BK 구속만병 리드블로
+	CASE "略称"
+		RESULTS = 리드블로
+	CASE "カテゴリ"
+		RESULTS:0 = BK
+ENDSELECT
+
+
+@CARD_51679(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN エクシーズ
+	CASE "属性"
+		RETURN 炎属性
+	CASE "種族"
+		RETURN 戦士族 
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 2000
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_51679(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+素材条件カテゴリ = BK
+
+IF EX参照 == 1
+	CALL XYZCAN(決闘者,召喚カード,51679) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_51679(種類)
+#DIM DYNAMIC 種類
+
+PRINTL レベル４「ＢＫ」モンスター×２
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,身代効果)
+PRINTL ①：自分フィールドの「ＢＫ」モンスターが戦闘・効果で破壊される場合、
+PRINTL 代わりにこのカードのＸ素材を１つ取り除く事ができる。
+PRINTL ②：「ＢＫ」カードか「カウンター」罠カードの効果でこのカードのＸ素材が取り除かれた場合に発動する。
+PRINTL このカードの攻撃力は８００アップする。
+;攻撃力アップは素材取り除く側で処理しています
+CALL CARD_ABLE(1,攻撃後誘発)
+PRINTL ③：このカードが戦闘でモンスターを破壊した場合に発動できる。
+PRINTL そのモンスターの元々の攻撃力分のダメージを相手に与える。
+
+@CARDCAN_51679(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,51679)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 身代効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	TRYCALLFORM CARDNAME_{破壊対象ID}("カテゴリ")
+	SIF !MATCH(RESULTS,"BK")
+		RETURN 0
+	TRYCALLFORM CARD_{破壊対象ID}("種類")
+	SIF RESULT > モン全般
+		RETURN 0
+	SIF !GROUPMATCH(破壊種類,"効果","戦闘")
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 攻撃後誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(決闘者,1) == 0
+		RETURN 0	
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51679(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 身代効果
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,51679,0,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		PRINTL 
+		SETCOLOR C_YELLOW
+		PRINTL 리드블로の구속が解かれた！
+		RESETCOLOR
+		PRINTL 
+		CALL SET_FIELD_INFO(決闘者,"戦場",場所,"永攻",800)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 種類 == 攻撃後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,51679)
+	IF RESULT == 0
+		PRINTL 
+		SETCOLOR C_YELLOW
+		PRINTL Ｋ Ｏ ！！
+		RESETCOLOR
+		PRINTL 
+		CALLFORM CARD_{直前戦闘破壊ID(決闘者,1)}("攻撃力")
+		ダメージ量 = RESULT
+		CALL LIFE_CHANGE(決闘者,"減少","効果",ダメージ量,1)
+	ENDIF
+ENDIF

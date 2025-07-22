@@ -1322,6 +1322,7 @@ ELSE
 							RETURN 0
 					ENDIF
 				ELSEIF 参照先 == "EX덱"
+					VARSET RESULT
 					TRYCALLFORM CARDSUMMON_{GETVAR(@"%実行者%_EX덱:カウンタ")}(実行者,カウンタ,1)
 					SIF RESULT != 1
 						RETURN 0
@@ -1626,16 +1627,15 @@ IF 효과条件スーパーレベル > 0
 		RETURN 0
 ENDIF
 
-
+VARSET RESULT
 IF 효과条件スーパー튜너 > 0
-	VARSET RESULT
-	TRYCALLFORM CARD_{설정カードID}, "종류"
-	IF RESULT < モン全般
-		VARSET RESULT
-		TRYCALLFORM CARD_{설정カードID}, "튜너"
-		SIF RESULT == 0
-			RETURN 0
-	ENDIF
+	TRYCALLFORM CARD_{설정カードID}, "튜너"
+	SIF RESULT == 0
+		RETURN 0
+ELSEIF 효과条件スーパー튜너 == -1
+	TRYCALLFORM CARD_{설정カードID}, "튜너"
+	SIF RESULT != 0
+		RETURN 0
 ENDIF
 
 ;Anonym추가
@@ -1728,10 +1728,75 @@ IF チェック플래그 == 2
 	ENDIF
 ENDIF
 
-
 CALL S_FILTER_EXIST
 SIF RESULT == 0
 	RETURN 0
+
+IF 参照先 != "필드"
+	IF 효과条件소환可 > 0
+		IF 효과条件特不無視 != 1
+			TRYCALLFORM CARD_{설정カードID}, "종류"
+			IF RESULT < 3 || RESULT == 초차원
+				IF 효과条件소환可 == 1 || 효과条件소환可 == 3
+					CALL CARD_SS_CHECK(듀얼리스트,설정カードID,参照先)
+					SIF RESULT == 1
+						RETURN 0
+				ELSEIF 효과条件소환可 == 2
+					CALL CARD_SS_CHECK(듀얼리스트,설정カードID,参照先,1)
+					SIF RESULT == 1
+						RETURN 0
+				ENDIF
+			ELSEIF INRANGE(RESULT,3,10)
+				IF RESULT == 의식
+					IF 参照先 == "손패"
+						TRYCALLFORM CARDSUMMON_{GETVAR(@"%実行者%_손패:カウンタ")}(実行者,カウンタ + 100,1)
+						SIF RESULT != 1
+							RETURN 0
+					ELSEIF 参照先 == "묘지"
+						TRYCALLFORM CARDSUMMON_{GETVAR(@"%実行者%_묘지:カウンタ")}(実行者,カウンタ + 200,1)
+						SIF RESULT != 1
+							RETURN 0
+					ELSEIF 参照先 == "덱"
+						TRYCALLFORM CARDSUMMON_{GETVAR(@"%実行者%_덱:カウンタ")}(実行者,カウンタ + 300,1)
+						SIF RESULT != 1
+							RETURN 0
+					ELSEIF 参照先 == "제외"
+						TRYCALLFORM CARDSUMMON_{GETVAR(@"%実行者%_제외:カウンタ")}(実行者,カウンタ + 500,1)
+						SIF RESULT != 1
+							RETURN 0
+					ENDIF
+				;EX덱を参照に確認している
+				ELSEIF 参照先 == "EX덱"
+					VARSET RESULT
+					TRYCALLFORM CARDSUMMON_{GETVAR(@"%実行者%_EX덱:カウンタ")}(実行者,カウンタ,1)
+					SIF RESULT != 1
+						RETURN 0
+				;EX덱以外を参照に確認
+				ELSEIF 参照先 != "EX덱" ;Anonym追加
+					IF 효과条件소환可 == 1 || 효과条件소환可 == 3
+						CALL CARD_SS_CHECK(듀얼리스트,설정カードID,参照先)
+						SIF RESULT == 1
+							RETURN 0
+					ELSEIF 효과条件소환可 == 2
+						CALL CARD_SS_CHECK(듀얼리스트,설정カードID,参照先,1)
+						SIF RESULT == 1
+							RETURN 0
+					ENDIF
+				ENDIF
+			ELSE
+				IF 효과条件소환可 == 3
+					CALL CARD_SS_CHECK(듀얼리스트,설정カードID,参照先)
+					SIF RESULT == 1
+						RETURN 0
+				ELSE
+					RETURN 0
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+
 
 RETURN 1
 

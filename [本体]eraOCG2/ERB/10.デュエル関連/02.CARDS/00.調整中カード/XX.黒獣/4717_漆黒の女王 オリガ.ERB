@@ -1,0 +1,221 @@
+@CARDNAME_4717,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 漆黒の女王 オリガ
+	CASE "略称"
+		RESULTS = オリガ
+	CASE "カテゴリ"
+		RESULTS:0 = 黒獣
+ENDSELECT
+
+@CARD_4717(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 魔法使い族
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 2800
+	CASE "性別"
+		RETURN 牝性
+	CASE "分割"
+		RETURN ペンデュラム
+	CASE "単一存在"
+		RETURN 1
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_4717(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 自分フィールドに闇属性以外のモンスターカードが存在する場合、このカードは永続魔法扱いで発動できない。
+PRINTL このカード名の②のＰ効果は１ターンに１度しか使用できない。
+CALL CARD_ABLE(0,攻守変動)
+PRINTL ①：自分の闇属性モンスターは攻撃力が３００アップする。
+CALL CARD_ABLE(1,魔罠起動)
+PRINTL ②：自分メインフェイズに発動できる。
+PRINTL このカードをＥＸデッキに送り、デッキからレベル４以下の闇属性モンスター１体を墓地に送る。
+PRINTL この効果の発動後、このデュエル中に自分は闇属性以外のモンスターの効果を発動できない。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL このカード名のカードは自分フィールドに１体しか表側表示で存在できない。
+PRINTL このカード名のモンスター効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(2,ターン開始時)
+PRINTL ①：お互いのスタンバイフェイズに、相手フィールドのモンスター１体を対象として発動できる。
+PRINTL 自分フィールドの闇属性モンスター１体を墓地に送り、ＥＸデッキからこのモンスターカードを自分の魔法＆罠ゾーンに表側表示で置く。
+PRINTL その後、対象のカードを破壊する。
+
+@CARDCAN_4717(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,4717)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	CALLFORM 効果条件属性_ADV(闇属性,"以外")
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件名前 = 漆黒の女王 オリガ
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_1(決闘者,4717)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件属性 = 闇属性
+	効果条件種類 = モン全般
+	CALLFORM 効果条件レベル_ADV(4,"以下")
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 攻守変動
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") > 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF !GROUPMATCH(ゾーン,"戦場","魔罠")
+	RETURN 1
+ELSEIF 種類 == ターン開始時
+	SIF 発動済_2(決闘者,4717)
+		RETURN 0
+	SIF ゾーン != "EXデッキ"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果条件除去種 = 選択
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件属性 = 闇属性
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,4717,"EXデッキ",1)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4717(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4717)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4717,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,EXデッキ行き)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件属性 = 闇属性
+			効果条件種類 = モン全般
+			CALLFORM 効果条件レベル_ADV(4,"以下")
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		ENDIF
+		CALL SET_PLAYER_INFO(決闘者,"光属性効果無効",10)
+		CALL SET_PLAYER_INFO(決闘者,"地属性効果無効",10)
+		CALL SET_PLAYER_INFO(決闘者,"水属性効果無効",10)
+		CALL SET_PLAYER_INFO(決闘者,"炎属性効果無効",10)
+		CALL SET_PLAYER_INFO(決闘者,"風属性効果無効",10)
+	ENDIF
+ELSEIF 種類 == 攻守変動
+	CALL FULLRESET
+	効果条件属性 = 闇属性
+	CALL STATCHANGE_BASIC(決闘者,"戦場",場所,300)
+ELSEIF 種類 == ターン開始時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4717,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲相手戦場 = 1
+		CALL CARD_REMOVAL_ADV(決闘者,"単体除去",場所,"選択")
+		選択カード = RESULT:1
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲戦場 = 1
+			効果条件属性 = 闇属性
+			効果条件種類 = モン全般
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				効果範囲EXデッキ = 1
+				効果条件名前 = 漆黒の女王 オリガ
+				CALL CARD_SET_ADV(決闘者,ゾーン,場所,"表側表示")
+				IF RESULT == 1
+					CALL CARD_SELECT(決闘者,選択カード)
+					CALL CARD_DISPOSE(対面者,"戦場",選択カード（CS）,破壊行き)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

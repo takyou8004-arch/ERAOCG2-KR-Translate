@@ -1,0 +1,544 @@
+﻿@CARDNAME_73115,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 트라미드 크루저
+	CASE "略称"
+		RESULTS = 트라미드 Ｃ
+	CASE "カテゴリ"
+		RESULTS:0 = 트라미드
+ENDSELECT
+
+
+@CARD_73115(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN フィールド
+	CASE "生成カード"
+		RETURN 173115
+	CASE "追加日"
+		RETURN 250706
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73115(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 自分フィールドは「트라미드」となる。
+PRINTL このカード名の②の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,効果後誘発)
+PRINTL ①：自分フィールドに「트라미드」モンスターが召喚された場合に発動できる。
+PRINTL 自分は５００ＬＰ回復し、１枚ドローする。
+CALLFORM CARD_ABLE(2,魔罠起動)
+PRINTL ②：自分メインフェイズに発動できる。
+PRINTL デッキから「트라미드」モンスター１体を手札に加え、手札を１枚捨てる。
+PRINTL ③：このカードはターンプレイヤー及びフェイズによって以下のカードに変形する。
+PRINTL ●自分ターン　　：「트라미드 크루저」
+PRINTL ●バトルフェイズ：「트라미드・キングゴレム」
+PRINTL ●相手ターン　　：「트라미드・フォートレス」
+
+@CARDCAN_73115(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,73115)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_1(決闘者,73115)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 트라미드
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 効果後誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+
+	CALL FULLRESET
+	効果条件カテゴリ = 트라미드
+	CALL CARD_CHECK_FIN_DATA(決闘者,"通常召喚")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == ターン開始時強制
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == バトル開始時強制
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73115(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73115,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 트라미드
+		効果条件種類 = モン全般
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲手札 = 1
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73115)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+
+ELSEIF 種類 == 効果後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73115)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(決闘者,"増加","効果",500)
+		CALL CARDDRAW_BASIC(決闘者,1)
+	ENDIF
+;フォートレス
+ELSEIF 種類 == ターン開始時強制
+	CALL CARD_RECONSTRUCT(決闘者,ゾーン,場所,273115)
+;キング
+ELSEIF 種類 == バトル開始時強制
+	CALL CARD_RECONSTRUCT(決闘者,ゾーン,場所,173115)
+
+ELSEIF 種類 == 永続効果
+	CALL SET_FIELD_MAGIC_INFO(決闘者, "트라미드")
+ENDIF
+
+;----------------------------------------------------------------------------------------------------------------
+
+@CARDNAME_173115,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 트라미드・キングゴレム
+	CASE "略称"
+		RESULTS = 트라미드・Ｋ
+	CASE "カテゴリ"
+		RESULTS:0 = 트라미드
+ENDSELECT
+
+
+@CARD_173115(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN フィールド
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 3000
+	CASE "属性"
+		RETURN 地属性
+	CASE "種族"
+		RETURN 元素霊族
+	CASE "トークン"
+		RETURN 1
+	CASE "生成カード"
+		RETURN 273115
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_173115(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 自分フィールドは「트라미드」となる。
+PRINTL このカード名の③の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,永続効果,攻守変動)
+PRINTL ①：自分フィールドの「트라미드」モンスターの攻撃力・守備力は５００アップし、戦闘阻害を得る。
+PRINTL このカードがモンスターゾーンにある場合、
+PRINTL このカードの攻撃力は自分のフィールド・墓地の「트라미드」モンスターカードの数×５００アップする。
+CALLFORM CARD_ABLE(0,バトル開始時)
+PRINTL ②：バトルフェイズ開始時に発動できる。
+PRINTL 魔法＆罠ゾーンのこのカードを特殊召喚する。
+PRINTL モンスターゾーンのこのカードは、バトルフェイズ終了時に魔法＆罠ゾーンに戻る。
+CALLFORM CARD_ABLE(3,魔罠起動,戦場起動,フリー誘発)
+PRINTL ③：お互いのバトルフェイズに、手札を１枚捨てて発動できる。
+PRINTL 相手フィールドのカード１枚を破壊する。
+
+@CARDCAN_173115(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,173115)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1 || 種類 == 戦場起動 || 種類 == フリー誘発
+	SIF 発動済_3(決闘者,173115)
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF 手札数(決闘者) < 1
+		RETURN 0
+	IF ゾーン == "戦場"
+	ELSEIF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == バトル開始時
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,173115,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == バトル終了時強制
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 永続効果 || 種類 == 攻守変動
+	SIF ゾーン != "魔罠" && ゾーン != "戦場"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_173115(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1 || 種類 == 戦場起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,173115,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"全場単体",場所,"墓地")
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,173115)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+
+ELSEIF 種類 == バトル開始時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,173115)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+	ENDIF
+
+ELSEIF 種類 == バトル終了時強制
+	IF ターンプレイヤー == 決闘者
+		;クルーザー
+		CALL CARD_RECONSTRUCT(決闘者,ゾーン,場所,73115)
+	ELSE
+		;フォートレス
+		CALL CARD_RECONSTRUCT(決闘者,ゾーン,場所,273115)
+	ENDIF
+	CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+
+ELSEIF 種類 == 攻守変動
+	CALL FULLRESET
+	効果条件カテゴリ = 트라미드
+	CALL STATCHANGE_BASIC(決闘者,"戦場",場所,500,500)
+
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果範囲墓地 = 1
+	効果条件カテゴリ = 트라미드
+	効果条件種類 = モン全般
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	攻撃力修正 = RESULT * 500
+	CALL STATCHANGE_BASIC(決闘者,"自身",場所,攻撃力修正)
+
+ELSEIF 種類 == 永続効果
+	CALL SET_FIELD_MAGIC_INFO(決闘者, "트라미드")
+	CALL FULLRESET
+	効果条件カテゴリ = 트라미드
+	CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"戦阻")
+ENDIF
+
+;----------------------------------------------------------------------------------------------------------------
+
+@CARDNAME_273115,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 트라미드・フォートレス
+	CASE "略称"
+		RESULTS = 트라미드・Ｆ
+	CASE "カテゴリ"
+		RESULTS:0 = 트라미드
+ENDSELECT
+
+
+@CARD_273115(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN フィールド
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_273115(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 自分フィールドは「트라미드」となる。
+PRINTL このカード名の②の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,永続効果,攻守変動)
+PRINTL ①：自分フィールドの「트라미드」モンスターは破壊耐性・対象耐性を得て、
+PRINTL 自分フィールドに「트라미드」Ｘモンスターがそんざいする場合、このカードは破壊耐性を得る。
+CALLFORM CARD_ABLE(2,魔罠起動,フリー誘発)
+PRINTL ②：相手ターンに発動できる。
+PRINTL 自分の墓地・除外状態の「트라미드」カード１枚を手札に加える。
+
+
+@CARDCAN_273115(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,273115)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1 || 種類 == フリー誘発
+	SIF 発動済_2(決闘者,273115)
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	IF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果範囲除外 = 1
+	効果条件カテゴリ = 트라미드
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == ターン開始時強制
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == バトル開始時強制
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_273115(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,273115,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果範囲除外 = 1
+		効果条件カテゴリ = 트라미드
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+	ENDIF
+
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,273115)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+;クルーザー
+ELSEIF 種類 == ターン開始時強制
+	CALL CARD_RECONSTRUCT(決闘者,ゾーン,場所,73115)
+;キング
+ELSEIF 種類 == バトル開始時強制
+	CALL CARD_RECONSTRUCT(決闘者,ゾーン,場所,173115)
+
+ELSEIF 種類 == 永続効果
+	CALL SET_FIELD_MAGIC_INFO(決闘者, "트라미드")
+
+	CALL FULLRESET
+	効果条件カテゴリ = 트라미드
+	CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"破耐")
+	CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"対耐")
+
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 트라미드
+	効果条件種類 = エクシーズ
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		CALL STATCHANGE_EFFECT(決闘者,"魔自身",場所,"破耐")
+ENDIF

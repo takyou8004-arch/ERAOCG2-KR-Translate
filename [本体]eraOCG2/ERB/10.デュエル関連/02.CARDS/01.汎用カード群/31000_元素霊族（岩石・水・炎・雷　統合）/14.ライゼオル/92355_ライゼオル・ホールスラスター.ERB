@@ -1,0 +1,175 @@
+@CARDNAME_92355,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 라이제올 홀스러스터
+	CASE "略称"
+		RESULTS = RZL함정속으로
+	CASE "カテゴリ"
+		RESULTS:0 = 라이제올
+		RESULTS:1 = 함정 속으로
+ENDSELECT
+
+
+@CARD_92355(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+
+		RETURN 通常罠
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92355(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,魔罠起動, フリー誘発)
+PRINTL ①：自分フィールドの「라이제올」Ｘモンスターの数まで、
+PRINTL 相手フィールドの表側表示カードを対象として発動できる。そのカードを破壊する。
+PRINTL その後、自分フィールドのランク４のＸモンスター１体のＸ素材を１つ増やす。
+CALLFORM CARD_ABLE(2,墓地起動, フリー誘発)
+PRINTL ②：墓地のこのカードを除外して発動できる。
+PRINTL 自分フィールドの「라이제올」モンスター１体を対象として発動できる。
+PRINTL そのカード名を含む自分フィールドのモンスターを素材としてX召喚を行う。
+
+
+@CARDCAN_92355(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,92355)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	SIF 発動済_1(決闘者,92355)
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+		RETURN 0
+
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 라이제올
+	効果条件種類 = エクシーズ
+	効果条件表示 = 表側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動 || (種類 == フリー誘発 && ゾーン == "墓地")
+	SIF ゾーン != "墓地"
+		RETURN 0
+	SIF 発動済_2(決闘者,92355)
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 라이제올
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲EXデッキ = 1
+	効果条件種類 = エクシーズ
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_92355(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カード名前
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC リピート数
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,92355,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件カテゴリ = 라이제올
+		効果条件種類 = エクシーズ
+		効果条件表示 = 表側表示
+		効果条件CNT = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		リピート数 = RESULT
+		CALL FULLRESET
+		効果条件複数 = 100 -リピート数
+		CALL CARD_REMOVAL_BASIC(決闘者,"全場単体",場所,"墓地")
+
+		CALL FULLRESET
+		効果条件レベル = 4
+		効果条件種類 = エクシーズ
+		CALL CARD_CHOOSE_BASIC(決闘者,"戦場",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL SET_FIELD_INFO(決闘者,"戦場",選択カード,"Ｘ",1)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 墓地起動 || (種類 == フリー誘発 && ゾーン == "墓地")
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,92355,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件カテゴリ = 라이제올
+		効果条件種類 = モン全般
+		CALL CARD_CHOOSE_BASIC(決闘者,"戦場",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カードID = RESULT:99
+			TRYCALLFORM CARDNAME_{選択カードID}, "名前"
+			選択カード名前 = %RESULTS%
+			CALL FULLRESET
+			効果条件種類 = エクシーズ
+			強制素材場所 = 指定場所(選択カード,"戦場")
+			効果条件召喚可 = 1
+			CALL CARD_CHOOSE_BASIC(決闘者,"EXデッキ",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%決闘者%_EXデッキ:{選択カード}")}(決闘者,選択カード)
+				CALL XYZSUMMON(決闘者, 選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

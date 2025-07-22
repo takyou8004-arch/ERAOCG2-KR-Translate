@@ -3,10 +3,15 @@
 ;日常계커맨드、レベル2
 ;-------------------------------------------------
 @COM336
-#DIM 回復前체력
-#DIM 回復前기력
-#DIM 回復後체력
-#DIM 回復後기력
+#DIM 회복前체력
+#DIM 회복前기력
+#DIM 회복後체력
+#DIM 회복後기력
+#DIM DYNAMIC 정애강도
+#DIM DYNAMIC 수동강도
+#DIM DYNAMIC 노출강도
+#DIM DYNAMIC 접촉강도
+
 ;무릎베개 받는다
 IF TIME_PROGRESS(TFLAG:무릎베개했다) < 45
 	CUSTOMDRAWLINE —
@@ -43,49 +48,53 @@ DOWNBASE:MASTER:기력 += 100
 
 
 ;固定で획득するソース
-SOURCE:정애 = 250
-SOURCE:수동 = 70
-SOURCE:반감 = 50 - MIN(ABL:친밀 * 10,50)
-;SIF TFLAG:SELECTCOM분기 == -1
-	;SOURCE:반감 += 150
+정애강도 = 250
+수동강도 = 70
+
 
 ;ABL:친밀をみる
 IF ABL:친밀 <= 5
-	SOURCE:정애 += (ABL:친밀 * 25)
+	정애강도 += (ABL:친밀 * 25)
 ELSEIF ABL:친밀 <= 8
-	SOURCE:정애 += 600 + (ABL:친밀 * 30)
-	SOURCE:노출 += 200 + (ABL:욕망 * 15)
+	정애강도 += 600 + (ABL:친밀 * 30)
+	노출강도 += 200 + (ABL:욕망 * 15)
 ELSEIF ABL:친밀 <= 11
-	SOURCE:정애 += 800 + (ABL:친밀 * 30)
-	SOURCE:공순 += ABL:친밀 * 40
-	SOURCE:노출 += 300 + (ABL:욕망 * 20)
+	정애강도 += 800 + (ABL:친밀 * 30)
+	공순강도 += ABL:친밀 * 40
+	노출강도 += 300 + (ABL:욕망 * 20)
 ELSE
-	SOURCE:정애 += 1000 + (ABL:친밀 * 40)
-	SOURCE:공순 += ABL:친밀 * 50
-	SOURCE:노출 += 700 + (ABL:욕망 * 25)
+	정애강도 += 1000 + (ABL:친밀 * 40)
+	공순강도 += ABL:친밀 * 50
+	노출강도 += 700 + (ABL:욕망 * 25)
 ENDIF
 
 
 
-SOURCE:수동 = 150 + 300 * ABL:순종
+수동강도 = 150 + 300 * ABL:순종
 
 IF TFLAG:SELECTCOM분기 == -1
-	TIMES SOURCE:정애 , 0.50
-	TIMES SOURCE:수동 , 0.50
-	TIMES SOURCE:노출 , 0.40
+	TIMES 정애강도 , 0.50
+	TIMES 수동강도 , 0.50
+	TIMES 노출강도 , 0.40
 ELSEIF TFLAG:SELECTCOM분기 == 0
-	TIMES SOURCE:정애 , 1.00
-	TIMES SOURCE:수동 , 1.00
-	TIMES SOURCE:노출 , 0.90
+	TIMES 정애강도 , 1.00
+	TIMES 수동강도 , 1.00
+	TIMES 노출강도 , 0.90
 ELSE
-	TIMES SOURCE:정애 , 1.50
-	TIMES SOURCE:수동 , 2.00
-	TIMES SOURCE:노출 , 1.80
+	TIMES 정애강도 , 1.50
+	TIMES 수동강도 , 2.00
+	TIMES 노출강도 , 1.80
 	TIME += 20
 	DOWNBASE:체력 -= 150
 	DOWNBASE:기력 -= 300
 	DOWNBASE:MASTER:기력 -= 50
 ENDIF
+
+CALL SOURCE_CALC_정애(TARGET, MASTER, 정애강도)
+CALL SOURCE_CALC_수동(TARGET, MASTER, 수동강도)
+CALL SOURCE_CALC_노출(TARGET, MASTER, 노출강도)
+CALL SOURCE_CALC_접촉(TARGET, MASTER, 접촉강도)
+
 TIME += 20
 ;무릎베개플래그
 TFLAG:무릎베개했다 = 1440 * DAY + TIME

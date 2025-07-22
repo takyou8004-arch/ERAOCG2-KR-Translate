@@ -1,0 +1,227 @@
+@CARDNAME_91635,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;エクトプラズマー
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 揺籃の星輝兵
+	CASE "略称"
+		RESULTS = 揺籃の星輝兵
+	CASE "カテゴリ"
+		RESULTS:0 = グレンディオス
+		RESULTS:1 = 星輝兵
+		RESULTS:2 = リンクジョーカー
+		RESULTS:4 = ヴァンガード
+ENDSELECT
+
+
+@CARD_91635(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 永続罠
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91635(種類)
+#DIM DYNAMIC 種類
+#DIMS DYNAMIC 決闘者
+
+PRINTL このカード名の①③の効果は１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,魔罠起動,フリー誘発)
+PRINTL ①：このカードの発動時の効果処理として、手札に「星輝兵 “Я” クレイドル」トークンを１枚生成する。
+CALL CARD_ABLE(0,永続効果)
+PRINTL ②：自分フィールド上に「Я」モンスターが存在する限り、
+PRINTL 自分フィールド上の「グレンディオス」モンスター全ては対象耐性を得る。
+CALL CARD_ABLE(2,魔罠起動,フリー誘発)
+PRINTL ③：相手ターンに、自分フィールドに「グレンディオス」モンスターが存在する場合に発動できる。
+PRINTL 手札の「Я」モンスター１体を特殊召喚する。
+
+@CARDCAN_91635(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+#DIM DYNAMIC 選択カードID
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,91635)
+SIF RESULT == 1
+	RETURN 0
+
+IF (種類 == 魔罠起動 || 種類 == フリー誘発) && ゾーン == "魔罠" && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_2(決闘者,91635)
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = グレンディオス
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果条件カテゴリ = Я
+	効果条件種類 = モン全般
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 || 種類 == フリー誘発
+	SIF 発動済_1(決闘者,91635)
+		RETURN 0
+	IF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = Я
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = グレンディオス
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_91635(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード数
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF (種類 == 魔罠起動 || 種類 == フリー誘発) && ゾーン == "魔罠" && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,91635,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果条件カテゴリ = Я
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF (種類 == 魔罠起動 || 種類 == フリー誘発)
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,91635,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+		CALL CARD_GENERATE_HAND(決闘者,191635)
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL FULLRESET
+	効果条件カテゴリ = グレンディオス
+	CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"対耐")
+ENDIF
+
+
+@CARDNAME_191635(参照先)
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 星輝兵 “Я” クレイドル
+	CASE "略称"
+		RESULTS = Яクレイドル
+	CASE "カテゴリ"
+		RESULTS:1 = 星輝兵
+		RESULTS:2 = リンクジョーカー
+		RESULTS:3 = Я
+		RESULTS:4 = ヴァンガード
+ENDSELECT
+
+
+@CARD_191635(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 機械族
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2500
+	CASE "性別"
+		RETURN 無性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_191635(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 「“Ω”グレンディオス」起動の折に“Я（リバース）”させた者達を有効利用する為、
+PRINTL 「ワールドライン・ドラゴン」の能力「反転支配（リバース・ドミネーション）」を移植された試作「サイバーゴーレム」。
+
+@CARDCAN_191635(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,91635)
+SIF RESULT == 1
+	RETURN 0
+
+@CARDEFFECT_191635(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%

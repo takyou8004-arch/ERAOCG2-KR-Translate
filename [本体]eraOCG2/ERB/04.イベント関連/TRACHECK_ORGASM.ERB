@@ -18,7 +18,7 @@ SIF HAS_PENIS(ARG)
 절정BASE計算 += CUP:ARG:쾌Ａ * (3000 + ABL:ARG:Ａ감각 * 5000) / (3000 + BASE:ARG:절정)
 절정BASE計算 += CUP:ARG:쾌Ｂ * (8000 + ABL:ARG:Ｂ감각 * 1000) / (8000 + BASE:ARG:절정)
 절정BASE計算 += CUP:ARG:쾌Ｍ * (8000 + ABL:ARG:Ｍ감각 * 1000) / (8000 + BASE:ARG:절정)
-절정BASE計算 += CUP:ARG:쾌Ｅ * (10000 + ABL:ARG:Ｅ감각 * 1000) / (8000 + BASE:ARG:절정)
+절정BASE計算 += CUP:ARG:쾌Ｅ * (10000 + ABL:ARG:Ｅ감각 * 1000) / (10000 + BASE:ARG:절정)
 
 절정BASE計算 = 절정BASE計算 * (BASE:ARG:쾌감 + 20000) / 20000
 BASE:ARG:절정 += 절정BASE計算
@@ -29,7 +29,7 @@ BASE:ARG:절정 += 절정BASE計算
 쾌락計算 += CUP:ARG:공포 * (ABL:ARG:마조끼 - 2) / 2
 
 BASE:ARG:쾌감 += 쾌락計算
-BASE:ARG:쾌감 = MAX(0, BASE:ARG:쾌감)
+BASE:ARG:쾌감 = LIMIT(BASE:ARG:쾌감, 0, 19998000)
 SIF HAS_PENIS(ARG)
 	BASE:ARG:발기 += (쾌락計算 * (BASE:ARG:정력 + 1000)) / (10 * 1000)
 
@@ -238,42 +238,48 @@ IF ABL:캐릭터_ID:욕망 < LOCAL
 	ABL:캐릭터_ID:욕망 ++
 	PRINTFORML 그리고 %CALLNAME:캐릭터_ID%의 욕망이 LV{LOCAL}되었다
 	PRINTFORML
-	;욕망の상승による[抑圧]の消滅をチェック
+	;욕망の상승による[抑圧]の소멸をチェック
 	CALL YOKUBO_UP_CHECK
 ENDIF
 ;-------------------------------------------------
 ;조교대상의 분유チェック
 ;-------------------------------------------------
-@TARGET_MILK_CHECK(ARG)
-SIF MILK_CAN(ARG) == 0
+@TARGET_MILK_CHECK(대상者)
+#DIM DYNAMIC 대상者
+#DIM DYNAMIC 환락강도
+#DIM DYNAMIC 굴종강도
+#DIM DYNAMIC 노출강도
+#DIM DYNAMIC 불결강도
+
+SIF MILK_CAN(대상者) == 0
 	RETURN 0
 
 
-LOCAL = CUP:ARG:쾌Ｃ / 10 + CUP:ARG:쾌Ｖ / 10 + CUP:ARG:쾌Ａ / 10 + CUP:ARG:쾌Ｂ * 3
+LOCAL = CUP:대상者:쾌Ｃ / 10 + CUP:대상者:쾌Ｖ / 10 + CUP:대상者:쾌Ａ / 10 + CUP:대상者:쾌Ｂ * 3
 SIF LOCAL == 0
 	RETURN 0
 ;자제심
-SIF TALENT:ARG:자제심
+SIF TALENT:대상者:자제심
 	LOCAL /= 2
 
 ;쾌락に素直
-SIF TALENT:ARG:쾌감반응 > 0
+SIF TALENT:대상者:쾌감반응 > 0
 	TIMES LOCAL , 1.20
 
 ;쾌락の부정（음란、쾌락狂で無効）
-SIF TALENT:ARG:쾌감반응 < 0 && !TALENT:ARG:음란
+SIF TALENT:대상者:쾌감반응 < 0 && !TALENT:대상者:음란
 	TIMES LOCAL , 0.80
 
 ;B敏感
-SIF TALENT:ARG:Ｂ감도 > 0
+SIF TALENT:대상者:Ｂ감도 > 0
 	TIMES LOCAL , 1.20
 
 ;미약
-SIF TEQUIP:ARG:미약
+SIF TEQUIP:대상者:미약
 	LOCAL *= 2
 
 ;이뇨제
-SIF TEQUIP:ARG:이뇨제
+SIF TEQUIP:대상者:이뇨제
 	LOCAL /= 2
 
 ;조교者が幼児退行
@@ -285,72 +291,75 @@ SIF TALENT:MASTER:유치
 	TIMES LOCAL , 1.20
 
 ;貧乳
-SIF TALENT:ARG:가슴사이즈 < 0
+SIF TALENT:대상者:가슴사이즈 < 0
 	TIMES LOCAL , 0.50
 
 ;가슴사이즈보정
-SIF BUST_SIZE(ARG) >= 0
-	LOCAL += BUST_SIZE(ARG)
+SIF BUST_SIZE(대상者) >= 0
+	LOCAL += BUST_SIZE(대상者)
 
 
 LOCAL = 500 + LOCAL / 2
-BASE:ARG:모유 += LOCAL
+BASE:대상者:모유 += LOCAL
 
-IF  BASE:ARG:모유 > MAXBASE:ARG:모유 * 2
+IF  BASE:대상者:모유 > MAXBASE:대상者:모유 * 2
 	LOCAL = 1
-ELSEIF BASE:ARG:모유 > MAXBASE:ARG:모유
+ELSEIF BASE:대상者:모유 > MAXBASE:대상者:모유
 	LOCAL = 0
 ELSE
 	RETURN 0
 ENDIF
 LOCAL ++
-DOWNBASE:ARG:체력 += 20 * LOCAL
-DOWNBASE:ARG:기력 += 100 * (LOCAL - 1)
-IF EXP:ARG:분유경험 < EXPLV:1
-	SOURCE:ARG:노출 += 5000 * LOCAL
-	SOURCE:ARG:굴종 += 2500 * LOCAL
-	SOURCE:ARG:불결 += 1000 * LOCAL
-ELSEIF EXP:ARG:분유경험 < EXPLV:2
-	SOURCE:ARG:노출 += 2500 * LOCAL
-	SOURCE:ARG:굴종 += 1500 * LOCAL
-	SOURCE:ARG:불결 += 750 * LOCAL
-ELSEIF EXP:ARG:분유경험 < EXPLV:3
-	SOURCE:ARG:노출 += 1500 * LOCAL
-	SOURCE:ARG:굴종 += 750 * LOCAL
-	SOURCE:ARG:불결 += 500 * LOCAL
-ELSEIF EXP:ARG:분유경험 < EXPLV:4
-	SOURCE:ARG:노출 += 750 * LOCAL
-	SOURCE:ARG:굴종 += 400 * LOCAL
-	SOURCE:ARG:불결 += 350 * LOCAL
-ELSEIF EXP:ARG:분유경험 < EXPLV:5
-	SOURCE:ARG:노출 += 500 * LOCAL
-	SOURCE:ARG:굴종 += 250 * LOCAL
-	SOURCE:ARG:불결 += 200 * LOCAL
+DOWNBASE:대상者:체력 += 20 * LOCAL
+DOWNBASE:대상者:기력 += 100 * (LOCAL - 1)
+IF EXP:대상者:분유경험 < EXPLV:1
+	노출강도 += 5000 * LOCAL
+	굴종강도 += 2500 * LOCAL
+	불결강도 += 1000 * LOCAL
+ELSEIF EXP:대상者:분유경험 < EXPLV:2
+	노출강도 += 2500 * LOCAL
+	굴종강도 += 1500 * LOCAL
+	불결강도 += 750 * LOCAL
+ELSEIF EXP:대상者:분유경험 < EXPLV:3
+	노출강도 += 1500 * LOCAL
+	굴종강도 += 750 * LOCAL
+	불결강도 += 500 * LOCAL
+ELSEIF EXP:대상者:분유경험 < EXPLV:4
+	노출강도 += 750 * LOCAL
+	굴종강도 += 400 * LOCAL
+	불결강도 += 350 * LOCAL
+ELSEIF EXP:대상者:분유경험 < EXPLV:5
+	노출강도 += 500 * LOCAL
+	굴종강도 += 250 * LOCAL
+	불결강도 += 200 * LOCAL
 ELSE
-	SOURCE:ARG:노출 += 250 * LOCAL
-	SOURCE:ARG:굴종 += 150 * LOCAL
+	노출강도 += 250 * LOCAL
+	굴종강도 += 150 * LOCAL
 ENDIF
 
 ;가슴사이즈보정
-SIF BUST_SIZE(ARG) >= 0
-	LOCAL += BUST_SIZE(ARG)
+SIF BUST_SIZE(대상者) >= 0
+	LOCAL += BUST_SIZE(대상者)
 
-	;PRINTFORML %CALLNAME:ARG%은 젖꼭지에서\@ LOCAL == 2 ? 대량 # \@의 모유를 분출했다
-IF EXP:ARG:분유경험 == 0
-	EXP:ARG:이상경험 ++
+IF EXP:대상者:분유경험 == 0
+	EXP:대상者:이상경험 ++
 ENDIF
-EXP:ARG:분유경험 += LOCAL
+CALL SOURCE_CALC_노출(대상者, MASTER, 노출강도)
+CALL SOURCE_CALC_굴종(대상者, MASTER, 굴종강도)
+CALL SOURCE_CALC_불결(대상者, MASTER, 불결강도)
+
+EXP:대상者:분유경험 += LOCAL
 
 ;Ｂに모유汚れ
-STAIN:ARG:5 |= 16
-	BASE:ARG:모유 -= MAXBASE:ARG:모유 * LOCAL
-SIF BASE:ARG:모유 >= MAXBASE:ARG:모유
-	BASE:ARG:모유 = MAXBASE:ARG:모유 - 1
+STAIN:대상者:5 |= 16
+	BASE:대상者:모유 -= MAXBASE:대상者:모유 * LOCAL
+SIF BASE:대상者:모유 >= MAXBASE:대상者:모유
+	BASE:대상者:모유 = MAXBASE:대상者:모유 - 1
 
 
 
-NOWEX:ARG:분유 += LOCAL
-EX:ARG:분유 += LOCAL
+NOWEX:대상者:분유 += LOCAL
+EX:대상者:분유 += LOCAL
 
 
 

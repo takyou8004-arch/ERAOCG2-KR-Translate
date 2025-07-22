@@ -1,0 +1,180 @@
+@CARDNAME_71637,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 災厄、未だ終わらず
+	CASE "略称"
+		RESULTS = 災厄未だ終わらず
+	CASE "カテゴリ"
+		RESULTS:0 = グレンディオス
+		RESULTS:1 = 星輝兵
+		RESULTS:2 = リンクジョーカー
+		RESULTS:4 = ヴァンガード
+ENDSELECT
+
+@CARD_71637(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 通常魔法
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_71637(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_71637(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,魔罠起動,手札起動)
+PRINTL ①：自分フィールドに「グレンディオス」モンスターが存在する場合に、以下の効果から１つを選択して発動できる。
+PRINTL ●相手フィールドの表側表示のモンスター１体を呪縛する。
+PRINTL ●相手はデッキからモンスター１体を呪縛状態で特殊召喚する。
+SETCOLOR C_GRAY
+PRINTL （呪縛状態のモンスターは裏側守備表示となり、攻撃回避を得る。
+PRINTL 　ただし、相手フィールドに呪縛状態のモンスターしか存在しない場合、自分フィールドのモンスターが相手プレイヤーに与える戦闘ダメージは半分になる）
+RESETCOLOR
+CALL CARD_ABLE(2,墓地起動)
+PRINTL ②：自分メインフェイズに、自分フィールドに「グレンディオス」モンスターが存在する場合に発動できる。
+PRINTL ＬＰを半分払い、墓地のこのカードをセットする。
+PRINTL この効果でセットされたこのカードはフィールドから離れる場合に除外される。
+RESETCOLOR
+
+@CARDCAN_71637(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,71637)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF 発動済_1(決闘者,71637)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = グレンディオス
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果条件表示 = 表側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		条件達成++
+	SIF モンスター数(対面者) < 5
+		条件達成++
+	SIF 条件達成 < 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	SIF 発動済_2(決闘者,71637)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = グレンディオス
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+    RETURN 1
+ENDIF
+
+@CARDEFFECT_71637(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+#DIM DYNAMIC 選択効果
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,71637,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲相手戦場 = 1
+		効果条件表示 = 表側表示
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT == 1
+			条件Ａ++
+		SIF モンスター数(対面者) < 5
+			条件Ｂ++
+		IF 条件Ａ == 1 && 条件Ｂ == 1
+			CALL YN_CHOICE(決闘者,"●相手フィールドの表側表示のモンスター１体を呪縛する。","●相手はデッキからモンスター１体を呪縛状態で特殊召喚する。")
+			選択効果 = RESULT
+		ELSEIF 条件Ａ == 1 && 条件Ｂ == 0
+			選択効果 = はい
+		ELSEIF 条件Ａ == 0 && 条件Ｂ == 1
+			選択効果 = いいえ
+		ENDIF
+		IF 選択効果 == はい
+			CALL FULLRESET
+			効果範囲相手戦場 = 1
+			効果条件表示 = 表側表示
+			CALL CARD_REMOVAL_ADV(決闘者,"単体除去",場所,"表示変更")
+		ELSEIF 選択効果 == いいえ
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			CALL CARD_SP_SUMMON_ADV(対面者,ゾーン,場所,"裏側守備表示")			
+		ELSE
+			RETURN
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,71637,2)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(決闘者,"減少","コスト",(GETVAR(@"ライフ_%決闘者%")  / 2))
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果条件名前 = 災厄、未だ終わらず
+		効果追加種類 = 500
+		CALL CARD_SET_ADV(決闘者,ゾーン,場所,"裏側表示")
+	ENDIF
+ENDIF

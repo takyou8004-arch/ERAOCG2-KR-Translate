@@ -1,0 +1,145 @@
+﻿@CARDNAME_73792,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 메달리온 플래시
+	CASE "略称"
+		RESULTS = 문장의 명멸
+	CASE "カテゴリ"
+		RESULTS:0 = 메달리온
+ENDSELECT
+
+
+@CARD_73792(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 速攻魔法
+	CASE "追加日"
+		RETURN 250713
+ENDSELECT
+RETURN 0
+
+
+
+@CARD_EXPLANATION_73792(種類)
+#DIM DYNAMIC 種類
+
+
+PRINTL このカード名の②の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,魔罠起動,手札起動,フリー誘発)
+PRINTL ①：相手フィールドの表側表示モンスターを任意の数だけ対象として発動できる。
+PRINTL そのモンスターのカード名を「アンノウン」として扱う。
+CALLFORM CARD_ABLE(1,ターン終了時)
+PRINTL ②：自分エンドフェイズに、このカードが墓地に存在し、
+PRINTL 自分フィールドに「문장수」Xモンスターが存在する場合に発動できる。
+PRINTL このカードを自分フィールドにセットする。
+PRINTL この効果でセットしたこのカードはフィールドから離れた場合に除外される。
+
+
+@CARDCAN_73792(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,73792)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	IF ゾーン == "手札"
+		SIF ターンプレイヤー != 決闘者
+			RETURN 0
+	ELSEIF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == ターン終了時
+	SIF 発動済_2(決闘者,73792)
+		RETURN 0
+	SIF ゾーン != "墓地"
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 문장수
+	効果条件種類 = エクシーズ
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_73792(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73792)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		REPEAT モンスター数(対面者)
+		    CALL FULLRESET
+			効果範囲相手戦場 = 1
+		    効果条件表示 = 表側表示
+			効果条件任意 = 1
+			効果条件固名前 = アンノウン
+			CALL CARD_REMOVAL_ADV(決闘者,"単体除去",場所,"選択")
+			選択カード = RESULT:1
+			IF RESULT == 1
+			    CALL CARD_SELECT(決闘者,選択カード)
+				選択カード = 選択カード（CS）
+				CALL CARD_SET_RENAME(対面者,"戦場",選択カード,"アンノウン")
+			ELSE
+			    BREAK
+			ENDIF
+		REND
+	ENDIF
+
+ELSEIF 種類 == ターン終了時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73792,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果条件名前 = 메달리온 플래시
+		効果追加種類:0 = 500
+		CALL CARD_SET_ADV(決闘者,ゾーン,場所,"裏側表示")
+	ENDIF
+ENDIF
+
+
+

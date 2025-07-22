@@ -1,0 +1,148 @@
+﻿@CARDNAME_38373,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 문장수 두 머리의 이글
+	CASE "略称"
+		RESULTS = TH 이글
+	CASE "カテゴリ"
+		RESULTS:0 = 문장수
+ENDSELECT
+
+
+@CARD_38373(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;効果モン/通常モン/儀式/融合/シンクロ/エクシーズ/リンク/超次元
+	CASE "種類"
+		RETURN 効果モン
+	;闇属性/光属性/地属性/水属性/炎属性/風属性
+	CASE "属性"
+		RETURN 風属性
+	CASE "種族"
+		RETURN 鳥獣族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 1400
+	CASE "追加日"
+		RETURN 250713
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_38373(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果は１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,手札起動)
+PRINTL ①：自分フィールドに「문장수」モンスターが存在する場合に発動できる。
+PRINTL 手札のこのモンスターを特殊召喚する。
+CALLFORM CARD_ABLE(2,墓地起動)
+PRINTL ②：墓地のこのカードをゲームから除外し、発動できる。
+PRINTL 自分フィールド上のX素材の無いXモンスター１体のX素材を２増やす。
+
+
+@CARDCAN_38373(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,38373)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF 発動済_1(決闘者,38373)
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,38373,"手札")
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 문장수
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 墓地起動
+	SIF ゾーン != "墓地"
+		RETURN 0
+	SIF 発動済_2(決闘者,38373)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0	
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種類 = エクシーズ
+	効果条件Ｘ素所持 = 888
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF	
+
+@CARDEFFECT_38373(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 手札起動 
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,38373,1)
+	IF RESULT == 0
+        CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+	ENDIF
+
+ELSEIF 種類 == 墓地起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,38373,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件種類 = エクシーズ
+		効果条件Ｘ素所持 = 888
+		CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SELECT(決闘者,選択カード)
+			選択カード = RESULT
+			CALL SET_FIELD_INFO(対象者（CS）,"戦場",選択カード（CS）,"Ｘ",2)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+
+
+
+

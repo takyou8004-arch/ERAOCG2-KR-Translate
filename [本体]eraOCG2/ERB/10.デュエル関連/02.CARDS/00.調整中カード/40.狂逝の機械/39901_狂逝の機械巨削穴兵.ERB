@@ -1,0 +1,337 @@
+@CARDNAME_39901,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ィークギア・ドリルバイブゴーレム
+	CASE "略称"
+		RESULTS = 狂逝の巨削穴機
+	CASE "カテゴリ"
+		RESULTS:0 = 狂逝の機械
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39901(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 地属性
+	CASE "種族"
+		RETURN 機械族
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+	CASE "性別"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39901(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 
+CALLFORM CARD_ABLE(1,攻撃後誘発)
+PRINTL ①：このカードが戦闘で相手モンスターを破壊し墓地へ送った時に発動できる。
+PRINTL 　　破壊したモンスターを相手フィールド上に特殊召喚し、そのモンスターに媚薬カウンターを１つ置く。
+PRINTL 　　この効果で特殊召喚したモンスターの攻撃力・守備力は０になる。
+CALLFORM CARD_ABLE(2,攻守変動)
+PRINTL ②：このカードは１度のバトルフェイズ中にこのカードに乗っている媚薬カウンターの数＋１回までモンスターに攻撃できる。
+CALLFORM CARD_ABLE(3,戦場起動)
+PRINTL ③：１ターンに１度、自分メインフェイズにこのカードに乗っている媚薬カウンターを全て取り除き発動できる。
+PRINTL 　　取り除いた数だけ相手フィールドのカードを破壊する。
+PRINTL 　　その後、このカードに媚薬カウンターを１つ置く。
+PRINTL
+SETCOLOR C_RED
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー警告ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL ④：このカードが牝■モン■■ーを破壊した時、そのモンスターの性器を■■ルバイ■で■壊する
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー注意ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL
+RESETCOLOR
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39901(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 調教対象
+#DIM DYNAMIC 選択カード名前
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,39901)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 攻撃後誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_戦闘カード") != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(決闘者,1) == 0
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 種類 == 戦場起動
+	SIF 発動済_3(決闘者,39901)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39901(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 調教対象
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 攻撃횟수
+#DIM DYNAMIC 減少値
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 絶頂횟수
+#DIM DYNAMIC 破壊枚数
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 攻撃後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39901,1)
+    IF RESULT == 0
+		TRYCALLFORM CARDNAME_{直前戦闘破壊ID(決闘者,1)}("名前")
+		選択カード名前 = %RESULTS%
+		CALL FULLRESET
+		効果範囲相手墓地 = 1
+		効果条件名前 = %選択カード名前%
+		効果追加種類 = 190
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所,"",0,1)
+		CALL FULLRESET
+		CALL CARD_EROTICS(直前戦闘破壊ID(決闘者,1))
+		調教対象 = RESULT
+		IF 調教対象 != -1 && TALENT:調教対象:性別 == 1
+			IF MARK:調教対象:快楽刻印 + MARK:調教対象:苦痛刻印 + MARK:調教対象:屈服刻印 - MARK:調教対象:反発刻印 < 8
+				;ドリルバイブによる性器破壊開幕の
+				SELECTCASE RAND:3
+					CASE 0 
+						PRINTFORML 倒されてしまった%CALLNAME:調教対象%は巨削穴兵が向けて来る%TEXTR("棘イボまみれのドリルバイブ/サイズが違う棘まみれの球体が繋がった形状のドリルバイブ/ギュルギュルと音を鳴らして回転するバイブ")%を見て戦慄する、
+						PRINTFORML その大きさは明らかに女体の許容範囲を超えており、%CALLNAME:調教対象%がその機械%TEXTR("これを使われてしまえば普通の生活が出来なくなるのを/こちらの性器に無理やりこじ開けるように挿入してくるのを/おまんこどころか子宮の奥に無理やりねじ込んでくる事を/有無を言わさず根元までねじ込んでくることを")%察するのは当然の事だろう。
+						PRINTFORML %CALLNAME:調教対象%が%TEXTR("必死に首を振り悲鳴のような拒絶を行っても/歯を振るわせ必死に言葉を並べて命乞いをしても/ロクに動かない手足をばたつかせるようにしてその場から逃げようとする姿に/")%巨削穴兵は、
+						PRINTFORMW 「あ”は”は”…❤」と口角を上げ口が裂けたような笑みを浮かべ、そのドリルバイブを一気にねじ込み起動してしまう……
+					CASE 1
+						PRINTFORML 捕らえられ他の狂逝の機械に大股を開かされ%TEXTR("無防備になったおまんこを指で広げられて/無理やり開かされた股を閉じる事も出来ず両穴をあけられて/クリトリスをつままれ膣肉をほじくられて/抵抗も出来ず隠す事もままならないまま両穴を晒して")%しまう%CALLNAME:調教対象%、
+						PRINTFORML 巨削穴兵に組み込まれている牝は「………%TEXTR("っくひひ”/…っ”ひひ”っ…/あは”ぁ”ぁ”…")%❤」と息を荒げながらドリルバイブを使い%CALLNAME:調教対象%の%TEXTR("牝穴をこじ開ける感触/未開発のおまんこを壊せる愉しみ/未だ使われていないおまんこをぶち壊す快感")%を思い浮かべていく、
+						PRINTFORMW 『%TEXTR("ギャギャギャ/ギュルギュル/ギギギギギギ")%』という派手に鉄と鉄が噛み合い鳴る音を鳴らしながら回転するドリルバイブを、%CALLNAME:調教対象%は%TEXTR("震えながら/怯えながら/歯を鳴らし怖がりながら/首を振り拒絶しながら")%も抵抗も出来ず、ねじこまれてしまう……
+					CASE 2
+						PRINTFORML %CALLNAME:調教対象%は구속具で両足を頭の方に持っていかれているまんぐり返しの体位で身動きを取ることができない状態とされてしまった。
+						PRINTFORML 機械の駆動音を鳴り響かせながら回転するドリルバイブを向けられ、%CALLNAME:調教対象%は%TEXTR("やめて貰おうと咥えさせられた猿轡から声を出そうと必死になる/がちゃがちゃと구속具を外そうと身をよじる/猿轡を咥えさせられてしまい声を出せないまま首を横に振り続ける")%。
+						PRINTFORMW %TEXTR("この器具でおまんこを使われてしまったら壊されてしまうの/挿入できるかもわからない太さのドリルバイブを無理やり使われればどうなるか/このままでは子宮の奥までねじ込まれ性器を壊されてしまうというの")%を察してしまっていた%CALLNAME:調教対象%の怯える表情に、巨削穴兵に組み込まれた牝穴は下卑た笑みを浮かべていた……
+				ENDSELECT
+				;『狂逝の機械用関数』にある個別イベント用の関数
+				CALL MADORGASM_DRILLVIBE_CHARA_TXT(調教対象)
+				;ドリルバイブによる性器破壊１回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_DRILLVIBE_TXT(1,0)
+						CALL MADORGASM_DRILLVIBE_TXT(1,2)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,50)
+					CASE 1
+						CALL MADORGASM_DRILLVIBE_TXT(1,1)
+						CALL MADORGASM_DRILLVIBE_TXT(1,3)
+						CALL EROTIC_MOVE("後穴凌辱",調教対象,-1,50)
+				ENDSELECT
+				;ドリルバイブによる性器破壊２回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_DRILLVIBE_TXT(1,0)
+						CALL MADORGASM_DRILLVIBE_TXT(1,2)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,50)
+					CASE 1
+						CALL MADORGASM_DRILLVIBE_TXT(1,1)
+						CALL MADORGASM_DRILLVIBE_TXT(1,3)
+						CALL EROTIC_MOVE("後穴凌辱",調教対象,-1,50)
+				ENDSELECT
+				;ドリルバイブによる性器破壊３回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_DRILLVIBE_TXT(1,0)
+						CALL MADORGASM_DRILLVIBE_TXT(1,2)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,50)
+					CASE 1
+						CALL MADORGASM_DRILLVIBE_TXT(1,1)
+						CALL MADORGASM_DRILLVIBE_TXT(1,3)
+						CALL EROTIC_MOVE("後穴凌辱",調教対象,-1,50)
+				ENDSELECT
+				;ドリルバイブによる性器破壊４回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_DRILLVIBE_TXT(1,0)
+						CALL MADORGASM_DRILLVIBE_TXT(1,2)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,50)
+					CASE 1
+						CALL MADORGASM_DRILLVIBE_TXT(1,1)
+						CALL MADORGASM_DRILLVIBE_TXT(1,3)
+						CALL EROTIC_MOVE("後穴凌辱",調教対象,-1,50)
+				ENDSELECT
+				;ドリルバイブによる性器破壊終了時の演出
+				SELECTCASE RAND:3
+					CASE 0 
+						PRINTFORML ドリルバイブを使われぽっかりと穴が開いたかのようにされている%CALLNAME:調教対象%の%TEXTR("牝穴/おまんこ")%からは、
+						PRINTFORMW 愛液と潮が吹きだされ続け周囲一帯に水溜まりを造る程壊されたが、下半身を愛液まみれにしたその体のまま戦場に引きずり出されてしまう……
+					CASE 1
+						PRINTFORML %TEXTR("泣き叫ぼうと、どれだけ喘ごうとも/必死な命乞いのような懇願も虚しく/首を振り、身をよじって逃れようとしていても結局は")%ドリルバイブを使われてしまった%CALLNAME:調教対象%は、
+						PRINTFORMW 「ぁ”……ぁ”……❤」と虚ろで瞳から光を失った表情となり、%TEXTR("全身をびくびくと跳ね上げながらも/絶頂が収まらない程に穴をほじくられていても/ぽっかりと空き子宮口の奥すら見える牝穴")%無理やり戦場に放り出されてしまう……
+					CASE 2
+						PRINTFORML %TEXTR("決壊したダムのように/栓が壊れた蛇口のように/ドリルバイブで壊されたおまんこは")%愛液を延々と垂れ流し続ける%TEXTR("牝穴/掘削済みまんこ/破壊済みおまんこ/機械開発済み牝穴")%と化した%CALLNAME:調教対象%は、
+						PRINTFORMW 「%TEXTR("やだ…やっ…/ゆる…ゆるじで…/も…もうや…嫌ぁ…/やめ…やめ…て”ぇ…")%」と力ない声を出しながら迫る巨削穴兵に足を掴まれ、無理やり戦場に戻されてしまう……
+				ENDSELECT
+				;『狂逝の機械用関数』にある個別セリフ用の関数
+				CALL MADORGASM_DRILLVIBE_END_CHARA_TXT(調教対象)
+
+			ENDIF
+			IF MARK:調教対象:快楽刻印 + MARK:調教対象:苦痛刻印 + MARK:調教対象:屈服刻印 - MARK:調教対象:反発刻印 >= 8
+				SELECTCASE RAND:3
+					CASE 0
+						PRINTFORML %TEXTR("%あっけなく/衣服をボロボロにした情けない姿で/敗北を認め命乞いをするように全裸土下座で/ガニ股になり自身をおちんぽ様に都合のいい穴だと語りながら")%捕らえられてしまった%CALLNAME:調教対象%は巨削穴兵のドリルバイブを見せつけられ、『ごくり』と喉を鳴らしてしまう。
+						PRINTFORML 『%TEXTR("これでまた私の穴を壊す気なんだ/もう私の穴おわっちゃうんだ/私のおまんこ、コレで壊されちゃうんだ/いろんな女の子がこれでこわされちゃったんだ")%❤』『%TEXTR("ぐちゃぐちゃにされてしまうんだ/めちゃめちゃにこわされちゃうんだ/ぼろぼろにされてしまうんだ")%❤』『%TEXTR("どれだけの時間が経とうとも/どんなに命乞いをしても/どれだけイったりしても/どんなに体がこわされても")%……%TEXTR("お構いなしに穴をこじ開けられて/もっと壊せる部分を念入りに壊されて/無視されて容赦なくおまんこ処刑されて/この城の主が満足するまで壊されて")%しまうんだ❤』
+						PRINTFORMW これから行われる凌辱に%CALLNAME:調教対象%は%TEXTR("股を濡らす/牝穴を開閉する/くぱくぱとマゾまんこをぐちゅぐちゅとかき回す/開発されてしまっている肉便器まんこを弄り始める")%だけでなく、自らその牝穴を広げ凌辱を受け入れようとしてしまう……
+					CASE 1
+						PRINTFORML %CALLNAME:調教対象%は%TEXTR("形ばかりの抵抗/私は負けませんというアピールのための/ここにまだ堕ちてない雌がいますという誇示のための抵抗/ここにおまんこ処刑を終えてませんよというための抵抗")%をしながらも衣服を破り捨てられ、%TEXTR("一糸纏わない姿/産まれたばかりの姿/凌辱させられるための姿")%を晒させられてしまう。
+						PRINTFORML %TEXTR("地べたに組み伏せられ/押し倒され/ねじふせられ")%た%CALLNAME:調教対象%の目線は、巨大な駆動音を鳴らし回転するドリルバイブに向けられてしまっていた、
+						PRINTFORMW %CALLNAME:調教対象%の体は%TEXTR("これから起こる凌辱への期待/おまんこ処刑を行われる妄想/牝穴をめちゃくちゃにされてしまう期待")%でその牝穴から%TEXTR("涎のように/餌を求める獣の口のように/いやしく凌辱を求めるマゾまんこらしく")%愛液を垂らしている……
+					CASE 2
+						PRINTFORML 戦闘で倒された%CALLNAME:調教対象%は逃げようとしたもののその足を掴まれてしまい捕らえられてしまう。
+						PRINTFORML 捕らえられた%CALLNAME:調教対象%はまるで%TEXTR("そうすることが当然のように/自分が行うべきこと/負けた雑魚牝として雄に媚びるように")%自ら衣服を脱ぎ捨て%TEXTR("全裸土下座/ガニ股腰へコチン媚/おちんぽ様媚び穴晒しオナニー/牝穴晒しまんぐりかえし")%を行う。
+						PRINTFORML 「どうか…この、%CALLNAME:MASTER%様に歯向かった%TEXTR("哀れな牝/変態敗北マゾ牝穴/おちんぽ様大好きまんこ/おまんこ処刑されたがりのド変態まんこ")%に……%TEXTR("罰をお与えください/おまんこ処刑をしてください/この選択を後悔するような凌辱をしてください")%……❤」
+						PRINTFORML そう語る%CALLNAME:調教対象%の%TEXTR("牝穴/媚びへコまんこ/変態マゾまんこ/敗北癖付き雑魚まんこ")%はこれから行われる”%TEXTR("お仕置き/凌辱/おまんこ処刑/蹂躙")%”への期待で濡れてしまっていた……
+				ENDSELECT
+				;『狂逝の機械用関数』にある個別イベント用の関数
+				CALL MADORGASM_DRILLVIBE_FALLCHARA_TXT(調教対象)
+				;ドリルバイブによる性器破壊１回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_DRILLVIBE_TXT(1,0)
+						CALL MADORGASM_DRILLVIBE_TXT(1,4)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_DRILLVIBE_TXT(1,1)
+						CALL MADORGASM_DRILLVIBE_TXT(1,5)
+						CALL EROTIC_MOVE("後穴凌辱",調教対象,-1,100)
+				ENDSELECT
+				;ドリルバイブによる性器破壊２回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_DRILLVIBE_TXT(1,0)
+						CALL MADORGASM_DRILLVIBE_TXT(1,4)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_DRILLVIBE_TXT(1,1)
+						CALL MADORGASM_DRILLVIBE_TXT(1,5)
+						CALL EROTIC_MOVE("後穴凌辱",調教対象,-1,100)
+				ENDSELECT
+				;ドリルバイブによる性器破壊３回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_DRILLVIBE_TXT(1,0)
+						CALL MADORGASM_DRILLVIBE_TXT(1,4)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_DRILLVIBE_TXT(1,1)
+						CALL MADORGASM_DRILLVIBE_TXT(1,5)
+						CALL EROTIC_MOVE("後穴凌辱",調教対象,-1,100)
+				ENDSELECT
+				;ドリルバイブによる性器破壊４回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_DRILLVIBE_TXT(1,0)
+						CALL MADORGASM_DRILLVIBE_TXT(1,4)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_DRILLVIBE_TXT(1,1)
+						CALL MADORGASM_DRILLVIBE_TXT(1,5)
+						CALL EROTIC_MOVE("後穴凌辱",調教対象,-1,100)
+				ENDSELECT
+				;ドリルバイブによる性器破壊終了時の演出
+				SELECTCASE RAND:3
+					CASE 0 
+						PRINTFORML ぽっかりと%TEXTR("おまんこ/牝穴/ざこまぞまんこ/敗北癖牝まんこ")%だけでなく%TEXTR("子宮口/赤ちゃん袋の口/孕まされたがりの受精マゾ子宮/おちんぽ様ほしがりの淫売子宮")%まで穴を開けられ子宮の奥の肉まで見えるようになってしまった%CALLNAME:調教対象%の%TEXTR("おまんこ/牝穴/ざこまぞまんこ/敗北癖牝まんこ/開通済みオナホール")%、
+						PRINTFORMW それでもなお%CALLNAME:調教対象%の肉体は%TEXTR("更なる凌辱を求めて/もっともっと❤と快楽欲しさに//")%ドリルバイブにまん肉を押し付け挿入おねだりをしてしまっている…
+					CASE 1
+						PRINTFORML %CALLNAME:調教対象%は%TEXTR("おまんこ/牝穴/雑魚マゾケツ穴/敗北癖マゾまんこ/屈折癖持ち雑魚けつ穴")%への性器処刑によって%TEXTR("おまんこ/牝穴/ざこまぞまんこ/敗北癖牝まんこ")%と%TEXTR("けつ穴/マゾケツ/ざこマゾアナル/敗北癖牝まんこ/異常性行為用孕まされたがりマゾケツ")%にぽっかりと穴を開けられてしまう……、
+						PRINTFORML そのような肉体の状態ですら、%CALLNAME:調教対象%は凌辱と蹂躙への謝辞を%TEXTR("全裸土下座/ガニ股腰へコ姿/ぐちゅぐちゅとおまんこを弄りその姿を晒す事で")%で行い、
+						PRINTFORMW 更なる罰を受けるべく、その%TEXTR("両穴/雑魚穴/開通済み牝穴/処刑されたがりの無様まんこ")%を差し出してしまう……
+					CASE 2
+						PRINTFORML %CALLNAME:調教対象%の体はドリルバイブによって壊され%TEXTR("ひくひく/びくっびくっ”/がくっがくっ")%❤と%TEXTR("地べたに転がりながら/地面でのたうち回りながら/腰を上下に動かしながら")%愛液を吹き出させている……、
+						PRINTFORML %TEXTR("ほぐされ/かき回され/ねじられ/")%、えぐられ、今ではぽっかりと%TEXTR("子宮の奥すら/子宮の肉/抜け出た子宮の肉")%が見える%TEXTR("おまんこ/牝穴/ざこまぞまんこ/敗北癖牝まんこ")%を引きずりながら、
+						PRINTFORMW %CALLNAME:調教対象%は『%TEXTR("ぇ…えひぇ…へ”へ”…/ぉ”❤おひぉ”♡お”っ/ひ”っっ”❤はひっっ”❤ひっ/にぎぉ”❤お”❤お”❤お”❤お”ぉ”")%❤』と口から漏らしながら再度凌辱を求めて%TEXTR("腰をへコへコと動かして/腰を上下に動かして/自分からクリトリスを引っ張り牝穴をより広げて/おまんこを指で掴んで広げて")%アピールしてしまう……
+				ENDSELECT
+				;『狂逝の機械用関数』にある個別イベント用の関数
+				CALL MADORGASM_DRILLVIBE_END_FALLCHARA_TXT(調教対象)
+			ENDIF
+		ENDIF
+	ENDIF
+
+
+ELSEIF 種類 == 攻守変動
+    攻撃횟수 = GETVAR(@"%決闘者%_MZ_薬Ｃ:場所") + 1
+	CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"追戦",攻撃횟수)
+    ELSEIF 種類 == 攻撃後強制誘発
+			CALL SET_FIELD_INFO(決闘者,"戦場",場所,"戦",-99,1)
+			CALL SET_FIELD_INFO(決闘者,"戦場",場所,"追戦",-99,1)
+	
+ELSEIF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39901,3)
+	IF RESULT == 0
+		破壊枚数 = GETVAR(@"%決闘者%_MZ_薬Ｃ:場所")
+			PRINTFORML
+			PRINTFORML 破壊可能枚数は{破壊枚数}！
+			PRINTFORMW
+		CALL FULLRESET
+		効果条件複数 = 100 - 破壊枚数
+		CALL CARD_REMOVAL_BASIC(決闘者,"全場単体",場所,"墓地")
+		CALL SET_FIELD_INFO(決闘者,"戦場",場所,"薬Ｃ",0,1)
+		SIF RESULT != 1
+			RETURN 0
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(決闘者,"戦場",場所,"薬Ｃ",1)
+	ENDIF
+ENDIF
+
+
+
+

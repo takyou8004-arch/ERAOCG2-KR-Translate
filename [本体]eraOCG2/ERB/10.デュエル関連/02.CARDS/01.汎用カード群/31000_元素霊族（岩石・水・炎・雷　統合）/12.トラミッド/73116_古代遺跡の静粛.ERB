@@ -1,0 +1,152 @@
+﻿@CARDNAME_73116,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 트라미드 로딩
+	CASE "略称"
+		RESULTS = 고대유적의 정순
+	CASE "カテゴリ"
+		RESULTS:0 = 트라미드
+ENDSELECT
+
+
+@CARD_73116(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 永続魔法
+	CASE "追加日"
+		RETURN 250706
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73116(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,発動誘発)
+PRINTL ①：フィールド魔法カードの効果が発動した時に発動できる。
+PRINTL デッキからこのカード名以外の「트라미드」魔法・罠カード１枚を手札に加える。
+CALLFORM CARD_ABLE(2,効果後誘発)
+PRINTL ②：自分フィールドの地属性・元素霊族モンスターが戦闘または相手の効果で破壊された場合に発動できる。
+PRINTL デッキから「트라미드」モンスター１体を特殊召喚する。
+
+
+@CARDCAN_73116(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,73116)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 発動誘発
+	SIF 発動済_1(決闘者,73116)
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	効果条件種類 = フィールド
+	CALL CARD_CHECK_START_DATA(決闘者,2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 트라미드
+	効果条件種類 = 魔罠全般
+	効果条件固名前 = 트라미드 로딩
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 効果後誘発
+	SIF 発動済_2(決闘者,73116)
+		RETURN 0
+	SIF 処理中_決闘者 == 決闘者
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	効果条件属性 = 地属性
+	効果条件種族 = 元素霊族
+	CALL CARD_CHECK_FIN_DATA(決闘者,"破壊全般",2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 트라미드
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") != 2
+			RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73116(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 発動誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73116,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 트라미드
+		効果条件種類 = 魔罠全般
+		効果条件固名前 = 트라미드 로딩
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+	ENDIF
+
+ELSEIF 種類 == 効果後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73116,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 트라미드
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+	ENDIF
+
+
+ELSEIF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73116)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ENDIF
+

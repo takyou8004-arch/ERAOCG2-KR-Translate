@@ -1,0 +1,328 @@
+@CARDNAME_39902,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ィークギア・シリコンチェーンソーゴーレム
+	CASE "略称"
+		RESULTS = 狂逝の巨鋸腕機
+	CASE "カテゴリ"
+		RESULTS:0 = 狂逝の機械
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39902(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 地属性
+	CASE "種族"
+		RETURN 機械族
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+	CASE "性別"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39902(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL このカード名の③の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,攻撃後誘発)
+PRINTL ①：このカードが戦闘で相手モンスターを破壊し墓地へ送った時に発動できる。
+PRINTL 　　破壊したモンスターを相手フィールド上に特殊召喚し、そのモンスターに媚薬カウンターを１つ置く。
+PRINTL 　　この効果で特殊召喚したモンスターの効果は無効化される。
+CALLFORM CARD_ABLE(2,攻守変動)
+PRINTL ②：このカードの攻撃力は、このカードに乗っている媚薬カウンターの数×１０００アップし、
+PRINTL 　　１度のバトルフェイズ中にこのカードの媚薬カウンターの数＋１回までモンスターに攻撃できる。
+CALLFORM CARD_ABLE(3,戦場起動)
+PRINTL ③：１ターンに１度、このカード以外の自分フィールドの牝性モンスターを１体を破壊して発動できる。
+PRINTL 　　このカードに媚薬カウンターを１つ置く。
+PRINTL
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39902(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 調教対象
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,39902)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 攻撃後誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_戦闘カード") != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(決闘者,1) == 0
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 攻守変動 || 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 戦場起動
+	SIF 発動済_3(決闘者,39902)
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_MZ_条達:場所") >= 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件性別 = 牝性
+	効果条件他所 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39902(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 調教対象
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 攻撃횟수
+#DIM DYNAMIC 減少値
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 絶頂횟수
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 攻撃後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39902,1)
+    IF RESULT == 0
+		TRYCALLFORM CARDNAME_{直前戦闘破壊ID(決闘者,1)}("名前")
+		選択カード名前 = %RESULTS%
+		CALL FULLRESET
+		効果範囲相手墓地 = 1
+		効果条件名前 = %選択カード名前%
+		効果追加種類 = 1
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所,"",0,1)
+		CALL FULLRESET
+		CALL CARD_EROTICS(直前戦闘破壊ID(決闘者,1))
+		調教対象 = RESULT
+		IF 調教対象 != -1 && TALENT:調教対象:性別 == 1
+			IF MARK:調教対象:快楽刻印 + MARK:調教対象:苦痛刻印 + MARK:調教対象:屈服刻印 - MARK:調教対象:反発刻印 < 8
+				SELECTCASE RAND:3
+					CASE 0 
+						PRINTFORML 巨鋸腕兵は『あはぁ……❤』と新しい獲物をじっくりと眺め、シリコンチェーンソーでぐりぐりと%CALLNAME:調教対象%のおまんこの具合を確認している。
+						PRINTFORML 一方で倒されてしまった%CALLNAME:調教対象%は他の狂逝の機械によって牝穴を晒される体位にさせられ、
+						PRINTFORMW 肉ヒダまみれのシリコンチェーンソーを締め付けの良さそうな未開発の牝まんこにおまんこに食い込まされてしまう。
+						PRINTFORMW %CALLNAME:調教対象%の制止の声も無視して巨鋸腕兵はシリコンチェーンソーを起動させる……
+					CASE 1
+						PRINTFORML 倒されてしまった%CALLNAME:調教対象%は구속され、両足を頭の後ろに持っていくまんぐり返しの体位にさせられてしまった。
+						PRINTFORML おまんこを無防備に晒すその体位にさせられた%CALLNAME:調教対象%は、目の前に差し出されるシリコンチェーンソーを見せられ、怯えた表情となる。
+						PRINTFORMW 回転するシリコンの部分がおまんこに押し付けられ何をされるのか察したものの、%CALLNAME:調教対象%は何もすることはできない……
+					CASE 2
+						PRINTFORML 倒され捕らえられてしまった%CALLNAME:調教対象%は、無理やりに首と両手を繋げるギロチンのような구속をされてしまう。
+						PRINTFORML 上半身を無理やりかがまされ、下半身を突き出すような体位のせいで%CALLNAME:調教対象%の両穴は晒される。
+						PRINTFORMW 何をされるか理解できないでいる%CALLNAME:調教対象%は怯えたまま、牝穴に何かを押し付けられる感触に怯えた声を出してしまう……
+					ENDSELECT
+
+				;シリコンチェーンソーによる性器破壊１回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_CHAINSAW_TXT(1,0)
+						CALL MADORGASM_CHAINSAW_TXT(1,2)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_CHAINSAW_TXT(1,1)
+						CALL MADORGASM_CHAINSAW_TXT(1,2)
+						CALL EROTIC_MOVE("Ｃ単発",調教対象,-1,100)
+				ENDSELECT
+				;シリコンチェーンソーによる性器破壊２回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_CHAINSAW_TXT(1,0)
+						CALL MADORGASM_CHAINSAW_TXT(1,2)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_CHAINSAW_TXT(1,1)
+						CALL MADORGASM_CHAINSAW_TXT(1,2)
+						CALL EROTIC_MOVE("Ｃ単発",調教対象,-1,100)
+				ENDSELECT
+				;シリコンチェーンソーによる性器破壊３回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_CHAINSAW_TXT(1,0)
+						CALL MADORGASM_CHAINSAW_TXT(1,2)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_CHAINSAW_TXT(1,1)
+						CALL MADORGASM_CHAINSAW_TXT(1,2)
+						CALL EROTIC_MOVE("Ｃ単発",調教対象,-1,100)
+				ENDSELECT
+				;シリコンチェーンソーによる性器破壊４回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_CHAINSAW_TXT(1,0)
+						CALL MADORGASM_CHAINSAW_TXT(1,2)
+						CALL EROTIC_MOVE("前穴凌辱",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_CHAINSAW_TXT(1,1)
+						CALL MADORGASM_CHAINSAW_TXT(1,2)
+						CALL EROTIC_MOVE("Ｃ単発",調教対象,-1,100)
+				ENDSELECT
+
+				SELECTCASE RAND:3
+					CASE 0 
+						PRINTFORML シリコンチェーンソーによって性器をすり潰された%CALLNAME:調教対象%は、惚けた表情で地べたに転がっていた。
+						PRINTFORML べろんと広げられたおまんこ、腫れあがりびんびんに勃っているクリトリス、愛液まみれの下半身。
+						PRINTFORMW ガニ股姿で潮を吹き「ん”ぎぉ”……ぉ”…❤」と喘ぎ声を漏らしながら%CALLNAME:調教対象%はまた盤面に引っ張り出されてしまう……
+					CASE 1
+						PRINTFORML %CALLNAME:調教対象%のおまんこはシリコンチェーンソーによってべろんとまん肉が広がりっぱなしのオナホまんことなってしまっていた。
+						PRINTFORML 長時間の間休みなくすり潰された牝穴は、潮を延々と吹き続け物欲しそうにくぱくぱと開閉を繰り返してしまっている。
+						PRINTFORMW %CALLNAME:調教対象%は連続絶頂の余韻が収まらない肉体を引きずられ盤面に放り出されてしまう……
+					CASE 2
+						PRINTFORML %CALLNAME:調教対象%は「おっ”……❤おぎぉぉ…ぉ”…❤」と普段の態度からは考えられない声を出して地べたに転がっていた。
+						PRINTFORML 下半身は垂れ流した愛液で濡れて、ぐっぱりと広げられたおまんこからは延々と潮を吹き出し続けてしまっている、
+						PRINTFORMW 巨鋸腕兵に足を掴まれ、乱雑に盤面に放り出されても尚、%CALLNAME:調教対象%は無様な姿のままでいつづけている……
+					ENDSELECT
+
+				ENDIF
+				IF MARK:調教対象:快楽刻印 + MARK:調教対象:苦痛刻印 + MARK:調教対象:屈服刻印 - MARK:調教対象:反発刻印 >= 8
+				SELECTCASE RAND:3
+					CASE 0 
+						PRINTFORML %CALLNAME:調教対象%はわざと捕らえられたかのような弱弱しい抵抗を行いそのまま押し倒されるだけでなく、
+						PRINTFORML 自ら両脚を頭の後ろに回し両腕で抱えるようにして牝穴を晒し、必死に巨鋸腕兵へ命乞いをしてしまっていた。
+						PRINTFORMW %CALLNAME:調教対象%の表情はこれから行われる行為を察し発情しきった牝の表情そのものであった……
+					CASE 1
+						PRINTFORML 倒されてしまった%CALLNAME:調教対象%は、自ら衣服を脱ぎ捨て命乞いのための全裸土下座をしてしまっていた。
+						PRINTFORML ただ%CALLNAME:調教対象%の表情は赤面し口角を吊り上げるような発情しきった牝の表情であり、
+						PRINTFORMW これから行われるシリコンチェーンソーでの凌辱を期待して止まないマゾ奴隷そのものであった。
+					CASE 2
+						PRINTFORML %CALLNAME:調教対象%は首と両手を繋げるギロチンのような구속を受けてしまう。
+						PRINTFORML ……だが、%CALLNAME:調教対象%は自ら腰を振り媚びるかのようにして愛液まみれの牝穴を見せつけていた。
+						PRINTFORMW そして、差し出されるシリコンチェーンソーに自身の牝穴を乗せ、期待と恐怖に息を荒げている……
+					ENDSELECT
+				;シリコンチェーンソーによる性器破壊１回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_CHAINSAW_TXT(1,0)
+						CALL MADORGASM_CHAINSAW_TXT(1,4)
+						CALL EROTIC_MOVE("Ｖ単発",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_CHAINSAW_TXT(1,1)
+						CALL MADORGASM_CHAINSAW_TXT(1,5)
+						CALL EROTIC_MOVE("Ｃ単発",調教対象,-1,100)
+				ENDSELECT
+				;シリコンチェーンソーによる性器破壊２回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_CHAINSAW_TXT(1,0)
+						CALL MADORGASM_CHAINSAW_TXT(1,4)
+						CALL EROTIC_MOVE("Ｖ単発",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_CHAINSAW_TXT(1,1)
+						CALL MADORGASM_CHAINSAW_TXT(1,5)
+						CALL EROTIC_MOVE("Ｃ単発",調教対象,-1,100)
+				ENDSELECT
+				;シリコンチェーンソーによる性器破壊３回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_CHAINSAW_TXT(1,0)
+						CALL MADORGASM_CHAINSAW_TXT(1,4)
+						CALL EROTIC_MOVE("Ｖ単発",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_CHAINSAW_TXT(1,1)
+						CALL MADORGASM_CHAINSAW_TXT(1,5)
+						CALL EROTIC_MOVE("Ｃ単発",調教対象,-1,100)
+				ENDSELECT
+				;シリコンチェーンソーによる性器破壊４回目
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_CHAINSAW_TXT(1,0)
+						CALL MADORGASM_CHAINSAW_TXT(1,4)
+						CALL EROTIC_MOVE("Ｖ単発",調教対象,-1,100)
+					CASE 1
+						CALL MADORGASM_CHAINSAW_TXT(1,1)
+						CALL MADORGASM_CHAINSAW_TXT(1,5)
+						CALL EROTIC_MOVE("Ｃ単発",調教対象,-1,100)
+				ENDSELECT
+					SELECTCASE RAND:3
+					CASE 0 
+						PRINTFORML シリコンチェーンソーによるおまんこ処刑を終えた%CALLNAME:調教対象%の表情は、
+						PRINTFORML 『この牝穴をこわしていただきありがとうございます……❤』と言わんばかりの悦楽の表情を浮かべていた。
+						PRINTFORMW 股を無防備に開き下半身を愛液まみれにしながら、%CALLNAME:調教対象%は盤面に戻されてしまう……
+					CASE 1
+						PRINTFORML 『ん”ぉ”……お”お”お”お”っ…❤』とぶぢゅぶぢゅと愛液を撒き散らしながらおまんこ処刑の余韻に浸っている%CALLNAME:調教対象%
+						PRINTFORML 地べたに転がり、がくがくと全身を跳ね上げさせ収まらない絶頂を抑える事も出来ず、
+						PRINTFORMW %CALLNAME:調教対象%は上半身を地べたに這わせたまま自ら両穴を差し出すように下半身を上にあげ次の凌辱を求めてしまう……
+					CASE 2
+						PRINTFORML %CALLNAME:調教対象%はびぢゃっ❤びぢゃぢゃっ❤と音が鳴るほどに愛液をおまんこから溢れさせてしまっている。
+						PRINTFORML 広がりっぱなしのおまんこを指でかき回し、腫れあがったクリトリスと摘まみながら喘ぐ%CALLNAME:調教対象%、
+						PRINTFORMW 『お”❤おまんこしょけいありがとっ”❤ありがとうございます❤』と謝辞を述べながら再度絶頂を迎えてしまう……
+				ENDSELECT
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 攻守変動
+	攻撃力修正 = GETVAR(@"%決闘者%_MZ_薬Ｃ:場所") * 1000
+    攻撃횟수 = GETVAR(@"%決闘者%_MZ_薬Ｃ:場所") + 1
+	CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"追戦",攻撃횟수)
+	CALL STATCHANGE_BASIC(決闘者,"自身",場所,攻撃力修正)
+    ELSEIF 種類 == 攻撃後強制誘発
+			CALL SET_FIELD_INFO(決闘者,"戦場",場所,"戦",-99,1)
+			CALL SET_FIELD_INFO(決闘者,"戦場",場所,"追戦",-99,1)
+
+ELSEIF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39902,3)
+		IF RESULT == 0
+			CALL FULLRESET
+			効果範囲戦場 = 1
+			効果条件他所 = 1
+            効果条件行先フラグ = 破壊行き
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+			IF RESULT == 1
+			CALL SET_FIELD_INFO(決闘者,"戦場",場所,"薬Ｃ",1)
+			ENDIF
+		ENDIF
+
+
+ENDIF
+
+
+
+

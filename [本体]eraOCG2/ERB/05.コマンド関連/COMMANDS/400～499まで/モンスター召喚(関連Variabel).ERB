@@ -117,8 +117,8 @@ NEXT
 #DIM DYNAMIC 캐릭터_ID
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC 条件달성
-
-
+#DIM DYNAMIC 初期値
+#DIM DYNAMIC 終結値
 IF 필터_所持 == 1
 	SIF CFLAG:캐릭터_ID:소유함 == 0
 		RETURN 0
@@ -269,10 +269,34 @@ IF 필터_素質_ACT == 1
 				RETURN 0
 		ENDIF
 	NEXT
+	ENDIF
+VARSET 条件달성
+IF フィルタ_特価品 == 1
+	IF CFLAG:MASTER:현재위치 == 場所_カドショ
+		初期値 = 0
+	ELSEIF CFLAG:MASTER:현재위치 == 場所_モール
+		初期値 = 10
+	ELSEIF CFLAG:MASTER:현재위치 == 場所_KCカドショ
+		初期値 = 20
+	ELSEIF CFLAG:MASTER:현재위치 == 場所_MZカドショ
+		初期値 = 30
+	ELSEIF CFLAG:MASTER:현재위치 == 場所_裏通り
+		初期値 = 40
+	ELSEIF CFLAG:MASTER:현재위치 == 場所_STカドショ
+		初期値 = 50
 ENDIF
 
-IF 필터_特価品 == 1
-	SIF !MATCH(日々_特価品,캐릭터_ID)
+
+	FOR カウンタ,0 + 初期値,10 + 初期値
+
+		SIF CFLAG:MASTER:현재위치 == 場所_STカドショ && カウンタ >= 55
+			BREAK
+		IF 日々_特価品:カウンタ == 캐릭터_ID
+			条件달성 = 1
+			BREAK
+		ENDIF
+	NEXT
+	SIF 条件달성 == 0
 		RETURN 0
 ENDIF
 
@@ -427,7 +451,7 @@ IF TALENTNAME:대상素質 == GET_TALENTNAME(대상素質,1)
 ELSEIF TALENTNAME:대상素質 != GET_TALENTNAME(대상素質,1)
 	필터_素質:대상素質 = 0
 	$INPUT_LOOP
-	PRINTFORML  ----상세설정----
+	PRINTFORML ----상세설정----
 	PRINTFORM 『%TALENTNAME:대상素質%
 	PRINTFORM …【%GET_TALENTNAME(대상素質,(필터_素質:대상素質))%】』
 	PRINTBUTTON "[소질설정]", 0
@@ -616,7 +640,7 @@ ENDIF
 #DIM DYNAMIC 使用場所
 #DIM CONST リスト표시 = 30
 #DIM DYNAMIC 캐릭터選択数
-#DIM DYNAMIC 모유回復量
+#DIM DYNAMIC 모유회복量
 #DIM DYNAMIC 모유価格
 #DIM DYNAMIC 待機_체력
 #DIM DYNAMIC 待機_기력
@@ -747,11 +771,11 @@ SELECTCASE 使用場所
 	;カード化（使用場所 7）
 	CASE 7
 		IF CFLAG:캐릭터_ID:카드화됨 != 1
-			CALL MONEY_GET(-ITEMPRICE:78)
 			TALENT:캐릭터_ID:듀얼리스트 = 0
 			CFLAG:캐릭터_ID:카드화됨 = 1
 			CALL CARD_GET_CHARA(캐릭터_ID,1)
 			PRINTFORMW %CALLNAME:캐릭터_ID%는 영혼까지 완전히 당신의 것이 되었습니다。
+			CALL MONEY_GET(-ITEMPRICE:78)
 			RETURN 1
 		ELSE
 			PRINTFORMW 이미 %CALLNAME:캐릭터_ID%의 영혼은 완전히 카드처럼 되어있다。
@@ -801,9 +825,9 @@ SELECTCASE 使用場所
 					PRINTFORMW %CALLNAME:캐릭터_ID%는 방 안으로 환영했다。
 					CFLAG:MASTER:현재위치 = 場所_캐릭터家
 					CFLAG:캐릭터_ID:현재위치 = 場所_캐릭터家
-					캐릭터家_名称 = %CALLNAME:캐릭터_ID%の家
+					캐릭터家_名称 = %CALLNAME:캐릭터_ID%의 집
 				ELSE
-					PRINTFORMW 오늘은 그만둔다고 전하자、 %CALLNAME:캐릭터_ID%는 유감스러운듯하지만、깨끗히 알았다고 해주었다。
+					PRINTFORMW 오늘은 그만둔다고 전하자、%CALLNAME:캐릭터_ID%는 유감스러운듯하지만、깨끗히 알았다고 해주었다。
 				ENDIF
 			ELSE
 				PRINTFORMW 조금정도 담소를 나눈 뒤、일단 헤어졌다。
@@ -841,9 +865,9 @@ SELECTCASE 使用場所
 			PRINTFORMW 돈이 부족합니다！
 			RETURN 0
 		ELSEIF RESULT == 0
-			CALL MONEY_GET(-1200)
 			PRINTFORMW 안전안심 합법적인 어플이라구요！		
 			CALL SUMMON_SHORI(캐릭터_ID,1)
+			CALL MONEY_GET(-1200)
 			RETURN 1
 		ENDIF
 		
@@ -905,7 +929,7 @@ SELECTCASE 使用場所
 			PRINTL
 			PRINTW 뭔갈 하기에는 양이 부족합니다。
 		ELSE			
-			모유回復量 = CFLAG:캐릭터_ID:저장모유량
+			모유회복量 = CFLAG:캐릭터_ID:저장모유량
 			CALLFORM CHARA_KACHI(캐릭터_ID, (CFLAG:캐릭터_ID:저장모유량),1)
 			모유価格 = RESULT
 
@@ -919,9 +943,9 @@ SELECTCASE 使用場所
 			BINPUT
 			IF RESULT == 1
 				PRINTFORML %CALLNAME:MASTER%는 %CALLNAME:캐릭터_ID%의 모유를 꿀꺽꿀꺽 마시기시작했다。
-				CALL RECOVER_PERMIL(MASTER,모유回復量,"체력",1)
-				CALL RECOVER_PERMIL(MASTER,모유回復量 * 2,"기력",1)
-				CALL RECOVER_PERMIL(MASTER,모유回復量,"정력",1)
+				CALL RECOVER_PERMIL(MASTER,모유회복量,"체력",1)
+				CALL RECOVER_PERMIL(MASTER,모유회복量 * 2,"기력",1)
+				CALL RECOVER_PERMIL(MASTER,모유회복量,"정력",1)
 				CFLAG:캐릭터_ID:저장모유량 = 0
 			ELSEIF RESULT == 2
 				PRINTFORML 어둠의 통판사이트에서 모유를 %CALLNAME:캐릭터_ID%의 눈을가린 사진과 함께、{모유価格}円에 판매했습니다。
@@ -954,7 +978,6 @@ SELECTCASE 使用場所
 			PRINTFORML 기력（{MAXBASE:캐릭터_ID:기력}）→（{MAXBASE:캐릭터_ID:체력}） 
 			CALL YN_CHOICE_STR()
 			IF RESULT == はい
-				CALL MONEY_GET(-ITEMPRICE:66)
 				待機_체력 = MAXBASE:캐릭터_ID:체력
 				待機_기력 = MAXBASE:캐릭터_ID:기력 
 				MAXBASE:캐릭터_ID:체력 = 待機_기력
@@ -962,11 +985,12 @@ SELECTCASE 使用場所
 				BASE:캐릭터_ID:체력 = MAXBASE:캐릭터_ID:체력
 				BASE:캐릭터_ID:기력 = MAXBASE:캐릭터_ID:기력
 				PRINTFORMW 적용했습니다！
+				CALL MONEY_GET(-ITEMPRICE:66)
 				RETURN 1
 			ENDIF
 		;아이템67_時의 마술사
 		ELSEIF 	아이템플래그 == 67
-			PRINTFORML 설정할 연령을 선택해주세요。
+			PRINTFORML 설정할 연령을 선택해 주세요。
 			PRINTL [5] 어린이
 			PRINTL [4] 10대
 			PRINTL [3] 성년
@@ -975,7 +999,7 @@ SELECTCASE 使用場所
 			PRINTL [0] 돌아간다
 			BINPUT
 			IF RESULT >= 1 && RESULT < 6
-				CALL MONEY_GET(-ITEMPRICE:67)
+
 				IF RESULT == 5
 					TALENT:캐릭터_ID:연령 = -2
 					IF TALENT:캐릭터_ID:체형 > -2 
@@ -1008,6 +1032,7 @@ SELECTCASE 使用場所
 					ENDIF
 					PRINTFORMW %CALLNAME:캐릭터_ID%는 중년이 되었습니다
 				ENDIF
+				CALL MONEY_GET(-ITEMPRICE:67)
 				RETURN 1
 			ENDIF
 		;아이템71_薬の材料（双）
@@ -1049,11 +1074,11 @@ SELECTCASE 使用場所
 					TALENT:캐릭터_ID:형태 = 1
 					PRINTFORMW 암컷쥬지로 설정했습니다
 				ENDIF
-				CALL MONEY_GET(-ITEMPRICE:71)
 				TALENT:캐릭터_ID:성별 = 3
 				MAXBASE:캐릭터_ID:사정 = 10000
 				MAXBASE:캐릭터_ID:정력 = 1000
 				PRINTFORMW %CALLNAME:캐릭터_ID%는 후타나리가 되었습니다
+				CALL MONEY_GET(-ITEMPRICE:71)
 				RETURN 1
 			ELSE
 				PRINTFORMW 이미 나있습니다！
@@ -1061,12 +1086,12 @@ SELECTCASE 使用場所
 		;아이템72_薬の材料（消）
 		ELSEIF 	아이템플래그 == 72
 			IF TALENT:캐릭터_ID:성별 != 1
-				CALL MONEY_GET(-ITEMPRICE:72)
 				TALENT:캐릭터_ID:성별 = 1
 				TALENT:캐릭터_ID:형태 = 0
 				MAXBASE:캐릭터_ID:사정 = 0
 				MAXBASE:캐릭터_ID:정력 = 0
 				PRINTFORMW %CALLNAME:캐릭터_ID%는 여자아이가 되었습니다
+				CALL MONEY_GET(-ITEMPRICE:72)
 				RETURN 1
 			ELSE
 				PRINTFORMW 남자와 후타나리 이외에는 사용할수 없습니다
@@ -1077,14 +1102,14 @@ SELECTCASE 使用場所
 			IF TALENT:캐릭터_ID:성별 == 2
 				PRINTFORMW 남자아이는 모유를 낼수 없어요！
 			ELSEIF TALENT:캐릭터_ID:모유체질 == 0
-				CALL MONEY_GET(-ITEMPRICE:73)
 				TALENT:캐릭터_ID:모유체질 = 1
 				PRINTFORMW %CALLNAME:캐릭터_ID%는 모유체질이 되었습니다
+				CALL MONEY_GET(-ITEMPRICE:73)
 				RETURN 1
 			ELSEIF TALENT:캐릭터_ID:모유체질 == 1
-				CALL MONEY_GET(-ITEMPRICE:73)
 				TALENT:캐릭터_ID:모유체질 = 0
 				PRINTFORMW %CALLNAME:캐릭터_ID%는 모유체질을 잃었습니다
+				CALL MONEY_GET(-ITEMPRICE:73)
 				RETURN 1
 			ENDIF
 		;아이템74_レッドポーション
@@ -1092,9 +1117,9 @@ SELECTCASE 使用場所
 			IF TALENT:캐릭터_ID:성별 == 2
 				PRINTFORMW 뒤쪽 처녀는 대상 외 입니다……
 			ELSEIF TALENT:캐릭터_ID:처녀 == 0
-				CALL MONEY_GET(-ITEMPRICE:74)
 				TALENT:캐릭터_ID:처녀 = 1
 				PRINTFORMW %CALLNAME:캐릭터_ID%의 처녀막이 재생했습니다
+				CALL MONEY_GET(-ITEMPRICE:73)
 				RETURN 1
 			ELSE
 				PRINTFORMW 이미 처녀입니다！
@@ -1104,15 +1129,13 @@ SELECTCASE 使用場所
 			IF TALENT:캐릭터_ID:성별 == 2
 				PRINTFORMW 남자의 가슴은 크게할수 없습니다
 			ELSEIF TALENT:캐릭터_ID:가슴사이즈 < 5
-				CALL MONEY_GET(-ITEMPRICE:75)
 				元가슴사이즈 = %TOSTR_BUSTSIZE(캐릭터_ID)%
 				元バスト数値 = %DECIMAL_STRING(CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장,2)%
 				元カップ = %TOSTR_CUPSIZE(캐릭터_ID)%
 				TALENT:캐릭터_ID:가슴사이즈 += 1 
 				CALL SET_BODYSIZE(캐릭터_ID,0b10,1)
 				PRINTFORMW %CALLNAME:캐릭터_ID%의 가슴이 비대화했습니다（【%元가슴사이즈%】→【%TOSTR_BUSTSIZE(캐릭터_ID)%】 / %元バスト数値%cm(%元カップ%)→%DECIMAL_STRING(CFLAG:캐릭터_ID:가슴초기치 + CFLAG:캐릭터_ID:가슴성장,2)%cm(%TOSTR_CUPSIZE(캐릭터_ID)%)）
-				; PRINTFORMW %CALLNAME:캐릭터_ID%の가슴が肥大化しました
-				; CALL SHOP_BUST_RESET(캐릭터_ID)
+				CALL MONEY_GET(-ITEMPRICE:75)
 				RETURN 1
 			ELSE
 				PRINTFORMW 약으론 이 이상 커질수 없습니다！
@@ -1175,13 +1198,13 @@ SELECTCASE 使用場所
 						PRINTFORMW 암컷쥬지로 설정했습니다
 					ENDIF
 				ENDIF
-				CALL MONEY_GET(-ITEMPRICE:77)
 				TALENT:캐릭터_ID:성별 = 2
 				TALENT:캐릭터_ID:가슴사이즈 = 0
 				MAXBASE:캐릭터_ID:사정 = 10000
 				MAXBASE:캐릭터_ID:정력 = 1000
 				PRINTFORMW %CALLNAME:캐릭터_ID%는 남자가 되었습니다
 				; CALL SHOP_BUST_RESET(캐릭터_ID)
+				CALL MONEY_GET(-ITEMPRICE:77)
 				CALL SET_BODYSIZE(캐릭터_ID,0b10,1)
 				RETURN 1
 			ELSE
@@ -1189,14 +1212,14 @@ SELECTCASE 使用場所
 			ENDIF
 		ELSEIF 	아이템플래그 == 82
 			IF TALENT:캐릭터_ID:펫 == 1
-				CALL MONEY_GET(-ITEMPRICE:82)
 				TALENT:캐릭터_ID:펫 = 0
 				PRINTFORMW %CALLNAME:캐릭터_ID%을 펫의 임무에서 해방시켜주었습니다。
+				CALL MONEY_GET(-ITEMPRICE:82)
 				RETURN 1
 			ELSEIF TALENT:캐릭터_ID:펫 == 0
-				CALL MONEY_GET(-ITEMPRICE:82)
 				TALENT:캐릭터_ID:펫 = 1
 				PRINTFORMW %CALLNAME:캐릭터_ID%를 펫으로 해주었습니다。
+				CALL MONEY_GET(-ITEMPRICE:82)
 				RETURN 1
 			ENDIF
 		ENDIF

@@ -109,7 +109,15 @@ ENDIF
 $CHOICE_LOOP
 IF 듀얼리스트 == "자신"
 	CUSTOMDRAWLINE —
-	PRINTL 【카드를 선택해 주세요】
+	PRINT 【카드를 선택해 주세요】
+	IF オプション_略표시 == 1
+		PRINTBUTTON "[간이표시중]", 6666
+	ELSE
+		PRINTBUTTON "[간이표시]", 6666
+	ENDIF
+	PRINTFORM　%"[7777] - 필드 / 패 정보 확인",55,RIGHT%
+
+	PRINTL
 	CUSTOMDRAWLINE —
 	PRINTL 
 ELSEIF 듀얼리스트 == "상대"
@@ -139,12 +147,14 @@ IF 듀얼리스트 == "자신"
 		PRINTFORM 　%"[9999] - 돌아간다",41,LEFT%
 	ENDIF
 	PRINTL
-	PRINTFORML　%"[7777] - 필드 / 패 정보 확인",95,RIGHT%
-	PRINTL
 	BINPUT
 	IF RESULT == 7777
 		CALL DIPLAY_BOARD(2)			
 		GOTO CHOICE_LOOP
+	ELSEIF RESULT == 6666
+		オプション_略표시 ^= 1
+		GOTO CHOICE_LOOP
+
 	ENDIF
 	選択カード:複数カウンタ = RESULT
 ELSEIF 듀얼리스트 == "상대"
@@ -333,6 +343,14 @@ $CHOICE_LOOP
 IF 듀얼리스트 == "자신"
 	CUSTOMDRAWLINE —
 	PRINTL 【카드를 선택해 주세요】
+	IF オプション_略표시 == 1
+		PRINTBUTTON "[간이표시중]", 6666
+	ELSE
+		PRINTBUTTON "[간이표시]", 6666
+	ENDIF
+	PRINTFORM　%"[7777] - 필드 / 패 정보 확인",55,RIGHT%
+	PRINTL
+
 	CUSTOMDRAWLINE —
 	PRINTL 
 ELSEIF 듀얼리스트 == "상대"
@@ -361,11 +379,12 @@ IF 듀얼리스트 == "자신"
 		PRINTFORM 　%"[9999] - 돌아간다",41,LEFT%
 	ENDIF
 	PRINTL
-	PRINTFORML　%"[7777] - 필드 / 패 정보 확인",95,RIGHT%
-	PRINTL
 	BINPUT
 	IF RESULT == 7777
 		CALL DIPLAY_BOARD(2)			
+		GOTO CHOICE_LOOP
+	ELSEIF RESULT == 6666
+		オプション_略표시 ^= 1
 		GOTO CHOICE_LOOP
 	ENDIF
 	選択カード:複数カウンタ = RESULT
@@ -577,7 +596,7 @@ ENDIF
 選択カード_ID = GETVAR(@"%듀얼리스트%_%ゾーン%:場所")
 
 SIF 選択カード_ID == 使用불가ゾーン
-	行先플래그 = 消滅行き
+	行先플래그 = 소멸行き
 ;PRINTFORML 選択カード_ID:{選択カード_ID}
 TRYCALLFORM CARDNAME_{選択カード_ID}("名前")
 選択カード_名 = %RESULTS%
@@ -697,7 +716,7 @@ IF ゾーン == "필드"
 		SETVAR @"%듀얼리스트%_묘지:カード추가先",選択カード_ID
 	ELSEIF 行先플래그 == 完全제외行き
 		CALL CARD_ADD(듀얼리스트, "필드", "제외",場所)
-	ELSEIF 行先플래그 == 消滅行き
+	ELSEIF 行先플래그 == 소멸行き
 		CALL CARD_BANISH(듀얼리스트,"필드",場所)
 	ELSE
 		묘지送り종류 = リリース
@@ -787,7 +806,7 @@ ELSEIF ゾーン == "마함"
 	ELSEIF 行先플래그 == 疑似묘지行き
 		カード추가先 = 現묘지数(듀얼리스트)
 		SETVAR @"%듀얼리스트%_묘지:カード추가先",選択カード_ID
-	ELSEIF 行先플래그 == 消滅行き
+	ELSEIF 行先플래그 == 소멸行き
 		CALL CARD_BANISH(듀얼리스트,"마함",場所)
 	ELSE
 		묘지送り종류 = リリース
@@ -827,7 +846,7 @@ ELSEIF ゾーン == "손패"
 	ELSEIF 行先플래그 == 疑似묘지行き
 		カード추가先 = 現묘지数(듀얼리스트)
 		SETVAR @"%듀얼리스트%_묘지:カード추가先",選択カード_ID
-	ELSEIF 行先플래그 == 消滅行き
+	ELSEIF 行先플래그 == 소멸行き
 		CALL CARD_BANISH(듀얼리스트,"손패",場所)
 	ELSE
 		CALL CARD_ADD(듀얼리스트, "손패", "묘지",場所)
@@ -858,7 +877,7 @@ ELSEIF ゾーン == "덱"
 	ELSEIF 行先플래그 == 疑似묘지行き
 		カード추가先 = 現묘지数(듀얼리스트)
 		SETVAR @"%듀얼리스트%_묘지:カード추가先",選択カード_ID
-	ELSEIF 行先플래그 == 消滅行き
+	ELSEIF 行先플래그 == 소멸行き
 		CALLFORM CARD_BANISH(듀얼리스트,"덱",場所)
 	ELSEIF 行先플래그 == 破壊行き
 		CALL CARD_ADD(듀얼리스트,"덱", "묘지",場所)
@@ -880,7 +899,7 @@ ELSEIF ゾーン == "EX덱"
 		CALL CARD_ADD(듀얼리스트, "EX덱", "묘지",場所)
 	ELSEIF 行先플래그 == 完全제외行き
 		CALL CARD_ADD(듀얼리스트, "EX덱", "제외",場所)
-	ELSEIF 行先플래그 == 消滅行き
+	ELSEIF 行先플래그 == 소멸行き
 		CALL CARD_BANISH(듀얼리스트,"EX덱",場所)
 	ELSEIF 行先플래그 == 손패行き
 		CALL CARD_ADD(듀얼리스트, "EX덱", "손패",場所)
@@ -907,7 +926,7 @@ ELSEIF ゾーン == "묘지"
 		CALL CARD_ADD(듀얼리스트, "묘지", "EX덱",場所)
 	ELSEIF 行先플래그 == 完全제외行き ;Anonym修正
 		CALL CARD_ADD(듀얼리스트, "묘지", "제외",場所)
-	ELSEIF 行先플래그 == 消滅行き
+	ELSEIF 行先플래그 == 소멸行き
 		CALL CARD_BANISH(듀얼리스트,"묘지",場所)
 	ELSE
 		IF 추가플래그 == 0
@@ -930,7 +949,7 @@ ELSEIF ゾーン == "제외"
 		ELSEIF 추가플래그 == 1
 			CALL CARD_ADD(듀얼리스트, "제외", "마함",場所,"裏側표시")
 		ENDIF
-	ELSEIF 行先플래그 == 消滅行き
+	ELSEIF 行先플래그 == 소멸行き
 		CALL CARD_BANISH(듀얼리스트,"제외",場所)
 	ELSE
 		CALL CARD_ADD(듀얼리스트,"제외", "묘지",場所)
@@ -967,9 +986,8 @@ ELSEIF 行先플래그 == 戦闘破壊行き
 	SETVAR @"%듀얼리스트%_直前戦闘破壊", 選択カード_ID
 	SIF ゾーン == "필드"
 		ターン破壊数 += 1
-ELSEIF 行先플래그 == 完全묘지行き || 行先플래그 == 完全제외行き
+ELSEIF GROUPMATCH(行先플래그,完全묘지行き,完全제외行き,마함行き,소멸行き)
 	RETURN 1
-
 ELSE
 	IF ゾーン == "필드" || ゾーン == "마함"
 		CALL CARD_FIN_ID_SET(듀얼리스트,選択カード_ID,"リリース")
@@ -1120,7 +1138,7 @@ ELSE
 		CALL CARD_DISPOSE(実行者,ゾーン,0,行先)
 	NEXT
 ENDIF
-
+RETURN 1
 @CARD_FINAL_MOVE(효과종류)
 #DIMS DYNAMIC 효과종류
 #DIM DYNAMIC カウンタ

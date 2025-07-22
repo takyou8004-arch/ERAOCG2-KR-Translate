@@ -1,0 +1,124 @@
+﻿@CARDNAME_23282,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = BK 치프세컨드
+	CASE "略称"
+		RESULTS = BK치프세컨드
+	CASE "カテゴリ"
+		RESULTS:0 = BK
+ENDSELECT
+
+
+@CARD_23282(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 炎属性
+	CASE "種族"
+		RETURN 戦士族 
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 2000
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23282(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,攻撃時誘発)
+PRINTL ①：相手モンスターの攻撃宣言時、自分フィールドに戦士族モンスターか炎属性モンスターが存在していれば発動できる。
+PRINTL このカードを手札から特殊召喚し、その攻撃を無効にする。
+PRINTL その後、フィールドのモンスター１体をエンドフェイズまで除外する。
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ②：このカードがモンスターゾーンに存在する限り、
+PRINTL 自分は通常召喚に加えて１度だけ、自分メインフェイズに「ＢＫ」モンスター１体を召喚できる。
+
+
+@CARDCAN_23282(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,23282)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 攻撃時誘発
+	SIF ゾーン != "手札"
+		RETURN 0
+	SIF 発動済_1(決闘者,23282)
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	SIF 戦闘場所(決闘者,1) == 5
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,23282,"手札")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種族 = 戦士族
+	効果条件スーパー属性 = 炎属性
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23282(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 攻撃時誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,23282,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+		CALL EVADE_ATTACK(決闘者)
+		CALL FULLRESET
+		効果追加種類 = 1
+		CALL CARD_REMOVAL_BASIC(決闘者,"両戦場単体",場所,"除外")
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果条件カテゴリ = BK
+	CALL STATCHANGE_HAND(決闘者,"全体",場所,"召可")
+ENDIF

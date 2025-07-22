@@ -1,0 +1,191 @@
+@CARDNAME_93279,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 액셀블록 카운터
+	CASE "略称"
+		RESULTS = AB카운터
+	CASE "カテゴリ"
+		RESULTS:0 = 카운터
+		RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_93279(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常罠
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93279(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカードは自分の「ＢＫ」モンスターのＸ素材を１つ取り除き、セットしたターンに発動する事もできる。
+PRINTL このカード名の②の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,発動誘発)
+PRINTL ①：自分フィールドに「ＢＫ」モンスターが存在し、相手が魔法・罠カードを発動した場合に発動できる。その発動を無効にし破壊する。
+PRINTL この効果で通常罠カードの発動を無効にした場合、破壊する代わりにそのカードを自分フィールドにセットできる。
+CALLFORM CARD_ABLE(2,手札→墓地 ,デッキ→墓地)
+PRINTL ②：このカードが手札・デッキから墓地へ送られた場合に発動できる。
+PRINTL デッキから「ＢＫ」モンスター１体を墓地へ送る。
+
+@CARDCAN_93279(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,93279)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 発動誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = BK
+	効果条件Ｘ素所持 = 999
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 3 && RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = BK
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果条件種類 = 魔罠全般
+	CALL CARD_CHECK_START_DATA(決闘者,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 手札→墓地 || 種類 == デッキ→墓地
+	SIF 発動済_2(決闘者,93279)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = BK
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_93279(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 特殊発動
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 条件達成
+
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 発動誘発 
+	;参考：マリス
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+		特殊発動 = 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,93279,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		PRINTFORMW {特殊発動}
+		IF 特殊発動 == 1
+			PRINTL 素材を取り除くモンスターを選んでください。
+			CALL FULLRESET
+			効果範囲戦場 = 1
+			効果条件カテゴリ = BK
+			効果条件Ｘ素所持 = 999
+			CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+			選択カード = RESULT
+			選択カード_ID = RESULT:99
+			SIF 選択カード == 9999
+				RETURN 0
+			CALL CARD_SELECT(決闘者,選択カード)
+			選択カード = RESULT
+			CALL SET_FIELD_INFO(対象者（CS）,"戦場",選択カード（CS）,"Ｘ",-1)
+			TRYCALLFORM CARDNAME_{選択カード_ID}, "名前"
+			IF RESULTS == "BK 구속만병 리드블로"
+				PRINTL 
+				SETCOLOR C_YELLOW
+				PRINTL 리드블로の구속が解かれた！
+				RESETCOLOR
+				PRINTL 
+				CALL SET_FIELD_INFO(決闘者,"戦場",選択カード（CS）,"永攻",800)
+			ENDIF
+		ENDIF
+		;無効にする前にカードIDを取る
+		CALL FULLRESET
+		効果条件種類 = 魔罠全般
+		CALL CARD_CHECK_START_DATA(決闘者,1)
+		
+		選択カード_ID = 効後_効果ID:(処理中番号 - 1)
+		TRYCALLFORM CARD_{選択カード_ID},"種類"
+		IF RESULT == 通常罠
+			条件達成 = 1
+			選択カード = 効後_設場所:(処理中番号 - 1) 
+			TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
+			選択カード名前 = %RESULTS%
+
+		ENDIF
+		CALL CARD_REMOVAL_BASIC(決闘者,"発動無効",場所,"墓地")
+
+		;発動条件満たしてるかチェック
+		CALL FULLRESET
+		効果範囲相手墓地 = 1
+		効果条件種類 = 通常罠
+		効果条件名前 = %選択カード名前%
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF 条件達成 != 1 && RESULT != 1
+			RETURN 1
+		;自分が使う場合だけ選択肢
+		IF 決闘者 == "自分"
+			PRINTL 無効にしたカードを自分の場にセットしますか？
+			CALL YN_CHOICE(決闘者)
+			SIF RESULT == いいえ
+				RETURN 1
+		ENDIF
+		CALL FULLRESET
+		CALL CARD_ADD(決闘者,"相手魔罠","魔罠",選択カード,"裏側表示")
+	ENDIF
+	RETURN 0
+ELSEIF 種類 == 手札→墓地 || 種類 == デッキ→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,93279,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = BK
+		効果条件種類 = モン全般
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ENDIF
+

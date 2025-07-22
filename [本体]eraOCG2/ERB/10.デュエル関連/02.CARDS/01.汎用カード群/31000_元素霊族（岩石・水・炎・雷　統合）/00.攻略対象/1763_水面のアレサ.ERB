@@ -1,0 +1,114 @@
+﻿@CARDNAME_1763,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 수면의 아레사
+	CASE "略称"
+		RESULTS = 수면의 아레사
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1763(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常モン
+	CASE "属性"
+		RETURN 水属性
+	CASE "種族"
+		RETURN 元素霊族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 500
+	CASE "性別"
+		RETURN 牝性
+	CASE "分割"
+		RETURN デュアル
+	CASE "レア度"
+		RETURN SPR
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1763(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカードは通常モンスターである。
+CALL CARD_ABLE(1,戦場起動)
+PRINTL ①：このカードが表側表示で存在する限り自分メインフェイズ時、１度だけ「覚醒」できる。
+CALL CARD_ABLE(0,攻撃後誘発)
+PRINTL ②：覚醒状態のこのカードが戦闘によって相手モンスターを破壊し墓地へ送った場合に発動できる。
+PRINTL 相手の手札をランダムに１枚捨てさせる。
+
+
+@CARDSUMMON_AA_1763
+
+
+@CARDCAN_1763(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,1763)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 戦場起動 && GETVAR(@"%決闘者%_MZ_条達:場所") == 0
+	SIF 発動済_1(決闘者,覚醒発動)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 攻撃後誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_戦闘カード") != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(決闘者,1) == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1763(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 戦場起動 && GETVAR(@"%決闘者%_MZ_条達:場所") == 0
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,覚醒発動,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(決闘者,"戦場",場所,"条達",2,1)
+	ENDIF
+ELSEIF 種類 == 攻撃後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,1763)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(決闘者,"手札破壊",場所,"墓地")
+	ENDIF
+ENDIF
+

@@ -1,0 +1,210 @@
+@CARDNAME_4711,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 二の砦の可憐姫 プリム
+	CASE "略称"
+		RESULTS = 二の砦 プリム
+	CASE "カテゴリ"
+		RESULTS:0 = 七盾同盟
+		RESULTS:1 = 黒獣
+ENDSELECT
+
+@CARD_4711(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 魔法使い族
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 2000
+	CASE "性別"
+		RETURN 牝性
+	CASE "分割"
+		RETURN ペンデュラム
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_4711(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名のＰ効果は１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,魔罠起動)
+PRINTL ①：自分メインフェイズに発動できる。
+PRINTL 手札・ＥＸデッキからＥＸモンスター以外の「七盾同盟」Ｐモンスター１体を特殊召喚する。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL このカード名の①②のモンスター効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(2,召喚時,特殊召喚時)
+PRINTL ①：このカードが召喚・特殊召喚した場合に発動できる。
+PRINTL 手札を１枚捨てて、デッキ・ＥＸデッキから「一の砦の姫騎士 アリシア」１体を特殊召喚する。
+CALL CARD_ABLE(3,効果後誘発)
+PRINTL ②：このカード名以外のモンスターが特殊召喚された場合に、自分フィールドに「七盾同盟の象徴 セレスティン」が存在する場合に発動できる。
+PRINTL このカードを魔法＆罠ゾーンに表側表示で置き、
+PRINTL ＥＸデッキ・魔法＆罠ゾーンのこのカード名以外でかつＥＸモンスター以外の「七盾同盟」Ｐモンスター１体を特殊召喚する。
+
+
+@CARDCAN_4711(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,4711)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_1(決闘者,4711)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲EXデッキ = 1
+	効果条件種類 = EX以外全般
+	効果条件分割 = ペンデュラム
+	効果条件カテゴリ = 七盾同盟
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_2(決闘者,4711)
+		RETURN 0
+	SIF 手札数(決闘者) < 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件名前 = 一の砦の姫騎士 アリシア
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 効果後誘発
+	SIF 発動済_3(決闘者,4711)
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果条件種類 = モン全般
+	効果条件固名前 = 二の砦の可憐姫 プリム
+	CALL CARD_CHECK_FIN_DATA(決闘者,"特殊召喚",2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件名前 = 七盾同盟の象徴 セレスティン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果範囲EXデッキ = 1
+	効果条件カテゴリ = 七盾同盟
+	効果条件分割 = ペンデュラム
+	効果条件種類 = EX以外全般
+	効果条件召喚可 = 2
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4711(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4711)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4711,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果範囲EXデッキ = 1
+		効果条件種類 = EX以外全般
+		効果条件分割 = ペンデュラム
+		効果条件カテゴリ = 七盾同盟
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4711,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件名前 = 一の砦の姫騎士 アリシア
+			効果条件カテゴリ = 七盾同盟
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 効果後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4711,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲EXデッキ = 1
+			効果範囲魔罠 = 1
+			効果条件種類 = EX以外全般
+			効果条件固名前 = 二の砦の可憐姫 プリム
+			効果条件分割 = ペンデュラム
+			効果条件カテゴリ = 七盾同盟
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

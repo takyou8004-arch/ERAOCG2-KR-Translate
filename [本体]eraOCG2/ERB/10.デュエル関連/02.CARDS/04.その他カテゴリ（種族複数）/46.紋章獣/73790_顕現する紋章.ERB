@@ -1,0 +1,104 @@
+﻿@CARDNAME_73790,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 차지 메달리온
+	CASE "略称"
+		RESULTS = 현현하는 문장
+	CASE "カテゴリ"
+		RESULTS:0 = 메달리온
+ENDSELECT
+
+
+@CARD_73790(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "追加日"
+		RETURN 250713
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_73790(種類)
+#DIM DYNAMIC 種類
+
+
+PRINTL このカード名のカードは１ターンに１枚しか発動できない。
+CALLFORM CARD_ABLE(1,魔罠起動,手札起動)
+PRINTL ①：自分フィールドのモンスター１体をリリースして発動できる。
+PRINTL デッキから「문장수」モンスター２体を守備表示で特殊召喚する。
+PRINTL このカードの発動後、ターン終了時まで自分は「문장수」モンスターしかEXデッキから特殊召喚できない。
+
+
+@CARDCAN_73790(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,73790)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF 発動済_1(決闘者,73790)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 문장수
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73790(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73790,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		効果条件種類 = モン全般
+		CALL CARD_ADD_GY_BASIC(決闘者,"戦場",ゾーン,場所)
+		IF RESULT == 1
+		    CALL FULLRESET
+		    効果範囲デッキ = 1
+		    効果条件カテゴリ = 문장수
+			効果条件複数 = 2
+		    CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所,"守備表示")
+			CALL CARD_EX_RESTRICTION(決闘者,"문장수")
+		ENDIF
+	ENDIF
+ENDIF
+

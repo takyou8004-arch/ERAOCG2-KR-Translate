@@ -1,0 +1,218 @@
+@CARDNAME_4714,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 五の砦の鍛冶姫 ルー・ルー
+	CASE "略称"
+		RESULTS = 五の砦 ルールー
+	CASE "カテゴリ"
+		RESULTS:0 = 七盾同盟
+		RESULTS:1 = 黒獣
+ENDSELECT
+
+@CARD_4714(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 炎属性
+	CASE "種族"
+		RETURN 獣族
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 2000
+	CASE "性別"
+		RETURN 牝性
+	CASE "分割"
+		RETURN ペンデュラム
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_4714(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名のＰ効果は１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,魔罠起動)
+PRINTL ①：自分メインフェイズに手札・ＥＸデッキのＥＸモンスター以外の「七盾同盟」Ｐモンスター１体を対象として発動できる。
+PRINTL そのカードを魔法＆罠ゾーンに置き、このカードを特殊召喚する。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL このカード名の①②のモンスター効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(2,召喚時,特殊召喚時)
+PRINTL ①：このカードが召喚・特殊召喚した場合に相手フィールドのカード１枚を対象として発動できる。
+PRINTL そのカードを破壊し、ターン終了時までこのカードの攻撃力を３００アップする。
+PRINTL その後、自分フィールドに「七盾同盟の象徴 セレスティン」が存在する場合、さらにターン終了時までこのカードの攻撃力を５００アップする。
+CALL CARD_ABLE(3,攻撃後誘発)
+PRINTL ②：このカードが戦闘を行ったダメージステップ終了時に、自分フィールドに「七盾同盟の象徴 セレスティン」が存在する場合に発動できる。
+PRINTL このカードを魔法＆罠ゾーンに表側表示で置き、魔法＆罠ゾーンのこのカード名以外の「七盾同盟」Ｐモンスター１体を特殊召喚する。
+
+
+@CARDCAN_4714(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,4714)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_1(決闘者,4714)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲EXデッキ = 1
+	効果条件種類 = EX以外全般
+	効果条件分割 = ペンデュラム
+	効果条件カテゴリ = 七盾同盟
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,4714,"魔罠")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_2(決闘者,4714)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果範囲相手魔罠 = 1
+	効果条件除去種 = 墓地
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 攻撃後誘発
+	SIF 発動済_3(決闘者,4714)
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 場所
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件名前 = 七盾同盟の象徴 セレスティン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果条件カテゴリ = 七盾同盟
+	効果条件分割 = ペンデュラム
+	効果条件種類 = モン全般
+	効果条件召喚可 = 2
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4714(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 対象者
+#DIMS DYNAMIC 対象ゾーン
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4714)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4714,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果範囲EXデッキ = 1
+		効果条件種類 = EX以外全般
+		効果条件分割 = ペンデュラム
+		効果条件カテゴリ = 七盾同盟
+		CALL CARD_SET_ADV(決闘者,ゾーン,場所,"表側表示")
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4714,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲相手戦場 = 1
+		効果範囲相手魔罠 = 1
+		CALL CARD_REMOVAL_ADV(決闘者,"単体除去",場所,"墓地")
+		IF RESULT == 1
+			CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"一攻",300)
+			CALL FULLRESET
+			効果範囲戦場 = 1
+			効果範囲魔罠 = 1
+			効果条件名前 = 七盾同盟の象徴 セレスティン
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			SIF RESULT == 1
+				CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"一攻",500)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 攻撃後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4714,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲魔罠 = 1
+			効果条件固名前 = 五の砦の鍛冶姫 ルー・ルー
+			効果条件分割 = ペンデュラム
+			効果条件カテゴリ = 七盾同盟
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

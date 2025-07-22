@@ -23,6 +23,14 @@ ENDIF
 CUSTOMDRAWLINE ―
 IF CFLAG:MASTER:현재위치 == 場所_カドショ
 	PRINTL 【카드샵「주사위놀이」4호점】
+ELSEIF CFLAG:MASTER:현재위치 == 場所_モール
+	PRINTL 【GAME STAGE DOMINO KM몰점】
+ELSEIF CFLAG:MASTER:현재위치 == 場所_MZカドショ
+	PRINTL 【카드샵「새티스팩션」】
+ELSEIF CFLAG:MASTER:현재위치 == 場所_STカドショ
+	PRINTL 【리사이클샵「뒷 우물」】
+ELSEIF CFLAG:MASTER:현재위치 == 場所_KCカドショ
+	PRINTL 【카이바 코퍼레이션 샵 카드 직영점】
 ELSEIF CFLAG:MASTER:현재위치 == 場所_裏通り
 	PRINTL 【카드샵「카드헌터」9호점】
 ENDIF
@@ -33,23 +41,25 @@ RESETCOLOR
 CUSTOMDRAWLINE ―
 初回カウンタ = 1
 
-IF CFLAG:MASTER:현재위치 == 場所_カドショ
-	;SIF FLAG:게임모드 == 0
-	PRINTL [0] - 마스터팩을 산다　　　(1팩 150円)
-	PRINTL [1] - 테마팩을 산다　　　　(1팩 150円)
+IF CFLAG:MASTER:현재위치 == 場所_裏通り
 	PRINTL 
-	PRINTL [4] - 스트럭쳐 덱을 산다(2500円)
+	PRINTL [1] - 테마팩을 산다　　　　(1팩 2500엔)
+	PRINTL 
+	PRINTL [4] - 스트럭쳐 덱을 산다(25000엔)
+	PRINTL 
+	PRINTL [9] - 매입
+ELSE
+	PRINTL [0] - 마스터팩을 산다　　　(1팩 150엔)
+
+	IF CFLAG:MASTER:현재위치 != 場所_STカドショ
+		PRINTL [1] - 테마팩을 산다　　　　(1팩 150엔)
+		PRINTL 
+	ENDIF
+	PRINTL [4] - 스트럭쳐 덱을 산다(2500엔)
 	PRINTL 
 	PRINTL [2] - 고액 싱글을 본다
 	PRINTL 
 	PRINTL [3] - 카드 트레이더
-ELSEIF CFLAG:MASTER:현재위치 == 場所_裏通り
-	PRINTL 
-	PRINTL [1] - 테마팩을 산다　　　　(1팩 2500円)
-	PRINTL 
-	PRINTL [4] - 스트럭쳐 덱을 산다(25000円)
-	PRINTL 
-	PRINTL [9] - 매입
 ENDIF
 
 CUSTOMDRAWLINE ―
@@ -72,7 +82,6 @@ ELSEIF RESULT == 1
 	ELSE
 		IF CFLAG:MASTER:현재위치 == 場所_カドショ
 			CALL CARD_PACK_CHOOSE(1)
-
 		ELSEIF CFLAG:MASTER:현재위치 == 場所_裏通り
 			CALL CARD_PACK_CHOOSE(2)
 		ENDIF
@@ -82,13 +91,11 @@ ELSEIF RESULT == 2
 	CALL MONSTER_LIST(2)
 ELSEIF RESULT == 3
 	CALL CARD_TRADER
-
 ELSEIF RESULT == 4
 	$DECK_CHOICE
-
 	IF CFLAG:MASTER:현재위치 == 場所_カドショ
 		CUSTOMDRAWLINE ―
-		PRINTL 구입하고싶은 덱을 선택해주세요：（일률：2500円）
+		PRINTL 구입하고싶은 덱을 선택해 주세요：（일률：2500엔）
 		CUSTOMDRAWLINE ―
 		FOR カウンタ,0,20
 			IF カウンタ == 1
@@ -112,7 +119,7 @@ ELSEIF RESULT == 4
 	;Anonym추가、裏ショップストラクチャー구입
 	ELSEIF CFLAG:MASTER:현재위치 == 場所_裏通り
 		CUSTOMDRAWLINE ―
-		PRINTL 구입하고싶은 덱을 선택해주세요：（일률：25000円）
+		PRINTL 구입하고싶은 덱을 선택해 주세요：（일률：25000엔）
 		CUSTOMDRAWLINE ―
 
 		FOR カウンタ,500,510
@@ -174,7 +181,7 @@ PRINTFORM SR카드×【{ITEM:SR카드}】
 PRINTFORM R카드×【{ITEM:R카드}】
 PRINTFORM N카드×【{ITEM:N카드}】
 PRINTL
-PRINTFORML 「1번에 1500円이에요」 소지금:{MONEY}円
+PRINTFORML 「1번에 1500엔이에요」 소지금:{MONEY}엔
 PRINTL [0] - UR로 돌린다（필요 수UR카드 5장）
 PRINTL [1] - SR로 돌린다（필요 수SR카드 30장）
 PRINTL [2] - R로 돌린다 （필요 수R카드 200장）
@@ -241,7 +248,7 @@ ENDIF
 $INPUT_LOOP2
 CALL CARD_PACK_NAME(パック_종류)
 PRINTFORML 팩：%RESULTS%
-PRINTFORML 무슨 팩을 구입하시겠습니까？ 소지금:{MONEY}円
+PRINTFORML 무슨 팩을 구입하시겠습니까？ 소지금:{MONEY}엔
 CUSTOMDRAWLINE —
 ;PRINTFORML 오늘 구입 제한 나머지【{(パック_最大구입数 - パック_合計구입数)}】팩
 PRINTL
@@ -310,12 +317,9 @@ GOTO INPUT_LOOP2
 SIF GLOBAL_COMABLE(470)
 	RETURN RESULT
 ;デュエリストカフェ
-SIF CFLAG:MASTER:현재위치 == 場所_カドショ
-	RETURN 1
+SIF !CARDSHOP(CFLAG:MASTER:현재위치)
+	RETURN 0
 ;裏通り
 SIF CFLAG:MASTER:현재위치 == 場所_裏通り && パック_解放:99 == 1
 	RETURN 1
-;수면中
-SIF CFLAG:우후후 == 2
-	RETURN 0
-RETURN 0
+RETURN 1

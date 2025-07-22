@@ -1,0 +1,107 @@
+﻿@CARDNAME_1769,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 은익의 AXE－서리
+	CASE "略称"
+		RESULTS = 은익의AXE서리
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1769(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 機械族
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 100
+	CASE "分割"
+		RETURN ユニオン
+	CASE "性別"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1769(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,手札起動)
+PRINTL ①：自分フィールドの表側表示モンスター１体を対象として発動できる。
+PRINTL 自分の手札・フィールドからこのカードを攻撃力５００・守備力１００アップの装備カード扱いとしてそのモンスターに装備する。
+PRINTL この効果は相手ターンでも発動できる。
+
+@CARDCAN_1769(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,1769)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 種類 == 手札起動 || 種類 == フリー誘発
+	SIF ゾーン != "手札"
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	SIF 発動済_1(決闘者,1769)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件表示 = 10
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1769(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+
+IF 種類 == 手札起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,1769,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件表示 = 10
+		CALL CARD_CHOOSE_BASIC(決闘者,"戦場",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_EQUIP_MONSTER(決闘者,選択カード,"手札",場所,(3))
+		ENDIF
+	ENDIF
+ENDIF
+

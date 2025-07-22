@@ -1,0 +1,173 @@
+@CARDNAME_55543,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 웅장한 번개기룡－썬더 드래곤
+	CASE "略称"
+		RESULTS = 웅장한 번개기룡
+	CASE "カテゴリ"
+		RESULTS:0 = 썬더 드래곤
+ENDSELECT
+
+
+@CARD_55543(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 융합
+		;ちょっと思う所があってリンクから융합に
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 元素霊族
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 2800
+	CASE "特殊不可"
+		RETURN 1
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_55543(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 元素霊族モンスター×４
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,戦場起動)
+PRINTL ①：このカードがEXデッキから特殊召喚されている場合に発動できる。
+PRINTL 自分の墓地・除外状態から、「썬더 드래곤」モンスター１体をデッキの一番下に戻す。
+PRINTL その後、そのモンスターに記された、自身を手札から捨てて発動する効果を適用する。
+CALLFORM CARD_ABLE(0,身代効果)
+PRINTL ②：自分フィールドの元素霊族モンスターが戦闘・効果で破壊される場合、
+PRINTL 代わりに自分の墓地のカード３枚を除外できる。
+
+
+@CARDSUMMON_AA_55543
+
+
+
+@CARDSUMMON_55543(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 4
+素材条件種族 = 元素霊族
+
+
+IF EX参照 == 1
+	CALL FUSCAN(決闘者,召喚カード,55543) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_55543(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,55543)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 種類 == 戦場起動
+	SIF 発動済_1(決闘者,55543)
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_MZ_召種:場所") != 召種EXデッキ
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果範囲除外 = 1
+	CALLFORM 効果条件レベル_ADV(7,"以下")
+	効果条件カテゴリ = 썬더 드래곤
+	効果条件種類 = 効果モン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 身代効果
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 破壊対象ゾーン != "戦場"
+		RETURN 0
+	TRYCALLFORM CARD_{破壊対象ID}("種族")
+	SIF RESULT != 元素霊族
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_55543(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 出処
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件合致数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+ 
+IF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,55543,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果範囲除外 = 1
+		CALLFORM 効果条件レベル_ADV(7,"以下")
+		効果条件カテゴリ = 썬더 드래곤
+		効果条件種類 = 効果モン
+		効果条件行先フラグ = デッキ行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			TRYCALLFORM CARDEFFECT_{選択カード_ID}(決闘者,手札起動,"効果処理",場所)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 身代効果
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,55543)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件複数 = 3
+		CALL CARD_ADD_GY_BASIC(決闘者,"墓地",ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+

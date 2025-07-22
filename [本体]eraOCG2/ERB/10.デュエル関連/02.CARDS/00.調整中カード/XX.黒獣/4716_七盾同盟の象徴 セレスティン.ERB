@@ -1,0 +1,191 @@
+@CARDNAME_4716,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 七盾同盟の象徴 セレスティン
+	CASE "略称"
+		RESULTS = セレスティン
+	CASE "カテゴリ"
+		RESULTS:0 = 七盾同盟
+		RESULTS:1 = 黒獣
+ENDSELECT
+
+@CARD_4716(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 天使族
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 3000
+	CASE "性別"
+		RETURN 牝性
+	CASE "分割"
+		RETURN ペンデュラム
+	CASE "召喚不可"
+		RETURN 1
+	CASE "特殊不可"
+		RETURN 1
+	CASE "単一存在"
+		RETURN 1
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_4716(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名の①②のＰ効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(2,魔罠起動)
+PRINTL ①：自分メインフェイズに発動できる。
+PRINTL 手札を１枚捨てて、デッキから「七盾同盟」魔法・罠カード１枚を手札に加える。
+CALL CARD_ABLE(3,発動誘発)
+PRINTL ②：相手の魔法・罠カードの効果が発動した場合に、自分フィールドのこのカード名以外の「七盾同盟」Ｐモンスターカード１枚を対象として発動できる。
+PRINTL 対象のカードをＥＸデッキに戻し、発動した効果を無効にする。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL このカードは召喚・特殊召喚できない。
+PRINTL このカード名のカードは自分フィールドに１体しか表側表示で存在できない。
+
+@CARDCAN_4716(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,4716)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件名前 = 七盾同盟の象徴 セレスティン
+	効果条件カテゴリ = 七盾同盟
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_2(決闘者,4716)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 手札数(決闘者) < 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件種類 = 魔罠全般
+	効果条件カテゴリ = 七盾同盟
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 発動誘発
+	SIF 発動済_3(決闘者,4716)
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") > 1
+		RETURN 0
+	CALL FULLRESET
+	効果条件種類 = 魔罠全般
+	CALL CARD_CHECK_START_DATA(決闘者,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件固名前 = 七盾同盟の象徴 セレスティン
+	効果条件分割 = ペンデュラム
+	効果条件カテゴリ = 七盾同盟
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4716(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 対象者
+#DIMS DYNAMIC 対象ゾーン
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4716,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4716,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件種類 = 魔罠全般
+			効果条件カテゴリ = 七盾同盟
+			CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 発動誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4716,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲魔罠 = 1
+		効果条件固名前 = 七盾同盟の象徴 セレスティン
+		効果条件分割 = ペンデュラム
+		効果条件カテゴリ = 七盾同盟
+		効果条件行先フラグ = EXデッキ行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"発動無効",場所,"無効")
+			RETURN 1
+		ENDIF
+	ENDIF
+ENDIF

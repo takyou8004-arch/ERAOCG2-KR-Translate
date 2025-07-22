@@ -1,0 +1,221 @@
+﻿@CARDNAME_39904,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ィークギア・アクメレーザーポーン
+	CASE "略称"
+		RESULTS = 狂逝の頂光兵
+	CASE "カテゴリ"
+		RESULTS:0 = 狂逝の機械
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39904(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 地属性
+	CASE "種族"
+		RETURN 機械族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1000
+	CASE "性別"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39904(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL このカード名の①②③の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,手札起動,墓地起動)
+PRINTL ①：このカードが手札・墓地に存在し、自分フィールドに「狂逝の機械」カードが存在する場合に発動できる。
+PRINTL このカードを特殊召喚する。
+CALLFORM CARD_ABLE(2,召喚時,特殊召喚時)
+PRINTL ②：このカードが召喚・特殊召喚した場合に発動できる。
+PRINTL デッキから「狂逝の機械」魔法・罠カード１枚を手札に加える。
+CALLFORM CARD_ABLE(3,戦場起動)
+PRINTL ③：自分・相手のメインフェイズに１度、相手フィールドの表側表示モンスター１体を対象として発動できる。
+PRINTL そのモンスターの攻撃力・守備力はこのカードの攻撃力分ダウンし、発情させる。
+PRINTL その後、フィールドの「狂逝の機械」カードを１枚を選び、そのカードに媚薬カウンターを１つ置く。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39904(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 調教対象
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,39904)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動 || 種類 == 墓地起動
+	SIF 発動済_1(決闘者,39904)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,39904,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+    効果範囲魔罠 = 1
+	効果条件カテゴリ = 狂逝の機械
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+    
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_2(決闘者,39904)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件種類 = 魔罠全般
+	効果条件カテゴリ = 狂逝の機械
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 戦場起動
+	SIF 発動済_3(決闘者,39904)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+    効果条件表示 = 表側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39904(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 調教対象
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 減少値
+
+
+
+
+IF 種類 == 手札起動 || 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39904,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+	ENDIF
+
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39904,2)
+	IF RESULT == 0
+		CALL FULLRESET
+        効果範囲デッキ = 1
+		効果条件カテゴリ = 狂逝の機械
+        効果条件種類 = 魔罠全般
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+	ENDIF
+
+ELSEIF 種類 == 戦場起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39904,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件種類 = モン全般
+		効果条件表示 = 表側表示
+        減少値 = GETVAR(@"%決闘者%_MZ_攻:場所")
+		CALL CARD_REMOVAL_BASIC(決闘者,"戦場単体",場所,"永攻DOWN",減少値)
+		CALL CARD_EROTICS(RESULT:2)
+			IF RESULT != -1
+			調教対象 = RESULT
+				SELECTCASE RAND:3
+					CASE 0
+					PRINTFORMW 機械頂光兵は右肩に搭載された強制絶頂させる光線を発射させるための狙撃砲を%CALLNAME:調教対象%に向けて撃つ。
+					SETCOLOR C_PINK 
+					PRINTFORMW 数コンマ程度の差異で、桃色の光線で撃ち抜かれた%CALLNAME:調教対象%はその場で急に愛液と潮を吹き出させ、
+					PRINTFORMW 「ぇ、……ぁ”、え”♡ぃ”っっっぎゅゅっ”♡ぁ”♡なに”こりぇ”ぇ”ぇ”♡♡♡」
+					PRINTFORMW 遅れるように愛液を溢れさせるように喘ぎ声をまき散らしながら絶頂した……
+					RESETCOLOR
+					CASE 1
+					PRINTFORMW 機械頂光兵が撃つ絶頂光線に貫かれた%CALLNAME:調教対象%の体はその場で愛液と潮を吹き出して絶頂する。
+					SETCOLOR C_PINK
+					PRINTFORMW 肉体に何が起きたかもわかっていない%CALLNAME:調教対象%は不意の事態に対応する子も出来ず、
+					PRINTFORMW ただその場で肉体を『びくっ❤びくっっ”❤』と跳ねあげながら絶頂し続けることしかできずにいる……
+					RESETCOLOR
+					CASE 2
+					PRINTFORMW %CALLNAME:調教対象%は急に自身の肉体を貫いた桃色の光線を感じ取った、
+					SETCOLOR C_PINK 
+					PRINTFORMW それを自覚してしまいながら体がイきつづけている事を認識した%CALLNAME:調教対象%に身に受けた絶頂光線に対して出来る事は無く、
+					PRINTFORMW ただアクメ声をあげ、絶頂するたびに「イくっ♡」と報告するだけの無様な牝となってしまった……
+					RESETCOLOR
+				ENDSELECT
+				SETCOLOR C_PINK 
+				CALL MADORGASM_RAND_ROB_TXT(1,1)
+				RESETCOLOR
+				CALL EROTIC_MOVE("絶頂光線",調教対象,-1,300)
+
+				IF 調教対象 != -1
+				CALL EROTIC_MOVE("絶頂光線",調教対象,-1,300)
+				ENDIF
+
+        	CALL STATCHANGE_EFFECT(決闘者,"戦場単体",場所,"発情")
+			ENDIF
+    	CALL FULLRESET
+        SETCOLOR C_PINK
+		PRINTFORML
+		PRINTFORML
+		PRINTFORML 　　　「狂逝の機械」に、媚薬カウンターを１つ乗せる事ができます、対象を選んでください。
+		PRINTFORML
+		RESETCOLOR
+		効果範囲戦場 = 1
+		効果条件カテゴリ = 狂逝の機械
+		CALL CARD_CHOOSE_BASIC(決闘者,"戦場",ゾーン,場所)
+		選択カード = RESULT
+			IF 選択カード != 9999
+				CALL SET_FIELD_INFO(決闘者,"戦場",選択カード,"薬Ｃ",1)
+			ENDIF
+	ENDIF
+	
+ENDIF
+
+
+
+

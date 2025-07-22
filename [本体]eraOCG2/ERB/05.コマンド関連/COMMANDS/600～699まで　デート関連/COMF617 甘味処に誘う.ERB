@@ -2,6 +2,9 @@
 ;디저트카페로 초대한다
 ;-------------------------------------------------
 @COM617 
+#DIM DYNAMIC 회복率_체력
+#DIM DYNAMIC 회복率_기력
+
 LOCAL = RAND:100
 LOCAL:1 = 90 + GET_SUCCESS_RATE() / 5
 SIF LOCAL:1 > 99
@@ -33,10 +36,12 @@ FOR LOCAL,1,CHARANUM
 	CALL COM617_1
 NEXT
 TARGET = LOCAL:1
-
 BASE:MASTER:체력 = MIN(BASE:MASTER:체력 + MAXBASE:MASTER:체력 / 10 , MAXBASE:MASTER:체력)
 BASE:MASTER:기력 = MIN(BASE:MASTER:기력 + MAXBASE:MASTER:기력 / 3 , MAXBASE:MASTER:기력)
+CALL RECOVER_PERMIL(MASTER,회복率_체력,"체력",1)
+CALL RECOVER_PERMIL(MASTER,회복率_기력,"기력",1)
 EXP:MASTER:데이트경험 ++
+TCVAR:MASTER:식사가능여부 = 1440 * DAY + TIME
 
 TIME += 60
 CALL MONEY_GET(-3000)
@@ -45,80 +50,97 @@ RETURN 1
 
 
 @COM617_1
+#DIM DYNAMIC 환락강도
+#DIM DYNAMIC 정복강도
+#DIM DYNAMIC 정애강도
+#DIM DYNAMIC 수동강도
+#DIM DYNAMIC 회복率_체력
+#DIM DYNAMIC 회복率_기력
+
 DOWNBASE:기력 += 10
 
 ;固定で획득するソース
-SOURCE:환락 = 800
-SOURCE:정애 = 300
+환락강도 = 800
+
+정애강도 = 300
 
 ;ABL:욕망をみる
 IF ABL:욕망 <= 1
-	SOURCE:환락 += (ABL:욕망 * 60)
+	환락강도 += (ABL:욕망 * 60)
 ELSEIF ABL:욕망 <= 3
-	SOURCE:환락 += 300 + (ABL:욕망 * 60)
+	환락강도 += 300 + (ABL:욕망 * 60)
 ELSEIF ABL:욕망 <= 5
-	SOURCE:환락 += 600 + (ABL:욕망 * 60)
+	환락강도 += 600 + (ABL:욕망 * 60)
 ELSEIF ABL:욕망 <= 8
-	SOURCE:환락 += 900 + (ABL:욕망 * 75)
+	환락강도 += 900 + (ABL:욕망 * 75)
 ELSEIF ABL:욕망 <= 11
-	SOURCE:환락 += 1500 + (ABL:욕망 * 75)
+	환락강도 += 1500 + (ABL:욕망 * 75)
 ELSE
-	SOURCE:환락 += 2500 + (ABL:욕망 * 30)
+	환락강도 += 2500 + (ABL:욕망 * 30)
 ENDIF
 
 ;ABL:봉사정신をみる
 IF ABL:봉사정신 <= 1
-	SOURCE:정애 += (ABL:봉사정신 * 30)
+	정애강도 += (ABL:봉사정신 * 30)
 ELSEIF ABL:봉사정신 <= 3
-	SOURCE:정애 += 200 + (ABL:봉사정신 * 30)
+	정애강도 += 200 + (ABL:봉사정신 * 30)
 ELSEIF ABL:봉사정신 <= 5
-	SOURCE:정애 += 500 + (ABL:봉사정신 * 30)
+	정애강도 += 500 + (ABL:봉사정신 * 30)
 ELSEIF ABL:봉사정신 <= 8
-	SOURCE:정애 += 700 + (ABL:봉사정신 * 45)
+	정애강도 += 700 + (ABL:봉사정신 * 45)
 ELSEIF ABL:봉사정신 <= 11
-	SOURCE:정애 += 1200 + (ABL:봉사정신 * 45)
+	정애강도 += 1200 + (ABL:봉사정신 * 45)
 ELSE
-	SOURCE:정애 += 1800 + (ABL:봉사정신 * 20)
+	정애강도 += 1800 + (ABL:봉사정신 * 20)
 ENDIF
 
 ;호감도をみる
 IF CFLAG:호감도 <= 500
-	SOURCE:환락 += CFLAG:호감도
+	환락강도 += CFLAG:호감도
 ELSEIF CFLAG:호감도 <= 5000
-	SOURCE:환락 += 750 + (CFLAG:호감도 - 500) / 3
+	환락강도 += 750 + (CFLAG:호감도 - 500) / 3
 ELSE
-	SOURCE:환락 += 2000 + (CFLAG:호감도 - 5000) / 4
+	환락강도 += 2000 + (CFLAG:호감도 - 5000) / 4
 ENDIF
-SIF SOURCE:환락 < 0
-	SOURCE:환락 = 0
+SIF 환락강도 < 0
+	환락강도 = 0
 
 
-SOURCE:수동 = 200 + 100 * ABL:순종
-SOURCE:정복 = 200 + 100 * ABL:새드끼
+수동강도 = 200 + 100 * ABL:순종
+정복강도 = 200 + 100 * ABL:새드끼
 
 IF TFLAG:SELECTCOM분기 == -1
-	TIMES SOURCE:환락 , 0.10
-	TIMES SOURCE:정애 , 0.10
-	TIMES SOURCE:정복 , 0.50
-	TIMES SOURCE:수동 , 0.50
+	TIMES 환락강도 , 0.10
+	TIMES 정애강도 , 0.10
+	TIMES 정복강도 , 0.50
+	TIMES 수동강도 , 0.50
 ELSEIF TFLAG:SELECTCOM분기 == 0
-	TIMES SOURCE:환락 , 1.00
-	TIMES SOURCE:정애 , 1.00
-	TIMES SOURCE:정복 , 1.00
-	TIMES SOURCE:수동 , 1.00
+	TIMES 환락강도 , 1.00
+	TIMES 정애강도 , 1.00
+	TIMES 정복강도 , 1.00
+	TIMES 수동강도 , 1.00
 ELSE
-	TIMES SOURCE:환락 , 2.00
-	TIMES SOURCE:정애 , 1.50
-	TIMES SOURCE:정복 , 2.00
-	TIMES SOURCE:수동 , 2.00
+	TIMES 환락강도 , 2.00
+	TIMES 정애강도 , 1.50
+	TIMES 정복강도 , 2.00
+	TIMES 수동강도 , 2.00
+	;期限の良さ（ウチではまだ設定なし）
 	SIF TALENT:15 < 1
 		TALENT:15 = 1
 ENDIF
+CALL SOURCE_CALC_환락(TARGET, MASTER, 환락강도)
+CALL SOURCE_CALC_정복(TARGET, MASTER, 정복강도)
+CALL SOURCE_CALC_정애(TARGET, MASTER, 정애강도)
+CALL SOURCE_CALC_수동(TARGET, MASTER, 수동강도)
 
-BASE:(TARGET:LOCAL):체력 = MIN(BASE:(TARGET:LOCAL):체력 + MAXBASE:(TARGET:LOCAL):체력 / 10 , MAXBASE:(TARGET:LOCAL):체력)
-BASE:(TARGET:LOCAL):기력 = MIN(BASE:(TARGET:LOCAL):기력 + MAXBASE:(TARGET:LOCAL):기력 / 3 , MAXBASE:(TARGET:LOCAL):기력)
-EXP:TARGET:데이트경험 ++
-TCVAR:MASTER:식사가능여부 = 1440 * DAY + TIME
+
+회복率_체력 = MIN(BASE:TARGET:체력 + MAXBASE:TARGET:체력 / 10 , MAXBASE:TARGET:체력)
+회복率_기력 = MIN(BASE:TARGET:기력 + MAXBASE:TARGET:기력 / 3 , MAXBASE:TARGET:기력)
+CALL RECOVER_PERMIL(TARGET,회복率_체력,"체력",1)
+CALL RECOVER_PERMIL(TARGET,회복率_기력,"기력",1)
+
+EXP:TARGET:デート経験 ++
+
 
 ;-------------------------------------------------
 ;実行판정

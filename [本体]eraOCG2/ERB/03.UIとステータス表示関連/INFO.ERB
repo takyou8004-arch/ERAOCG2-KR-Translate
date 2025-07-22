@@ -19,6 +19,8 @@
 #DIMS DYNAMIC 名前설정
 #DIM DYNAMIC GDI値
 #DIM DYNAMIC ターゲット보존,100
+#DIM DYNAMIC PORTRAIT_같은방数
+#DIM SPACEWIDTH
 
 #DIM GDI보존
 VARSET 표시済み
@@ -47,7 +49,7 @@ SIF 듀얼モード == 1
 CALL CHARA_ATTITUDE
 
 ;-------------------------------------------------
-;시간경과によるステータス回復、캐릭터의 이동
+;시간경과によるステータス회복、캐릭터의 이동
 ;-------------------------------------------------
 CALL CHARA_MOVEMENT("INFO")
 IF TCVAR:MASTER:친밀감 >= 1
@@ -484,19 +486,28 @@ IF TARGET:2
 		SIF カウンタ >= 20
 			BREAK
 	NEXT
-
+	IF PORTRAIT_画像표시 == 1 && PORTRAIT_簡易표시 == 0
+		SPACEWIDTH = 31
+	ELSE
+		SPACEWIDTH = 0
+	ENDIF
 	SIF CFLAG:MASTER:우후후 >= 1
 		SETCOLOR  C_Ne_PINK	
-	PRINTFORM ＞＞——동실자：
-	;PRINTFORM {PORTRAIT_같은방開始} / {GET_TARGETNUM()}
+
+	PRINTFORM %"",SPACEWIDTH%
+	PRINTFORM ——동실자：
 	PRINTBUTTON "[표시 전환]",2020
 	PRINTFORM ——
 	PRINTBUTTON "(<<)", 2021
-	PRINTFORM ————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+	PRINTFORM —————————————————————————————————————————
 	PRINTBUTTON "(>>)", 2022
-	PRINTFORM ———————
+	PRINTFORM ————————————————————————————————————————————————
+	IF PORTRAIT_画像표시 == 1 && PORTRAIT_簡易표시 == 1
+		PRINTFORM ———————————————————————————————
+	ENDIF
 	PRINTL
 	RESETCOLOR
+	PRINTFORM %"",SPACEWIDTH%
 	IF PORTRAIT_같은방표시 == 0
 		FOR カウンタ, 0, CHARANUM
 			SIF TARGET:カウンタ <= 0
@@ -525,6 +536,11 @@ IF TARGET:2
 		NEXT
 		PRINTL
 	ELSEIF PORTRAIT_같은방표시 == 1
+		IF PORTRAIT_簡易표시 == 1
+			PORTRAIT_같은방数 = 6
+		ELSE
+			PORTRAIT_같은방数 = 4
+		ENDIF
 		FOR カウンタ, PORTRAIT_같은방開始, (PORTRAIT_같은방開始 + 6)
 			SIF ターゲット보존:カウンタ <= 0
 				CONTINUE
@@ -532,8 +548,6 @@ IF TARGET:2
 				SETCOLOR C_PINK
 			SIF TARGET == ターゲット보존:カウンタ
 				SETCOLOR C_AQUA
-			;24CHARA= 18CHARA
-
 			SUBSTRING CALLNAME:(ターゲット보존:カウンタ), 0, 16
 			名前설정 = %"[" + RESULTS + "]",18,LEFT%
 			PRINTBUTTON @"%名前설정%", (1000 + ターゲット보존:カウンタ)
@@ -547,23 +561,13 @@ IF TARGET:2
 			ELSE
 				PRINTFORM %"",6%
 			ENDIF
-
 			RESETCOLOR
+
 			SIF カウンタ < GET_TARGETNUM()
 				PRINTFORM %"",1%
 		NEXT
 		PRINTL
-		FOR カウンタ, PORTRAIT_같은방開始, (PORTRAIT_같은방開始 + 6)
-			SIF ターゲット보존:カウンタ <= 0
-				CONTINUE
-			PRINT ┏━━━━━━━━━━┓
-			;24CHARA
-			RESETCOLOR
-			SIF カウンタ < GET_TARGETNUM()
-				PRINTFORM %"",1%
-
-		NEXT
-		PRINTL
+		PRINTFORM %"",SPACEWIDTH%
 
 		FOR カウンタ,PORTRAIT_같은방開始, (PORTRAIT_같은방開始 + 6)
 			SIF ターゲット보존:カウンタ <= 0
@@ -574,36 +578,23 @@ IF TARGET:2
 				GDI보존 = 0
 			ENDIF
 			CALL SHOW_GRAPHICS(ターゲット보존:カウンタ,GDI値,3)
-			PRINT ┃
 			IF SPRITECREATED(@"{GDI値}_WINDOW")
-				LOCALS = <button value='{1000 + ターゲット보존:カウンタ}'><img src='{GDI値}_WINDOW' srcb='' height='{600}' width='{1000}'></button>
+				LOCALS = <div height='{(PORTRAIT_표시サイズ)*60 +200}' width='{(PORTRAIT_표시サイズ)*100 +200}' border='15' margin='35' padding='2px,2px,2px,0' xpos='{(カウンタ-PORTRAIT_같은방開始)*(PORTRAIT_표시サイズ+2)*100}'><button value='{1000 + ターゲット보존:カウンタ}'><shape type='space' param='50'><img src='{GDI値}_WINDOW' srcb='' height='{(PORTRAIT_표시サイズ)*60}' width='{(PORTRAIT_표시サイズ)*100}' ypos='7px'></button></div>
 				HTML_PRINT LOCALS,30
 			ENDIF
-			PRINT ┃
 			SIF カウンタ < GET_TARGETNUM()
 				PRINTFORM %"",1%
+;				PRINTFORM {カウンタ}
 		NEXT
 		PRINTL
-
-		REPEAT 5
-			FOR カウンタ,PORTRAIT_같은방開始, (PORTRAIT_같은방開始 + 6)
-				SIF ターゲット보존:カウンタ <= 0
-					CONTINUE
-				PRINTFORM ┃%"",20,LEFT%┃
-				SIF カウンタ < GET_TARGETNUM()
-					PRINTFORM %"",1%
-			NEXT
+		FOR LOCAL,0,7
 			PRINTL
-		REND
-		FOR カウンタ,PORTRAIT_같은방開始, (PORTRAIT_같은방開始 + 6)
-			SIF ターゲット보존:カウンタ <= 0
-				CONTINUE
-			PRINTFORM ┗━━━━━━━━━━┛
-			SIF カウンタ < GET_TARGETNUM()
-				PRINTFORM %"",1%
 		NEXT
-		PRINTL
 	ENDIF
+ELSE
+	FOR LOCAL,0,10
+		PRINTL
+	NEXT
 ENDIF
 
 IF TARGET == 0
@@ -641,3 +632,4 @@ IF TARGET
 	ENDIF
 	RESETCOLOR
 ENDIF
+

@@ -1,0 +1,263 @@
+@CARDNAME_4713,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 四の砦の女傭兵 マイア
+	CASE "略称"
+		RESULTS = 四の砦 マイア
+	CASE "カテゴリ"
+		RESULTS:0 = 七盾同盟
+		RESULTS:1 = 黒獣
+ENDSELECT
+
+@CARD_4713(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN エクシーズ
+	CASE "属性"
+		RETURN 地属性
+	CASE "種族"
+		RETURN 戦士族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1800
+	CASE "性別"
+		RETURN 牝性
+	CASE "分割"
+		RETURN ペンデュラム
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_4713(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+
+IF EX参照 == 1
+	CALL XYZCAN(決闘者,召喚カード,4713) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_4713(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名のＰ効果は１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,魔罠起動)
+PRINTL ①：自分メインフェイズに、手札・フィールドのＰモンスターカード１枚を対象として発動できる。
+PRINTL そのカードをＥＸデッキに送り、このカードを特殊召喚する。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL レベル４モンスター×２
+CALL CARD_ABLE(4,EXデッキ起動)
+PRINTL このカード名のカードは１ターンに１度、自分フィールドにこのカード名のカードが存在しない場合に、
+PRINTL 自分フィールドのレベル６以下のＰモンスターカード１体をＥＸデッキに送ることで、自分の魔法＆罠ゾーンに表側表示で置く事ができる。
+PRINTL このカード名の①②のモンスター効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(2,EX召喚時,特殊召喚時)
+PRINTL ①：このカードが特殊召喚した場合に相手フィールドの表側表示のモンスター１枚を対象として発動できる。
+PRINTL ターン終了時まで、そのモンスターの効果を無効化する。
+CALL CARD_ABLE(3,効果後誘発)
+PRINTL ②：このカード名以外のモンスターが特殊召喚された場合に発動できる。
+PRINTL このカードを魔法＆罠ゾーンに表側表示で置き、
+PRINTL ＥＸデッキ・魔法＆罠ゾーンのこのカード名以外でかつＥＸモンスター以外のＰモンスター１体を特殊召喚する。
+
+
+@CARDCAN_4713(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,4713)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	SIF 発動済_1(決闘者,4713)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	IF モンスター数(決闘者) < 5
+		効果範囲手札 = 1
+		効果範囲魔罠 = 1
+	ENDIF
+	効果範囲戦場 = 1
+	効果条件分割 = ペンデュラム
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,4713,"魔罠",1)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == EX召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_2(決闘者,4713)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果条件表示 = 表側表示
+	効果条件除去種 = 無効
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 効果後誘発
+	SIF 発動済_3(決闘者,4713)
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果条件固名前 = 四の砦の女傭兵 マイア
+	CALL CARD_CHECK_FIN_DATA(決闘者,"特殊召喚",2)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果範囲EXデッキ = 1
+	効果条件分割 = ペンデュラム
+	効果条件種類 = EX以外全般
+	効果条件召喚可 = 2
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == EXデッキ起動
+	SIF 発動済_4(決闘者,4713)
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件名前 = 四の砦の女傭兵 マイア
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件分割 = ペンデュラム
+	CALLFORM 効果条件レベル_ADV(6,"以下")
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_4713(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 対象者
+#DIMS DYNAMIC 対象ゾーン
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4713)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == 魔罠起動 && GETVAR(@"%決闘者%_魔_表:場所") == 1
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4713,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		IF モンスター数(決闘者) < 5
+			効果範囲手札 = 1
+			効果範囲魔罠 = 1
+		ENDIF
+		効果範囲戦場 = 1
+		効果条件分割 = ペンデュラム
+		効果条件行先フラグ = EXデッキ行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == EX召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4713,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲相手戦場 = 1
+		効果条件表示 = 表側表示
+		CALL CARD_REMOVAL_ADV(決闘者,"単体除去",場所,"無効")
+	ENDIF
+ELSEIF 種類 == 効果後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4713,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲EXデッキ = 1
+			効果範囲魔罠 = 1
+			効果条件種類 = EX以外全般
+			効果条件固名前 = 四の砦の女傭兵 マイア
+			効果条件分割 = ペンデュラム
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == EXデッキ起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4713,4)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲魔罠 = 1
+		効果範囲戦場 = 1
+		効果条件分割 = ペンデュラム
+		CALLFORM 効果条件レベル_ADV(6,"以下")
+		効果条件行先フラグ = EXデッキ行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲EXデッキ = 1
+			効果条件名前 = 四の砦の女傭兵 マイア
+			CALL CARD_SET_ADV(決闘者,ゾーン,場所,"表側表示")
+		ENDIF
+	ENDIF
+ENDIF

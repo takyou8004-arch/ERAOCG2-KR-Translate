@@ -1,0 +1,137 @@
+@CARDNAME_98720,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 七盾同盟の挺身
+	CASE "略称"
+		RESULTS = 七盾同盟の挺身
+	CASE "カテゴリ"
+		RESULTS:0 = 七盾同盟
+		RESULTS:1 = 黒獣
+ENDSELECT
+
+@CARD_98720(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 通常罠
+	CASE "追加日"
+		RETURN 250707
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_98720(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_98720(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 自分フィールドに「七盾同盟の象徴 セレスティン」が存在する場合、このカードは手札から発動できる。
+PRINTL このカード名の効果は１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,発動誘発)
+PRINTL ①：相手のモンスターの効果が発動した場合に、自分フィールドに「七盾同盟」モンスターカードが存在するなら発動できる。
+PRINTL ＥＸデッキからＥＸモンスター以外の「七盾同盟」モンスター１体を墓地に送り、その効果を無効にする。
+
+@CARDCAN_98720(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+#DIM DYNAMIC 候補除外ID, VARSIZE("効果条件固ID")
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 選択カード名前
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC カウンタB
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,98720)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 発動誘発
+	IF ゾーン == "手札"
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲魔罠 = 1
+		効果条件名前 = 七盾同盟の象徴 セレスティン
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSEIF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_START_DATA(決闘者,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件カテゴリ = 七盾同盟
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲EXデッキ = 1
+	効果条件カテゴリ = 七盾同盟
+	効果条件種類 = EX以外全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_98720(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,98720,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲EXデッキ = 1
+		効果条件カテゴリ = 七盾同盟
+		効果条件種類 = EX以外全般
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"発動無効",場所,"無効")
+			RETURN 1
+		ENDIF
+	ENDIF
+ENDIF
