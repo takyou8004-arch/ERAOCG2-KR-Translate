@@ -1,0 +1,164 @@
+﻿@CARDNAME_65515,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 홍마의 안개
+	CASE "略称"
+		RESULTS = 홍마의 안개
+	CASE "カテゴリ"
+		RESULTS:0 = 홍마관
+		RESULTS:1 = 이변
+		RESULTS:4 = 동방 Project
+ENDSELECT
+
+
+@CARD_65515(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 지속마법
+	CASE "추가日"
+		RETURN 250705
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_65515(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(1,지속효과)
+PRINTL ①：소환・특수소환したモンスターはそのターンの間、守備표시になる。
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ②：元々の攻撃力が２０００以上の「뱀파이어」モンスターが破壊された場合に발동できる。
+PRINTL 자신の묘지から攻撃力が２０００以上の「뱀파이어」モンスター１体を특수소환する。
+CALLFORM CARD_ABLE(1,ターン終了時強制)
+PRINTL ③：상대エンドフェイズ時に「홍마관の主 レミリア 스칼렛」が存在しない場合に발동する。
+PRINTL このカードを破壊し、덱からこのカード名以外の「이변」カード１枚とそのカテゴリのレベル４以下のモンスター１体を손패に加える。
+
+
+
+
+@CARDCAN_65515(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,65515)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 뱀파이어
+	효과条件以攻撃力 = 2500
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF 발동済_3(듀얼리스트,65515)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = 홍마관の主 レミリア 스칼렛
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_65515(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 속성数
+#DIMS DYNAMIC 参照先
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,65515)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,65515)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 뱀파이어
+		효과条件以攻撃力 = 2500
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件T1召種 = 全召種
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+	CALL FULLRESET
+	효과条件T1召種 = 全召種
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"対耐",,65515)
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,65515,3)
+	IF RESULT == 0	
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 이변
+		효과条件固名前 = 홍마의 안개
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			CALLFORM CARDNAME_{選択カード_ID}("カテゴリ")
+			효과条件カテゴリ = 설정カテゴリ
+
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = %효과条件カテゴリ%
+			CALLFORM 효과条件レベル_ADV(4,"以下")
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+

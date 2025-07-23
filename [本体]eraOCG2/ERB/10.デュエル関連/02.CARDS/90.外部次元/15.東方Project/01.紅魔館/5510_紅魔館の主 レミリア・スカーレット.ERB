@@ -1,0 +1,185 @@
+@CARDNAME_5510,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 홍마관の主 レミリア 스칼렛
+	CASE "略称"
+		RESULTS = 홍마관의레밀리아
+	CASE "カテゴリ"
+		RESULTS:0 = 홍마관
+		RESULTS:1 = 환상소녀
+		RESULTS:2 = 뱀파이어
+		RESULTS:4 = 동방 Project
+ENDSELECT
+
+@CARD_5510(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250705
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_5510(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「홍마관」モンスターを含むモンスター２体以上
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：このカードが특수소환に成功した場合に발동できる。
+PRINTL 자신の손패・묘지の「홍마관」モンスター１体を특수소환する。
+CALL CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ②：자신・상대ターンに발동できる。덱の上から６枚を見て、その中から１枚を選ぶ。
+PRINTL そのカードを덱の上に置く。次のドローフェイズの通常のドローは２枚になる。
+PRINTL こうして「홍마관」カードを選択した場合、자신・상대フィールドのカードを１枚破壊できる。
+CALL CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ③：このカードがモンスターを攻撃した場合、
+PRINTL その守備力を攻撃力が超えていれば、상대モンスターを破壊し、このカードの攻撃力分のダメージを与える。
+
+
+
+
+@CARDCAN_5510(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,5510)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,5510)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 홍마관
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_2(듀얼리스트,5510)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF GETVAR(@"%対面者%_MZ_守:戦闘場所(듀얼리스트,1)") >= GETVAR(@"%듀얼리스트%_MZ_攻:戦闘場所(듀얼리스트)")
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDSUMMON_5510(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 3
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 홍마관
+ELSE
+ENDIF
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,5510) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDEFFECT_5510(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 合計ダメージ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,5510,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 홍마관
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,5510,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"덱",ゾーン,場所,6)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+			CALL CARD_ADD_DECK_SPC(듀얼리스트,"덱",選択カード)
+			CALL SET_PLAYER_INFO(듀얼리스트,"ドロー倍化",1)
+			TRYCALLFORM CARDNAME_{選択カード_ID}("カテゴリ")
+			IF MATCH(RESULTS,"홍마관")
+				CALL FULLRESET
+				효과条件任意 = 1
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드単体",場所,"묘지")
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,5510)
+	IF RESULT == 0
+		選択カード = 戦闘場所(듀얼리스트,1)
+		合計ダメージ = GETVAR(@"%듀얼리스트%_MZ_攻:戦闘場所(듀얼리스트)")
+		CALL FULLRESET
+		효과추가종류 = 3
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"묘지",合計ダメージ)
+	ENDIF
+ENDIF
+
+

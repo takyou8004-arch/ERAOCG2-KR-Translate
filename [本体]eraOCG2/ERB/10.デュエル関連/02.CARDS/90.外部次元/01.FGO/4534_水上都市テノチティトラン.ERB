@@ -1,0 +1,349 @@
+﻿@CARDNAME_4534,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 중기동 심장도시　－오메테오틀 테노치티틀란－
+	CASE "略称"
+		RESULTS = 테노치티틀란
+	CASE "要塞名"
+		RESULTS = 수상도시 테노치티틀란
+	CASE "カテゴリ"
+		RESULTS:0 = 포트리스
+		RESULTS:1 = 프리텐더
+		RESULTS:2 = 문 캔서
+		RESULTS:3 = 영령
+		RESULTS:4 = FATE
+ENDSELECT
+
+@CARD_4534(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 초차원
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 9
+	CASE "コスト"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250703
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_4534(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+RETURN 0
+
+@CARD_EXPLANATION_4534(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 『초차원』により降臨。
+PRINTL （このカードはカードの효과でのみＥＸ덱からフィールドに특수소환・마법＆함정ゾーンに置くことができる）
+CALL TEXT_DECORATION("D_HEART_F")
+PRINTL フォートレス側　《水上都市테노치티틀란》 コスト：５
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,EX덱起動)
+PRINTL ①：자신フィールドにカードが２枚以上存在する場合に발동できる。
+PRINTL ＥＸ덱のこのカードを마법＆함정ゾーンに表側표시でセットし、「水上都市테노치티틀란」以外の자신フィールドのカード２枚を破壊する。
+CALLFORM CARD_ABLE(2,마함起動)
+PRINTL ②：자신の묘지のモンスター１体を대상として발동できる。
+PRINTL そのモンスターを특수소환し、자신の손패・フィールドのモンスター２体を破壊する。
+CALLFORM CARD_ABLE(0,효과後強制誘発)
+PRINTL ③：モンスターが戦闘・효과で破壊されるたびに、このカードにイフカヨトル카운터を１つ置く。
+PRINTL その後、このカードのイフカヨトル카운터が５つ以上の場合、このカードを특수소환できる。
+CALL TEXT_DECORATION("D_HEART_2")
+
+
+
+@CARDCAN_4534(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4534)
+SIF RESULT == 1
+	RETURN 0
+;F
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,4534)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+;F
+ELSEIF 종류 == 마함起動
+	SIF 발동済_2(듀얼리스트,4534)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+;F
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊全般",2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+;M
+ELSEIF 종류 == 지속효과 || 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	IF 종류 == 攻守変動
+		SIF 戦闘場所(듀얼리스트,1) == 5
+			RETURN 0
+		SIF GETVAR(@"%対面者%_MZ_攻:戦闘場所(듀얼리스트,1)") < 2500
+			RETURN 0
+	ENDIF
+	RETURN 1
+;M
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+;M
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF MATCH(破壊종류,"마함")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4534(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4534,1)
+	IF RESULT == 0
+		CALL CARD_ADD(듀얼리스트,"EX덱","마함",場所,"表側표시")
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件固名前 = 重起動心臓都市　－オメオトル・테노치티틀란－
+		효과条件行先플래그 = 破壊行き
+		효과条件複数 = 2
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4534,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲필드 = 1
+			효과条件종류 = モン全般
+			효과条件行先플래그 = 破壊行き
+			효과条件複数 = 2
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 효과後強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4534)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",1)
+		PRINTFORMW 「水上都市테노치티틀란」にイフカヨトル카운터が乗りました。（現在値：{GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所")}個）
+
+		SIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") < 5
+			RETURN 0
+		CALL CARD_SS_CHECK(듀얼리스트,4534,ゾーン)
+		SIF RESULT == 1
+			RETURN 0
+
+		PRINTL
+		PRINTL 宝具を起動しますか？
+		CALL YN_CHOICE(듀얼리스트)
+		SIF RESULT != 0
+			RETURN 0
+
+		PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+		SETCOLOR C_YELLOW
+		PRINTL
+		PRINTFORMW 「我がアルタール、我がカットーラ、我が愛しきトラマカスキ！」
+		PRINTFORMW 「心臓都市、起動！　オメオトル・테노치티틀란！」
+		PRINTL
+		CUSTOMDRAWLINE ―
+		RESETCOLOR
+		WAIT
+		CALL RESETCONDITION
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"貫通")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"一破")
+
+	CALL FULLRESET
+	효과条件攻撃力 = 2000
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"攻避")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,1000)
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4534,11)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"リリース")
+	ENDIF
+
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4534)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+
+@CARDNAME_104534,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 중기동 심장도시　－오메테오틀 테노치티틀란－
+	CASE "略称"
+		RESULTS = 테노치티틀란
+	CASE "要塞名"
+		RESULTS = 수상도시 테노치티틀란
+	CASE "カテゴリ"
+		RESULTS:0 = 포트리스
+		RESULTS:1 = 프리텐더
+		RESULTS:2 = 문 캔서
+		RESULTS:3 = 영령
+		RESULTS:4 = FATE
+ENDSELECT
+
+@CARD_104534(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 초차원
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 9
+	CASE "コスト"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_104534(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：상대は자신フィールドの攻撃力２０００以下のモンスターを攻撃・효과の대상にできず、
+PRINTL フィールドのこのカードは１ターンに１度だけ戦闘・효과では破壊されない。
+CALLFORM CARD_ABLE(0,지속효과,攻守変動)
+PRINTL ②：このカードの攻撃は貫通する。
+PRINTL また、このカードが攻撃力２５００以上のモンスターと戦闘を行う場合、ダメージステップ終了時まで攻撃力が１０００アップする。
+CALLFORM CARD_ABLE(11,필드起動,フリー誘発)
+PRINTL ③：このカードがフィールドに存在する限り１度だけ、자신・상대ターンに발동できる。
+PRINTL 상대フィールドの表側표시のカードを全て묘지へ送る。
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ④：このカードがフィールドを離れる場合、代わりに마법＆함정ゾーンに置く。

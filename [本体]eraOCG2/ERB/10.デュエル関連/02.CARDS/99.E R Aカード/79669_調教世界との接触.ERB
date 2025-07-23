@@ -7,12 +7,12 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 조교 세계와의 접촉
+		RESULTS = E.R.A 카논 이벤트
 	CASE "略称"
-RESULTS = 소녀와의 만남
+		RESULTS = 조교세계와 접촉
 	CASE "カテゴリ"
-RESULTS:0 =  없음
-RESULTS:1 =  E.R.A
+		RESULTS:0 = 없음
+		RESULTS:1 = E.R.A
 ENDSELECT
 
 
@@ -119,17 +119,21 @@ IF 종류 == 마함起動 || 종류 == 손패起動
 		효과条件성별 = 牝性
 		효과条件종류 = モン全般
 		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
-		選択カード = RESULT
-		IF 選択カード != 9999
-			CALL CARD_SELECT(듀얼리스트,選択カード)
-			TRYCALLFORM CARD_{GETVAR(@"%대상者（CS）%_덱:選択カード（CS）")}, "攻撃力"
+		IF RESULT != 9999
+			選択カード = RESULT
+			TRYCALLFORM CARD_{RESULT:99}, "攻撃力"
 			ダメージ = RESULT
-			IF 대상者（CS） == 듀얼리스트
-				CALL CARD_ADD(듀얼리스트, "덱", "손패", 選択カード（CS）)
-			ELSE
-				CALL CARD_ADD(듀얼리스트, "상대덱", "손패",  選択カード（CS）)
+			CALL URARA_CHANCE(듀얼리스트,,"덱")
+			IF RESULT == 1
+				CALL SHUFFLE(듀얼리스트)
+				CALL SHUFFLE(対面者)
+				RETURN 0
 			ENDIF
-			CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",ダメージ)
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = RESULT
+			CALL CARD_ADD(듀얼리스트, 本参照先（CS）, "손패", 選択カード)
+			SIF ダメージ > 0
+				CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",ダメージ)
 		ENDIF
 	ENDIF
 ELSEIF 종류 == 묘지起動

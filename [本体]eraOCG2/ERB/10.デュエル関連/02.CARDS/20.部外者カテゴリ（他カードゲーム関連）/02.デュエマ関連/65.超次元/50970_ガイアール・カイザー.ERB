@@ -1,0 +1,398 @@
+﻿@CARDNAME_50970,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ガイアール・カイザー
+	CASE "略称"
+		RESULTS = ガイアール
+	CASE "カテゴリ"
+		RESULTS:0 = ハンター
+		RESULTS:1 = サイキック
+		RESULTS:2 = コマンド
+		RESULTS:4 = DUEL MASTERS
+	CASE "맥시멈"
+		RESULTS = 激竜王
+ENDSELECT
+
+
+@CARD_50970(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 초차원
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250717
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_50970(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL 【초차원MAXIMUM！！】「ドラゴニック・ピッピー」＆「ブーストグレンオー」
+PRINTL 자신メインフェイズに발동できる。
+PRINTL 자신フィールドの지정のモンスター２体を含むモンスターを全て묘지に送り、
+PRINTL 「激竜王ガイアール・オウドラゴン」を맥시멈소환する。
+PRINTL 맥시멈소환は無効化されず、１ターンに１度しか行えない。
+CALLFORM CARD_ABLE(1,EX소환時 ,특수소환時)
+PRINTL ①：このカードが특수소환した場合に、このカードの攻撃力以下の상대モンスター１体を대상として발동できる。
+PRINTL そのカードを破壊する。
+CALL TEXT_DECORATION("MAXIMUM")
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：このカードが맥시멈状態の場合、자신メインフェイズに발동できる。
+PRINTL 상대フィールドのカードを全て破壊する。
+PRINTL その後、破壊した枚数×１０００ダメージを상대に与える。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：このカードが맥시멈状態の場合、このカードは貫通攻撃と戦闘阻害を持つ。
+
+@CARDCAN_50970(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 발동불가,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50970)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+;맥시멈소환
+	SIF 발동済_1(듀얼리스트,覚醒발동)
+		발동불가:0 = 1
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件他所 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ:0 = ハンター
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		발동불가:0 = 1
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = ドラゴニック・ピッピー
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:0 = 1
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = ブーストグレンオー
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:0 = 1
+;맥시멈限定효과
+	SIF 발동済_2(듀얼리스트,50970)
+		발동불가:1 = 1
+	SIF GETVAR(@"%듀얼리스트%_필드:1") != 50969 || GETVAR(@"%듀얼리스트%_필드:2") != 50970 || GETVAR(@"%듀얼리스트%_필드:3") != 50971
+		발동불가:1 = 1
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:1 = 1
+	SIF 발동불가:0 == 1 && 발동불가:1 == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,50970)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件攻撃力 = GETVAR(@"%듀얼리스트%_MZ_攻:場所")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	RETURN 1
+ELSEIF 종류 == 맥시멈条件
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_필드:1") != 50969 || GETVAR(@"%듀얼리스트%_필드:2") != 50970 || GETVAR(@"%듀얼리스트%_필드:3") != 50971
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50970(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 발동불가,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50970)
+	IF RESULT == 0
+		SIF 발동済_1(듀얼리스트,覚醒발동)
+			발동불가:0 = 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件他所 = 1
+		효과条件종류 = モン全般
+		효과条件カテゴリ:0 = ハンター
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT < 2
+			발동불가:0 = 1
+	;맥시멈限定효과
+		SIF 발동済_3(듀얼리스트,50970)
+			발동불가:1 = 1
+		SIF GETVAR(@"%듀얼리스트%_필드:1") != 50969 || GETVAR(@"%듀얼리스트%_필드:2") != 50970 || GETVAR(@"%듀얼리스트%_필드:3") != 50971
+			발동불가:1 = 1
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			발동불가:1 = 1
+
+		IF 듀얼리스트 == "자신"
+			PRINTL 효과を選択してください
+			PRINTL
+			IF 발동불가:0 != 1
+				PRINTL [0] - ●초차원맥시멈소환を行う。
+			ELSE
+				SETCOLOR C_GRAY
+				PRINTL ［X］- 발동条件を満たしていません！
+				RESETCOLOR
+			ENDIF
+			IF 발동불가:1 != 1
+				PRINTL [1] - ●상대フィールドのモンスターを全て破壊する。
+			ELSE
+				SETCOLOR C_GRAY
+				PRINTL ［X］- 발동条件を満たしていません！
+				RESETCOLOR
+			ENDIF
+			BINPUT
+		ELSE
+			IF 발동불가:0 != 1
+				RESULT = 0
+			ELSEIF 발동불가:1 != 1
+				RESULT = 1
+			ENDIF
+		ENDIF
+
+		IF RESULT == 0
+			효과無効不能 = 1
+			CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,覚醒발동,1)
+			IF RESULT == 0
+				FOR カウンタ,0,5
+					SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+						CONTINUE
+					CALL CARD_DISPOSE(듀얼리스트,"필드",カウンタ)
+				NEXT	
+					
+				CALL FULLRESET
+				효과範囲EX덱 = 1
+				효과条件名前 = ガイアール・カイザー
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"攻撃표시")
+				CALL FULLRESET
+				효과範囲EX덱 = 1
+				효과条件名前 = ドラゴニック・ピッピー
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+				CALL FULLRESET
+				효과範囲EX덱 = 1
+				효과条件名前 = ブーストグレンオー
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+			ENDIF
+		ELSEIF RESULT == 1
+			CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50970,2)
+			IF RESULT == 0
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+				カウンタ = RESULT:1 * 1000
+				CALL LIFE_CHANGE(듀얼리스트,"減少","효과",カウンタ,1)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50970,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件攻撃力 = GETVAR(@"%듀얼리스트%_MZ_攻:場所")
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"묘지")
+	ENDIF
+ELSEIF 종류 == 맥시멈条件
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"変化元ID",150970)
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦阻")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"貫通")
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARDNAME_150970,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 激竜王ガイアール・オウドラゴン
+	CASE "略称"
+		RESULTS = 激竜王ガイアール
+	CASE "カテゴリ"
+		RESULTS:0 = ハンター
+		RESULTS:1 = サイキック
+		RESULTS:2 = コマンド
+		RESULTS:3 = 覚醒者
+	CASE "맥시멈"
+		RESULTS = 激竜王
+ENDSELECT
+
+
+@CARD_150970(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 초차원
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 1500
+	CASE "성별"
+		RETURN 雄性
+	CASE "トークン"
+		RETURN 1
+	CASE "生成カード"
+		RETURN 50970
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_150970(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALL TEXT_DECORATION("MAXIMUM")
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ①：このカードが맥시멈状態の場合、자신メインフェイズに발동できる。
+PRINTL 상대フィールドのモンスターを全て破壊する。
+PRINTL その後、破壊した枚数×１０００ダメージを상대に与える。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：このカードは貫通攻撃と戦闘阻害を持つ。
+
+
+@CARDCAN_150970(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,150970)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,150970)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"激竜王・パーツ")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 맥시멈条件
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"激竜王・パーツ")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_150970(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦阻")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"貫通")
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,150970,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+		カウンタ = RESULT:1 * 1000
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",カウンタ,1)
+	ENDIF
+ENDIF

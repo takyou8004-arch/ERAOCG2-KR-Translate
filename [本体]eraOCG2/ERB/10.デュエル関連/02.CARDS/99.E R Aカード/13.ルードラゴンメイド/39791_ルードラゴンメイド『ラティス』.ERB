@@ -1,0 +1,268 @@
+﻿@CARDNAME_39791,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 루 드래곤메이드『라티스』
+	CASE "略称"
+		RESULTS = 『라티스』
+	CASE "カテゴリ"
+		RESULTS:0 = 드래곤메이드
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39791(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 2061
+	CASE "추가日"
+		RETURN 250708
+ENDSELECT
+RETURN 0
+
+
+@CARDSUMMON_39791(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+;システムでは소환불가
+RETURN 0
+
+
+@CARD_EXPLANATION_39791(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL お互いのフィールドに存在する드래곤족・빛속성モンスター１体（このカードと同名以外）と자신に９００ダメージ
+CALL CARD_ABLE(3,EX덱起動)
+PRINTL このカードは１ターンに１度、上記の素材を使って守備표시でＸ소환できる。
+PRINTL 「드래곤메이드・라티스」を素材にＸ소환した場合、このカードは覚醒状態になる。
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,EX소환時)
+PRINTL ①：このカードがX소환した場合に발동できる。
+PRINTL 상대フィールドのカード１枚を제외する。
+CALL CARD_ABLE(2,ターン開始時)
+PRINTL ②：자신・상대のスタンバイフェイズに발동できる。
+PRINTL このカードのＸ素材を１つ増やす事で、자신の묘지のカード１枚を손패に戻す。
+PRINTL このカードが覚醒状態の場合、更に자신の제외状態のカード１枚を묘지へ送る。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39791(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39791)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_3(듀얼리스트,39791)
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,39791)
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 800
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	SIF モンスター数(듀얼리스트) < 5
+		효과範囲상대필드 = 1
+	효과条件종족 = 드래곤족
+	효과条件속성 = 빛속성
+	효과条件固名前 = 루 드래곤메이드『라티스』
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,39791)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,39791)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39791(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 듀얼元ライフ
+#DIM DYNAMIC 소환素材
+#DIM DYNAMIC 소환素材レベル
+#DIMS DYNAMIC 소환素材名前
+#DIMS DYNAMIC 대상者
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 対面カード使用
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39791,3)
+	IF RESULT == 0
+		;素材を選択
+		CALL FULLRESET
+		효과範囲필드 = 1
+		SIF モンスター数(듀얼리스트) < 5
+			효과範囲상대필드 = 1
+		효과条件종족 = 드래곤족
+		효과条件속성 = 빛속성
+		효과条件固名前 = 루 드래곤메이드『라티스』
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			소환素材 = RESULT:1
+			対面カード使用 = RESULT:10
+			TRYCALLFORM CARD_{소환素材},"レベル"
+			소환素材レベル = RESULT
+			;ライフコスト
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",800)
+			;フレ-バ-
+			IF 듀얼리스트 == "자신"
+				IF 소환素材 == 2061 && 対面カード使用 == 0
+					PRINTFORML
+					SETCOLOR C_YELLOW
+					PRINTFORMW 라티스が淫らな装いに着替えて現れた。
+					RESETCOLOR
+					CALL CARD_EROTICS(소환素材)
+					IF RESULT != -1
+						CALL EROTIC_MOVE("露出単発",RESULT,-1,소환素材レベル*100)
+						WAIT
+					ENDIF
+				ELSE
+					TRYCALLFORM CARDNAME_{소환素材},"名前"
+					소환素材名前 = %RESULTS%
+					PRINTFORML
+					PRINTFORML %CALLNAME:MASTER%は%소환素材名前%を組み伏せた！
+					PRINTFORMW 抵抗する%소환素材名前%を抑えたまま、조교を始める！
+					CALL CARD_EROTICS(소환素材)
+					조교대상 = RESULT
+					IF 조교대상 != -1
+						FOR カウンタ,0,소환素材レベル
+							CALL EROTIC_MOVE("全身凌辱",조교대상,MASTER,100)
+						NEXT
+					ENDIF
+					PRINTFORML
+					PRINTFORMW ………
+					PRINTFORMW %소환素材名前%は%CALLNAME:MASTER%に굴복し、淫らな衣装のメイドにされた！
+					PRINTFORML 
+				ENDIF
+			ENDIF
+			;특수소환
+			CALL FULLRESET
+			효과추가종류:0 = 効追Ｘ素
+			;SIF 소환素材レベル >= 8
+			SIF 소환素材 == 2061
+				효과추가종류:1 = 効追条達
+			SIF !GROUPMATCH(소환素材, 2061, 12061)
+				효과추가종류:2 = 効追変化ID + 소환素材
+			CALL CARD_EX_SUMMON(듀얼리스트,ゾーン,場所,"守備표시")
+			リザルト：XYZ소환 = 1
+		ENDIF
+	ENDIF
+ELSEIF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39791,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件任意 = 1
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39791,2)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"Ｘ",1)
+		IF 듀얼리스트 == "자신"
+			소환素材 = GETVAR(@"%듀얼리스트%_MZ_変化元ID:場所")
+			IF 소환素材 == -1
+				PRINTFORML
+				SETCOLOR C_YELLOW
+				PRINTFORMW 라티스は%NAME:MASTER%から元気を貰った！
+				RESETCOLOR
+				PRINTFORML
+				CALL EROTIC_MOVE("펠라치오",NO_TO_CHARANUM(2061),MASTER,100)
+			ELSE
+				CALL CARD_EROTICS(소환素材)
+				조교대상 = RESULT
+				IF 조교대상 != -1
+					PRINTFORML
+					SETCOLOR C_YELLOW
+					PRINTFORMW 루 드래곤메이드・%CALLNAME:조교대상%は%NAME:MASTER%から元気を貰った！
+					RESETCOLOR
+					PRINTFORML
+					CALL EROTIC_MOVE("펠라치오",조교대상,MASTER,100)
+				ELSE
+					TRYCALLFORM CARDNAME_{소환素材},"略称"
+					PRINTFORML
+					SETCOLOR C_YELLOW
+					PRINTFORMW 루 드래곤메이드・%RESULTS%は%NAME:MASTER%から元気を貰った！
+					RESETCOLOR
+				ENDIF
+			ENDIF
+		ENDIF
+		
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF GETVAR(@"%듀얼리스트%_MZ_条達:場所") != 0
+		CALL FULLRESET
+		효과範囲제외 = 1
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"제외",ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+

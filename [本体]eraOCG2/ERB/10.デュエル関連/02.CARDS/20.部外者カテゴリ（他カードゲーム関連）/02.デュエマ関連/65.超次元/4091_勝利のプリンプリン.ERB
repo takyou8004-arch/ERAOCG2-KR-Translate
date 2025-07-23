@@ -1,0 +1,138 @@
+﻿@CARDNAME_4091,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 勝利のプリンプリン
+	CASE "略称"
+		RESULTS = 勝利プリンプリン
+	CASE "カテゴリ"
+		RESULTS:0 = サイキック
+		RESULTS:1 = ハンター
+		RESULTS:2 = エイリアン
+		RESULTS:4 = DUEL MASTERS
+	CASE "맥시멈"
+		RESULTS = 唯我独尊・パーツ
+ENDSELECT
+
+
+@CARD_4091(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 초차원
+	CASE "속성"
+		RESULT:2 = 빛속성
+		RESULT:1 = 물속성
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 1800
+	CASE "パーツ"
+		RETURN 1
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250716
+ENDSELECT
+RETURN 0
+
+
+@CARD_EXPLANATION_4091(종류)
+#DIM DYNAMIC 종류
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,특수소환時)
+PRINTL ①：このカードが특수소환した場合に상대フィールドのモンスター１体を대상として발동できる。
+PRINTL そのモンスターの효과を無効にし、そのモンスターは攻撃できない。
+CALLFORM CARD_ABLE(2,필드起動,フリー誘発)
+PRINTL ②：자신・상대ターンに、このカードが맥시멈状態の場合、상대フィールドのモンスター１体を대상として발동できる。
+PRINTL そのモンスターの효과を無効にし、そのモンスターは攻撃できない。
+
+@CARDCAN_4091(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4091)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,4091)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,4091)
+		RETURN 0
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"唯我独尊")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 맥시멈条件
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_필드:1") != 4091 || GETVAR(@"%듀얼리스트%_필드:2") != 50972 || GETVAR(@"%듀얼리스트%_필드:3") != 50973
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4091(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+IF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4091,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과추가종류 = 3
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"지속無効")
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4091,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		효과추가종류 = 3
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"지속無効")
+	ENDIF
+ELSEIF 종류 == 맥시멈条件
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"変化元ID",150972)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+ENDIF

@@ -1,0 +1,127 @@
+﻿@CARDNAME_5513,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 홍마관의 문지기 美鈴
+	CASE "略称"
+		RESULTS = 홍마관의 미령
+	CASE "カテゴリ"
+		RESULTS:0 = 홍마관
+		RESULTS:1 = 환상소녀
+		RESULTS:4 = 동방 Project
+ENDSELECT
+
+
+@CARD_5513(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 2100
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250705
+ENDSELECT
+
+
+RETURN 0
+
+@CARD_EXPLANATION_5513(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：このカードが소환・특수소환した場合に발동できる。
+PRINTL 덱からこのカード名以外の「홍마관」モンスターカード１体を손패に加える。その後、このカードを守備표시にする。
+CALLFORM CARD_ABLE(2,戦破壊→묘지)
+PRINTL ②：フィールドのこのカードが破壊された場合に발동できる。
+PRINTL 덱から「홍마관-Scarlet Devil Mansion-」１枚を選んで자신フィールドに表側표시でセットする。
+
+
+@CARDCAN_5513(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,5513)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,5513)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 홍마관
+	효과条件종류 = モン全般
+	효과条件固名前 = 홍마관의 문지기 美鈴
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊")
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件名前 = 홍마관-Scarlet Devil Mansion-
+	효과条件うらら解除 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_5513(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,5513,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 홍마관
+		효과条件종류 = モン全般
+		효과条件固名前 = 홍마관의 문지기 美鈴
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",2,1)		
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,5513,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件名前 = 홍마관-Scarlet Devil Mansion-
+		CALL CARD_SET_BASIC(듀얼리스트,"덱",ゾーン,場所,"表側표시")
+	ENDIF
+ENDIF
+

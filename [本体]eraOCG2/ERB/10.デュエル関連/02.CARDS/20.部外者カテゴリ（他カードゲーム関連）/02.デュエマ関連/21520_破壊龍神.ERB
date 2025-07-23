@@ -7,13 +7,12 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 파괴용신
+		RESULTS = 파괴용신
 	CASE "略称"
-RESULTS = 파괴용신
+		RESULTS = 파괴용신
 	CASE "カテゴリ"
-RESULTS:0 = 신
-RESULTS:1 = 파괴용신
-RESULTS:4 = 듀얼 마스터즈
+		RESULTS:0 = 신
+		RESULTS:4 = 듀얼 마스터즈
 ENDSELECT
 
 
@@ -41,8 +40,6 @@ SELECTCASE 参照先
 		RETURN 0
 	CASE "맥시멈"
 		RETURN 121520
-	CASE "소환불가"
-		RETURN 1
 ENDSELECT
 RETURN 0
 
@@ -52,7 +49,11 @@ RETURN 0
 PRINTL 【맥시멈！！】드래곤족 몬스터 2장
 PRINTL 손패에 존재하는 다른 드래곤족 몬스터 2장을 버리고, 맥시멈 소환을 실행한다.
 PRINTL 맥시멈 소환은 무효화되지 않는다.
-PRINTL 
+PRINTL 이 카드명의①의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①: 이 카드가 손패에 존재하고, 자신의 덱이 13장 이하인 경우에 발동할 수 있다.
+PRINTL 이 카드를 소멸시키고, '파괴용신 헤비 데스 메탈'을 맥시멈 소환한다.
+
 
 
 @CARDSUMMON_21520(듀얼리스트,소환カード,EX参照)
@@ -80,6 +81,17 @@ CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21520)
 SIF RESULT == 1
 	RETURN 0
 
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,21520)
+		RETURN 0
+	SIF 現山札数(듀얼리스트) > 13
+		RETURN 0
+	RETURN 1
+ENDIF
 
 
 @CARDEFFECT_21520(듀얼리스트,종류,ゾーン,場所)
@@ -94,7 +106,22 @@ SIF RESULT == 1
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21520,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,소멸行き)
 
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"필드",カウンタ)
+		NEXT	
+		CALL FULLRESET
+		CALL CARD_GENERATE(듀얼리스트,121520,"攻撃표시")				
+		CALL CARD_GENERATE(듀얼리스트,121521,"守備표시")	
+		CALL CARD_GENERATE(듀얼리스트,121522,"守備표시")
+	ENDIF
+ENDIF
 
 
 
@@ -108,15 +135,15 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 파괴용신 헤비 데스 메탈
+		RESULTS = 파괴용신 헤비 데스 메탈
 	CASE "略称"
-RESULTS = 파괴용신 HDM
+		RESULTS = 파괴용신 HDM
 	CASE "カテゴリ"
-RESULTS:0 = 신
-RESULTS:1 = 파괴용신
-RESULTS:4 = 듀얼 마스터즈
+		RESULTS:0 = 신
+		RESULTS:1 = 피닉스
+		RESULTS:4 = 듀얼 마스터즈
 	CASE "맥시멈"
-		RESULTS = 破壊龍神
+		RESULTS = 파괴용신
 ENDSELECT
 
 
@@ -207,18 +234,10 @@ CALL 対面者판정(듀얼리스트)
 IF 종류 == 지속효과
 	CALL FULLRESET
 	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"戦狂")
-
 	CALL FULLRESET
-효과条件カテゴリ = 파괴용신
 	효과条件他所 = 1
 	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"攻避")
 ELSEIF 종류 == 맥시멈条件
-	IF GETVAR(@"%듀얼리스트%_필드:1") == 121521 && GETVAR(@"%듀얼리스트%_필드:3") == 121522
-		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
-		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"함정耐")
-		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
-	ENDIF
-ELSEIF 종류 == 필드起動
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,121520,11)
 	IF RESULT == 0
 		CALL FULLRESET
@@ -238,15 +257,14 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 용신 헤비
+		RESULTS = 용신 헤비
 	CASE "略称"
-RESULTS = 용신 헤비
+		RESULTS = 용신 헤비
 	CASE "カテゴリ"
-RESULTS:0 = 신
-RESULTS:1 = 파괴용신
-RESULTS:4 = 듀얼 마스터즈
+		RESULTS:0 = 신
+		RESULTS:4 = 듀얼 마스터즈
 	CASE "맥시멈"
-		RESULTS = 破壊龍神・パーツ
+		RESULTS = 파괴용신 파츠
 ENDSELECT
 
 
@@ -268,9 +286,9 @@ SELECTCASE 参照先
 	CASE "レベル"
 		RETURN 5
 	CASE "攻撃力"
-		RETURN 2000
+		RETURN 1000
 	CASE "守備力"
-		RETURN 1800
+		RETURN 1000
 	CASE "パーツ"
 		RETURN 1
 ENDSELECT
@@ -315,7 +333,8 @@ ELSEIF 종류 == 필드起動
 		RETURN 0
 	RETURN 1
 ELSEIF 종류 == 맥시멈条件
-	SIF GETVAR(@"%듀얼리스트%_필드:2") != 121520
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"파괴용신")
+	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
 ENDIF
@@ -332,11 +351,7 @@ ENDIF
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 
-IF 종류 == 攻守変動
-	CALL FULLRESET
-효과条件名前 = 파괴용신 헤비 데스 메탈
-	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,0,GETVAR(@"%듀얼리스트%_MZ_守:場所"))
-ELSEIF 종류 == 필드起動
+IF 종류 == 필드起動
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,121521,11)
 	IF RESULT == 0
 		CALL FULLRESET
@@ -365,15 +380,14 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 용신 메탈
+		RESULTS = 용신 메탈
 	CASE "略称"
-RESULTS = 용신 메탈
+		RESULTS = 용신 메탈
 	CASE "カテゴリ"
-RESULTS:0 = 신
-RESULTS:1 = 파괴용신
-RESULTS:4 = 듀얼 마스터즈
+		RESULTS:0 = 신
+		RESULTS:4 = 듀얼 마스터즈
 	CASE "맥시멈"
-		RESULTS = 破壊龍神・パーツ
+		RESULTS = 파괴용신 파츠
 ENDSELECT
 
 
@@ -395,9 +409,9 @@ SELECTCASE 参照先
 	CASE "レベル"
 		RETURN 7
 	CASE "攻撃力"
-		RETURN 2000
+		RETURN 1000
 	CASE "守備力"
-		RETURN 1800
+		RETURN 1000
 	CASE "パーツ"
 		RETURN 1
 ENDSELECT
@@ -434,7 +448,8 @@ ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
 		RETURN 0
 	RETURN 1
 ELSEIF 종류 == 맥시멈条件
-	SIF GETVAR(@"%듀얼리스트%_필드:2") != 121520
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"破壊龍神")
+	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
 ENDIF
@@ -458,12 +473,7 @@ IF 종류 == 필드起動
 		CALL SET_PLAYER_INFO(듀얼리스트,"ドロースキップ", 1, 1)
 	ENDIF
 ELSEIF 종류 == 맥시멈条件
-	CALL FULLRESET
 	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
-ELSEIF 종류 == 攻守変動
-	CALL FULLRESET
-효과条件名前 = 파괴용신 헤비 데스 메탈
-	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,GETVAR(@"%듀얼리스트%_MZ_攻:場所"))
 ENDIF
 
 

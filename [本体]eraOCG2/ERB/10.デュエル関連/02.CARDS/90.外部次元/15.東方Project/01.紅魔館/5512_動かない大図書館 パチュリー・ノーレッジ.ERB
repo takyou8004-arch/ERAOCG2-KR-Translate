@@ -1,0 +1,167 @@
+﻿@CARDNAME_5512,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 움직이지 않는 대도서관 パチュリー・ノーレッジ
+	CASE "略称"
+		RESULTS = 홍마관의파츄리
+	CASE "カテゴリ"
+		RESULTS:0 = 홍마관
+		RESULTS:1 = 환상소녀
+		RESULTS:4 = 동방 Project
+ENDSELECT
+
+
+@CARD_5512(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 2300
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250705
+ENDSELECT
+
+
+RETURN 0
+
+@CARD_EXPLANATION_5512(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②③の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：このカードが소환・특수소환した場合に발동できる。
+PRINTL 덱からレベル２以下の악마족モンスター１体を특수소환する。
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：자신メインフェイズに손패を１枚捨てて발동できる。
+PRINTL このターンのエンドフェイズに자신の묘지の지속마법カード１枚を表側표시でセットする。
+CALLFORM CARD_ABLE(3,발동誘発)
+PRINTL ③：자신フィールドに表側표시で마법カードが２枚以上存在し、
+PRINTL 상대が마법カードを발동した場合に발동できる。
+PRINTL その효과を無効にする。
+
+
+
+@CARDCAN_5512(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,5512)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,5512)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	CALLFORM 효과条件レベル_ADV(2, "以下")
+	효과条件종류 = モン全般
+	효과条件종족 = 악마족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,5512)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 손패数(듀얼리스트) == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_3(듀얼리스트,5512)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件종류 = 마법全般
+	효과条件표시 = 表側표시
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 지속마법
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_5512(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,5512,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		CALLFORM 효과条件レベル_ADV(2, "以下")
+		효과条件종류 = モン全般
+		효과条件종족 = 악마족
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,5512,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT == 1
+			CALL CARD_RESERV(듀얼리스트,5512)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,5512,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+	ENDIF
+ELSEIF 종류 == ターン終了時予約
+	CALL FULLRESET
+	효과条件종류 = 지속마법
+	CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"表側표시")
+ENDIF

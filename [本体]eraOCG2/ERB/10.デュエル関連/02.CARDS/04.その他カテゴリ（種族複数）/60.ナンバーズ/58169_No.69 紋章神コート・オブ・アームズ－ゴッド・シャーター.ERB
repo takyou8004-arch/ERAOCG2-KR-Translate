@@ -1,0 +1,200 @@
+﻿@CARDNAME_58169,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = No.69 紋章神コート・オブ・アームズ－갓・シャーター
+	CASE "略称"
+		RESULTS = #69 CoA G・S
+	CASE "カテゴリ"
+		RESULTS:0 = 넘버즈
+		RESULTS:1 = 문장수
+ENDSELECT
+
+
+@CARD_58169(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 엑시즈
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2800
+	CASE "守備力"
+		RETURN 1600
+	CASE "추가日"
+		RETURN 250713
+ENDSELECT
+RETURN 0
+
+
+@CARDSUMMON_58169(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 4
+素材条件レベル = 4
+
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,58169) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_58169(종류)
+#DIM DYNAMIC 종류
+
+PRINTL レベル４モンスター×４
+PRINTL このカードは元々のカード名が「No.69 紋章神コート・オブ・アームズ」である
+PRINTL 자신フィールドのモンスターの上に重ねてX소환する事もできる。
+PRINTL このカード名の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,발동誘発,攻撃時誘発)
+PRINTL ①：상대フィールドのモンスターが효과を발동した時、または상대モンスターの攻撃宣言時に발동できる。
+PRINTL 「No.69 紋章神コート・オブ・アームズ－갓・レイジ」１体を
+PRINTL 자신フィールドのこのカードの上に重ねてX소환扱いでEX덱から특수소환する。
+PRINTL その後、その상대モンスターを破壊する。
+
+@CARDCAN_58169(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58169)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,58169)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件名前 = No.69 紋章神コート・オブ・アームズ
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+    SIF 발동済_1(듀얼리스트,58169)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+	
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,58169)
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0	
+	RETURN 1
+
+
+ENDIF
+
+@CARDEFFECT_58169(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 戦闘カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58169)
+	IF RESULT == 0
+		CALL CARDSUMMON_58169(듀얼리스트,場所)
+		CALL RESETCONDITION_MAT(1)
+		代替素材数 = 1
+		素材条件名前 = No.69 紋章神コート・オブ・アームズ
+		重ねてＸ = 1
+		TRYCALLFORM XYZSUMMON(듀얼리스트,場所)
+	ENDIF
+
+ELSEIF 종류 == 발동誘発
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58169,1)
+	選択カード = RESULT
+	IF 選択カード != 9999
+		選択カード = 効後_設場所:(処理中番号 - 1)
+		CALL FULLRESET	
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"묘지")
+
+		CALL FULLRESET
+		효과条件名前 = No.69 紋章神コート・オブ・アームズ－갓・レイジ
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+		    CALL RESETCONDITION_MAT
+			必要素材数 = 1
+			重ねてＸ = 1
+			素材条件固定 = 場所
+			TRYCALLFORM XYZSUMMON(듀얼리스트,選択カード)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58169,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘場所(듀얼리스트,1),"묘지")
+
+		CALL FULLRESET
+		효과条件名前 = No.69 紋章神コート・オブ・アームズ－갓・レイジ
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+		    CALL RESETCONDITION_MAT
+			必要素材数 = 1
+			重ねてＸ = 1
+			素材条件固定 = 場所
+			TRYCALLFORM XYZSUMMON(듀얼리스트,選択カード)
+		ENDIF
+	ENDIF
+
+
+ENDIF

@@ -1,0 +1,148 @@
+﻿@CARDNAME_58008,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = No.8 紋章王ゲノム・ヘリター
+	CASE "略称"
+		RESULTS = #8 G・ヘリター
+	CASE "カテゴリ"
+		RESULTS:0 = 넘버즈
+		RESULTS:1 = 문장수
+ENDSELECT
+
+
+@CARD_58008(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 엑시즈
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 사이킥족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1800
+	CASE "추가日"
+		RETURN 250713
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_58008(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 4
+素材条件カテゴリ = 문장수
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,58008) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_58008(종류)
+#DIM DYNAMIC 종류
+
+PRINTL レベル４「문장수」モンスター×２
+PRINTL このカード名の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ①：자신・상대ターンに、このカードのX素材を１つ取り除き、상대フィールドの表側표시モンスター１体を대상として발동できる。
+PRINTL そのカードの『필드起動효과』（フィールドに存在する場合、起動できる효과）を발동し、
+PRINTL このカードの攻撃力はそのモンスターの攻撃力と同じになり、そのモンスターの元々のカード名と同じカード名を得る。
+PRINTL その後、대상のモンスターは名前を「アンノウン」として扱い、エンドフェイズまで攻撃力は０になり、효과は無効化される。
+
+
+@CARDCAN_58008(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58008)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+    SIF 발동済_1(듀얼리스트,58008)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1	
+
+
+ENDIF
+
+
+@CARDEFFECT_58008(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 選択カード名前
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,58008,1,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"選択")
+		選択カード = RESULT:1
+		IF RESULT == 1
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = 選択カード（CS）
+			攻撃力修正 = (GETVAR(@"%対面者%_MZ_攻:選択カード"))
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
+			選択カード名前 = %RESULTS%
+
+			CALLFORM CARDEFFECT_{GETVAR(@"%対面者%_필드:選択カード")}(듀얼리스트,필드起動,"효과処理")
+			
+			CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード,"一攻",-999999,1)
+			CALL SET_FIELD_INFO(대상者（CS）,参照先（CS）,選択カード,"無効",1)
+			CALL CARD_SET_RENAME(対面者,"필드",選択カード,"アンノウン")
+
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",選択カード_ID,上書きモード)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"攻固",攻撃力修正,上書きモード)
+		ENDIF
+
+	ENDIF
+ENDIF

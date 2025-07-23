@@ -40,6 +40,10 @@ SELECTCASE 参照先
 		RETURN 0
 	CASE "성별"
 		RETURN 牝性
+	CASE "특수불가"
+		RETURN 1
+	CASE "生成カード"
+		RETURN 159647
 ENDSELECT
 
 
@@ -94,21 +98,32 @@ IF 종류 == EX덱起動
 		RETURN 0
 	SIF ターンプレイヤー != 듀얼리스트
 		RETURN 0
-	CALL CARD_SS_CHECK(듀얼리스트,159647,"",1)
+	CALL CARD_SS_CHECK(듀얼리스트,159647,ゾーン,1)
 	SIF RESULT == 1
 		RETURN 0
 	CALL FULLRESET
 	효과範囲필드 = 1
-	효과条件名前:0 = Live☆Twin 키스킬
-	효과条件名前:1 = Live☆Twin 키스킬 프로스트
+	효과条件종류 = レベル持ち
+	효과条件カテゴリ = 키스킬
+	효과条件レベル = 2
+	효과条件CNT = 1
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	SIF RESULT != 1
+	;一体も無かればNG
+	IF RESULT == 0
 		RETURN 0
+	;一体だけならチェック
+	ELSEIF RESULT == 1
+		条件달성 ++
+	ENDIF
 	CALL FULLRESET
 	효과範囲필드 = 1
-	효과条件名前:0 = Live☆Twin 리일라
-	효과条件名前:1 = Live☆Twin 리일라 트리트
-	효과条件名前:2 = Live☆Twin 리일라 스위트
+	효과条件종류 = レベル持ち
+	효과条件カテゴリ = 리일라
+	;上で「キスキル」が一体だけだったなら、「キスキル」カテゴリ同時持ちは弾く
+	SIF 条件달성 == 1
+		효과条件固カテゴリ = 키스킬
+	효과条件レベル = 2
+	효과条件CNT = 1
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
@@ -165,6 +180,7 @@ ENDIF
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC 選択カード
 #DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 条件달성
 #DIMS DYNAMIC 対面者
 
 CALL 対面者판정(듀얼리스트)
@@ -176,23 +192,36 @@ IF 종류 == EX덱起動
 	IF RESULT == 0
 		CALL FULLRESET
 		효과範囲필드 = 1
-		효과条件名前:0 = Live☆Twin 키스킬
-		효과条件名前:1 = Live☆Twin 키스킬 프로스트
-		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
-
+		효과条件종류 = レベル持ち
+		효과条件カテゴリ = 리일라
+		효과条件レベル = 2
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		;一体だけならチェック
+		SIF RESULT == 1
+			条件달성 ++
 		CALL FULLRESET
 		효과範囲필드 = 1
-		효과条件名前:0 = Live☆Twin 리일라
-		효과条件名前:1 = Live☆Twin 리일라 트리트
-		효과条件名前:2 = Live☆Twin 리일라 스위트
+		효과条件종류 = レベル持ち
+		효과条件カテゴリ = 키스킬
+		;上で「リィラ」が一体だけだったなら、「リィラ」カテゴリ同時持ちは弾く
+		SIF 条件달성 == 1
+			효과条件固カテゴリ = 리일라
+		효과条件レベル = 2
 		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
-
-		CALL FULLRESET
-		CALL CARD_GENERATE(듀얼리스트,159647)
-		PRINTFORMW 키스킬과 리일라의 환영이 나타났다 ！
-
-		CALL CARD_SS_RESTRICTION(듀얼리스트,"Live☆Twin")
-		CALL CARD_EX_RESTRICTION(듀얼리스트,"Live☆Twin")
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件종류 = レベル持ち
+			효과条件カテゴリ = 리일라
+			효과条件レベル = 2
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_GENERATE(듀얼리스트,159647)
+				PRINTFORMW 키스킬과 리일라의 환영이 나타났다 ！
+			ENDIF
+		ENDIF
 	ENDIF
 ELSEIF 종류 == ターン終了時
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59647)
@@ -364,7 +393,7 @@ ELSEIF 종류 == 攻撃後強制誘発
 		조교대상 = RESULT
 		PRINTFORML
 		SETCOLOR C_PINK 
-		PRINTFORML 키스킬의 리일라의 환연이 %CALLNAME:조교대상%에게 얽혀 들어 전신을 쓰다듬었다。
+		PRINTFORML 키스킬의 리일라의 환영이 %CALLNAME:조교대상%에게 얽혀 들어 전신을 쓰다듬었다。
 		RESETCOLOR
 		CALL EROTIC_MOVE("全身애무",조교대상,-1,400)
 	ENDIF

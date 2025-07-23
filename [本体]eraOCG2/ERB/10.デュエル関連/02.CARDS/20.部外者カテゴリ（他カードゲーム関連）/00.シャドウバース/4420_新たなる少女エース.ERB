@@ -1,0 +1,121 @@
+﻿@CARDNAME_4420,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 새로운 소녀 에이스
+	CASE "略称"
+		RESULTS = 에이스
+	CASE "カテゴリ"
+		RESULTS:0 = 네메시스 클래스
+		RESULTS:4 = Shadowverse
+ENDSELECT
+
+
+@CARD_4420(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1800
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_4420(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか발동できない。
+CALLFORM CARD_ABLE(2,소환時,특수소환時)
+PRINTL ①：このカードが소환・특수소환した場合に발동出来る。
+PRINTL カードを１枚ドローする。
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②：このカードは자신メインフェイズに１度だけ「진화」できる。
+PRINTL そうした場合、このカードの攻撃力・守備力は１０００アップする。
+PRINTL その後、자신は以下の효과を得る。この효과は重複しない。
+PRINTL ●상대エンドフェイズ時に、상대フィールドのカードが５枚以上存在する場合、カードを１枚ドローする。
+
+
+
+@CARDCAN_4420(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,4420)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,4420)
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") != 0
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,覚醒발동)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 時限紋章起動
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF エンドフェイズ != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_4420(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4420,1)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,覚醒발동,1)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",1000)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永守",1000)
+		SIF 紋章済(듀얼리스트,4420) == 0
+			CALL CARD_RESERV(듀얼리스트,4420,時限紋章予約)
+	ENDIF
+ELSEIF 종류 == 時限紋章起動
+	CALL CARDDRAW_BASIC(듀얼리스트,1)
+ENDIF

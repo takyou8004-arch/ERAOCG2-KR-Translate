@@ -1,0 +1,108 @@
+﻿@CARDNAME_50969,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ドラゴニック・ピッピー
+	CASE "略称"
+		RESULTS = D・ピッピー
+	CASE "カテゴリ"
+		RESULTS:0 = ハンター
+		RESULTS:1 = サイキック
+		RESULTS:2 = ファイアーバード
+		RESULTS:4 = DUEL MASTERS
+	CASE "맥시멈"
+		RESULTS = 激竜王・パーツ
+ENDSELECT
+
+
+@CARD_50969(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 초차원
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "パーツ"
+		RETURN 1
+	CASE "レア度"
+		RETURN RARE
+	CASE "추가日"
+		RETURN 250717
+ENDSELECT
+RETURN 0
+
+
+@CARD_EXPLANATION_50969(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①：このカードの攻撃力は자신フィールドの「ハンター」モンスター１枚につき２００ポイントアップする。
+PRINTL （맥시멈状態のこのカードは攻撃できない）
+
+@CARDCAN_50969(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50969)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 맥시멈条件
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_필드:1") != 50969 || GETVAR(@"%듀얼리스트%_필드:2") != 50970 || GETVAR(@"%듀얼리스트%_필드:3") != 50971
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50969(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = ハンター
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 200
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+ELSEIF 종류 == 맥시멈条件
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"変化元ID",150970)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+ENDIF

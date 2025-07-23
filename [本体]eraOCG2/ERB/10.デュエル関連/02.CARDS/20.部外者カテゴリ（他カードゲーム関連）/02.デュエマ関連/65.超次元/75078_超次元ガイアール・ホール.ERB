@@ -1,0 +1,163 @@
+﻿@CARDNAME_75078,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 초차원ガイアール・ホール
+	CASE "略称"
+		RESULTS = 초차원ガイアール
+	CASE "カテゴリ"
+		RESULTS:0 = 초차원呪文
+		RESULTS:1 = ハンター
+		RESULTS:4 = DUEL MASTERS
+ENDSELECT
+
+
+@CARD_75078(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+
+
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_75078(종류)
+#DIM DYNAMIC 종류
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①：자신のフィールドに「ハンター」モンスターが存在する場合に발동できる。
+PRINTL レベルの合計が８以下になるように、「サイキック」화염속성초차원モンスターをEX덱から특수소환する。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：このカードが묘지に存在する場合、
+PRINTL 자신フィールドの「ハンター」モンスター１体を持ち主の손패に戻して발동できる。
+PRINTL このカードを자신フィールドにセットする。
+PRINTL この효과でセットしたこのカードはフィールドから離れた場合に제외される。
+
+@CARDCAN_75078(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,75078)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,75078)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = ハンター
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 초차원
+	효과条件속성 = 화염속성
+	효과条件カテゴリ = サイキック
+	CALLFORM 효과条件レベル_ADV(8, "以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,75078)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = ハンター
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_75078(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 소환済レベル
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,75078,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		소환済レベル = 8
+		WHILE 소환済レベル > 0
+			CALL FULLRESET
+			효과条件任意 = 1
+			효과条件종류 = 초차원
+			효과条件속성 = 화염속성
+			효과条件カテゴリ = サイキック
+			CALL 효과条件レベル_ADV(소환済レベル,"以下")
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",場所)
+			SIF RESULT == 9999
+				BREAK
+			選択カード = RESULT
+			TRYCALLFORM CARD_{RESULT:99},"レベル"
+			소환済レベル -= RESULT
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,"EX덱",選択カード)
+			SIF モンスター数(듀얼리스트) >= 5
+				RETURN 0
+			WEND
+
+;	DIMSUMMONではRESULTを使えないのでかわりにSP_SUMMONを使用
+
+;		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)	
+;		選択カード = RESULT
+;		IF 選択カード != 9999
+;			CALL DIMSUMMON(듀얼리스트,ゾーン,場所,選択カード,9,8)
+;		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,75078,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = ハンター
+		효과条件行先플래그 = 손패行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件名前 = 초차원ガイアール・ホール
+			효과추가종류 = 500
+			CALL CARD_SET_BASIC(듀얼리스트,"묘지",ゾーン,場所,"裏側표시")
+		ENDIF
+	ENDIF
+ENDIF
