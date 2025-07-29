@@ -1,0 +1,133 @@
+﻿@CARDNAME_25120,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 현람한 에르담
+	CASE "略称"
+		RESULTS = 에르담
+	CASE "カテゴリ"
+		RESULTS:0 = 현람
+ENDSELECT
+
+
+@CARD_25120(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 風属性
+	CASE "種族"
+		RETURN 獣族
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1300
+	CASE "守備力"
+		RETURN 800
+	CASE "性別"
+		RETURN 雄性
+	CASE "追加日"
+		RETURN 250726
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_25120(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,手札起動)
+PRINTL ①：自分の墓地に「サイクロン」が存在するか、相手フィールドに魔法・罠カードが存在しない場合に発動できる。
+PRINTL このカードを手札から特殊召喚する。
+CALLFORM CARD_ABLE(2,召喚時,特殊召喚時)
+PRINTL ②：このカードが召喚・特殊召喚した場合に発動できる。
+PRINTL デッキから「현람한 에르담」以外の「현람」モンスター１体か「サイクロン」１枚を手札に加える。
+
+
+@CARDCAN_25120(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,25120)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF 発動済_1(決闘者,25120)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,25120,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	SIF 魔罠数(対面者) == 0
+		RETURN 1
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件名前 = サイクロン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 1
+	RETURN 0
+
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_2(決闘者,25120)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 현람
+	効果条件種類 = モン全般
+	効果条件固名前 = 현람한 에르담
+	効果条件スーパー名前 = サイクロン
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25120(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,25120,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+	ENDIF
+
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,25120,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 현람
+		効果条件種類 = モン全般
+		効果条件固名前 = 현람한 에르담
+		効果条件スーパー名前 = サイクロン
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ENDIF

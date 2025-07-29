@@ -1,0 +1,140 @@
+﻿@CARDNAME_27013,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 오노마토 도마뱀
+	CASE "略称"
+		RESULTS = 오노마토 도마뱀
+	CASE "カテゴリ"
+		RESULTS:0 = 오노마토
+		;このカード名はルール上「주바바」、「가가가」、「고고고」、「도도도」カードとしても扱う。
+		RESULTS:1 = 주바바
+		RESULTS:2 = 가가가
+		RESULTS:3 = 고고고
+		RESULTS:4 = 도도도
+ENDSELECT
+
+
+@CARD_27013(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 鱗獣族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1100
+	CASE "守備力"
+		RETURN 1500
+	CASE "追加日"
+		RETURN 250726
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_27013(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,手札起動,墓地起動)
+PRINTL ①：このカードが手札・墓地に存在し、
+PRINTL 自分フィールドに「주바바」、「가가가」、「고고고」、「도도도」モンスターのいずれかが存在する場合に発動できる
+PRINTL このカードを特殊召喚する。
+PRINTL この効果で特殊召喚したこのカードは、フィールドから離れた場合に除外される。
+PRINTL ②：墓地のこのカードの効果を発動し、このカードを特殊召喚しなかった場合に適用する。
+PRINTL 墓地のこのカードを除外し、自分の墓地からXモンスターを２体までEXデッキに戻す。
+
+
+@CARDCAN_27013(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,27013)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF 発動済_1(決闘者,27013)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,27013,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ:0 = 주바바
+	効果条件カテゴリ:1 = 가가가
+	効果条件カテゴリ:2 = 고고고
+	効果条件カテゴリ:3 = 도도도
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	SIF 発動済_1(決闘者,27013)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_27013(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,27013,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果追加種類 = 2
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,27013)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果条件名前 = 오노마토 도마뱀
+		効果追加種類 = 2
+		効果条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		IF RESULT != 1
+			CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				効果条件種類 = エクシーズ
+				効果条件複数 = 98
+				効果条件行先フラグ = デッキ行き
+				CALL CARD_ADD_GY_BASIC(決闘者,"墓地",ゾーン,場所)
+				SIF RESULT == 1
+					CALL CARD_EFFECT_USE(決闘者,27013,2)
+			ENDIF
+		ELSE
+			CALL CARD_EFFECT_USE(決闘者,27013,1)
+		ENDIF
+	ENDIF
+ENDIF

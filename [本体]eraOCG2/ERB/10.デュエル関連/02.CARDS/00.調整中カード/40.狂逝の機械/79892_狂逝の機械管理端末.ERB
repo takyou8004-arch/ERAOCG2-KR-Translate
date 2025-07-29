@@ -38,7 +38,9 @@ PRINTL 이 카드명의 카드는 １턴에 １장밖에 발동할 수 없다.
 CALLFORM CARD_ABLE(1,마함起動)
 PRINTL ①: 이하의 효과에서 １개를 선택해서 발동할 수 있다.
 PRINTL ●덱에서 "광서의 기계"몬스터를 １장 묘지로 보내고,
-PRINTL 자신 필드 위의 기계족 / 암컷몬스터를 １장을 대상으로 발동할 수 있다."광서의 기계"카드로도 취급한다.
+PRINTL 자신 필드 위의 기계족 / 암컷몬스터를 １장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터는 발정하고 공격력 1000 올리고,
+PRINTL "광서의 기계"카드로도 취급한다.
 PRINTL ●자신의 패 / 묘지에서 "광서의 기계"몬스터카드를 ２장 제외하고 발동할 수 있다.
 PRINTL 패 / 묘지 / 덱에서 레벨８이상의 "광서의 기계"몬스터를 １체 특수 소환한다.
 
@@ -128,9 +130,12 @@ ENDIF
 #DIM DYNAMIC 選択結果
 #DIM DYNAMIC 효과条件플래그 = 0
 #DIM DYNAMIC 捕縛대상
+#DIM DYNAMIC 捕縛場所,紙束最大値
 #DIM DYNAMIC 捕縛候補,紙束最大値
+#DIM DYNAMIC 捕縛場所B
 #DIM DYNAMIC カウンタB
 #DIM DYNAMIC 절정횟수
+#DIM DYNAMIC 묘지送り位置
 
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
@@ -204,11 +209,14 @@ CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79892,1)
 					SIF RESULT < 1 ;CSV持ち以外は제외
 						CONTINUE
 					捕縛候補:カウンタB = 捕縛대상 ;牝性を候補に格納
+					捕縛場所:カウンタB = カウンタ
 					カウンタB++ ;候補数加算
 				NEXT
 				SIF カウンタB < 1 ;カウンタが0以下=候補0
 					RETURN
 				捕縛대상 = 捕縛候補:(RAND:カウンタB) ;カウンタBまでの乱数で捕縛候補の中からランダムに捕縛대상を決定
+				捕縛대상 = 捕縛候補:묘지送り位置
+				捕縛場所B = 捕縛場所:묘지送り位置
 				CALL CARD_EROTICS(捕縛대상) ;必ずCARD_EROTICSを挟む
 				조교대상 = RESULT
 				IF 조교대상 > 0 ;조교대상条件はあなたを想定しないなら>0で
@@ -251,13 +259,14 @@ CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79892,1)
 						CALL EROTIC_MOVE("全身凌辱",조교대상,MASTER,500)
 						PRINTFORML 
 						CALL MADORGASM_RAND_ROB_TXT(1,0)
-						CALL MADORGASM_RAND_ROB_TXT(1,4)
+						CALL MADORGASM_RAND_ROB_TXT(1,3)
 						PRINTFORML
 					NEXT
-					CALL MADORGASM_RAND_ROB_TXT(1,4);うるさい鳴き声
+					CALL MADORGASM_RAND_ROB_TXT(1,5);うるさい鳴き声
 					PRINTFORML %CALLNAME:조교대상%는 온몸에서 체액을 흘리며, 눈물을 흘리면서 필사적으로 구원을 구하고 있다。
 					PRINTFORMW 이 광서의 기계는 언제든 움직일 수 있을 것 같으며, 듀얼의 판에 올려도 효과를 발휘할 것이다
 				ENDIF
+				CALL CARD_DISPOSE(対面者,"덱",捕縛場所B)
 			ENDIF
 		ELSE
 			CALL FULLRESET
@@ -275,7 +284,6 @@ CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79892,1)
 				CALL FULLRESET
 				효과範囲손패 = 1
 				효과範囲묘지 = 1
-				효과範囲덱 = 1
 				효과条件カテゴリ = 광서의 기계
 				CALL 효과条件レベル_ADV(8, "以上")
 				효과条件소환可 = 1
@@ -292,11 +300,14 @@ CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79892,1)
 						SIF RESULT < 1 ;CSV持ち以外は제외
 							CONTINUE
 						捕縛候補:カウンタB = 捕縛대상 ;牝性を候補に格納
+						捕縛場所:カウンタB = カウンタ
 						カウンタB++ ;候補数加算
 					NEXT
 					SIF カウンタB < 1 ;カウンタが0以下=候補0
 						RETURN
 					捕縛대상 = 捕縛候補:(RAND:カウンタB) ;カウンタBまでの乱数で捕縛候補の中からランダムに捕縛대상を決定
+					捕縛대상 = 捕縛候補:묘지送り位置
+					捕縛場所B = 捕縛場所:묘지送り位置
 					CALL CARD_EROTICS(捕縛대상) ;必ずCARD_EROTICSを挟む
 					조교대상 = RESULT
 					IF 조교대상 > 0 ;조교대상条件はあなたを想定しないなら>0で
@@ -316,6 +327,7 @@ CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79892,1)
 								PRINTFORML %CALLNAME:조교대상%는 대형 광서의 기계를 작동시키기 위한 에너지원이 되기 위해,
 								PRINTFORML 사지가 절단되어, 기계성의 시설 안에서 끝없이 능욕당하는 암컷 구멍으로 편입되어 있었다.
 								PRINTFORMW %CALLNAME:조교대상%를 포함한 무수한 암컷 구멍들의 신음소리가 기계성에 울려 퍼진다……
+					
 						CASE 3
 								PRINTFORML
 								PRINTFORML 이미 포획되어 있던 암컷 중 하나가 기계병으로 손에 옮겨진다
@@ -325,14 +337,15 @@ CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79892,1)
 						FOR カウンタ,0,4
 							PRINTFORML 
 							CALL MADORGASM_RAND_ROB_TXT(1,0)
-							CALL MADORGASM_RAND_ROB_TXT(1,4)
+							CALL MADORGASM_RAND_ROB_TXT(1,3)
 							PRINTFORML
 							CALL EROTIC_MOVE("全身凌辱",조교대상,MASTER,500)
 						NEXT
-						CALL MADORGASM_RAND_ROB_TXT(1,4);うるさい鳴き声
+						CALL MADORGASM_RAND_ROB_TXT(1,5);うるさい鳴き声
 						PRINTFORML %CALLNAME:조교대상%는 온몸에서 체액을 흘리며, 눈물을 흘리면서 필사적으로 구원을 구하고 있다。
 						PRINTFORMW 이 광서의 기계는 언제든 움직일 수 있을 것 같으며, 듀얼의 판에 올려도 효과를 발휘할 것이다
 					ENDIF
+					CALL CARD_DISPOSE(対面者,"덱",捕縛場所B)
 				ENDIF
 			ENDIF
 		ENDIF

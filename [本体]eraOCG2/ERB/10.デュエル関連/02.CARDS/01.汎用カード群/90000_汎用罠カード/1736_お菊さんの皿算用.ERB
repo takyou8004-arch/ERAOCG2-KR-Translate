@@ -1,0 +1,142 @@
+﻿@CARDNAME_1736,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 오키쿠 씨의 접시 세기
+	CASE "略称"
+		RESULTS = 오키쿠 접시세기
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+ENDSELECT
+
+
+@CARD_1736(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 永続罠
+	CASE "性別"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1736(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(10,発動誘発)
+PRINTL ①：相手がカードの効果を発動した時に発動できる（同一チェーン上では１度まで）。
+PRINTL この効果の発動時に積まれているチェーンの数だけこのカードにお皿カウンターを置く。
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ②：このカードのお皿カウンターの数によって以下の効果を適用する。
+PRINTL ●９以下：このカードは効果では破壊されず、相手はこのカードを効果の対象にできない。
+PRINTL ●１０以上：このカードは墓地へ送られる。
+PRINTL 　　　　　　その後、自分のデッキの上からカードを１０枚墓地へ送ることができる。
+
+
+@CARDCAN_1736(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 効果制限達成
+#DIM DYNAMIC カウンタ
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,1736)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 発動誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF 効果発動済(決闘者,場所,ゾーン)
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(決闘者,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 効果後強制誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF 効果発動済(決闘者,1736)
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_個Ｃ:場所") < 10
+		RETURN 0
+	RETURN 1
+	
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") != 1
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_個Ｃ:場所") >= 10
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_1736(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 墓地送カード,5
+
+#DIM DYNAMIC カウンタ
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,1736)
+	IF RESULT == 0
+	ENDIF
+
+ELSEIF 種類 == 発動誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,1736,10)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(決闘者,ゾーン,場所,"個Ｃ",効後_カウンタ)
+		PRINTL
+		PRINTFORML ──お皿が{GETVAR(@"%決闘者%_魔_個Ｃ:場所")}まーい……
+		PRINTW
+		CALL SET_FIELD_INFO(決闘者,ゾーン,場所,"効済",0,1)
+	ENDIF
+
+ELSEIF 種類 == 効果後強制誘発
+	CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+	SIF 現山札数(決闘者) < 10
+		RETURN 0
+	SIF 決闘者 == "自分"
+		PRINTL カードを墓地へ送りますか？
+	CALL YN_CHOICE(決闘者)
+	SIF RESULT == はい
+		CALL CARD_DECK_DISPOSE(決闘者,"デッキ",10)
+
+ELSEIF 種類 == 永続効果
+	CALL STATCHANGE_EFFECT(決闘者,"魔自身",場所,"破耐")
+	CALL STATCHANGE_EFFECT(決闘者,"魔自身",場所,"対耐")
+ENDIF

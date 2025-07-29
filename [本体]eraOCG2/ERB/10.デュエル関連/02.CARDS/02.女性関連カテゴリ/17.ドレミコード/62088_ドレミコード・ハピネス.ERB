@@ -1,0 +1,285 @@
+@CARDNAME_62088,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 도레미코드 하피니스
+	CASE "略称"
+		RESULTS = 행복의 다중주
+	CASE "カテゴリ"
+		RESULTS:0 = 도레미코드
+ENDSELECT
+
+
+@CARD_62088(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62088(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,魔罠起動 ,手札起動)
+PRINTL ①：以下の効果から１つを選択して発動できる
+PRINTL   （このカード名の以下の効果はそれぞれ１ターンに１度しか選択できない）。
+PRINTL   ●自分の手札を1枚選んで捨て、デッキからレベルが異なる「도레미코드」Pモンスター2体を手札に加える。
+PRINTL     その後、相手フィールドのモンスターの数+1 体まで、手札から「도레미코드」Pモンスターを特殊召喚できる。
+PRINTL   ●自分の魔法&罠ゾーンに存在する「도레미코드」Pモンスターの数まで、
+PRINTL     手札・EXデッキから、「도레미코드」Pモンスターを特殊召喚できる。
+PRINTL   ●自分の魔法&罠ゾーンの「도레미코드」カード2枚を特殊召喚する。
+
+@CARDCAN_62088(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 効果使用可,3
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,62088)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL CARDEFFCT_ABLE_62088(決闘者,種類,ゾーン,場所)
+	SIF RESULT:1 == 0 && RESULT:2 == 0 && RESULT:3 == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_62088(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 効果使用可,3
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,62088,0)
+	IF RESULT == 0
+		;通常魔法汎用処理
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+
+		CALL CARDEFFCT_ABLE_62088(決闘者,種類,ゾーン,場所)
+		効果使用可:0 = RESULT:1
+		効果使用可:1 = RESULT:2
+		効果使用可:2 = RESULT:3
+		
+		カウンタ = 発動済_1(決闘者,62088) + 発動済_2(決闘者,62088) + 発動済_3(決闘者,62088)
+		PRINTL
+		IF カウンタ == 0
+			PRINTL 幸せの一重奏：
+		ELSEIF カウンタ == 1
+			PRINTL 幸せの二重奏：
+		ELSEIF カウンタ == 2
+			PRINTL 幸せの三重奏：
+		ELSE
+			PRINTL 演奏终了。
+			PRINTW
+			RETURN
+		ENDIF
+
+		IF 効果使用可:0 == 1
+			PRINTL
+			PRINTL [1]自分の手札を1枚選んで捨て、デッキからPスケールが異なる「도레미코드」Pモンスター2体を手札に加える。
+			PRINTL    その後、相手フィールドのモンスターの数+1体まで、手札から「도레미코드」Pモンスターを特殊召喚できる。
+		ENDIF
+		IF 効果使用可:1 == 1
+			PRINTL
+			PRINTL [2]自分の魔法&罠ゾーンに存在する「도레미코드」Pモンスターの数まで、
+			PRINTL    手札・EXデッキから、「도레미코드」Pモンスターを特殊召喚できる。
+		ENDIF
+		IF 効果使用可:2 == 1
+			PRINTL
+			PRINTL [3]自分の魔法&罠ゾーンの「도레미코드」カード2枚を特殊召喚する。
+		ENDIF
+		PRINTL
+
+		BINPUT
+		IF RESULT == 1 && 効果使用可:0 == 1
+			CALL CARDEFFECT_62088_0(決闘者,種類,ゾーン,場所)
+		ELSEIF RESULT == 2 && 効果使用可:1 == 1
+			CALL CARDEFFECT_62088_1(決闘者,種類,ゾーン,場所)
+		ELSEIF RESULT == 3 && 効果使用可:2 == 1
+			CALL CARDEFFECT_62088_2(決闘者,種類,ゾーン,場所)
+		ENDIF
+
+		IF 発動済_1(決闘者,62088) && 発動済_2(決闘者,62088) && 発動済_3(決闘者,62088)
+			PRINTL
+			PRINTL ●「幸せの多重奏」華麗终了。
+			PRINTW
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+;-------------------------------------------------------------------------
+@CARDEFFECT_62088_0(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_EFFECT_USE(決闘者,62088,1)
+
+CALL FULLRESET
+CALL CARD_ADD_GY_BASIC(決闘者,"手札",ゾーン,場所)
+IF RESULT == 1
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 도레미코드
+	効果条件種類 = モン全般
+	効果条件分割 = ペンデュラム
+	CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+	IF RESULT != 9999
+		CALLFORM CARD_{RESULT:1},"レベル"
+		カウンタ = RESULT
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 도레미코드
+		効果条件種類 = モン全般
+		効果条件分割 = ペンデュラム
+		CALL 効果条件レベル_ADV(カウンタ  , "以外")
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+	ENDIF
+
+	カウンタ = MIN( モンスター数(対面者)+1, 5-モンスター数(決闘者))
+	
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果条件カテゴリ = 도레미코드
+	効果条件分割 = ペンデュラム
+	効果条件複数 = 100 - カウンタ
+	CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+ENDIF
+RETURN
+
+
+;-------------------------------------------------------------------------
+@CARDEFFECT_62088_1(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_EFFECT_USE(決闘者,62088,2)
+
+CALL FULLRESET
+効果範囲魔罠 = 1
+効果条件カテゴリ = 도레미코드
+効果条件種類 = モン全般
+効果条件CNT = 1
+CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+カウンタ =  MIN( RESULT, 5 - モンスター数(決闘者))
+
+CALL FULLRESET
+効果範囲手札 = 1
+効果範囲EXデッキ = 1
+効果条件カテゴリ = 도레미코드
+効果条件種類 = EX以外全般
+効果条件分割 = ペンデュラム
+効果条件複数 = 100 - カウンタ
+CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+
+RETURN
+
+
+
+;-------------------------------------------------------------------------
+@CARDEFFECT_62088_2(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_EFFECT_USE(決闘者,62088,3)
+
+CALL FULLRESET
+効果範囲魔罠 = 1
+効果条件カテゴリ = 도레미코드
+効果条件種類 = モン全般
+効果条件複数 = 2
+CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+
+RETURN
+
+;-------------------------------------------------------------------------
+@CARDEFFCT_ABLE_62088(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 効果使用可,3
+
+効果使用可:0 = 1 - 発動済_1(決闘者,62088)
+効果使用可:1 = 1 - 発動済_2(決闘者,62088)
+効果使用可:2 = 1 - 発動済_3(決闘者,62088)
+SIF 手札数(決闘者) == 0
+	効果使用可:0 = 0
+
+CALL FULLRESET
+効果範囲手札 = 1
+効果範囲EXデッキ = 1
+効果条件カテゴリ = 도레미코드
+効果条件分割 = ペンデュラム
+効果条件種類 = EX以外全般
+CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+SIF RESULT == 0
+	効果使用可:1 = 0
+
+CALL FULLRESET
+効果範囲魔罠 = 1
+効果条件カテゴリ = 도레미코드
+効果条件種類 = モン全般
+効果条件CNT = 1
+CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+SIF RESULT == 0
+	効果使用可:1 = 0
+SIF RESULT < 2
+	効果使用可:2 = 0
+SIF モンスター数(決闘者) > 3
+	効果使用可:2 = 0
+
+VARSET RESULT
+RESULT:1 = 効果使用可:0
+RESULT:2 = 効果使用可:1
+RESULT:3 = 効果使用可:2
+
+RETURN

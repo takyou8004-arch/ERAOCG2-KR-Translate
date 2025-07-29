@@ -1,0 +1,82 @@
+﻿@CARDNAME_300101,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 템플 섀시
+	CASE "略称"
+		RESULTS = 템플 섀시
+	CASE "カテゴリ"
+		RESULTS:0 = 섀시
+ENDSELECT
+
+
+@CARD_300101(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN システム
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_300101(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,召喚強制誘発)
+PRINTL ①：スピードカウンターが０である限り、自分は手札およびセットされた魔法・罠カードを発動できない。
+PRINTL ②：『Top Speed！』：（スピードカウンタが４つ）
+PRINTL 自分の魔法＆罠ゾーンに存在するカードは、セットされたターンでも発動できる。
+PRINTL （この効果適応中にセットされたカードの使用可能状態は『Top Speed！』解除後も継続する）
+
+@CARDCAN_300101(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,300101)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 常在無効
+	SIF GETVAR(@"%決闘者%_SpＣ") != 0
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_300101(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択肢
+
+IF 種類 == 常在無効
+
+	CALL FULLRESET
+	効果条件表示 = 裏側表示
+	CALL STATCHANGE_EFFECT(決闘者,"魔罠",場所,"無効")
+ELSEIF 種類 == 永続効果
+	IF GETVAR(@"%決闘者%_SpＣ") == 0
+		CALL SET_PLAYER_INFO(決闘者,"魔香効果",3)
+	ELSEIF GETVAR(@"%決闘者%_SpＣ") == 4
+		CALL FULLRESET
+		効果条件表示 = 裏側表示
+		CALL STATCHANGE_EFFECT(決闘者,"魔罠",場所,"表",2)
+	ENDIF
+ENDIF

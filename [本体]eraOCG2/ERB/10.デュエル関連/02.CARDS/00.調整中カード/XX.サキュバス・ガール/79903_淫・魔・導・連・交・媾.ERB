@@ -1,0 +1,279 @@
+@CARDNAME_79903,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;ブラックツインバースト
+SELECTCASE 参照先
+	CASE "名前"
+		IF GETBIT(TALENT:MASTER:性別,1)
+			RESULTS = 서큐버스 매직 키스삽입
+		ELSEIF GETBIT(TALENT:MASTER:性別,0)
+			RESULTS = 서큐버스 매직 키스가위
+		ELSE
+			RESULTS = 서큐버스 매직 키스삽입
+		ENDIF
+	CASE "略称"
+		RESULTS = 음마도연교구
+	CASE "カテゴリ"
+	    RESULTS:0 = 매지션 걸
+		RESULTS:1 = 서큐버스 걸
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+@CARD_79903(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 速攻魔法
+	CASE "生成カード"
+		RETURN 宝液ID
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_79903(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_79903(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,魔罠起動,手札起動,フリー誘発)
+PRINTL ①：自分フィールドの「서큐버스 걸」モンスター１体を対象として発動できる。
+PRINT 自分は
+SETCOLOR C_H_PINK
+PRINT 対象のモンスターと
+IF GETBIT(TALENT:MASTER:性別,1)
+	PRINT ❤キスハメ❤
+ELSEIF GETBIT(TALENT:MASTER:性別,0)
+	PRINT ❤キス貝合わせ❤
+ELSE
+	PRINT ❤キスハメ❤
+ENDIF
+PRINT をすることで、
+RESETCOLOR
+PRINTL １０００ＬＰ回復し、墓地に「賢者の宝液」トークン１枚を生成する。
+PRINTL その後、対象のモンスターの攻撃力は５００アップする。
+CALL CARD_ABLE(2,墓地起動)
+PRINTL ②：自分メインフェイズに発動できる。
+PRINTL 墓地のこのカードを除外して、デッキ・墓地から「매지션 걸」モンスター１体、
+PRINTL または「매지컬 실드 베드룸－음마술의 비의」１枚を手札に加える。
+PRINTL この際、自分フィールドに「서큐버스 걸」モンスターが存在する場合、
+PRINTL 代わりに自分フィールドの「서큐버스 걸」モンスターの数まで以下の効果を適用できる。
+PRINTL ●自分の墓地の「서큐버스 걸」魔法カードを１枚除外することで、相手フィールドのモンスター１枚を対象として効果を無効にする。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79903(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+#DIM DYNAMIC 条件達成
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,79903)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	SIF 発動済_1(決闘者,79903)
+		RETURN 0
+	IF ゾーン == "手札"
+		SIF ターンプレイヤー != 決闘者
+			RETURN 0
+	ELSEIF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 서큐버스 걸
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	SIF 発動済_2(決闘者,79903)
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	SIF ゾーン != "墓地"
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果範囲墓地 = 1
+	効果条件カテゴリ = 매지션 걸
+	効果条件スーパー名前 = 매지컬 실드 베드룸－음마술의 비의
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		条件達成++
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 서큐버스 걸
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果条件カテゴリ = 서큐버스 걸
+		効果条件種類 = 魔法全般
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲相手戦場 = 1
+			効果条件除去種 = 無効
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			SIF RESULT == 1
+				条件達成++
+		ENDIF
+	ENDIF
+	SIF 条件達成 < 1
+		RETURN 0
+    RETURN 1
+ENDIF
+
+@CARDEFFECT_79903(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+#DIM DYNAMIC 選択効果
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択マジシャン
+#DIMS DYNAMIC 選択マジシャン名
+#DIM DYNAMIC 補正値
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,79903,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件カテゴリ = 서큐버스 걸
+		CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+		選択カードID = RESULT:99
+		IF RESULT != 9999
+			CALL LIFE_CHANGE(決闘者,"増加","効果",1000)
+			選択マジシャン = RESULT
+			CALL CARD_GENERATE_GY(決闘者,宝液ID)
+			CALL CARD_LOADUP
+			CALL SET_FIELD_INFO(決闘者,"戦場",選択マジシャン,"一攻",500)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,79903,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果範囲墓地 = 1
+		効果条件カテゴリ = 매지션 걸
+		効果条件スーパー名前 = 매지컬 실드 베드룸－음마술의 비의
+		効果条件種類 = モン全般
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT == 1
+			条件Ａ++
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件カテゴリ = 서큐버스 걸
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲墓地 = 1
+			効果条件カテゴリ = 서큐버스 걸
+			効果条件種類 = 魔法全般
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				効果範囲相手戦場 = 1
+				効果条件除去種 = 無効
+				CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+				SIF RESULT == 1
+					条件Ｂ++
+			ENDIF
+		ENDIF
+		IF 条件Ａ != 0 && 条件Ｂ != 0
+			CALL YN_CHOICE(決闘者,"デッキ・墓地から「매지션 걸」モンスター１体または「매지컬 실드 베드룸－음마술의 비의」１枚を手札に加える。","『墓地「서큐버스 걸」魔法カード１枚除外、相手場のモンスター１体対象効果無効』を自分場の「서큐버스 걸」モンスターの数まで繰り返す。")
+			選択効果 = RESULT
+		ELSEIF 条件Ｂ == 1 && 条件Ａ == 0
+			選択効果 = いいえ
+		ELSEIF 条件Ａ == 1 && 条件Ｂ == 0
+			選択効果 = はい
+		ENDIF
+		IF 選択効果 == はい
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果範囲墓地 = 1
+			効果条件スーパー名前 = 매지컬 실드 베드룸－음마술의 비의
+			効果条件カテゴリ = 매지션 걸
+			効果条件種類 = モン全般
+			CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		ELSEIF 選択効果 == いいえ
+			CALL FULLRESET
+			効果範囲戦場 = 1
+			効果条件カテゴリ = 서큐버스 걸
+			効果条件CNT = 1
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			カウンタ = RESULT
+			REPEAT カウンタ
+				CALL FULLRESET
+				効果範囲墓地 = 1
+				効果条件カテゴリ = 서큐버스 걸
+				効果条件種類 = 魔法全般
+				CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+				IF RESULT == 1
+					CALL FULLRESET
+					効果範囲相手戦場 = 1
+					効果条件除去種 = 無効
+					CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+					SIF RESULT != 1
+						BREAK
+				ELSE
+					BREAK
+				ENDIF
+				CALL FULLRESET
+				効果範囲墓地 = 1
+				効果条件カテゴリ = 서큐버스 걸
+				効果条件種類 = 魔法全般
+				効果条件任意 = 1
+				効果条件行先フラグ = 1
+				CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+				IF RESULT == 1
+					CALL FULLRESET
+					効果範囲相手戦場 = 1
+					CALL CARD_REMOVAL_ADV(決闘者,"単体除去",場所,"永続無効")
+				ENDIF
+			REND
+		ENDIF
+	ENDIF
+ENDIF

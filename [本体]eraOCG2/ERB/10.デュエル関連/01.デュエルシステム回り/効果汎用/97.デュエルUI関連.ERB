@@ -214,7 +214,11 @@ ELSEIF RESULT > 30
 		PRINTFORM 통상함정
 	ELSEIF RESULT == 지속함정
 		PRINTFORM 지속함정
+	ELSE
+		PRINTFORM 그 외
 	ENDIF
+ELSE
+	PRINTFORM 그 외
 ENDIF
 VARSET RESULT
 TRYCALLFORM CARD_{選択カード_ID}, "튜너"
@@ -1609,6 +1613,9 @@ ELSEIF RESULT > 30
 		PRINTFORM 통상함정
 	ELSEIF RESULT == 지속함정
 		PRINTFORM 지속함정
+	ELSE
+		PRINTFORM 그 외
+
 	ENDIF
 ENDIF
 IF GETVAR(@"%듀얼리스트%_MZ_Ｔ:選択カード") >= 1
@@ -2351,6 +2358,8 @@ IF 듀얼리스트 == "자신" || (듀얼리스트 == "상대" && 상대_魔_表
 			PRINTFORM 통상함정
 		ELSEIF RESULT == 지속함정
 			PRINTFORM 지속함정
+		ELSE
+			PRINTFORM 그 외
 		ENDIF
 	ENDIF
 	VARSET RESULT
@@ -2929,12 +2938,12 @@ ENDIF
 PRINTFORML ｜
 RESETCOLOR
 
+
 IF ターンプレイヤー == "자신"
 	SETCOLOR C_L_BLUE
 ELSE
 	SETCOLOR C_L_RED
 ENDIF
-;SETCOLOR C_L_BLUE
 PRINTFORM 　｜
 
 IF ターンプレイヤー == "자신"
@@ -2944,7 +2953,6 @@ ELSE
 ENDIF
 
 PRINTFORM 　┗──%"",20%
-;PRINTFORM 　┗———————————————
 
 SETCOLOR C_L_BLUE
 PRINTFORM 【De:{現山札数("자신"),2}/Ha:{손패数("자신"),2}/Gy:{묘지数("자신"),2}】
@@ -2957,7 +2965,6 @@ ELSE
 	SETCOLOR C_L_RED
 ENDIF
 
-;PRINTFORM ———————————————— ＼
 PRINTFORM ——————— ＼
 
 FONTSTYLE 8
@@ -3006,8 +3013,10 @@ IF ターンプレイヤー == "자신"
 ELSE
 	SETCOLOR C_L_RED
 ENDIF
-;SETCOLOR C_L_RED
 PRINTFORML ｜
+
+
+
 
 RESETCOLOR
 
@@ -3036,10 +3045,36 @@ PRINTBUTTON "◎",8888
 PRINTPLAIN ─────────────────────────────────────>P<────────────────────────────────────┘
 RESETCOLOR
 
-; DISPLAY CARDS IMAGE
-CALL DISPLAY_CARDS_ONBOARD()
 
-;PRINTFORML チェック！AF_DUEL_UI 효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
+
+CALL DISPLAY_CARDS_ONBOARD()
+;追加：ライディングデュエル関連
+IF 특수듀얼종류 == ライディングＤ
+	SETCOLOR C_L_BLUE
+	PRINTPLAIN ＼────────🏍
+
+
+	TRYCALLFORM CARDCAN_{자신_부스트}("자신",부스트起動,"")
+	IF RESULT == 1 && 설정플래그 == 0
+		SETCOLOR C_G_YELLOW
+	ENDIF
+	PRINTBUTTON "[機体性能]",555
+	RESETCOLOR
+	SETCOLOR C_L_BLUE
+	PRINTFORM Sp：{자신_SpＣ,2}
+	PRINTPLAIN ────────────────────
+
+	SETCOLOR C_GOLD
+	PRINTPLAIN >R<
+	SETCOLOR C_L_RED
+
+	PRINTPLAIN ────────🏍
+	PRINTBUTTON "[機体性能]",556
+	PRINTFORM Sp：{상대_SpＣ,2}
+	PRINTPLAIN ───────────────────／
+	RESETCOLOR
+ENDIF
+
 CALL DUEL_PLAYER_UI(설정플래그)
 IF 설정플래그 == 2 && RESULT != 9999
 	RESTART
@@ -3083,7 +3118,6 @@ IF 설정플래그 == 1
 	RETURN 0
 ENDIF
 
-PRINTL
 VARSET 묘지起動可
 VARSET EX起動可
 FOR カウンタB,0,紙束最大値
@@ -3135,12 +3169,14 @@ NEXT
 
 
 
-;PRINTFORML チェック！B4_HAND_UI 효과条件名前:%효과条件名前%　素材条件종류:{素材条件종류}
 
 PRINTPLAINFORM ┏━━
 FONTSTYLE 8
+
 PRINTPLAINFORM ▽손패▽
+
 FONTSTYLE 0
+
 PRINTPLAINFORM ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━PAGE：{(初期値 / 5)+1, 2}━━━━━━┯━┓
 SIF 묘지起動可 || EX起動可
 	SETCOLOR C_YELLOW
@@ -3739,7 +3775,7 @@ ELSE
 				PRINT 　[3] - 효과 발동　　　　
 				RESETCOLOR
 				ENDIF
-VARSET RESULT
+				VARSET RESULT
 
 			IF メインフェイズ == 1 && ターンプレイヤー == "자신"
 				TRYCALLFORM CARD_{選択カード_ID}, "종류"
@@ -4185,18 +4221,94 @@ VARSET RESULT
 			ENDIF
 		ENDIF
 	ELSEIF RESULT == 555
+		$MACHINE_LOOP
 		CUSTOMDRAWLINE —
 		PRINTFORML 「머신 성능」
 		CUSTOMDRAWLINE —
 		PRINTL
 		VARSET RESULT
-		TRYCALLFORM CARDNAME_{자신_エンジン}, "名前"
+		TRYCALLFORM CARDNAME_{자신_엔진}, "名前"
 		PRINTFORML ENGINE[ 1] - %RESULTS%
 		VARSET RESULT
-		TRYCALLFORM CARDNAME_{자신_シャーシ}, "名前"
+		TRYCALLFORM CARDNAME_{자신_섀시}, "名前"
 		PRINTFORML CHASIS[ 2] - %RESULTS%
 		VARSET RESULT
-		TRYCALLFORM CARDNAME_{자신_ブースト}, "名前"
+		
+
+		TRYCALLFORM CARDCAN_{自分_부스트}("自分",부스트起動,"")
+		IF RESULT == 1 && 설정플래그 == 0
+			SETCOLOR C_G_YELLOW
+		ENDIF
+		TRYCALLFORM CARDNAME_{자신_부스트}, "名前"
+		PRINTFORML BOOST [ 3] - %RESULTS%
+		RESETCOLOR
+
+		CUSTOMDRAWLINE —
+		PRINTL
+		PRINTL [100] - 돌아간다
+		BINPUT
+		選択カード = RESULT
+		;돌아간다
+		IF 選択カード != 100
+			IF 選択カード == 1
+				CALL CARD_UI_RESET
+				TRYCALLFORM CARD_UI(자신_엔진,2)
+				RESETCOLOR	
+				PRINTL
+				PRINTL [100] - 돌아간다
+				BINPUT
+				IF RESULT == 100
+					PRINTL 
+					GOTO MACHINE_LOOP
+				ENDIF
+			ELSEIF 選択カード == 2
+				CALL CARD_UI_RESET
+				TRYCALLFORM CARD_UI(자신_섀시,2)
+				RESETCOLOR	
+				PRINTL
+				PRINTL [100] - 돌아간다
+				BINPUT
+				IF RESULT == 100
+					PRINTL 
+					GOTO MACHINE_LOOP
+				ENDIF
+			ELSEIF 選択カード == 3
+				CALL CARD_UI_RESET
+				TRYCALLFORM CARD_UI(자신_부스트,2)
+				TRYCALLFORM CARDCAN_{자신_부스트}("자신",부스트起動,"")
+				IF RESULT == 1 && 설정플래그 == 0
+					SETCOLOR C_G_YELLOW
+					PRINT [3] - 효과발동
+				ENDIF
+				RESETCOLOR	
+				PRINTL
+				PRINTL [100] - 돌아간다
+				BINPUT
+				IF RESULT == 100
+					PRINTL 
+					GOTO MACHINE_LOOP
+				ELSEIF RESULT == 3
+					TRYCALLFORM CARDEFFECT_{자신_부스트}("자신",부스트起動,"")
+					CALL CARD_FINAL(ターンプレイヤー)
+				ENDIF
+			ENDIF
+		ENDIF
+
+
+	ELSEIF RESULT == 556
+		$E_MACHINE_LOOP
+		CUSTOMDRAWLINE —
+		PRINTFORML 「상대 머신 성능」
+		CUSTOMDRAWLINE —
+		PRINTL
+		VARSET RESULT
+		TRYCALLFORM CARDNAME_{상대_엔진}, "名前"
+		PRINTFORML ENGINE[ 1] - %RESULTS%
+		VARSET RESULT
+		TRYCALLFORM CARDNAME_{상대_섀시}, "名前"
+		PRINTFORML CHASIS[ 2] - %RESULTS%
+		VARSET RESULT
+		TRYCALLFORM CARDNAME_{상대_부스트}, "名前"
 		PRINTFORML BOOST [ 3] - %RESULTS%
 
 		CUSTOMDRAWLINE —
@@ -4208,7 +4320,7 @@ VARSET RESULT
 		IF 選択カード != 100
 			IF 選択カード == 1
 				CALL CARD_UI_RESET
-				TRYCALLFORM CARD_UI(자신_エンジン,2)
+				TRYCALLFORM CARD_UI(상대_엔진,2)
 				RESETCOLOR	
 				PRINTL
 				PRINTL [100] - 돌아간다
@@ -4218,7 +4330,7 @@ VARSET RESULT
 				ENDIF
 			ELSEIF 選択カード == 2
 				CALL CARD_UI_RESET
-				TRYCALLFORM CARD_UI(자신_シャーシ,2)
+				TRYCALLFORM CARD_UI(상대_섀시,2)
 				RESETCOLOR	
 				PRINTL
 				PRINTL [100] - 돌아간다
@@ -4228,21 +4340,15 @@ VARSET RESULT
 				ENDIF
 			ELSEIF 選択カード == 3
 				CALL CARD_UI_RESET
-				TRYCALLFORM CARD_UI(자신_ブースト,2)
-				TRYCALLFORM CARDCAN_{자신_ブースト}("자신",ブースト起動,"")
-				SETCOLOR C_G_YELLOW
-				SIF RESULT == 1 && 설정플래그 == 0
-					PRINT [3] - 효과발동
-				RESETCOLOR	
+				TRYCALLFORM CARD_UI(상대_부스트,2)
 				PRINTL
 				PRINTL [100] - 돌아간다
 				BINPUT
 				IF RESULT == 100
 					PRINTL 
-				ELSEIF RESULT == 3
-					TRYCALLFORM CARDEFFECT_{자신_ブースト}("자신",ブースト起動,"")
 				ENDIF
 			ENDIF
+			GOTO E_MACHINE_LOOP
 		ENDIF
 
 	;――――――――――――ターン進行――――――――――――

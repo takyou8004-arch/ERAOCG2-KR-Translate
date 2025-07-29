@@ -1,0 +1,73 @@
+﻿@CARDNAME_300001,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 모먼트 엔진
+	CASE "略称"
+		RESULTS = 모먼트 엔진
+	CASE "カテゴリ"
+		RESULTS:0 = 엔진
+ENDSELECT
+
+
+@CARD_300001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN システム
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_300001(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,召喚強制誘発)
+PRINTL ①：自分がシンクロ召喚に成功する度にスピードカウンターを１つ増やす。
+
+
+
+@CARDCAN_300001(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,300001)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 召喚強制誘発
+	SIF 最終召喚決者 != 決闘者
+		RETURN 0
+	SIF 最終召喚タイプ != "EX特殊"
+		RETURN 0
+	TRYCALLFORM CARD_{最終召喚ID},"種類"
+	SIF !GROUPMATCH(RESULT,シンクロ)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_300001(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択肢
+
+IF 種類 == 召喚強制誘発
+	CALL SET_PLAYER_INFO(決闘者,"SpＣ",1,0,1)
+ENDIF

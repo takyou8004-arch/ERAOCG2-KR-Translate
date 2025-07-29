@@ -1,0 +1,78 @@
+﻿@CARDNAME_300201,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 액셀 부스트
+	CASE "略称"
+		RESULTS = 액셀 부스트
+	CASE "カテゴリ"
+		RESULTS:0 = 부스트
+ENDSELECT
+
+
+@CARD_300201(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN システム
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_300201(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 부스트は１ターンに１度しか発動できない。
+CALLFORM CARD_ABLE(1,부스트起動)
+PRINTL ①：スピードカウンターを２つ消費して発動できる。
+PRINTL 自分はデッキから１枚ドローする。
+
+@CARDCAN_300201(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,300201)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 부스트起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 発動済_1(決闘者,300201)
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_SpＣ") < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_300201(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択肢
+
+IF 種類 == 부스트起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,300201,1)
+	IF RESULT == 0
+		CALL SET_PLAYER_INFO(決闘者,"SpＣ",-2,0,1)
+		CALL CARDDRAW_BASIC(決闘者,1)
+	ENDIF
+ENDIF

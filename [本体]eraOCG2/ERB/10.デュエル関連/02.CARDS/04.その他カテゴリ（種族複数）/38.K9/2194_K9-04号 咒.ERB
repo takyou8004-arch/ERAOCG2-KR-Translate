@@ -1,0 +1,161 @@
+﻿@CARDNAME_2194,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = K9-04호 노로이
+	CASE "略称"
+		RESULTS = K9 노로이
+	CASE "カテゴリ"
+		RESULTS:0 = K9
+ENDSELECT
+
+
+@CARD_2194(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 地属性
+	CASE "種族"
+		RETURN 機械族
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2200
+	CASE "守備力"
+		RETURN 1500
+	CASE "性別"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250726
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_2194(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の②③の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,効果召喚)
+PRINTL ①：相手の手札が２枚以上の場合、このカードはリリースなしで召喚できる。
+CALLFORM CARD_ABLE(2,召喚誘発)
+PRINTL ②：このカードが召喚した場合に発動できる。
+PRINTL デッキから機械族以外の「K9」モンスター１体を特殊召喚する。
+;PRINTL このターン、自分は「K9」モンスターしかEXデッキから特殊召喚できない。
+CALLFORM CARD_ABLE(3,戦場起動)
+PRINTL ③：自分フィールドの表側表示の「K9」カード１枚を墓地へ送って発動できる。
+PRINTL 相手の手札を全て確認する。
+
+@CARDSUMMON_AA_2194
+
+
+@CARDCAN_2194(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,2194)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 効果召喚
+	CALL FULLRESET
+	効果範囲相手手札 = 1
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 召喚誘発
+	SIF 発動済_2(決闘者,2194)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	CALLFORM 効果条件種族_ADV(機械族,"以外")
+	効果条件レベル = 5
+	効果条件カテゴリ = K9
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場起動
+	SIF 発動済_3(決闘者,2194)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 決闘者 == "相手" ;CPUは使わない
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件カテゴリ = K9
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手手札 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_2194(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+
+IF 種類 == 効果召喚
+	RETURN 1
+ELSEIF 種類 == 召喚誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,2194,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		CALLFORM 効果条件種族_ADV(機械族,"以外")
+		効果条件レベル = 5
+		効果条件カテゴリ = K9
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,2194,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲魔罠 = 1
+		効果条件カテゴリ = K9
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲相手手札 = 1
+			効果条件任意 = 1
+			CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

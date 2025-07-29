@@ -1,0 +1,183 @@
+﻿@CARDNAME_52291,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 셀레브로즈 리치 매지션즈
+	CASE "略称"
+		RESULTS = CR리치
+	CASE "カテゴリ"
+		RESULTS:0 = 셀레브로즈
+ENDSELECT
+
+
+@CARD_52291(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 0
+	CASE "種類"
+		RETURN 融合
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 魔法使い族 
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 1600
+	CASE "性別"
+		RETURN 牝性
+	CASE "連動ID"
+		SELECTCASE RAND:2
+			CASE 0
+				RESULT:1 = 2325
+				RETURN 2323
+			CASE 1
+				RESULT:1 = 2323
+				RETURN 2325
+		ENDSELECT
+	CASE "追加日"
+		RETURN 250720
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_52291(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 「셀레브로즈・ソーサラー」＋「셀레브로즈・メイジ」
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,EX召喚時)
+PRINTL ①：このカードが融合召喚した場合に発動できる。
+PRINTL デッキから「셀레브로즈」カード１枚を墓地に送る。
+CALLFORM CARD_ABLE(2,戦場起動)
+PRINTL ②：自分メインフェイズに墓地の装備魔法を3枚までデッキに戻して発動できる。（同名カードは1枚まで）
+PRINTL 相手フィールドの魔法・罠カードを同じ数だけ選んで破壊してもよい。
+CALLFORM CARD_ABLE(3,永続効果)
+PRINTL ③：このカードは装備魔法カードを装備している場合、効果の対象にならず、１ターンに２回攻撃できる。
+
+@CARDSUMMON_52291(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件名前 = 셀레브로즈・ソーサラー
+ELSEIF EX参照 >= 10
+	素材条件名前 = 셀레브로즈・メイジ
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(決闘者,召喚カード,52291)
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_52291(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == EX召喚時
+	SIF 発動済_1(決闘者,52291)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 셀레브로즈
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 戦場起動
+	SIF 発動済_2(決闘者,52291)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件種類 = 装備魔法
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	RETURN 1
+
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EQUIP_CHECK(決闘者,場所,ゾーン)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52291(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC リピート数
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == EX召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,52291,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件カテゴリ = 셀레브로즈
+		CALL CARD_ADD_GY_BASIC(決闘者,"デッキ",ゾーン,場所)
+	ENDIF
+
+ELSEIF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,52291,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果条件種類 = 装備魔法
+		効果条件固名前選択 = 1
+		効果条件複数 = 97
+		効果条件行先フラグ = デッキ行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			リピート数 = RESULT:2 
+			CALL FULLRESET
+			効果条件任意 = 1
+			効果条件複数 = 100 - リピート数
+			CALL CARD_REMOVAL_BASIC(決闘者,"魔罠単体",場所,"墓地")
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"対耐")
+	CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"追戦",1)
+	
+ENDIF

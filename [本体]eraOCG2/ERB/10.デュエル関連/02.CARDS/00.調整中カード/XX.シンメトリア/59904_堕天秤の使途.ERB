@@ -1,0 +1,339 @@
+﻿@CARDNAME_59904,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 타천칭의 사도
+	CASE "略称"
+		RESULTS = 타천칭의 사도
+
+	CASE "要塞名"
+		RESULTS = 타천칭
+	CASE "カテゴリ"
+		RESULTS:0 = 심메트리아
+		RESULTS:1 = 타천칭
+		RESULTS:2 = 포트리스
+		RESULTS:3 = E.R.A
+ENDSELECT
+
+
+@CARD_59904(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 超次元
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 天使族
+	CASE "レベル"
+		RETURN 11
+	CASE "コスト"
+		RETURN 11
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 4000
+	CASE "性別"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250721
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_59904(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+RETURN 0
+
+@CARD_EXPLANATION_59904(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 『超次元』により降臨。
+PRINTL （このカードはカードの効果でのみEXデッキからフィールドに特殊召喚・魔罠ゾーンに置くことができる）
+CALL TEXT_DECORATION("D_HEART_F")
+PRINTL 포트리스側　《타천칭》 コスト：１１
+CALLFORM CARD_ABLE(1,永続効果)
+PRINTL ①：このカードが存在する限り、
+PRINTL 自分は直接攻撃できず、「심메트리아」または「타천칭」モンスターしかEXデッキから特殊召喚できない。
+CALLFORM CARD_ABLE(2,魔罠起動,フリー誘発)
+PRINTL ②：相手ターンに一度、このカードの個別カウンターを１つ取り除いて発動できる。
+PRINTL 相手フィールド・墓地のモンスター１体を「심메트리아・スレイヴ」として、
+PRINTL 永続魔法カード扱いで自分の魔法＆罠ゾーンに表側表示で置く。
+CALLFORM CARD_ABLE(3,発動強制誘発)
+PRINTL ③：「심메트리아」魔法・罠カードの効果が発動した場合に発動する。
+PRINTL このカードに個別カウンターを１つ置く（最大２０個まで）。
+CALL CARD_ABLE(4,ターン終了時)
+PRINTL ④：エンドフェイズに発動できる。自分の魔法＆罠ゾーンに存在しているモンスターにセクハラを行う。
+PRINTL これが自分のエンドフェイズ中であれば、さらにこのカードの個別カウンターの数×１００ダメージを与える。
+PRINTL その後、自分フィールドに「심메트리아・スレイヴ」が４体以上存在している場合、このカードをモンスターとして特殊召喚できる。
+CALL TEXT_DECORATION("D_HEART_2")
+
+
+@CARDCAN_59904(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,59904)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 永続効果
+	;魔法面①の効果（EXデッキからの召喚制限・直接攻撃制限）
+	;モンスター面①の効果（対象耐性）
+	SIF !GROUPMATCH(ゾーン, "魔罠","戦場")
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動 || 種類 == フリー誘発
+	;魔法面②の効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	SIF 発動済_2(決闘者,59904)
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_個Ｃ:場所") < 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果範囲相手墓地 = 1
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 発動強制誘発
+	;魔法面③の効果（カウンターを乗せる）
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	;カウンターの上限は２０個
+	CALL FULLRESET
+		SIF GETVAR(@"%決闘者%_魔_個Ｃ:場所") >= 20
+		RETURN 0
+	効果条件カテゴリ = 심메트리아
+	効果条件固カテゴリ = 타천칭
+	効果条件種類 = 魔罠全般
+	CALL CARD_CHECK_START_DATA_2(決闘者,2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン終了時 && ゾーン == "魔罠"
+	;魔法面④の効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	;セクハラ効果があるのでカウンターが無くても発動可能な仕様
+	;空打ちできるようになっちゃうけどまあいいでしょう
+	RETURN 1
+ELSEIF 種類 == ターン終了時 && ゾーン == "戦場"
+	;モンスター面④の効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場起動 || 種類 == フリー誘発
+	;モンスター面③の効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 発動済_3(決闘者,159904)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果範囲相手墓地 = 1
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59904(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 設定場所
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC カード追加先
+#DIM DYNAMIC 調教対象
+
+
+IF 種類 == 永続効果
+	IF ゾーン == "魔罠"
+		;포트리스状態での永続効果
+		CALL CARD_EX_RESTRICTION(決闘者,"심메트리아")
+		CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"直無")
+	ELSEIF ゾーン == "戦場"
+		;モンスター状態での永続効果
+		CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"対耐")
+	ENDIF
+ELSEIF 種類 == 魔罠起動 || 種類 == フリー誘発
+	;魔法面の磔効果
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,59904,2)
+		IF RESULT == 0
+			;次にカードを置く予定の領域を取得
+			カード追加先 = 現魔罠(決闘者)
+			;相手のカードを置く
+			CALL FULLRESET
+			効果範囲相手戦場 = 1
+			効果範囲相手墓地 = 1
+			効果条件表示 = 10
+			効果条件種類 = モン全般
+			効果条件除去種 = 強奪
+			CALL CARD_SET_ADV(決闘者,ゾーン,場所,"表側表示")
+			;名前を「Symスレイヴ」に変更（処理上はこの表記）
+			CALL CARD_SET_RENAME(決闘者,"魔罠",カード追加先,"Symスレイヴ")
+			;カウンターを取り除く
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(決闘者,"魔罠",場所,"個Ｃ",-1)
+		ENDIF
+ELSEIF 種類 == 発動強制誘発
+	;自分にカウンターを乗せる
+	PRINTFORMW 「타천칭」にカウンターが置かれた。
+	CALL SET_FIELD_INFO(決闘者,"魔罠",場所,"個Ｃ",1)
+ELSEIF 種類 == ターン終了時 && ゾーン == "魔罠"
+	;魔法面のEP効果
+	;セクハラを行う
+	CALL CARD_HOSTAGE_FORT_59904(決闘者,種類,ゾーン,場所)
+	
+	;自分のターンである事をチェック
+	IF ターンプレイヤー == 決闘者
+		;カウンターの数だけダメージを与える
+		ダメージ量 = GETVAR(@"%決闘者%_魔_個Ｃ:場所") * 100
+		CALL CARD_DAMAGE_59904(決闘者,種類,ゾーン,場所,ダメージ量)
+		;「심메트리아・スレイヴ」が4枚あるかチェック
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲魔罠 = 1
+		効果条件名前 = Symスレイヴ
+		効果条件種類 = モン全般
+		効果条件CNT = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		IF RESULT >= 4
+			;条件を満たしているので変形
+			CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,59904)
+			IF RESULT == 0
+				PRINTFORMW 타천칭の左右が釣り合った……
+				PRINTFORML 強烈な光の中から新たな天使が現れた！
+				CALL RESETCONDITION
+				CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 種類 == ターン終了時 && ゾーン == "戦場"
+	;モンスター面のEP効果
+	;セクハラを行う
+	CALL CARD_HOSTAGE_MONSTER_59904(決闘者,種類,ゾーン,場所)
+	ダメージ量 = 2000
+	CALL CARD_DAMAGE_59904(決闘者,種類,ゾーン,場所,ダメージ量)
+ELSEIF 種類 == 戦場起動 || 種類 == フリー誘発
+	;モンスター面の磔効果
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,159904,3)
+		IF RESULT == 0
+			;カードを置く位置の情報を取得
+			カード追加先 = 現魔罠(決闘者)
+			;相手のカードを置く
+			CALL FULLRESET
+			効果範囲相手戦場 = 1
+			効果範囲相手墓地 = 1
+			効果条件表示 = 10
+			効果条件種類 = モン全般
+			効果条件除去種 = 強奪
+			CALL CARD_SET_ADV(決闘者,ゾーン,場所,"表側表示")
+			;名前を「Symスレイヴ」に変更（処理上はこの表記）
+			CALL CARD_SET_RENAME(決闘者,"魔罠",カード追加先,"Symスレイヴ")
+		ENDIF
+ELSEIF 種類 == 永続効果
+	;戦場に出た時の書き換え処理？
+	SIF ゾーン == "戦場"
+		CALL SET_FIELD_INFO(決闘者,"戦場",場所,"変化元ID",159904,上書きモード)
+ENDIF
+
+
+
+
+
+@CARDNAME_159904,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 타천칭의 사도
+	CASE "略称"
+		RESULTS = 타천칭의 사도
+
+	CASE "要塞名"
+		RESULTS = 타천칭
+	CASE "カテゴリ"
+		RESULTS:0 = 심메트리아
+		RESULTS:1 = 타천칭
+		RESULTS:2 = 포트리스
+		RESULTS:3 = E.R.A
+ENDSELECT
+
+@CARD_159904(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 超次元
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 天使族
+	CASE "レベル"
+		RETURN 11
+	CASE "コスト"
+		RETURN 11
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 4000
+	CASE "性別"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250721
+ENDSELECT
+
+@CARD_EXPLANATION_159904(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("D_HEART_C")
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ①：このカードは対象耐性を持つ。
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ②：このカードが存在する限り、「심메트리아」カードによってカード効果を選ぶ場合、
+PRINTL その効果はどちらも適用され、要求する行為は過激なものになる。
+;②の効果は심메트리아モンスターに追加条件として書く
+CALLFORM CARD_ABLE(0,戦場起動,フリー誘発)
+PRINTL ③：自分・相手ターンに、相手フィールド・墓地のモンスター１体を対象として発動できる。
+PRINTL そのモンスターを「심메트리아・スレイヴ」として、永続魔法カード扱いで自分の魔法＆罠ゾーンに表側表示で置く。
+CALL CARD_ABLE(10,ターン終了時)
+PRINTL ④：エンドフェイズに発動できる。自分の魔法＆罠ゾーンに存在しているモンスターに過激なセクハラを行う。
+PRINTL その後、２０００ダメージを与える。
+CALL TEXT_DECORATION("D_HEART_2")

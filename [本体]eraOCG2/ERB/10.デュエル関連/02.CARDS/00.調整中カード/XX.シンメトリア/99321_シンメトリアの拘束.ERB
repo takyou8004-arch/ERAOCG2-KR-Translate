@@ -1,0 +1,140 @@
+﻿@CARDNAME_99321,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 심메트리아의 구속
+	CASE "略称"
+		RESULTS = Sym구속
+	CASE "カテゴリ"
+		RESULTS:0 = 심메트리아
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99321(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常罠
+	CASE "追加日"
+		RETURN 250721
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99321(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(0,魔罠起動 ,フリー誘発)
+PRINTL ①：自分フィールドに存在する「타천칭」以外のカード１枚を墓地へ送ってこのカードを発動できる。
+PRINTL 相手フィールド・墓地のモンスター１体を「심메트리아・スレイヴ」として、
+PRINTL 永続魔法カード扱いで自分の魔法＆罠ゾーンに表側表示で置く。
+PRINTL ②：墓地のこのカードを除外して発動できる。自分のデッキの上からカードを３枚墓地へ送る。
+PRINTL その後、「타천칭」カードに個別カウンターを４つ乗せる。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_99321(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,99321)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+		RETURN 0
+	;ここで条件指定
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件CNT = 1
+	効果条件固カテゴリ = 타천칭
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT < 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果範囲相手墓地 = 1
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	SIF ゾーン != "墓地"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99321(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カード追加先
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99321)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		;指定したカードを墓地に送る
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲魔罠 = 1
+		効果条件固カテゴリ = 타천칭
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			;相手のカードを魔法罠ゾーンに置く効果の処理
+			CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+			;カードを置く位置の情報を取得
+			カード追加先 = 現魔罠(決闘者)
+			;相手のカードを置く
+			CALL FULLRESET
+			効果範囲相手戦場 = 1
+			効果範囲相手墓地 = 1
+			効果条件表示 = 10
+			効果条件種類 = モン全般
+			効果条件除去種 = 強奪
+			CALL CARD_SET_ADV(決闘者,ゾーン,場所,"表側表示")
+			;名前を「Symスレイヴ」に変更（処理上はこの表記）
+			CALL CARD_SET_RENAME(決闘者,"魔罠",カード追加先,"Symスレイヴ")
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99321)
+	IF RESULT == 0
+		;カードを墓地に送る
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL CARD_DECK_DISPOSE(決闘者,"デッキ",3)
+		;カウンターを乗せる
+		CALL CARD_COUNTER_SYMMETRIA(決闘者,種類,ゾーン,場所,4)
+	ENDIF
+ENDIF

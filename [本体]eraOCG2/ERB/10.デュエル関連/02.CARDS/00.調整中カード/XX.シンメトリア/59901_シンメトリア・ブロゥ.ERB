@@ -1,0 +1,230 @@
+﻿@CARDNAME_59901,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 심메트리아 블로우
+	CASE "略称"
+		RESULTS = Sym블로우
+	CASE "カテゴリ"
+		RESULTS:0 = 심메트리아
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59901(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 天使族
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 200
+	CASE "性別"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250721
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_59901(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL このカード名の(1)(2)(3)の効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,手札起動)
+PRINTL ①：手札のこのカードを墓地へ送って発動できる。
+PRINTL EXデッキから「타천칭」포트리스１枚を自分の魔法＆罠ゾーンに表側表示で置く。
+CALL CARD_ABLE(2,墓地起動,フリー誘発)
+PRINTL ②：自分・相手ターンにこのカードが墓地に存在し、自分フィールドに「타천칭」カードが存在する場合に発動できる。
+PRINTL このカードを特殊召喚する。
+CALLFORM CARD_ABLE(3,戦場起動,フリー誘発)
+PRINTL ③：自分・相手ターンに、自分フィールドに「타천칭」カードが存在する場合、
+PRINTL フィールドのこのカードを墓地へ送って発動できる。
+PRINTL 相手は以下の効果から１つを選ぶ。その後、その効果を適用する。
+PRINTL ●相手フィールドの魔法・罠カードを全て除外する。
+PRINTL ●相手にフェラで奉仕をさせる。その後200ダメージを与え、「타천칭」カードに個別カウンターを１つ乗せる。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_59901(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,59901)
+SIF RESULT == 1
+	RETURN 0
+
+;포트리스効果
+IF 種類 == 手札起動
+	SIF 発動済_1(決闘者,59901)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲EXデッキ = 1
+	効果条件種類 = 超次元
+	効果条件カテゴリ = 포트리스
+	効果条件カテゴリ = 타천칭
+	CALL 効果条件レベル_ADV(11, "以下")
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+;墓地からのss効果
+ELSEIF 種類 == 墓地起動 || 種類 == フリー誘発
+	SIF 発動済_2(決闘者,59901)
+		RETURN 0
+	SIF ゾーン != "墓地"
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,59901,"墓地")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件カテゴリ = 타천칭
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+;フリー誘発効果
+ELSEIF 種類 == 戦場起動 || 種類 == フリー誘発
+	SIF 発動済_3(決闘者,59901)
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 타천칭
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59901(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 選択後メッセージ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンター数
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 効果分岐
+#DIM DYNAMIC 調教対象
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,59901)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	;手札から自分を捨て、포트리스を置く効果
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,59901,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果条件種類 = 超次元
+		効果条件カテゴリ = 포트리스
+		効果条件カテゴリ = 타천칭
+		CALL 効果条件レベル_ADV(11, "以下")
+		CALL DIMSUMMON(決闘者,ゾーン,場所,4)
+	ENDIF
+
+ELSEIF 種類 == 墓地起動 || 種類 == フリー誘発
+	;墓地から自分を特殊召喚する効果（このカードのみフリーチェーン）
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,59901,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,"墓地",場所)
+	ENDIF
+
+ELSEIF 種類 == 戦場起動 || 種類 == フリー誘発
+	;ダメージか固有のボーナス効果かを相手に選択させる効果
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,59901,3)
+	IF RESULT == 0
+		;自分を墓地に送る
+		CALL FULLRESET
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		;どの効果が選択されるか決定
+		CALL FULLRESET
+		CALL CALC_PROBABILITY_SYMMETRIA(決闘者,種類,ゾーン,場所)
+		効果分岐 = RESULT
+
+		IF 効果分岐 == 1 || 効果分岐 == 2
+			;RESULTが1なら確率によってボーナス効果が選択された
+			;RESULTが2ならダメージ的にボーナス効果を選択するしかなかった状況
+			;それぞれに違うメッセージを用意する予定があったが、今のところは結果は同じ
+			;魔法罠をすべて除外
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"魔罠全体",場所,"除外")
+		ELSEIF 効果分岐 == 3
+			;RESULTが3なら使途が居るので両方の効果を適用させる
+			;モンスターが個別で持つボーナス効果の処理
+			;魔法罠をすべて除外
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"魔罠全体",場所,"除外")
+			;奉仕処理
+			CALL CARD_EROTICS(相手プレイヤー,決闘者)
+			IF RESULT != -1
+				調教対象 = RESULT
+				PRINTFORML
+				SETCOLOR C_PINK 
+				PRINTFORML %CALLNAME:調教対象%はフェラでの奉仕を強要されている……
+				RESETCOLOR
+				CALL EROTIC_MOVE("フェラチオ",調教対象,MASTER,500)
+			ENDIF
+			;ダメージを与えカウンターを置く効果
+			CALL FULLRESET
+			ダメージ量 = 200
+			CALL CARD_DAMAGE_SYMMETRIA(決闘者,種類,ゾーン,場所,ダメージ量)
+		ELSE
+			;それ以外ならダメージを与える効果が選択されている。
+			;奉仕処理
+			CALL CARD_EROTICS(相手プレイヤー,決闘者)
+			IF RESULT != -1
+				調教対象 = RESULT
+				PRINTFORML
+				SETCOLOR C_PINK 
+				PRINTFORML %CALLNAME:調教対象%はフェラでの奉仕を強要されている……
+				RESETCOLOR
+				CALL EROTIC_MOVE("フェラチオ",調教対象,MASTER,500)
+			ENDIF
+			;ダメージを与えカウンターを置く効果の処理
+			ダメージ量 = 200
+			CALL CARD_DAMAGE_SYMMETRIA(決闘者,種類,ゾーン,場所,ダメージ量)
+		ENDIF
+	ENDIF
+ENDIF

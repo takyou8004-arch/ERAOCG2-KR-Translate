@@ -1,0 +1,138 @@
+﻿@CARDNAME_72274,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 리벤데드 버스
+	CASE "略称"
+		RESULTS = RVD.Evolution
+	CASE "カテゴリ"
+		RESULTS:0 = 벤데드
+		RESULTS:1 = 의식 마법
+ENDSELECT
+
+
+@CARD_72274(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "追加日"
+		RETURN 250720
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72274(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 「벤데드」儀式モンスターの降臨に必要。
+PRINTL このカード名のカードは１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,魔罠起動 ,手札起動)
+PRINTL ①：レベルの合計が儀式召喚するモンスターのレベル以上になるように、
+PRINTL 自分の手札・デッキ・フィールドのモンスターをリリースし、
+PRINTL 自分の手札・墓地から「벤데드」儀式モンスター１体を儀式召喚し、そのモンスターにリミットカウンターを１つ置く。
+PRINTL 次のターンのエンドフェイズに、自分フィールドのリミットカウンターの乗ったモンスター１体を破壊する。
+PRINTL この効果の発動後、ターン終了時まで自分はアンデット族モンスターしかＥＸデッキから特殊召喚できない。
+
+
+@CARDCAN_72274(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,72274)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF 発動済_1(決闘者,72274)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲戦場 = 1
+	素材範囲手札 = 1
+	素材範囲デッキ = 1
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲墓地 = 1
+	効果条件種類 = 儀式
+	効果条件カテゴリ = 벤데드
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == ターン開始時予約 || 種類 == ターン終了時予約
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_72274(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,72274,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL RESETAREA_MAT
+		素材範囲手札 = 1
+		素材範囲戦場 = 1
+		素材範囲デッキ = 1
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果範囲墓地 = 1
+		効果条件種類 = 儀式
+		効果条件カテゴリ = 벤데드
+		効果条件召喚可 = 1
+		CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_SELECT(決闘者,RESULT)
+			選択カード = RESULT
+			CALL RESETAREA_MAT
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%決闘者%_%参照先（CS）%:選択カード")}(決闘者,選択カード)
+			素材範囲戦場 = 1
+			素材範囲手札 = 1
+			素材範囲デッキ = 1
+			TRYCALLFORM RITSUMMON(決闘者, 選択カード,参照先（CS）)
+			CALL SET_FIELD_INFO(決闘者,"戦場",カード召喚先,"個Ｃ",1)
+			CALL CARD_RESERV(決闘者,72274,スタン予約)
+		ENDIF
+		EX召喚可能種族 = アンデット族
+		CALL CARD_EX_RESTRICTION(決闘者)
+	ENDIF
+
+ELSEIF 種類 == ターン開始時予約
+	CALL CARD_RESERV(決闘者,72274,エンド予約)
+
+ELSEIF 種類 == ターン終了時予約
+	PRINTL 【破壊するモンスターを選択してください】
+	PRINTL
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 벤데드
+	効果条件種類 = 儀式
+	効果条件個Ｃ所持 = 999
+	効果条件行先フラグ = 破壊行き
+	CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+ENDIF
+

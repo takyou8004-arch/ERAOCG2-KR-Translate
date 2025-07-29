@@ -1,0 +1,158 @@
+﻿@CARDNAME_62291,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 셀레브레이드 데스와일드
+	CASE "略称"
+		RESULTS = 데스와일드
+	CASE "カテゴリ"
+		RESULTS:0 = 셀레브로즈
+ENDSELECT
+
+
+@CARD_62291(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 0
+	CASE "種類"
+		RETURN 装備魔法
+	CASE "追加日"
+		RETURN 250720
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62291(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 魔法使い族・光属性モンスターにのみ装備可能。
+PRINTL このカード名の②の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,永続効果)
+PRINTL ①：このカードを装備したモンスターの攻撃力は４００アップし、貫通攻撃を得る。
+PRINTL 装備モンスターが融合モンスターの場合、さらにその攻撃力は６００アップする。
+CALLFORM CARD_ABLE(2,墓地起動)
+PRINTL ②：自分フィールドに「셀레브로즈」融合モンスター存在する場合に発動できる。
+PRINTL 墓地のこのカードを自分フィールドの「셀레브로즈」融合モンスターに装備する。
+
+
+@CARDCAN_62291(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,62291)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種族 = 魔法使い族
+	効果条件属性 = 光属性
+	効果条件表示 = 表側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	SIF 発動済_2(決闘者,62291)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 셀레브로즈
+	効果条件種類 = 融合
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+	
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 攻守変動
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_62291(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,62291,1)
+	IF RESULT == 0
+		;手札から発動後、魔法トラップゾーンにカード移動
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件種族 = 魔法使い族
+		効果条件属性 = 光属性
+		CALLFORM CARD_EQUIP_ADV(決闘者,場所,ゾーン)
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,62291,2)
+	IF RESULT == 0
+		;墓地から発動後、魔法トラップゾーンにカード移動
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件カテゴリ = 셀레브로즈
+		効果条件種類 = 融合
+		CALLFORM CARD_EQUIP_ADV(決闘者,場所,ゾーン)
+	ENDIF
+
+ELSEIF 種類 == 永続効果
+	CALL STATCHANGE_EFFECT(決闘者,"装備",場所,"貫通")
+ELSEIF 種類 == 攻守変動
+	CALL STATCHANGE_BASIC(決闘者,"装備",場所,400)
+	TRYCALLFORM CARD_{GETVAR(@"%装備者%_戦場:装備先")}, "種類"
+	SIF RESULT == 融合
+		CALL STATCHANGE_BASIC(決闘者,"装備",場所,600)
+	
+ENDIF

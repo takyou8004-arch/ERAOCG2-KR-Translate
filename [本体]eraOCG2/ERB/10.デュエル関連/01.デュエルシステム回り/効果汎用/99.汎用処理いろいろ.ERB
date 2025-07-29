@@ -132,6 +132,7 @@ VARSET 효과条件複数
 VARSET 효과条件選択済,-1
 VARSET 효과条件行先플래그
 VARSET 효과条件추가플래그
+VARSET 효과条件装備先,-1
 
 VARSET 효과条件召種, -1
 VARSET 효과条件T1召種
@@ -2689,9 +2690,19 @@ RETURN LRESULT
 #DIM DYNAMIC 효과修正
 #DIM DYNAMIC 反転플래그
 #DIM DYNAMIC 설정타입
+#DIMS DYNAMIC 대상名
 
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
+
+IF 反転フラグ == 0
+	대상名 = %듀얼리스트%
+ELSEIF 反転フラグ == 1
+	대상名 = %対面者%
+ELSEIF 反転フラグ == 2
+	대상名 = お互い
+ENDIF
+
 
 IF 설정타입 == 0
 	IF 反転플래그 == 0
@@ -2702,18 +2713,22 @@ IF 설정타입 == 0
 				SETVAR @"%듀얼리스트%_어둠속성효과無効", 2
 				SETVAR @"%듀얼리스트%_물속성효과無効", 2
 				SETVAR @"%듀얼리스트%_화염속성효과無効", 2
-
+				PRINTFORMW %대상名%に『어둠물화염속성효과무효』가 적용되었습니다。
+				RETURN 1
 			;インパルス
 			CASE 2
 				SETVAR @"%듀얼리스트%_빛속성효과無効", 2
 				SETVAR @"%듀얼리스트%_땅속성효과無効", 2
 				SETVAR @"%듀얼리스트%_바람속성효과無効", 2
-
+				PRINTFORMW %대상名%に『빛땅바람속성효과무효』가 적용되었습니다。
+				RETURN 1
 			;デドダム
 			CASE 10
 				SETVAR @"%듀얼리스트%_빛속성효과無効", 2
 				SETVAR @"%듀얼리스트%_화염속성효과無効", 2
 				SETVAR @"%듀얼리스트%_땅속성효과無効", 2
+				PRINTFORMW %대상名%に『빛화염땅속성효과무효』가 적용되었습니다。
+				RETURN 1
 			ENDSELECT
 		ELSE
 			SETVAR @"%듀얼리스트%_%효과種%", 효과修正
@@ -2725,6 +2740,9 @@ IF 설정타입 == 0
 		SETVAR @"%対面者%_%효과種%", 효과修正
 	ENDIF
 
+	SIF 効果修正 != 3
+		PRINTFORMW %대상名%に『%효과種%』가 적용되었습니다。
+
 ELSEIF 설정타입 == 1
 	IF 反転플래그 == 0
 		SETVAR @"%듀얼리스트%_%효과種%", GETVAR(@"%듀얼리스트%_%효과種%") + 효과修正
@@ -2734,6 +2752,7 @@ ELSEIF 설정타입 == 1
 		SETVAR @"%듀얼리스트%_%효과種%", GETVAR(@"%듀얼리스트%_%효과種%") + 효과修正
 		SETVAR @"%対面者%_%효과種%", GETVAR(@"%対面者%_%효과種%") + 효과修正
 	ENDIF
+	PRINTFORMW %대상名%의『%효과種%』가 １개 늘었습니다。
 ENDIF
 
 @GET_PLAYER_INFO(듀얼리스트,효과種,反転플래그)
@@ -3281,7 +3300,7 @@ PRINTFORMW %듀얼리스트%의 ＥＸ덱에 %RESULTS%가 추가되었다！
 #DIM DYNAMIC カードID
 #DIM DYNAMIC コピー先
 
-コピー先 = 묘지数(듀얼리스트)
+コピー先 = 現묘지数(듀얼리스트)
 SETVAR @"%듀얼리스트%_묘지:コピー先",カードID
 
 CALLFORM CARDNAME_{カードID},"名前"

@@ -1,0 +1,151 @@
+﻿@CARDNAME_62293,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 카리스 매직－엘레강트체인지
+	CASE "略称"
+		RESULTS = CM－E체인지
+	CASE "カテゴリ"
+		RESULTS:0 = 셀레브로즈
+ENDSELECT
+
+
+@CARD_62293(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 0
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "追加日"
+		RETURN 250720
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62293(種類)
+#DIM DYNAMIC 種類
+
+PRINTL ①：このカード名の①②の効果はそれぞれ１ターンに１度しか発動できない。
+CALLFORM CARD_ABLE(1,魔罠起動,手札起動)
+PRINTL ①：手札を１枚をデッキに戻して発動できる。
+PRINTL デッキから「셀레브로즈」モンスター１体を手札に加える。
+PRINTL その後、自分は１枚ドローできる。
+CALLFORM CARD_ABLE(2,墓地起動)
+PRINTL ②：墓地のこのカードを除外し発動できる。
+PRINTL 自分の手札、フィールドのモンスターを素材とし、「셀레브로즈」融合モンスター１体を融合召喚する。
+
+
+@CARDCAN_62293(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,62293)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;手札コストが無いとダメ
+	SIF 種類 == 魔罠起動 && 手札数(決闘者) < 1
+		RETURN 0
+	SIF 種類 == 手札起動 && 手札数(決闘者) < 2
+		RETURN 0
+	SIF 発動済_1(決闘者,62293)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件種類 = モン全般
+	効果条件カテゴリ = 셀레브로즈
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+	
+ELSEIF 種類 == 墓地起動
+	SIF 発動済_2(決闘者,62293)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲手札 = 1
+	素材範囲戦場 = 1
+	CALL FULLRESET
+	効果範囲EXデッキ = 1
+	効果条件種類 = 融合
+	効果条件カテゴリ = 셀레브로즈
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_62293(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,62293,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果条件行先フラグ = デッキ行き
+		CALL CARD_ADD_GY_BASIC(決闘者,"手札",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果条件カテゴリ = 셀레브로즈
+			効果条件種類 = モン全般
+			CALL CARD_ADD_BASIC(決闘者,"デッキ",ゾーン,場所)
+			SIF 決闘者 == "自分"
+				PRINTL ドローしますか？
+			CALL YN_CHOICE(決闘者)
+			SIF RESULT == はい
+				CALL CARDDRAW_BASIC(決闘者,1)
+		ENDIF
+	ENDIF
+	
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,62293,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL RESETAREA_MAT
+		素材範囲手札 = 1
+		素材範囲戦場 = 1
+		CALL FULLRESET
+		効果範囲EXデッキ = 1
+		効果条件種類 = 融合
+		効果条件カテゴリ = 셀레브로즈
+		効果条件召喚可 = 1
+		CALL CARD_CHOOSE_BASIC(決闘者,"EXデッキ",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%決闘者%_EXデッキ:{選択カード}")}(決闘者,選択カード)
+			CALL FUSSUMMON(決闘者, 選択カード)
+		ENDIF
+	ENDIF
+
+ENDIF

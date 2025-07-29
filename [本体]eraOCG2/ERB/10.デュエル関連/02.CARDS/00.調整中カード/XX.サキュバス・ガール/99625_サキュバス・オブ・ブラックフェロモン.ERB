@@ -1,0 +1,205 @@
+@CARDNAME_99625,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 서큐버스 오브 블랙페로몬
+	CASE "略称"
+		RESULTS = 음마도의흑연영
+	CASE "カテゴリ"
+	    RESULTS:0 = 매지션 걸
+		RESULTS:1 = 서큐버스 걸
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+@CARD_99625(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 永続罠
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RESULT:1 = 悪魔族
+		RETURN 魔法使い族
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 2000
+	CASE "性別"
+		RETURN 牝性
+	CASE "生成カード"
+		RETURN 宝液ID
+	CASE "分割"
+		RETURN 効果なし
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_99625(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_99625(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 自分フィールドにモンスターが存在しない場合、このカードは手札からも発動できる。
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,手札起動,魔罠起動,フリー誘発,発動誘発)
+PRINTL ①：このカードをモンスターゾーンに特殊召喚する。
+PRINTL 相手の性別を有するモンスターの効果にチェーンして発動した場合、
+PRINTL さらに５００ＬＰを払うことで、その効果を無効にできる。
+PRINTL この効果の発動後、自分は次のターン終了時まで、「서큐버스 걸」以外のモンスターをＥＸデッキから特殊召喚できない。
+CALL CARD_ABLE(0,永続効果)
+PRINTL ②：このカードがモンスターゾーンに存在する限り、自分フィールドの他の表側表示の「서큐버스 걸」カードは対象耐性を得る。
+CALL CARD_ABLE(0,ターン終了時強制)
+PRINTL ③：自分・相手エンドフェイズに、このカードがモンスターゾーンに存在する場合に発動する。
+PRINTL 自分は５００ＬＰを失い、墓地に「賢者の宝液」トークン１枚を生成する。
+PRINTL その後、このカードを墓地に送る。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99625(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 選択カード名
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,99625)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動 || 種類 == 魔罠起動 || 種類 == フリー誘発
+	SIF 発動済_1(決闘者,99625)
+		RETURN 0
+	IF ゾーン == "手札"
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+	ELSEIF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 3 || GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL CARD_SS_CHECK(決闘者,99625,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 発動誘発
+	SIF 発動済_1(決闘者,99625)
+		RETURN 0
+	IF ゾーン == "手札"
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+	ELSEIF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 3 || GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL CARD_SS_CHECK(決闘者,99625,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果条件性別 = 性別在
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_START_DATA(決闘者,1)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"ライフ_%決闘者%") <= 1000 && GETVAR(@"%決闘者%_コスト無効") < 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン終了時強制
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン開始時予約
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99625(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 手札起動 || 種類 == 魔罠起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99625,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+		CALL CARD_EX_RESTRICTION(決闘者,"서큐버스 걸")
+		CALL CARD_RESERV(決闘者,99625,スタン予約)
+	ENDIF
+ELSEIF 種類 == 発動誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99625,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+		PRINTL ５００ＬＰを払って相手が発動した効果を無効にしますか？
+		CALL YN_CHOICE(決闘者)
+		IF RESULT == はい
+			CALL LIFE_CHANGE(決闘者,"減少","コスト",500)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"発動無効",場所,"無効")
+		ENDIF
+		CALL CARD_EX_RESTRICTION(決闘者,"서큐버스 걸")
+		CALL CARD_RESERV(決闘者,99625,スタン予約)
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL FULLRESET
+	効果条件カテゴリ = 서큐버스 걸
+	効果条件他所 = 1
+	効果条件表示 = 表側表示
+	CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"対耐")
+	CALL STATCHANGE_EFFECT(決闘者,"魔罠",場所,"対耐")
+ELSEIF 種類 == ターン終了時強制
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99625)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(決闘者,"減少","コスト",500)
+		CALL CARD_GENERATE_GY(決闘者,宝液ID)
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == ターン開始時予約
+	CALL CARD_EX_RESTRICTION(決闘者,"서큐버스 걸")
+ENDIF

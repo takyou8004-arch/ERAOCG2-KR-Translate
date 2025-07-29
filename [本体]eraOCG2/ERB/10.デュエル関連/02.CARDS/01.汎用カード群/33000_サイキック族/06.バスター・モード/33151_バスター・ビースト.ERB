@@ -1,0 +1,102 @@
+﻿@CARDNAME_33151,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 버스터 비스트
+	CASE "略称"
+		RESULTS = Ｂ 비스트
+	CASE "カテゴリ"
+		RESULTS:0 = 버스터
+ENDSELECT
+
+
+@CARD_33151(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 地属性
+	CASE "種族"
+		RETURN 獣族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 1200
+	CASE "性別"
+		RETURN 雄性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_33151(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,手札起動)
+PRINTL ①：このカードを手札から墓地へ捨てて発動できる。
+PRINTL デッキから「버스터」魔法・罠カード１枚を手札に加える。
+PRINTL 
+
+@CARDCAN_33151(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,33151)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 種類 == 手札起動
+	SIF 発動済_1(決闘者,33151)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 버스터
+	効果条件種類 = 魔罠全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_33151(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,33151,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果条件カテゴリ = 버스터
+		効果条件種類 = 魔罠全般
+		CALL CARD_ADD_BASIC(決闘者,"デッキ",ゾーン,場所)
+	ENDIF
+
+ENDIF

@@ -1,0 +1,126 @@
+﻿@CARDNAME_28152,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 《이치키사요리히메》
+	CASE "略称"
+		RESULTS = 이치키사요리히메
+	CASE "カテゴリ"
+		RESULTS:0 = 스피릿
+ENDSELECT
+
+@CARD_28152(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 天使族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 800
+	CASE "特殊不可"
+		RETURN 1
+	CASE "追加日"
+		RETURN 250726
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28152(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカードは特殊召喚できない。
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,手札起動)
+PRINTL ①：このカードが手札に存在し、自分フィールドに攻撃力か守備力が８００のモンスターが存在する場合に発動できる。
+PRINTL このカードの召喚を行う。
+CALLFORM CARD_ABLE(2,召喚時)
+PRINTL ②：このカードが召喚した場合に発動できる。
+PRINTL デッキから「斎キ狭依姫」以外の守備力が８００でレベル４の光・闇属性モンスター１体を手札に加える。
+;PRINTL デッキから「斎キ狭依姫」以外の攻撃力か守備力が８００でレベル４の光・闇属性モンスター１体を手札に加える。
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ③：エンドフェイズに発動する。
+PRINTL このカードを持ち主の手札に戻す。
+
+@CARDCAN_28152(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,28152)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF 発動済_1(決闘者,28152)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 召喚時
+	SIF 発動済_2(決闘者,28152)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件固名前 = 《이치키사요리히메》
+	効果条件守備力 = 800
+	効果条件レベル = 4
+	効果条件属性:0 = 光属性
+	効果条件属性:1 = 闇属性
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン終了時強制
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_28152(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,28152,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SUMMON_SHORI(決闘者,場所,"攻撃表示",1)
+	ENDIF
+ELSEIF 種類 == 召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,28152,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件固名前 = 《이치키사요리히메》
+		効果条件守備力 = 800
+		効果条件レベル = 4
+		効果条件属性:0 = 光属性
+		効果条件属性:1 = 闇属性
+		効果条件種類 = モン全般
+		CALL CARD_ADD_BASIC(決闘者,"デッキ",ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == ターン終了時強制
+	CALL CARD_DISPOSE(決闘者,ゾーン,場所,手札行き)
+ENDIF

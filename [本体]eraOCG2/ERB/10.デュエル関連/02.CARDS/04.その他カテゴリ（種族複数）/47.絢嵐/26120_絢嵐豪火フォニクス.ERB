@@ -1,0 +1,146 @@
+﻿@CARDNAME_26120,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 현람호화 포닉스
+	CASE "略称"
+		RESULTS = 포닉스
+	CASE "カテゴリ"
+		RESULTS:0 = 현람
+ENDSELECT
+
+
+@CARD_26120(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 風属性
+	CASE "種族"
+		RETURN 元素霊族
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 0
+	CASE "追加日"
+		RETURN 250726
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_26120(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②③の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,効果後誘発)
+PRINTL ①：速攻魔法カードが発動した場合に発動できる。
+PRINTL このカードを手札から特殊召喚する。
+CALLFORM CARD_ABLE(2,効果後誘発)
+PRINTL ②：速攻魔法カードが発動した場合、相手フィールドのカードを２枚まで対象として発動できる。
+PRINTL そのカードをデッキに戻す。
+CALLFORM CARD_ABLE(3,効果後誘発)
+PRINTL ③：このカードが墓地に存在する状態で「サイクロン」が発動した場合に発動できる。
+PRINTL このカードを特殊召喚する。
+
+
+@CARDCAN_26120(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,26120)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 効果後誘発
+	IF ゾーン == "手札"
+		SIF 発動済_1(決闘者,26120)
+			RETURN 0
+		CALL CARD_SS_CHECK(決闘者,26120,ゾーン)
+		SIF RESULT == 1
+			RETURN 0
+		CALL FULLRESET
+		効果条件種類 = 速攻魔法
+		CALL CARD_CHECK_FIN_DATA(決闘者,"効果発動",2)
+		SIF RESULT != 1
+			RETURN 0
+	
+	ELSEIF ゾーン == "戦場"
+		SIF 発動済_2(決闘者,26120)
+			RETURN 0
+		CALL FULLRESET
+		効果条件種類 = 速攻魔法
+		CALL CARD_CHECK_FIN_DATA(決闘者,"効果発動",2)
+		SIF RESULT != 1
+			RETURN 0
+		CALL FULLRESET
+		効果範囲相手戦場 = 1
+		効果範囲相手魔罠 = 1
+		効果条件除去種 = デッキ
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+
+	ELSEIF ゾーン == "墓地"
+		SIF 発動済_3(決闘者,26120)
+			RETURN 0
+		CALL CARD_SS_CHECK(決闘者,26120,ゾーン)
+		SIF RESULT == 1
+			RETURN 0
+		CALL FULLRESET
+		効果条件名前 = サイクロン
+		CALL CARD_CHECK_FIN_DATA(決闘者,"効果発動",2)
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_26120(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+IF 種類 == 効果後誘発
+	IF ゾーン == "手札"
+		CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,26120,1)
+	ELSEIF ゾーン == "戦場"
+		CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,26120,2)
+	ELSEIF ゾーン == "墓地"
+		CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,26120,3)
+	ENDIF
+	IF RESULT == 0
+		IF ゾーン == "戦場"
+			CALL FULLRESET
+			効果条件複数 = 98
+			CALL CARD_REMOVAL_BASIC(決闘者,"全場単体",場所,"デッキ")
+
+		ELSE
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

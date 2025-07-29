@@ -1,0 +1,110 @@
+﻿@CARDNAME_99320,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 심메트리아의 거래
+	CASE "略称"
+		RESULTS = Sym거래
+	CASE "カテゴリ"
+		RESULTS:0 = 심메트리아
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99320(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常罠
+	CASE "追加日"
+		RETURN 250721
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99320(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(0,魔罠起動 ,フリー誘発)
+PRINTL ①：自分の手札・フィールドの「타천칭」以外のカード１枚を墓地へ送ってこのカードを発動できる。
+PRINTL このターン、自分が受ける戦闘ダメージは０になる。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_99320(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,99320)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	SIF 発動済_1(決闘者,99320)
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+		RETURN 0
+	;ここまで和睦コピペ
+	;ここで条件指定
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲魔罠 = 1
+	効果条件CNT = 1
+	効果条件固カテゴリ = 타천칭
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT < 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99320(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99320)
+	IF RESULT == 0
+		;手札またはフィールドのカードを墓地へ
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲魔罠 = 1
+		効果範囲手札 = 1
+		効果条件固カテゴリ = 타천칭
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			;和睦効果
+			CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+			CALL SET_PLAYER_INFO(決闘者,"ダメージ無効",1)
+			CALL CARD_EFFECT_USE(決闘者,99320,1)
+
+			;和睦効果が適応されているかどうかをシステム上で判別しているっぽい？
+			;という事で和睦にも使用済みフラグを立てる
+			CALL CARD_EFFECT_USE(決闘者,91090,1)
+		ENDIF
+	ENDIF
+ENDIF

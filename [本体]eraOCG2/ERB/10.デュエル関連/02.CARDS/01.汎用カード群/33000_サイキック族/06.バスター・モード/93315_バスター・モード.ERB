@@ -1,0 +1,112 @@
+﻿@CARDNAME_93315,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 버스터 모드
+	CASE "略称"
+		RESULTS = 버스터 모드
+	CASE "カテゴリ"
+		RESULTS:0 = 버스터
+ENDSELECT
+
+
+@CARD_93315(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+
+		RETURN 通常罠
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_93315(種類)
+#DIM DYNAMIC 種類
+CALLFORM CARD_ABLE(0,魔罠起動 ,フリー誘発)
+PRINTL ①：自分フィールドのSモンスター１体をリリースして発動できる。
+PRINTL そのモンスターのカード名が含まれる「/버스터」モンスター１体をEXデッキから攻撃表示で特殊召喚する。
+PRINTL 
+PRINTL 
+
+@CARDCAN_93315(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,93315)
+SIF RESULT == 1
+	RETURN 0
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+		RETURN 0
+
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件名前:0 = 스타더스트 드래곤
+	効果条件名前:1 = 레드 데몬즈 드래곤
+	効果条件名前:2 = 기간틱 파이터
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_93315(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード,5
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 選択名前
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,93315)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件名前:0 = 스타더스트 드래곤
+		効果条件名前:1 = 레드 데몬즈 드래곤
+		効果条件名前:2 = 기간틱 파이터
+		CALL CARD_ADD_GY_BASIC(決闘者,"戦場",ゾーン,場所)
+		IF RESULT == 1
+			CALLFORM CARDNAME_{RESULT:1}("名前")
+			選択名前 = %RESULTS%
+			CALL FULLRESET
+			効果範囲EXデッキ = 1
+			SIF 選択名前 == "스타더스트 드래곤"
+				効果条件名前 = 스타더스트 드래곤/버스터
+			SIF 選択名前 == "레드 데몬즈 드래곤"
+				効果条件名前 = 레드 데몬즈 드래곤/버스터
+			SIF 選択名前 == "레드 데몬즈 드래곤"
+				効果条件名前 = 기간틱 파이터/버스터
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所,"攻撃表示")		
+		ENDIF
+	ENDIF
+ENDIF
