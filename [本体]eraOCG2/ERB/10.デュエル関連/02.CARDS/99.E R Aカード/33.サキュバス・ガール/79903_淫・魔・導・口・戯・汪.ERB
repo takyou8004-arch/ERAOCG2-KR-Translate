@@ -1,0 +1,238 @@
+@CARDNAME_79903,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+;ブラック・バーニング
+SELECTCASE 参照先
+	CASE "名前"
+		IF GETBIT(TALENT:MASTER:성별,1)
+			RESULTS = 서큐버스 매직 펠라치오
+		ELSEIF GETBIT(TALENT:MASTER:성별,0)
+			RESULTS = 서큐버스 매직 커닐링구스
+		ELSE
+			RESULTS = 서큐버스 매직 펠라치오
+		ENDIF
+	CASE "略称"
+		RESULTS = 음마도구희왕
+	CASE "カテゴリ"
+	    RESULTS:0 = 매지션 걸
+		RESULTS:1 = 서큐버스 걸
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+@CARD_79903(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "生成カード"
+		RETURN 宝液ID
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_79903(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_79903(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신 필드의 "서큐버스 걸" 몬스터를 원하는 만큼 대상으로 하고 발동할 수 있다（최소１장 필요）。
+PRINT 자신은
+SETCOLOR C_H_PINK
+PRINT 대상 몬스터 전부에게
+IF GETBIT(TALENT:MASTER:성별,1)
+	PRINT ❤펠라치오❤
+ELSEIF GETBIT(TALENT:MASTER:성별,0)
+	PRINT ❤커닐링구스❤
+ELSE
+	PRINT ❤펠라치오❤
+ENDIF
+PRINT 을 받는것으로、
+RESETCOLOR
+PRINTL 대상 몬스터의 수×２００ＬＰ를 잃고、묘지에 "현자의 보액" 토큰을 １장 생성하고、대상 몬스터는 턴 종료시까지 일시적 파괴내성을 얻는다。
+PRINTL 그 후、자신 필드의 "서큐버스 걸" 몬스터의 수까지 이하의 효과를 적용할 수 있다。
+PRINTL ●묘지의 "서큐버스 걸" 마법 카드를 １장 제외하는 것으로、상대 필드의 몬스터는 턴 종료시까지 공격력이 ６００내려간다。
+CALL CARD_ABLE(2,묘지起動)
+PRINTL ②：자신 메인 페이즈에 발동할 수 있다。
+PRINTL 묘지의 이 카드를 제외하고、덱 / 묘지에서 "매지션 걸" 몬스터 １장、
+PRINTL 또는 "매지컬 실크 베드룸－음마술의 비의" １장을 패에 넣는다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79903(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+#DIM DYNAMIC 条件달성
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79903)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,79903)
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 서큐버스 걸
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,79903)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件スーパー名前 = 매지컬 실크 베드룸－음마술의 비의
+	효과条件カテゴリ = 매지션 걸
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+    RETURN 1
+ENDIF
+
+@CARDEFFECT_79903(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+#DIM DYNAMIC 選択マジシャン,5
+#DIM DYNAMIC 選択マジシャンID,5
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+#DIM DYNAMIC 選択효과
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC カウンタC
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79903,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 서큐버스 걸
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		カウンタ = RESULT
+		FOR カウンタB, 0, カウンタ
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ = 서큐버스 걸
+			IF カウンタB > 0
+				FOR カウンタC, 0, カウンタB
+					효과条件選択済:カウンタC = 選択マジシャン:カウンタC
+				NEXT
+				효과条件任意 = 1
+			ENDIF
+			효과条件複数 = 1
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				選択マジシャン:カウンタB = RESULT
+				選択マジシャンID:カウンタB = RESULT:99
+			ELSE
+				BREAK
+			ENDIF
+		NEXT
+		IF カウンタB > 0
+			CALL SUCCUGIRL_SPELL_BLOWJOB(듀얼리스트,選択マジシャンID:0,選択マジシャンID:1,選択マジシャンID:2,選択マジシャンID:3,選択マジシャンID:4)
+			CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",200 * カウンタB)
+			CALL CARD_GENERATE_GY(듀얼리스트,宝液ID)
+			FOR カウンタ, 0, カウンタB
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",選択マジシャン:カウンタ,"一破",1)
+			NEXT
+			;추가효과
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ = 서큐버스 걸
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			カウンタ = RESULT
+			REPEAT カウンタ
+				CALL FULLRESET
+				효과範囲상대필드 = 1
+				효과条件攻撃力 = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				SIF RESULT != 1
+					BREAK
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 서큐버스 걸
+				효과条件종류 = 마법全般
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				SIF RESULT != 1
+					BREAK
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 서큐버스 걸
+				효과条件종류 = 마법全般
+				효과条件任意 = 1
+				효과条件行先플래그 = 제외行き
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+				IF RESULT == 1
+					CALL FULLRESET
+					CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"一攻",-600)
+				ELSE
+					BREAK
+				ENDIF
+			REND
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79903,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件スーパー名前 = 매지컬 실크 베드룸－음마술의 비의
+		효과条件カテゴリ = 매지션 걸
+		효과条件종류 = モン全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

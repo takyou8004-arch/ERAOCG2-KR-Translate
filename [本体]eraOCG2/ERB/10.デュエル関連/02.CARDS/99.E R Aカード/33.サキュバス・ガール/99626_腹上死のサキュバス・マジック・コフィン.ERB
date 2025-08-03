@@ -93,8 +93,10 @@ IF 종류 == 마함起動 || 종류 == フリー誘発
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
+	SIF エンドフェイズ == 1
+		RETURN 0
 	RETURN 1
-ELSEIF 종류 == 短紋章予約
+ELSEIF 종류 == 短紋章起動
 	RETURN 1
 ELSEIF 종류 == ターン終了時予約
 	RETURN 1
@@ -108,6 +110,7 @@ ENDIF
 #DIM DYNAMIC 場所
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
 
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
@@ -119,19 +122,27 @@ IF 종류 == 마함起動 || 종류 == フリー誘発
 		CALL FULLRESET
 		효과範囲필드 = 1
 		효과条件カテゴリ = 서큐버스 걸
-		효과条件行先플래그 = 一時제외行き
-		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
-		IF RESULT == 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			選択カードID = RESULT:99
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			CALL SUCCUGIRL_SPELL_BLACKCOFFIN_START(듀얼리스트,選択カードID)
+			CALL CARD_DISPOSE(듀얼리스트,"필드",選択カード（CS）,제외行き,1)
 			CALL CARD_RESERV(듀얼리스트,99626,短紋章予約)
 			CALL CARD_RESERV(듀얼리스트,99626,ターン終了時予約)
 		ENDIF
 	ENDIF
-ELSEIF 短紋章予約
+ELSEIF 종류 == 短紋章予約
 	CALL FULLRESET
-	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"直不")
-ELSEIF ターン終了時予約
-	CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1000)
-	CALL CARD_GENERATE_GY(듀얼리스트,宝液ID)
-	CALL CARD_GENERATE_GY(듀얼리스트,宝液ID)
-	CALL CARD_GENERATE_GY(듀얼리스트,宝液ID)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"直無")
+ELSEIF 종류 == ターン終了時予約
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99626)
+	IF RESULT == 0
+		CALL SUCCUGIRL_SPELL_BLACKCOFFIN_END(듀얼리스트)
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1000)
+		CALL CARD_GENERATE_GY(듀얼리스트,宝液ID)
+		CALL CARD_GENERATE_GY(듀얼리스트,宝液ID)
+		CALL CARD_GENERATE_GY(듀얼리스트,宝液ID)
+	ENDIF
 ENDIF

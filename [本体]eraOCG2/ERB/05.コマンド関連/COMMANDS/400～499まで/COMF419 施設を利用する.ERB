@@ -1,0 +1,161 @@
+﻿;-------------------------------------------------
+;施設を利用する
+;-------------------------------------------------
+@COM419
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC カードコスト,10
+#DIM DYNAMIC 절정BASE計算
+#DIM DYNAMIC 절정BASE基礎
+#DIM DYNAMIC 이벤트主
+#DIM DYNAMIC 選択パーツ
+
+SIF 설정_엔진 == 0
+	설정_엔진 = 300007
+SIF 설정_섀시 == 0
+	설정_섀시 = 300101
+SIF 설정_부스트 == 0
+	설정_부스트 = 300201
+
+
+$MACHINE_LOOP
+CUSTOMDRAWLINE —
+PRINTFORML 「머신 개조」
+CUSTOMDRAWLINE —
+
+VARSET RESULTS
+TRYCALLFORM CARDNAME_{설정_엔진}, "名前"
+PRINTFORML ENGINE[ 1] - %RESULTS%
+
+VARSET RESULTS
+TRYCALLFORM CARDNAME_{설정_섀시}, "名前"
+PRINTFORML CHASIS[ 2] - %RESULTS%
+
+VARSET RESULTS
+TRYCALLFORM CARDNAME_{설정_부스트}, "名前"
+PRINTFORML BOOST [ 3] - %RESULTS%
+RESETCOLOR
+
+CUSTOMDRAWLINE —
+PRINTL
+PRINTL [100] - 돌아간다
+BINPUT
+選択パーツ = RESULT
+;戻る
+IF 選択パーツ != 100
+	CALL CUSTOM_WHEELS(選択パーツ)
+	GOTO MACHINE_LOOP
+ENDIF
+
+@CUSTOM_WHEELS(選択パーツ)
+#DIMS DYNAMIC 설정カテゴリ
+#DIM DYNAMIC 選択パーツ
+#DIM DYNAMIC 변경パーツ
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カード_ID
+#DIM DYNAMIC パーツ_ID
+
+$MACHINE_LOOP
+SELECTCASE 選択パーツ
+CASE 1
+	パーツ_ID = 설정_엔진
+	설정カテゴリ = 엔진
+CASE 2
+	パーツ_ID = 설정_섀시
+	설정カテゴリ = 섀시
+CASE 3
+	パーツ_ID = 설정_부스트
+	설정カテゴリ = 부스트
+ENDSELECT
+CUSTOMDRAWLINE —
+PRINTFORML 「현재 설정 파츠」
+CUSTOMDRAWLINE —
+PRINTL
+CALL CARD_UI_RESET
+TRYCALLFORM CARD_UI(パーツ_ID,2)
+PRINTL [3] - 변경한다
+PRINTL
+PRINTL [100] - 돌아간다
+
+BINPUT
+IF RESULT == 100
+	PRINTL 
+	RETURN 0
+
+ELSEIF RESULT == 3
+	$MACHINE_LOOP_2
+	CUSTOMDRAWLINE —
+	PRINTFORML 「파츠 변경」
+	CUSTOMDRAWLINE —
+	FOR カウンタ,0,2000
+		カード_ID = カウンタ + 300000
+
+
+		VARSET RESULTS
+		TRYCALLFORM CARDNAME_{カード_ID}, "カテゴリ"
+		SIF RESULTS != 설정カテゴリ
+			CONTINUE
+
+
+		VARSET RESULTS
+		TRYCALLFORM CARDNAME_{カード_ID}, "名前"
+		SIF RESULTS == ""
+			CONTINUE
+		PRINTBUTTON @"[{カウンタ,4}] - %RESULTS%",カード_ID
+		PRINTL
+	NEXT
+	CUSTOMDRAWLINE —
+	PRINTL
+	PRINTL [9999] - 돌아간다
+
+	BINPUT
+	변경パーツ = RESULT
+	IF RESULT == 9999
+		GOTO MACHINE_LOOP
+	ELSE
+		CALL CARD_UI_RESET
+		TRYCALLFORM CARD_UI(변경パーツ,2)
+
+		PRINTL [1] - 설정한다
+		PRINTL [2] - 돌아간다
+		BINPUT
+		IF RESULT == 1
+			PRINTFORML 키ｰ잉！！　깡깡깡깡！！
+			PRINTFORML 　　드르르륵！　철컥철컥！！
+			PRINTL
+			PRINTFORMW 파츠 교환이 완료되었습니다。
+			SELECTCASE 選択パーツ
+			CASE 1
+				설정_엔진 = 변경パーツ
+			CASE 2
+				설정_섀시 = 변경パーツ
+			CASE 3
+				설정_부스트 = 변경パーツ
+			ENDSELECT
+			GOTO MACHINE_LOOP
+		ELSE
+			GOTO MACHINE_LOOP_2
+		ENDIF
+	ENDIF
+ENDIF
+
+
+;-------------------------------------------------
+;実行판정
+;-------------------------------------------------
+;施設を利用する
+@COM_ABLE419
+;毎日リセット甘味플래그
+;デート中以
+SIF !TFLAG:100
+	RETURN 0
+;寝室
+SIF CFLAG:MASTER:현재위치 != 場所_車庫
+	RETURN 0
+SIF GLOBAL_COMABLE(418)
+	RETURN 0
+;気力0
+SIF BASE:MASTER:기력 <= 0
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1

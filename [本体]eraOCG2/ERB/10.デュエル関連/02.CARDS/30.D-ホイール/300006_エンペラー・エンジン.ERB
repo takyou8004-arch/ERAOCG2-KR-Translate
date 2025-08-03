@@ -1,0 +1,75 @@
+﻿@CARDNAME_300006,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 엠페러 엔진
+	CASE "略称"
+		RESULTS = 엠페러 엔진
+	CASE "カテゴリ"
+		RESULTS:0 = 엔진
+ENDSELECT
+
+
+@CARD_300006(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN システム
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_300006(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환強制誘発)
+PRINTL ①：자신이 패에서 레벨 ５이상의 몬스터를 소환할 때마다 스피드 카운터를 １개 늘린다。
+
+
+
+@CARDCAN_300006(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,300006)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환強制誘発
+	SIF 最終소환決者 != 듀얼리스트
+		RETURN 0
+	SIF 最終소환타입 != "通常"
+		RETURN 0
+	TRYCALLFORM CARD_{最終소환ID},"レベル"
+	SIF !GROUPMATCH(RESULT,5,99)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:カード소환先") != 召種通常
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_300006(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択肢
+
+IF 종류 == 소환強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"SpＣ",1,0,1)
+ENDIF

@@ -1,0 +1,1304 @@
+﻿@CARDNAME_24321,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 스카이 코어
+	CASE "略称"
+		RESULTS = 스카이 코어
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+ENDSELECT
+
+
+@CARD_24321(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "맥시멈"
+		RETURN 124230
+	CASE "추가日"
+		RETURN 250802
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24321(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 【MAXIMUM！！】기계족 몬스터 ×２
+PRINTL 패에 존재하는 다른 기계족 몬스터２장을 덮어씌워、맥시멈 소환을 한다。
+PRINTL 맥시멈 소환은 무효화 되지 않는다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 전투 내성을 갖는다。
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②：필드의 이 카드가 효과로 파괴되었을 경우 발동할 수 있다.
+PRINTL 게임 밖에서 "스카이 파츠" 2장을 패에 넣고, 묘지 / 제외 상태인 "스카이 코어" 1장을 패에 넣는다.
+PRINTL 그 후, 맥시멈 소환을 한다。
+
+
+@CARDSUMMON_24321(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件종족 = 기계족
+
+IF EX参照 == 1
+	CALL MAXCAN(듀얼리스트,소환カード,24321) 
+	RETURN RESULT
+
+ENDIF
+
+@CARDCAN_24321(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24321)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"破壊")
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_24321(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 候補カードID,紙束最大値
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24321)
+	IF RESULT == 0
+		CALL CARD_GENERATE_HAND(듀얼리스트,224230)
+		CALL CARD_GENERATE_HAND(듀얼리스트,224230)
+
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件名前 = 스카이 코어
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			VARSET 候補カードID,-1
+			FOR カウンタ, 0, 紙束最大値
+				選択カードID = GETVAR(@"%듀얼리스트%_손패:カウンタ")
+				SIF 選択カードID == -1
+					BREAK
+				TRYCALLFORM CARD_{選択カードID}("맥시멈")
+				SIF RESULT < 1
+					CONTINUE
+				TRYCALLFORM CARDSUMMON_{選択カードID}(듀얼리스트,カウンタ,1)
+				IF RESULT >= 1
+					候補カードID:カウンタB = 選択カードID
+					カウンタB++
+					SIF カウンタB >= VARSIZE("효과条件ID")
+						BREAK
+				ENDIF
+			NEXT
+			IF カウンタB > 0
+				PRINTL 패에서 맥시멈 소환할 몬스터를 고를 수 있습니다。
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과条件任意 = 1
+				FOR カウンタ, 0, VARSIZE("효과条件ID")
+					SIF 候補カードID == -1
+						BREAK
+					효과条件ID:カウンタ = 候補カードID:カウンタ
+				NEXT
+				CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+				IF RESULT != 9999
+					CALL CARD_SELECT(듀얼리스트,RESULT)
+					CALL MAXSUMMON(듀얼리스트,選択カード（CS）,"손패")
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@CARDNAME_224230,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 스카이 파츠
+	CASE "略称"
+		RESULTS = 스카이 파츠
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+ENDSELECT
+
+@CARD_224230(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+
+
+@CARD_EXPLANATION_224230(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 "스카이 코어"의 효과로 생성된다。
+
+@CARDCAN_224230(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+RETURN 0
+
+
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@CARDNAME_124230,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 기황제 스키엘 MAX
+	CASE "略称"
+		RESULTS = 스키엘MAX！
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+		RESULTS:1 = 기황제
+		RESULTS:2 = 스키엘
+	CASE "맥시멈"
+		RESULTS = 기황제 코어
+ENDSELECT
+
+
+@CARD_124230(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 0
+ENDSELECT
+RETURN 0
+
+
+@CARD_EXPLANATION_124230(종류)
+#DIM DYNAMIC 종류
+CALL TEXT_DECORATION("MAXIMUM")
+PRINTL 이 카드명의 ②의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드가 존재하는 한、자신 필드의 "와이젤" 몬스터、"스키엘" 몬스터、"그란엘" 몬스터는
+PRINTL 무차별 내성을 얻고、이 카드의 공격력은 자신의 효과로 장착한 몬스터의 공격력만큼 올린다.
+CALLFORM CARD_ABLE(1,필드起動,フリー誘発)
+PRINTL ②：자신 / 상대 턴에、상대 필드의 Ｓ몬스터 １장을 대상으로 하고 발동할 수 있다。
+PRINTL 그 상대 Ｓ몬스터를 이 카드에 장착한다。
+CALLFORM CARD_ABLE(10,攻撃時誘発)
+PRINTL ④：１턴에 １번、상대 몬스터의 공격 선언시에 발동할 수 있다。
+PRINTL 그 공격을 무효로 한다。
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ④：필드의 이 카드가 파괴되는 경우에 발동할 수 있다。
+PRINTL 덱 / 묘지에서 "기황제 스키엘∞"를 특수 소환한다。
+
+
+@CARDCAN_124230(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,124230)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 맥시멈条件
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"기황제 파츠")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件名前 = 기황제 스키엘∞
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,124230)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 싱크로
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+
+@CARDEFFECT_124230(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 와이젤
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"無差耐")
+
+	CALL FULLRESET
+	효과条件カテゴリ = 스키엘
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"無差耐")
+
+	CALL FULLRESET
+	효과条件カテゴリ = 그란엘
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"無差耐")
+
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,124230,10)
+	IF RESULT == 0
+		CALL EVADE_ATTACK(듀얼리스트)
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,124230)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件名前 = 기황제 스키엘∞
+		효과条件소환可 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)	
+	ENDIF
+
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,124230,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件종류 = 싱크로
+		효과条件표시 = 表側표시
+		CALL CARD_EQUIP_MONSTER_ADV(듀얼리스트,ゾーン,場所,1,124230)
+	ENDIF
+
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARDNAME_124231,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 스키엘A
+	CASE "略称"
+		RESULTS = 스키엘A
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+		RESULTS:1 = 스키엘
+		RESULTS:2 = A
+	CASE "맥시멈"
+		RESULTS = 기황제 파츠
+ENDSELECT
+
+@CARD_124231(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 0
+	CASE "パーツ"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+
+@CARD_EXPLANATION_124231(종류)
+#DIM DYNAMIC 종류
+
+PRINTL （맥시멈 상태인 이 카드는 공격할 수 없다）
+PRINTL ①：자신의 "기황제" 몬스터가 직접공격으로 주는 데미지는 절반이 된다。
+PRINTL ②：이 카드는 맥시멈 상태라면、자신의 "기황제" 몬스터는 직접공격을 얻는다。
+CALLFORM CARD_ABLE(0,필드起動,묘지起動)
+PRINTL ③：자신 메인 페이즈에、이 카드가 필드 / 묘지에 존재하고、
+PRINTL 필드의 다른 "A" 몬스터가 존재하지 않는 경우에 발동할 수 있다。
+PRINTL 이 카드가 필드에 존재한다면、이 카드를 릴리스한다。
+PRINTL 패에서 바람속성 몬스터、땅속성 몬스터、어둠속성 몬스터중 어느것인가 １장을 버리고、
+PRINTL 대응하는 몬스터 １장을 게임 밖에서 특수 소환한다。
+
+@CARDCAN_124231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,124231)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = A
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件속성:0 = 바람속성
+	효과条件속성:1 = 땅속성
+	효과条件속성:2 = 어둠속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+		
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	IF !MATCH(RESULTS,"기황제")
+		RETURN 0
+	ENDIF
+
+	SIF 戦闘場所(듀얼리스트,1) != 5
+		RETURN 0
+	RETURN 1
+
+
+ELSEIF 종류 == 맥시멈条件
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"기황제 코어")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_124231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択カード名前
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,124231)
+	IF RESULT == 0
+		SIF 종류 == 필드起動
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件속성:0 = 바람속성
+		효과条件속성:1 = 땅속성
+		효과条件속성:2 = 어둠속성
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			IF 選択カード_ID == 24233
+				CALL CARD_GENERATE(듀얼리스트,324231)
+
+			ELSE
+				TRYCALLFORM CARD_{選択カード_ID},"속성"
+				IF RESULT == 바람속성
+					SIF 종류 == 필드起動
+						CALL CARD_GENERATE(듀얼리스트,224231)
+					SIF 종류 == 묘지起動
+						CALL CARD_GENERATE(듀얼리스트,124231)
+				ELSEIF RESULT == 땅속성
+					CALL CARD_GENERATE(듀얼리스트,124236)
+				ELSEIF RESULT == 어둠속성
+						CALL CARD_GENERATE(듀얼리스트,124321)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ半化", 3 ,1)
+
+ELSEIF 종류 == 맥시멈条件
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+	CALL FULLRESET
+	효과条件カテゴリ = 기황제
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"直攻")
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARDNAME_224231,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 스키엘A３
+	CASE "略称"
+		RESULTS = 스키엘A３
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+		RESULTS:1 = 스키엘
+		RESULTS:2 = A
+	CASE "맥시멈"
+		RESULTS = 기황제 파츠
+ENDSELECT
+
+
+@CARD_224231(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 0
+	CASE "パーツ"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+
+@CARD_EXPLANATION_224231(종류)
+#DIM DYNAMIC 종류
+
+PRINTL （맥시멈 상태인 이 카드는 공격할 수 없다）
+PRINTL ①：이 카드가 맥시멈 상태라면、자신 필드의 "기황제" 몬스터는 직접 공격할 수 있다。
+PRINTL
+
+@CARDCAN_224231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,224231)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 맥시멈条件
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"기황제 코어")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_224231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 맥시멈条件
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+	CALL FULLRESET
+	효과条件カテゴリ = 기황제
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"直攻")
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARDNAME_324231,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 기황병장 스키엘 아인A
+	CASE "略称"
+		RESULTS = 스키엘１A
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+		RESULTS:1 = 기황병
+		RESULTS:2 = 스키엘
+		RESULTS:3 = A
+	CASE "맥시멈"
+		RESULTS = 기황제 파츠
+ENDSELECT
+
+
+@CARD_324231(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1200
+	CASE "守備力"
+		RETURN 1000
+	CASE "パーツ"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+
+@CARD_EXPLANATION_324231(종류)
+#DIM DYNAMIC 종류
+
+PRINTL （맥시멈 상태인 이 카드는 공격할 수 없다）
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①：이 카드의 공격력은、이 카드 이외의 자신 필드의 기계족 몬스터의 수×２００ 올리고、
+PRINTL 공격 회피를 갖는다。
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ②："기황제" 몬스터가 공격한 데미지 스탭 종료시에 이 카드를 파괴하고 발동할 수 있다。
+PRINTL 그 몬스터는 턴 종료시까지 공격력이 １２００오르고、
+PRINTL 이 턴 한번 더 공격할 수 있다。
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ③：필드의 이 카드가 파괴된 경우에 발동할 수 있다。
+PRINTL 게임 밖에서 "스키엘A" １장을 특수 소환하고、묘지의 "기황병" 몬스터 １장을 패에 넣는다。
+PRINTL
+
+@CARDCAN_324231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,324231)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"破壊")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 기황병
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF !MATCH(RESULTS,"기황제")
+		RETURN 0
+
+	SIF GETVAR(@"%듀얼리스트%_필드:戦闘場所(듀얼리스트)") == -1
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 종류 == 맥시멈条件
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"기황제 코어")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_324231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,324231)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_GENERATE(듀얼리스트,124231)
+		CALL FULLRESET
+		효과条件カテゴリ = 기황병
+		효과条件종류 = モン全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+    효과条件他所 = 1
+	효과条件종족 = 기계족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 200
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,324231)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+		CALL FULLRESET
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘場所(듀얼리스트),"一攻",1200)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",戦闘場所(듀얼리스트),"戦",1)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻避")
+
+ELSEIF 종류 == 맥시멈条件
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARDNAME_124232,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 스키엘G
+	CASE "略称"
+		RESULTS = 스키엘G
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+		RESULTS:1 = 스키엘
+		RESULTS:2 = G
+	CASE "맥시멈"
+		RESULTS = 기황제 파츠
+ENDSELECT
+
+@CARD_124232(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 200
+	CASE "守備力"
+		RETURN 300
+	CASE "パーツ"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+
+@CARD_EXPLANATION_124232(종류)
+#DIM DYNAMIC 종류
+
+PRINTL （맥시멈 상태인 이 카드는 공격할 수 없다）
+CALLFORM CARD_ABLE(10,攻撃時誘発)
+PRINTL ①：１턴에 １번、상대 몬스터의 공격 선언시에 발동할 수 있다。
+PRINTL 그 공격을 무효로 한다。
+CALLFORM CARD_ABLE(0,필드起動,묘지起動)
+PRINTL ②：자신 메인 페이즈에、이 카드가 필드 / 묘지에 존재하고、
+PRINTL 필드에 다른 "G" 몬스터가 존재하지 않는 경우에 발동할 수 있다。
+PRINTL 이 카드가 필드에 존재한다면、이 카드를 릴리스한다。
+PRINTL 패에서 바람속성 몬스터、땅속성 몬스터、어둠속성 몬스터중 어느것인가 １장을 버리고、
+PRINTL 대응하는 몬스터 １장을 게임 밖에서 특수 소환한다。
+
+@CARDCAN_124232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,124232)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動 || 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = G
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件속성:0 = 바람속성
+	효과条件속성:1 = 땅속성
+	효과条件속성:2 = 어둠속성
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 맥시멈条件
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"기황제 코어")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_124232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択カード名前
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,124232)
+	IF RESULT == 0
+		SIF 종류 == 필드起動
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件속성:0 = 바람속성
+		효과条件속성:1 = 땅속성
+		효과条件속성:2 = 어둠속성
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			IF 選択カード_ID == 24233
+				CALL CARD_GENERATE(듀얼리스트,324232)
+
+			ELSE
+				TRYCALLFORM CARD_{選択カード_ID},"속성"
+				IF RESULT == 바람속성
+					SIF 종류 == 필드起動
+						CALL CARD_GENERATE(듀얼리스트,224232)
+					SIF 종류 == 묘지起動
+						CALL CARD_GENERATE(듀얼리스트,124232)
+				ELSEIF RESULT == 땅속성
+					CALL CARD_GENERATE(듀얼리스트,124237)
+				ELSEIF RESULT == 어둠속성
+					CALL CARD_GENERATE(듀얼리스트,124322)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,124232,10)
+	IF RESULT == 0
+		CALL EVADE_ATTACK(듀얼리스트)
+	ENDIF
+
+ELSEIF 종류 == 맥시멈条件
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+ENDIF
+
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@CARDNAME_224232,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 스키엘G３
+	CASE "略称"
+		RESULTS = 스키엘G３
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+		RESULTS:1 = 와이젤
+		RESULTS:2 = G
+	CASE "맥시멈"
+		RESULTS = 기황제 파츠
+ENDSELECT
+
+
+@CARD_224232(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 600
+	CASE "守備力"
+		RETURN 900
+	CASE "パーツ"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+
+@CARD_EXPLANATION_224232(종류)
+#DIM DYNAMIC 종류
+
+PRINTL （맥시멈 상태인 이 카드는 공격할 수 없다）
+CALLFORM CARD_ABLE(10,攻撃時誘発)
+PRINTL ①：１턴에 １번、상대 몬스터의 공격 선언시에 발동할 수 있다。
+PRINTL 그 공격을 무효로 한다。
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ⑤：자신의 "스키엘" 몬스터、"그란엘" 몬스터、"와이젤" 몬스터가 전투 / 효과로 파괴될 경우、
+PRINTL 대신에 묘지에서 "스키엘" 몬스터 １장을 제외할 수 있다。
+
+@CARDCAN_224232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,224232)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+
+	TRYCALLFORM CARDNAME_{破壊대상ID},"カテゴリ"
+	IF !MATCH(RESULTS,"스키엘")
+		IF !MATCH(RESULTS,"그란엘")
+			IF !MATCH(RESULTS,"와이젤")
+				RETURN 0
+			ENDIF
+		ENDIF
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 스키엘
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 맥시멈条件
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"기황제 코어")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_224232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,224232)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 스키엘
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT == 1
+			RETURN 1
+		ENDIF
+	ENDIF
+	RETURN 0
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,224232,10)
+	IF RESULT == 0
+		CALL EVADE_ATTACK(듀얼리스트)
+	ENDIF
+
+ELSEIF 종류 == 맥시멈条件
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+@CARDNAME_324232,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 기황병장 스키엘 아인G
+	CASE "略称"
+		RESULTS = 스키엘・１G
+	CASE "カテゴリ"
+		RESULTS:0 = 기황
+		RESULTS:1 = 기황병
+		RESULTS:2 = 스키엘
+		RESULTS:3 = G
+	CASE "맥시멈"
+		RESULTS = 기황제 파츠
+ENDSELECT
+
+
+@CARD_324232(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1200
+	CASE "パーツ"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+
+@CARD_EXPLANATION_324232(종류)
+#DIM DYNAMIC 종류
+
+PRINTL （맥시멈 상태인 이 카드는 공격할 수 없다）
+CALLFORM CARD_ABLE(0,지속효과,攻守変動)
+PRINTL ①：이 카드의 수비력은、이 카드 이외의 필드의 기계족 몬스터의 수×２００ 올리고、
+PRINTL 이 카드는 공격유도를 갖는다。
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②：필드의 이 카드가 파괴될 경우에 발동할 수 있다。
+PRINTL 게임 밖에서 "스키엘G" １장을 특수 소환하고、묘지의 "기황병" 몬스터１장을 을 패에 넣는다。
+PRINTL
+
+@CARDCAN_324232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,324232)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 戦破壊→묘지
+	SIF !GROUPMATCH(묘지送り종류,"破壊")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 기황병
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 맥시멈条件
+	SIF ゾーン != "필드"
+		RETURN 0
+
+	CALL CARD_CHECK_MAXX(듀얼리스트,ゾーン,場所,"기황제 코어")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_324232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,324232)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_GENERATE(듀얼리스트,124232)
+		CALL FULLRESET
+		효과条件カテゴリ = 기황병
+		효과条件종류 = モン全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲상대필드 = 1
+    효과条件他所 = 1
+	효과条件종족 = 기계족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻撃力修正 = RESULT * 200
+	CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,0,攻撃力修正)
+
+
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻誘")
+
+ELSEIF 종류 == 맥시멈条件
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

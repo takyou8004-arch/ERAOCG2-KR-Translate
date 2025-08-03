@@ -1,0 +1,188 @@
+﻿@CARDNAME_59880,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 악몽의 조교사
+	CASE "略称"
+		RESULTS = 악몽의 조교사
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59880(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+
+RETURN 0
+
+
+@CARD_EXPLANATION_59880(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 몬스터 １장
+PRINTL 이 카드는 상대의 라이프가 ０이하일 경우에만 L 소환할 수 있다。
+;PRINTL このカード名の①の효과は１ターンに１度しか使用できない
+;どうせ듀얼終わった後なのにターン重ねるのダルいなーと思ってターン１を廃止。代わりに설치できる数に上限を설정
+CALL CARD_ABLE(0,필드起動)
+PRINTL ①：자신의 패 / 덱 / 필드에 존재하는 "악몽의 조교실"이 ３장보다 적은 경우에 발동할 수 있다。
+PRINTL 자신의 마법＆함정 존의 카드를 １장까지 묘지로 보낼 수 있다。
+PRINTL 덱 밖에서 "악몽의 조교실" １장을 자신의 마법 / 함정 존에 둔다。
+CALL CARD_ABLE(0,攻守変動)
+PRINTL ②：이 카드의 공격력은、이 카드의 L소재로 사용된 몬스터의 원래 공격력과 같아진다。
+CALL CARD_ABLE(0,지속효과)
+PRINTL ③：이 카드가 몬스터 존에 존재하는 한、
+PRINTL "악몽의 조교실"의 조교 데미지에 감쇠상한을 해제한다。
+;この효과は악몽의 조교실側で処理する。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_59880(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+;素材条件
+
+SIF GETVAR(@"ライフ_%対面者%") > 0
+	RETURN 0
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件素材ID起動 = 1
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,59880) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_59880(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59880)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드起動
+	;SIF 발동済_1(듀얼리스트,59880)
+	;	RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 악몽의 조교실
+	효과条件표시 = 0
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 악몽의 조교실
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_59880(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 取込カードID
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59880,1)
+	IF RESULT == 0
+		IF 마함数(듀얼리스트) > 0
+			CALL FULLRESET
+			효과範囲마함 = 1
+			SIF 마함数(듀얼리스트) < 5
+				효과条件任意 = 1
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			PRINTFORML 
+		ENDIF
+
+		CALL FULLRESET
+		CALL CARD_GENERATE_MAGIC(듀얼리스트,79608,1)
+		PRINTFORMW 마법＆함정 존[{カード설치先}]에 "악몽의 조교실"을 놓았습니다。
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	;汎数読み込み。カードは1000からなので999より高いなら読み込む。それでも別口で汎数を書き込まれると問題置きそうだけど。
+	IF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") > 999
+		取込カードID = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+		;攻撃力読み込み
+		TRYCALLFORM CARD_{取込カードID}, "攻撃力"
+		攻撃力修正 = RESULT
+		IF 攻撃力修正 > 0
+			CALL STATCHANGE_BASIC(듀얼리스트,"自身",場所,攻撃力修正)
+		ENDIF
+	ENDIF
+ENDIF
+
+
