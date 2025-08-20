@@ -1,0 +1,128 @@
+﻿@CARDNAME_91230,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 아르토메기아 메세나－각성－
+	CASE "略称"
+		RESULTS = 신예학도-각성-
+	CASE "カテゴリ"
+		RESULTS:0 = 아르토메기아
+ENDSELECT
+
+
+@CARD_91230(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250426
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91230(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 1턴에 1번, 그 중 1개밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 덱에서 "아르토메기아" 몬스터 또는 "무구한 자 메디우스" 1장을 특수 소환한다.
+;PRINTL 이 턴、융합 몬스터를 융합 소환한다효과를 含む효과를 자신이 발동한 경우、
+;PRINTL 그 발동は無効化されず、その융합소환成功時に상대는 카드의 효과를 발동할 수 없다。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②: 묘지의 이 카드를 제외하고 발동할 수 있다.
+PRINTL 자신 필드의 "아르토메기아" 몬스터 1장을 패/EX덱으로 되돌리고,
+PRINTL 상대 필드의 카드 1장을 파괴한다.
+
+
+@CARDCAN_91230(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91230)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	SIF 발동済_1(듀얼리스트,91230)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,91230)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 아르토메기아
+	효과条件スーパー名前 = 무구한 자 메디우스
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	SIF 발동済_1(듀얼리스트,91230)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,91230)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 아르토메기아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_91230(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91230,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 아르토메기아
+		효과条件スーパー名前 = 무구한 자 메디우스
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 묘지起動 || (종류 == フリー誘発 && ゾーン == "묘지")
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91230,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 아르토메기아
+		효과条件行先플래그 = 손패行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲相手戦場 = 1
+			効果範囲相手魔罠 = 1
+			CALL CARD_REMOVAL_ADV(決闘者,"単体除去",場所,"墓地")
+		ENDIF
+	ENDIF
+ENDIF

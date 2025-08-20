@@ -1,0 +1,228 @@
+﻿@CARDNAME_65521,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = -이변- 묵염의 벚꽃
+	CASE "略称"
+		RESULTS = 묵염의 벚꽃
+	CASE "カテゴリ"
+		RESULTS:0 = 백옥루
+		RESULTS:1 = 이변
+		RESULTS:4 = 동방 Project
+ENDSELECT
+
+
+@CARD_65521(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 永続魔法
+	CASE "追加日"
+		RETURN 250808
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_65521(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の②③の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,効果後強制誘発)
+PRINTL ①：相手がモンスターを特殊召喚する度に、相手はデッキの上から１枚を墓地へ送る。
+CALLFORM CARD_ABLE(2,効果後誘発)
+PRINTL ②：自分フィールド・墓地に「저승누각의 대망령 유유코」が存在し、
+PRINTL お互いの墓地を合わせて合計１０体目のモンスターが墓地へ送られた場合に発動する。
+PRINTL 自分フィールド・墓地・EXデッキの「저승누각의 대망령 유유코」をすべて除外し、
+PRINTL この이변は「사이교우아야카시와 공주의 망해」変質する。
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ③：相手エンドフェイズ時に「저승누각의 대망령 유유코」が存在しない場合に発動する。
+PRINTL このカードを破壊し、デッキからこのカード名以外の「이변」カード１枚とそのカテゴリのレベル４以下のモンスター１体を手札に加える。
+
+
+
+
+@CARDCAN_65521(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,65521)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 効果後強制誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(決闘者,"特殊召喚",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 効果後誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲墓地 = 1
+	効果条件名前 = 저승누각의 대망령 유유코
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果範囲相手墓地 = 1
+	効果条件種類 = モン全般
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT < 10
+		RETURN 0
+	CALL FULLRESET
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_FIN_DATA(決闘者,"墓地送り全般+HD",2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン終了時強制
+	SIF 発動済_3(決闘者,65521)
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件名前 = 저승누각의 대망령 유유코
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_65521(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 属性数
+#DIMS DYNAMIC 参照先
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,65521)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == 効果後強制誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,65521)
+	IF RESULT == 0
+		CALL CARD_DECK_DISPOSE(決闘者,"デッキ",1,0,1)
+	ENDIF
+
+ELSEIF 種類 == 効果後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,65521,2)
+	IF RESULT == 0
+		FOR カウンタ, 5, -1, -1
+			SIF GETVAR(@"%決闘者%_戦場:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%決闘者%_戦場:カウンタ")}, "名前"
+			SIF RESULTS != "저승누각의 대망령 유유코"
+				CONTINUE
+			CALL CARD_DISPOSE(決闘者,"戦場",カウンタ,除外行き)
+		NEXT
+		FOR カウンタ, 5, -1, -1
+			SIF GETVAR(@"%決闘者%_魔罠:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%決闘者%_魔罠:カウンタ")}, "名前"
+			SIF RESULTS != "저승누각의 대망령 유유코"
+				CONTINUE
+			CALL CARD_DISPOSE(決闘者,"魔罠",カウンタ,除外行き)
+		NEXT
+		FOR カウンタ, 98, -1, -1
+			SIF GETVAR(@"%決闘者%_墓地:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%決闘者%_墓地:カウンタ")}, "名前"
+			SIF RESULTS != "저승누각의 대망령 유유코"
+				CONTINUE
+			CALL CARD_DISPOSE(決闘者,"墓地",カウンタ,除外行き)
+		NEXT
+		FOR カウンタ, 98, -1, -1
+			SIF GETVAR(@"%決闘者%_EXデッキ:カウンタ") == -1
+				CONTINUE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%決闘者%_EXデッキ:カウンタ")}, "名前"
+			SIF RESULTS != "저승누각의 대망령 유유코"
+				CONTINUE
+			CALL CARD_DISPOSE(決闘者,"EXデッキ",カウンタ,除外行き)
+		NEXT
+		CALL CARD_RECONSTRUCT(決闘者,ゾーン,場所,105520)
+		CALL RESETCONDITION
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)	
+	ENDIF
+ELSEIF 種類 == ターン終了時強制
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,65521,3)
+	IF RESULT == 0	
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,破壊行き)
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 이변
+		効果条件固名前 = 묵염의 벚꽃
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			CALLFORM CARDNAME_{選択カード_ID}("カテゴリ")
+			効果条件カテゴリ = 設定カテゴリ
+
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件カテゴリ = %効果条件カテゴリ%
+			CALLFORM 効果条件レベル_ADV(4,"以下")
+			CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+
+
+
+

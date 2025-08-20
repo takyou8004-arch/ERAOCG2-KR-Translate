@@ -1,0 +1,214 @@
+@CARDNAME_24185,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 감옥신기 DOOM－Z
+	CASE "略称"
+		RESULTS = 감옥신기 DOOM－Z
+	CASE "カテゴリ"
+		RESULTS:0 = 둠즈
+		RESULTS:1 = 감옥신
+ENDSELECT
+
+
+@CARD_24185(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 風属性
+	CASE "種族"
+		RETURN 機械族
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 300
+	CASE "守備力"
+		RETURN 200
+	CASE "追加日"
+		RETURN 250809
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_24185(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の②③の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ①：自分はＸモンスターしかEXデッキから特殊召喚できない。
+CALLFORM CARD_ABLE(2,戦場起動)
+PRINTL ②：自分フィールドの他の効果モンスター１体を対象として発動できる。
+PRINTL その自分のモンスターのレベルと同じ数値のランクを持つ、
+PRINTL 「둠즈」Ｘモンスターか「괴감옥신 유피테르」１体を
+PRINTL 対象のモンスターの上に重ねてＸ召喚扱いでＥＸデッキから特殊召喚し、
+PRINTL 自分フィールドのこのカードを装備魔法カード扱いで装備する。
+CALLFORM CARD_ABLE(3,破壊→墓地,戦闘→墓地)
+PRINTL ③：このカードが破壊された場合に発動できる。
+PRINTL デッキから「둠즈」カード１枚を手札に加える。
+
+@CARDCAN_24185(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 選択カード名
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 存在カード名,100
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,24185)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場起動
+	SIF 発動済_2(決闘者,24185)
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL CARD_EX_CHECK(決闘者,0)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲EXデッキ = 1
+	効果条件種類 = エクシーズ
+	効果条件カテゴリ = 둠즈
+	効果条件スーパー名前 = 괴감옥신 유피테르
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種類 = レベル持ち
+	効果条件他所 = 1
+	効果条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 破壊→墓地 || 種類 == 戦闘→墓地
+	SIF 発動済_3(決闘者,24185)
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 둠즈
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_24185(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC レベル存在,12
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 選択カードB
+
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 永続効果
+	CALL SET_TMP_EX_RST(決闘者,"種類",エクシーズ)
+ELSEIF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,24185,2)
+	IF RESULT == 0
+		;召喚できないモンスターが選ばれないようにするための処理
+		CALL FULLRESET
+		FOR カウンタ, 1, 12
+			効果範囲戦場 = 1
+			効果条件種類 = レベル持ち
+			効果条件他所 = 1
+			効果条件レベル = カウンタ
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			SIF RESULT == 1
+				レベル存在:カウンタ = 1
+		NEXT
+		SETCOLOR C_YELLOW
+		PRINTL 【Ｘ召喚するモンスターを選んでください】
+		RESETCOLOR
+		CALL FULLRESET
+		;召喚できないモンスターが選ばれないようにするための処理その２
+		FOR カウンタ, 1, 12
+			IF レベル存在:カウンタ == 1
+				効果条件レベル:カウンタB = カウンタ
+				カウンタB ++
+			ENDIF
+		NEXT
+		効果条件カテゴリ = 둠즈
+		SIF レベル存在:10 == 1
+			効果条件スーパー名前 = 괴감옥신 유피테르
+		効果条件種類 = エクシーズ
+		CALL CARD_CHOOSE_BASIC(決闘者,"EXデッキ",ゾーン,場所)
+		選択カード = RESULT
+		選択カード_ID = RESULT:99
+		IF 選択カード != 9999
+			CALL FULLRESET
+			TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
+			選択カード名前 = %RESULTS%
+			TRYCALLFORM CARD_{選択カード_ID},"レベル"
+			効果条件レベル = RESULT
+			効果条件種類 = レベル持ち
+			効果条件他所 = 1
+			CALL CARD_CHOOSE_BASIC(決闘者,"戦場",ゾーン,場所)
+			選択カードB = RESULT
+			IF 選択カードB != 9999
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%決闘者%_EXデッキ:{選択カード}")}(決闘者,選択カード)
+				CALL RESETCONDITION_MAT(1)
+				代替素材数 = 1
+				重ねてＸ = 1
+				素材条件固定 = 選択カードB
+				TRYCALLFORM XYZSUMMON(決闘者,選択カード)
+				;装備
+				SETCOLOR C_YELLOW
+				PRINTL 【DOOM-Zを装備するモンスターを選んでください】
+				RESETCOLOR
+				CALL FULLRESET
+				効果条件名前 = %選択カード名前%
+				CALL CARD_CHOOSE_BASIC(決闘者,"戦場",ゾーン,場所)
+				選択カード = RESULT
+				CALL CARD_EQUIP_MONSTER(決闘者,選択カードB,"戦場",場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 破壊→墓地 || 種類 == 戦闘→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,24185,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 둠즈
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ENDIF
+

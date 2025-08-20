@@ -1,0 +1,285 @@
+﻿@CARDNAME_39908,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 이쿠기어 리트센트 에스코트노이드
+	CASE "略称"
+		RESULTS = 광서의 과묵검객
+	CASE "カテゴリ"
+		RESULTS:0 = 광서의 기계
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39908(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250706
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_39908(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL
+PRINTL "광서의 기계" 몬스터 ＋ 암컷 몬스터 １장
+PRINTL 이 카드는 융합 소환 및 이하의 방법으로 EX덱에서 특수 소환할 수 있다。
+CALLFORM CARD_ABLE(0,EX덱起動)
+PRINTL 자신 필드의 "광서의 기계" 몬스터 １장과 、기계족 / 암컷 몬스터 １장을 릴리스했을 때、이 카드를 EX덱에서 수비 표시로 특수 소환할 수 있다。
+PRINTL 이 카드명의 ②③의 효과는 １턴에 어느쪽인가 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,지속효과)
+PRINTL ①：앞면 수비 표시의 이 카드는 공격 유도를 가지며、１턴에 １번 전투 / 효과로 파괴되지 않는다。
+PRINTL    또한、이 카드는 앞면 수비 표시인채로 공격할 수 있다。
+PRINTL    그 경우、이 카드는 수비력을 공격력으로 취급해 데미지 계산을 한다。
+CALLFORM CARD_ABLE(2,攻撃時誘発)
+PRINTL ②：상대 몬스터의 공격 선언시에、자신의 묘지에서 기계족 / 암컷 몬스터를 제외하고 발동할 수 있다。
+PRINTL    그 공격을 무효로 하고、수비 표시로 한다。
+CALLFORM CARD_ABLE(3,攻撃後誘発)
+PRINTL ③：상대가 마법 / 함정 카드를 발동했을 때에 패에서 "광서의 기계" 카드를 묘지로 보내고 발동할 수 있다。
+PRINTL    그 발동을 무효로 한다。
+PRINTL
+SETCOLOR C_RED
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー경고ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+CALLFORM CARD_ABLE(1,지속효과)
+PRINTL ⑤：융합 소환한 이 카드에는、２장째 소재로 사용한 암컷 몬스터 １장이 끼워진다。
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー주의ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL
+RESETCOLOR
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_39908(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件素材ID起動 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 광서의 기계
+ELSEIF EX参照 >= 10
+    素材条件성별 = 牝性
+ENDIF
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,39908) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_39908(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39908)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+    효과範囲필드 = 1
+	효과条件종족 = 기계족
+	효과条件성별 = 牝性
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 1
+		RETURN 0
+	CALL FULLRESET
+    효과範囲필드 = 1
+	효과条件カテゴリ = 광서의 기계
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF 발동済_2(듀얼리스트,39908)
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,39908)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+    CALL FULLRESET
+    효과範囲묘지 = 1
+    효과条件カテゴリ = 광서의 기계
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,39908)
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,39908)
+		RETURN 0
+    SIF ゾーン != "필드"
+	 	RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종족 = 기계족
+	효과条件성별 = 牝性
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+    RETURN 1
+
+ENDIF
+
+@CARDEFFECT_39908(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 제외カードID
+#DIM DYNAMIC 破壊カードID
+#DIMS DYNAMIC 제외カード名
+#DIM DYNAMIC 残り횟수
+#DIM DYNAMIC 取込カードID
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39908)
+		IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 광서의 기계
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+        CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件성별 = 牝性
+		효과条件종족 = 기계족
+        CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",場所,"守備표시")
+			ENDIF
+		ENDIF
+
+ELSEIF 종류 == 지속효과
+	IF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 守備표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"攻誘")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"一破")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"守戦")
+	ENDIF
+
+	IF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") > 0
+		;汎数読み込み
+		取込カードID = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+		;記録した素材の성별をチェック
+		TRYCALLFORM CARD_{取込カードID}, "성별"
+		;♀かふたなりなら続行
+		選択カード = NO_TO_CHARANUM(取込カードID)
+		IF 選択カード >= 1 && オプション_성별
+			RESULT = TALENT:選択カード:성별
+		ENDIF
+		IF GETBIT(RESULT,0)
+			;変化元IDに汎数を打ち込み
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",取込カードID,上書きモード)
+			;フレーバー、캐릭터リスト読み込み
+			CALL CARD_EROTICS(取込カードID)
+			IF RESULT != -1
+				조교대상 = RESULT
+				PRINTFORMW 인격을 덮어씌워진、%NAME:조교대상%는『과묵검객기인』으로서 필드에 내려섰다
+				CALL EROTIC_MOVE("拷問処理",조교대상,-1,200)
+			ENDIF
+		ENDIF
+		;使い終わった汎数を削除
+		SIF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") >= 1000
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",0,上書きモード)
+	ENDIF
+
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39908,2)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件종족 = 기계족
+			효과条件성별 = 牝性
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL EVADE_ATTACK(듀얼리스트)
+				CALL FULLRESET
+				효과추가종류 = 5
+	    		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"표시변경")
+			ENDIF
+        ENDIF
+
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39908,3)
+    	IF RESULT == 0
+			CALL FULLRESET
+			효과条件カテゴリ = 광서의 기계
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+				RETURN 1
+			ENDIF
+        ENDIF
+ENDIF
+
+
+
+
+
+
+

@@ -1,0 +1,163 @@
+﻿@CARDNAME_36006,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 탈론즈 오브 슈리렌
+	CASE "略称"
+		RESULTS = 슈리렌
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_36006(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 未確認族
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2100
+	CASE "守備力"
+		RETURN 2050
+	CASE "性別"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250804
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_36006(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①③の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,手札起動,フリー誘発)
+PRINTL ①：相手ターンに、「탈론즈 오브 슈리렌」以外の自分フィールドの悪魔族・未確認族モンスター１体を対象として発動できる。
+PRINTL そのモンスターを手札に戻し、このカードを手札から特殊召喚する。
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ②：このカードがモンスターと戦闘を行う場合、その２体はその戦闘では破壊されない。
+CALLFORM CARD_ABLE(3,発動誘発)
+PRINTL ③：相手の効果が発動した時に発動できる。
+PRINTL フィールドのこのカードを手札に戻し、相手フィールドのモンスター１体を破壊する。
+
+@CARDCAN_36006(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 戦闘種族
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,36006)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動 || 種類 == フリー誘発
+	SIF ゾーン != "手札"
+		RETURN 0
+	SIF 発動済_1(決闘者,36006)
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,36006,ゾーン,1)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種族:0 = 悪魔族
+	効果条件種族:1 = 未確認族
+	効果条件固名前 = 탈론즈 오브 슈리렌
+	効果条件表示 = 表側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 発動誘発
+	SIF 発動済_3(決闘者,36006)
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(決闘者,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件除去種 = 墓地
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 戦闘場所(決闘者,1) == 5
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_36006(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戦闘カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 手札起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,36006,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件種族:0 = 悪魔族
+		効果条件種族:1 = 未確認族
+		効果条件固名前 = 탈론즈 오브 슈리렌
+		効果条件表示 = 表側表示
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 発動誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,36006,3)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,手札行き)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(決闘者,"戦場単体",場所,"墓地")
+	ENDIF
+	RETURN 0
+
+ELSEIF 種類 == 永続効果
+	CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(対面者,"自身",戦闘場所(決闘者,1),"戦耐")
+ENDIF

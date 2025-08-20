@@ -1,0 +1,110 @@
+﻿@CARDNAME_2335,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 핸디걸
+	CASE "略称"
+		RESULTS = 핸디Ｇ
+	CASE "カテゴリ"
+		RESULTS:0 = 핸디
+ENDSELECT
+
+
+@CARD_2335(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 風属性
+	CASE "種族"
+		RETURN 未確認族
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 1200
+	CASE "性別"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250810
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_2335(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,戦場起動)
+PRINTL ①：このカードを召喚・特殊召喚した場合に発動できる。
+PRINTL 自分の墓地・デッキの「핸디레이디」１体を選んで手札に加える。
+PRINTL その後、自分の手札・フィールドの２体を素材として墓地へ送って風属性融合モンスターの融合召喚できる。
+
+
+@CARDCAN_2335(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,2335)
+SIF RESULT == 1
+	RETURN 0
+IF 種類 == 召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_1(決闘者,2335)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果範囲墓地 = 1
+	効果条件名前 = 핸디레이디
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2335(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 選択カード
+
+IF 種類 == 召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,2335,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果範囲墓地 = 1
+		効果条件名前 = 핸디레이디
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL RESETAREA_MAT
+			素材範囲戦場 = 1
+			素材範囲手札 = 1
+			CALL FULLRESET
+			効果条件属性 = 風属性
+			効果条件種類 = 融合
+			効果条件召喚可 = 1
+			効果条件任意 = 1
+			CALL CARD_CHOOSE_BASIC(決闘者,"EXデッキ",ゾーン,場所)
+			選択カード = RESULT
+			IF 選択カード != 9999
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%決闘者%_EXデッキ:選択カード")}(決闘者,選択カード)
+				CALL FUSSUMMON(決闘者,選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

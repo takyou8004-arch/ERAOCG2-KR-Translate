@@ -1,0 +1,145 @@
+﻿@CARDNAME_29103,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 홀리 라이트닝 스케일
+	CASE "略称"
+		RESULTS = 광천사 스케일
+	CASE "カテゴリ"
+		RESULTS:0 = 홀리 라이트닝
+ENDSELECT
+
+
+@CARD_29103(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 900
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_29103(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ②의 효과는 1턴에 1번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(0,특수소환時)
+PRINTL ①: 이 카드가 특수 소환에 성공했을 때에 발동할 수 있다.
+PRINTL 패에서 "광천사" 몬스터 1장을 특수 소환한다.
+PRINTL 그 후, 자신의 묘지에서 빛 속성 몬스터 1장을 고르고 덱으로 되돌린다.
+
+CALLFORM CARD_ABLE(1,X素材時효과)
+PRINTL ②: 이 카드가 엑시즈 소재가 되었을 경우, 자신 필드의 X 몬스터 1장을 대상으로 하여 발동할 수 있다.
+PRINTL 이 게임중, 자신은 이하의 효과를 얻는다. (이 효과는 중복하지 않는다)
+CALLFORM CARD_ABLE(0,永攻紋章起動)
+PRINTL ●자신 필드에 빛속성X 몬스터가 존재하는 경우,
+PRINTL 상대가 몬스터를 특수 소환할때 마다, 자신은 덱에서 1장 드로우한다.
+
+@CARDCAN_29103(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29103)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 홀리 라이트닝
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == X素材時효과
+
+	SIF 紋章済(決闘者,29103)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種類 = エクシーズ
+	効果条件Ｘ素所持 = 3
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動付与
+	SIF 발동済_2(듀얼리스트,29103)
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(決闘者,"特殊召喚",1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	効果条件属性 = 光属性
+	効果条件種類 = エクシーズ
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29103(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29103,0)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 홀리 라이트닝
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件속성 = 빛속성
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == X素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29103)
+	IF RESULT == 0
+		CALL CARD_RESERV(決闘者,29103,効後紋章予約)
+	ENDIF
+;――――――――――――――――――――――――付与효과――――――――――――――――――――――――
+ELSEIF 종류 == 効後紋章起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29103,3)
+	IF RESULT == 0
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ENDIF

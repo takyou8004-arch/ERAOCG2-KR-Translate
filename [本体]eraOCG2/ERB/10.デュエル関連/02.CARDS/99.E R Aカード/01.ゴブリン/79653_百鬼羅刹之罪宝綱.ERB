@@ -1,0 +1,285 @@
+﻿@CARDNAME_79653,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 고블린라이더즈 레인즈
+	CASE "略称"
+		RESULTS = 백귀나찰의죄보망
+	CASE "カテゴリ"
+		RESULTS:0 = 고블린
+		RESULTS:1 = 고블린라이더
+		RESULTS:2 = 죄보
+		RESULTS:3 = E.R.A
+ENDSELECT
+
+
+@CARD_79653(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 装備魔法
+	CASE "追加日"
+		RETURN 250809
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_79653(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ①③의 효과는 각각 １턴에 １장밖에 발동할 수 없다。
+CALLFORM CARD_ABLE(1,魔罠起動,手札起動)
+PRINTL ①：덱에서 "고블린" 몬스터 １장을 묘지로 보내고、
+PRINTL 이 카드를 자신 필드의 암컷 X몬스터 １장에게 장착할 수 있다。
+CALLFORM CARD_ABLE(0,身代効果)
+PRINTL ②：자신 필드의 "고블린" 카드가 전투 / 효과로 파괴되는 경우、
+PRINTL 대신에 장착 몬스터의 X소재를 １개 제거할 수 있다。
+CALLFORM CARD_ABLE(3,墓地起動)
+PRINTL ③：이 카드가 묘지에 존재하는 경우에 발동할 수 있다。
+PRINTL 필드의 암컷 X몬스터의 X소재를 １개 제거하는것으로、이 카드를 패로 되돌린다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_79653(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,79653)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF 発動済_1(決闘者,79653)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	IF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件種類 = モン全般
+	効果条件カテゴリ = 고블린
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種類 = エクシーズ
+	効果条件性別 = 牝性
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 身代効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	TRYCALLFORM CARDNAME_{破壊対象ID}("カテゴリ")
+	SIF !MATCH(RESULTS,"고블린")
+		RETURN 0
+	SIF !GROUPMATCH(破壊種類,"効果","戦闘")
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	SIF GETVAR(@"%装備者%_MZ_Ｘ:装備先") <= -1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	SIF 発動済_3(決闘者,79653)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲相手戦場 = 1
+	効果条件種類 = エクシーズ
+	効果条件性別 = 牝性
+	効果条件Ｘ素所持 = 999
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == リアクション効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79653(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,79653,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 고블린
+		効果条件種類 = モン全般
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲戦場 = 1
+			効果条件種類 = エクシーズ
+			効果条件性別 = 牝性
+			CALLFORM CARD_EQUIP_ADV(決闘者,場所,ゾーン)
+			IF RESULT == 1
+				選択カード_ID = RESULT:1
+				選択カード = RESULT:2
+				CALL SET_FIELD_INFO(決闘者,"戦場",カード召喚先,"束縛",(カード設置先)+30,1)
+
+				IF GETVAR(@"%決闘者%_MZ_変化元ID:選択カード") >= 1
+					選択カード_ID = GETVAR(@"%決闘者%_MZ_変化元ID:選択カード")
+				ENDIF
+				CALL CARD_EROTICS(選択カード_ID)
+				IF RESULT != -1
+					조교대상 = RESULT
+					CALL BAD_ASS_EROTEXT(選択カード_ID,3)
+					PRINTFORML 
+					IF MARK:조교대상:굴복각인 != 3
+						PRINTFORML 「……ー！💢」
+					ELSE
+						PRINTFORML 「……ー！❤」
+					ENDIF
+					PRINTFORML 
+					PRINTFORML %NAME:조교대상%は頭に手綱型の죄보を嵌められた！
+					CALL EROTIC_MOVE("구속晒し",조교대상,-1,200)
+				ELSE
+					PRINTFORML 
+					PRINTFORML 「……ー！💢」
+					PRINTFORML 
+					PRINTFORML %NAME:選択カード_ID%は頭に手綱型の죄보を嵌められた！
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 身代効果
+	;身代わり効果
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,79653)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(装備者,"戦場",装備先,"Ｘ",-1)
+		選択カード_ID = GETVAR(@"%装備者%_戦場:装備先")
+		IF GETVAR(@"%装備者%_MZ_変化元ID:装備先") >= 1
+			選択カード_ID = GETVAR(@"%装備者%_MZ_変化元ID:装備先")
+		ENDIF
+		CALL CARD_EROTICS(選択カード_ID)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML 
+			IF MARK:조교대상:굴복각인 != 3
+				PRINTFORML 「！！！💢」
+			ELSE
+				PRINTFORML 「！！！❤」
+			ENDIF
+			PRINTFORML 
+			PRINTFORML 고블린は%NAME:조교대상%を肉盾にしては耐えた！
+			CALL EROTIC_MOVE("구속晒し",조교대상,-1,200)
+		ELSE
+			PRINTFORML 
+			PRINTFORML 「！！！💢」
+			PRINTFORML 
+			PRINTFORML 고블린は%NAME:選択カード_ID%を肉盾にしては耐えた！
+		ENDIF
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,79653,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲相手戦場 = 1
+		効果条件種類 = エクシーズ
+		効果条件性別 = 牝性
+		効果条件Ｘ素所持 = 999
+		CALL CARD_GRANT_ADV(決闘者,ゾーン,場所,"Ｘ",-1)
+		IF RESULT
+			選択カード_ID = RESULT:1
+			選択カード = RESULT:2
+			IF GETVAR(@"%決闘者%_MZ_変化元ID:選択カード") >= 1
+				選択カード_ID = GETVAR(@"%決闘者%_MZ_変化元ID:選択カード")
+			ENDIF
+			CALL CARD_EROTICS(選択カード_ID)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL BAD_ASS_EROTEXT(選択カード_ID,4)
+				PRINTFORML 
+				PRINTFORML %NAME:조교대상%のX素材を素材に、手綱型の죄보が復活する…！
+				CALL EROTIC_MOVE("全身애무",조교대상,-1,100)
+			ELSE
+				PRINTFORML 
+				CALLFORM CARDNAME_{選択カード_ID}, "名前"
+				PRINTFORML %RESULTS%のX素材を素材に、手綱型の죄보が復活する…！
+			ENDIF
+			CALL CARD_DISPOSE(決闘者,ゾーン,場所,手札行き)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == リアクション効果
+	選択カード_ID = GETVAR(@"%装備者%_戦場:装備先")
+	IF GETVAR(@"%装備者%_MZ_変化元ID:装備先") >= 1
+		選択カード_ID = GETVAR(@"%装備者%_MZ_変化元ID:装備先")
+	ENDIF
+	CALL CARD_EROTICS(選択カード_ID)
+	IF RESULT != -1
+		조교대상 = RESULT
+		PRINTFORML 
+		IF MARK:조교대상:굴복각인 != 3
+			PRINTFORML 「……ー！💢」
+		ELSE
+			PRINTFORML 「……ー！❤」
+		ENDIF
+		PRINTFORML 
+		PRINTFORML 手綱を嵌められた%NAME:조교대상%は고블린の操るがままだ…
+		CALL EROTIC_MOVE("구속晒し",조교대상,-1,50)
+	ELSE
+		PRINTFORML 
+		PRINTFORML 「……ー！💢」
+		PRINTFORML 
+		PRINTFORML 手綱を嵌められた%NAME:選択カード_ID%は고블린の操るがままだ…
+	ENDIF
+ENDIF
+

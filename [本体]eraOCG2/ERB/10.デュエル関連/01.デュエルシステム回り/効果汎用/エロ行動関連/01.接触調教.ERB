@@ -15,8 +15,9 @@
 #DIM DYNAMIC 装備品
 #DIM DYNAMIC 성별판정
 #DIM DYNAMIC 実성별판정
-
-
+#DIM DYNAMIC 절정カウント前
+#DIM DYNAMIC 절정カウント後
+#DIM DYNAMIC 절정횟수
 VARSET 조교대상, -1
 
 IF ゾーン == "プレイヤー" || ゾーン == "이벤트"
@@ -38,11 +39,13 @@ IF RESULT >= 1
 	NEXTCOM = -1
 	듀얼モード = 1
 	TFLAG:104 = 조교대상
+	절정カウント前 = EXP:조교대상:절정경험
 	FOR カウンタ,0,99
 		SIF 조교대상:カウンタ == -1
 			CONTINUE
 		캐릭터_ID = 조교대상:カウンタ
 		CFLAG:캐릭터_ID:우후후 = 1
+
 	NEXT
 	CFLAG:MASTER:우후후 = 1
 	TFLAG:COMABLE관리 = 2
@@ -98,13 +101,15 @@ IF RESULT >= 1
 			ENDIF
 			CFLAG:캐릭터_ID:접촉조교중 = 1
 
+
+			;レイ追記250601
+			IF GETVAR(@"%듀얼리스트%_MZ_특수状態:場所") == 79617
+				TEQUIP:캐릭터_ID:절정금지 = 1
+			ENDIF
+
 		NEXT
 		IF GETVAR(@"%듀얼리스트%_MZ_특수状態:場所")  == 99602
 			停止状態 = 1
-		ENDIF
-		;レイ追記250601
-		IF GETVAR(@"%듀얼리스트%_MZ_특수状態:場所") == 79617
-			TEQUIP:캐릭터_ID:절정금지 = 1
 		ENDIF
 	ENDIF
 	$INPUT_LOOP
@@ -124,6 +129,7 @@ IF RESULT >= 1
 		BINPUT
 
 	IF RESULT == 2000
+		절정カウント後 = EXP:TARGET:절정경험
 		SELECTCOM = -1
 		TFLAG:SELECTCOM보존 = SELECTCOM
 		CALL_COMスキップ = 1
@@ -143,6 +149,13 @@ IF RESULT >= 1
 		TFLAG:COMABLE관리 = 0
 		PRINTL 듀얼로 돌아간다
 		RESETBGCOLOR
+		
+
+		절정횟수 = 절정カウント後 - 절정カウント前
+		IF ゾーン == "필드"
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"조교",절정횟수)
+		ENDIF
+		RESULT:1 = 절정횟수
 		RETURN 0
 	ELSE
 		;コマンド処理

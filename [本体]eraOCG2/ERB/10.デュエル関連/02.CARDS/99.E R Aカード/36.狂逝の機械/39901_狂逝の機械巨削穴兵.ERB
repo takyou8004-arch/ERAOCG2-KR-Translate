@@ -1,0 +1,278 @@
+@CARDNAME_39901,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 이쿠기어 드릴 바이브 골렘
+	CASE "略称"
+		RESULTS = 광서의거삭혈병
+	CASE "カテゴリ"
+		RESULTS:0 = 광서의 기계
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39901(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250706
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39901(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 
+CALLFORM CARD_ABLE(1,攻撃後誘発)
+PRINTL ①：이 카드가 전투로 상대 몬스터를 파괴해 묘지로 보냈을 때에 발동할 수 있다。
+PRINTL 파괴한 몬스터를 상대 필드 위에 특수 소환하고、그 몬스터에게 미약카운터를 １개 놓는다。
+PRINTL 이 효과로 특수 소환한 몬스터의 공격력 / 수비력은 ０이 된다。
+CALLFORM CARD_ABLE(2,攻守変動)
+PRINTL ②：이 카드는 １번의 배틀 페이즈 중에 이 카드에 놓여있는 미약카운터의 수＋１번까지 몬스터에게 공격할 수 있다。
+CALLFORM CARD_ABLE(3,필드起動)
+PRINTL ③：１턴에 １번、자신 메인 페이즈에 이 카드에 놓여있는 미약카운터를 전부 제거하고 발동할 수 있다。
+PRINTL 제거한 수 만큼 상대 필드의 카드를 파괴한다。
+PRINTL 그 후、이 카드에 미약카운터를 １개 놓는다。
+PRINTL
+SETCOLOR C_RED
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー경고ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL ④：이 카드가 암컷 몬스터를 파괴했을 때, 그 몬스터의 성기를 드릴 바이브로 파괴한 뒤에
+PRINTL 상대의 필드에 끌어내린다。
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー주의ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL
+RESETCOLOR
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39901(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 選択カード名前
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39901)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_戦闘カード") != 場所
+		RETURN 0
+	SIF 直前戦闘破壊ID(듀얼리스트,1) == 0
+		RETURN 0
+	SIF モンスター数(対面者) >= 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_3(듀얼리스트,39901)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39901(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 攻撃횟수
+#DIM DYNAMIC 破壊枚数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39901,1)
+    IF RESULT == 0
+		TRYCALLFORM CARDNAME_{直前戦闘破壊ID(듀얼리스트,1)}("名前")
+		選択カード名前 = %RESULTS%
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과条件名前 = %選択カード名前%
+		효과추가종류 = 190
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"",0,1)
+		CALL FULLRESET
+		CALL CARD_EROTICS(直前戦闘破壊ID(듀얼리스트,1))
+		조교대상 = RESULT
+		IF 조교대상 != -1
+			IF MARK:조교대상:쾌락각인 + MARK:조교대상:고통각인 + MARK:조교대상:굴복각인 - MARK:조교대상:반발각인 < 8
+				;드릴 바이브による性器破壊開幕の
+				SELECTCASE RAND:3
+					CASE 0 
+						PRINTFORML 쓰러져버린 %CALLNAME:조교대상%는 거삭혈병이 다가오는 %TEXTR("가시투성이인 드릴 바이브/사이즈가 다른 가시 투성이인 구체가 이어진 형태의 드릴 바이브/구릉구릉 하는 소리를 내며 회전하는 바이브")%를 보고 전율한다、
+						PRINTFORML 그 크기는 명백하게 여체의 허용범위를 넘어있으며、%CALLNAME:조교대상%가 그 기계 %TEXTR("이걸 사용해버리면 평범한 생활을 할수 없게 되는것을/이것을 성기에 무리하게 꽂아 열도록 삽입해오는것을/보지뿐만 아니라 자궁 안쪽에 무리하게 꽂아넣는것을/다짜고짜 뿌리부분까지 꽂아넣는것을")%알아채는건 당연한 일이겠지。
+						PRINTFORML %CALLNAME:조교대상%가 %TEXTR("필사적으로 고개를 저으며 비명같은 거절을 해도/이빨을 부딪히며 필사적으로 단어를 나열하며 목숨구걸을 해도/제대로 움직이지 못하는 팔다리를 허우적대며 그 장소에서 도망치려하는 모습에/")%거삭혈병은、
+						PRINTFORMW "아”하”하”…❤"하며 입꼬리가 올라가 입이 찢어질것같은 미소를 띄우고、그 드릴 바이브를 한번에 꽂아넣고 기동해버린다……
+					CASE 1
+						PRINTFORML 붙잡힌 다른 광서의 기계에게 사타구니가 열려 %TEXTR("무방비해진 보지를 손가락으로 넓혀져/무리하게 열려진 사타구니를 닫는것도 못하고 양쪽 구멍을 열려져/클리토리스를 붙잡힌채 질벽을 풀려/저항도 못하고 숨기지도 못하는채로 양 구멍을 보여져")%버린%CALLNAME:조교대상%、
+						PRINTFORML 거삭혈병에게 꽂혀있는 암컷은 "………%TEXTR("쿠히히”/…읏”히히”잇…/아하”아”아”…")%❤" 하며 숨을 거칠게 쉬며 드릴 바이브를 사용해 %CALLNAME:조교대상%의 %TEXTR("암컷구멍을 제껴여는 감촉/미개봉의 보지를 망가뜨리는 즐거움/아직 사용하지 않은 보지를 쳐부수는 쾌감")%을 상상해간다、
+						PRINTFORMW 『%TEXTR("과과과/끼릭끼릭/기기기기기기")%』하며 화려하게 철과 철이 부딪히는 소리를 내며 회전하는 드릴 바이브를、%CALLNAME:조교대상%는 %TEXTR("떨면서/두려워하며/이를 갈며 무서워하면서/고개를 저으며 거부하면서")% 저항도 못하고, 박혀버린다……
+					CASE 2
+						PRINTFORML %CALLNAME:조교대상%는 구속구로 양 다리가 머리 쪽으로 들려진 만개 자세로 꼼짝할 수 없는 상태가 되었다.
+						PRINTFORML 기계의 구동음을 울리며 회전하는 드릴 바이브를 향해져, %CALLNAME:조교대상%는 %TEXTR("그만두게 하려고 재갈 물린 입에서 소리를 내려고 필사적으로 노력한다/덜그럭거리며 구속구를 풀려고 몸부림친다/재갈을 물려 소리를 내지 못한 채 고개를 계속 가로젓는다")%.
+						PRINTFORMW %TEXTR("이 기구로 암컷 구멍을 사용당하면 망가져 버릴 거야/삽입할 수 있을지도 모르는 굵기의 드릴 바이브를 억지로 사용하면 어떻게 될까/이대로는 자궁 깊숙이 박혀 성기가 망가져 버릴 거야")%를 알아차린 %CALLNAME:조교대상%의 겁에 질린 표정에, 거삭혈병에 내장된 암컷 구멍은 비열한 미소를 띠고 있었다……
+				ENDSELECT
+				;『광서의 기계用関数』にある個別이벤트用の関数
+				CALL MADORGASM_DRILLVIBE_CHARA_TXT(조교대상)
+				;드릴 바이브による性器破壊１回目
+				FOR カウンタ,0,4
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_DRILLVIBE_TXT(1,0)
+						CALL MADORGASM_DRILLVIBE_TXT(1,2)
+						CALL EROTIC_MOVE("前穴凌辱",조교대상,-1,50)
+					CASE 1
+						CALL MADORGASM_DRILLVIBE_TXT(1,1)
+						CALL MADORGASM_DRILLVIBE_TXT(1,3)
+						CALL EROTIC_MOVE("後穴凌辱",조교대상,-1,50)
+				ENDSELECT
+				NEXT
+				;ドリルバイブによる性器破壊終了時の演出
+				SELECTCASE RAND:3
+					CASE 0 
+						PRINTFORML 드릴 바이브를 사용되어 허탈하게 힘없이 늘어져버린 %CALLNAME:조교대상%의 %TEXTR("암컷 구멍/보지")%에서,
+						PRINTFORMW 사랑의 액체와 진이 뿜어져 나오고 주변 일대에 물웅덩이를 만들 정도로 망가져버렸지만, 하반신을 사랑의 액체로 범벅이 된 그 몸 상태로 필드에 끌려나가게 된다……
+					CASE 1
+						PRINTFORML %TEXTR("울부짖으려 해도, 아무리 신음해도/필사적인 목숨 구걸 같은 간청도 헛되고/고개를 흔들며, 몸을 비틀어 도망치려 해도 결국은")%드릴 바이브를 사용당해버린 %CALLNAME:조교대상%는,
+						PRINTFORMW "아”……아”……❤"와 허탈하고 눈에서 빛을 잃은 표정이 되어, %TEXTR("온몸이 벌벌 떨리면서도/절정이 가시지 않을 정도로 구멍을 파헤쳐도/푹 꺼진 자궁 입구의 안쪽마저 보이는 암컷 구멍")%억지로 필드에 내던져지게 된다……
+					CASE 2
+						PRINTFORML %TEXTR("붕괴한 댐처럼/마개가 부서진 수도꼭지처럼/드릴 바이브로 파괴된 보지는")%사랑의 액체를 끝없이 흘리며 %TEXTR("암컷 구멍/굴착된 보지/파괴된 보지/기계 개발된 암컷 구멍")%으로 변한 %CALLNAME:조교대상%는,
+						PRINTFORMW "%TEXTR("싫어…싫어…/놔…놔줘…/이…이제 그만…싫어…/그만…그만해…")%"과 힘없는 목소리를 내며 다가오는 거삭혈병에게 발이 붙잡혀 억지로 필드에 되돌려지게 된다……
+				ENDSELECT
+				;『광서의 기계用関数』にある個別セリフ用の関数
+				CALL MADORGASM_DRILLVIBE_END_CHARA_TXT(조교대상)
+
+			ELSEIF MARK:조교대상:쾌락각인 + MARK:조교대상:고통각인 + MARK:조교대상:굴복각인 - MARK:조교대상:반발각인 >= 8
+				SELECTCASE RAND:3
+					CASE 0
+						PRINTFORML %TEXTR("허무하게/옷이 너덜너덜해진 한심한 모습으로/패배를 인정하고 목숨을 구걸하듯 전라 도게자로/쩍벌이 되어 자신을 자지님에게 좋은 구멍이라고 말하며")% 붙잡혀버린 %CALLNAME:조교대상%는 거삭혈병의 드릴 바이브를 보여지자, '꿀꺽'하고 침을 삼켜버린다.
+						PRINTFORML 『%TEXTR("이걸로 또 내 구멍을 망가뜨릴 셈이구나/이제 내 구멍은 끝장이야/내 보지, 이걸로 망가져버려/많은 여자애들이 이걸로 망가졌어")%❤』『%TEXTR("질척질척하게 되어버려/엉망진창으로 망가져버려/너덜너덜하게 되어버려")%❤』『%TEXTR("아무리 시간이 지나도/아무리 목숨을 구걸해도/아무리 가버려도/아무리 몸이 망가져도")%……%TEXTR("상관없이 구멍이 벌려지고/더 망가뜨릴 부분을 정성껏 망가뜨리고/무시당하고 가차없이 보지 처형당하고/이 성의 주인이 만족할 때까지 망가뜨려지고")% 말 거야❤』
+						PRINTFORMW 앞으로 행해질 능욕에 %CALLNAME:조교대상%는 %TEXTR("가랑이를 적시고/암컷 구멍을 개폐하고/뻐끔뻐끔 마조 보지를 질척질척 휘젓고/개발되어버린 육변기 보지를 만지기 시작할")% 뿐만 아니라, 스스로 그 암컷 구멍을 벌려 능욕을 받아들이려 해버린다……
+					CASE 1
+						PRINTFORML %CALLNAME:조교대상%는 %TEXTR("형식뿐인 저항/저는 지지 않습니다라는 어필을 위한/여기에 아직 타락하지 않은 암컷이 있습니다라는 과시를 위한 저항/여기에 보지 처형을 끝내지 않았습니다라는 저항")%을 하면서도 옷을 찢어버리고, %TEXTR("실오라기 하나 걸치지 않은 모습/갓 태어난 모습/능욕당하기 위한 모습")%을 드러내게 된다.
+						PRINTFORML %TEXTR("땅바닥에 엎드려지고/밀어 넘어뜨려지고/비틀어 눕혀지고")% %CALLNAME:조교대상%의 시선은, 거대한 구동음을 울리며 회전하는 드릴 바이브를 향해져 있었다.
+						PRINTFORMW %CALLNAME:조교대상%의 몸은 %TEXTR("앞으로 일어날 능욕에 대한 기대/보지 처형을 당하는 망상/암컷 구멍이 엉망진창이 될 기대")%로 그 암컷 구멍에서 %TEXTR("침처럼/먹이를 찾는 짐승의 입처럼/천박하게 능욕을 원하는 마조 보지답게")% 애액을 흘리고 있다……
+					CASE 2
+						PRINTFORML 전투로 쓰러진 %CALLNAME:조교대상%는 도망치려 했지만 발이 붙잡혀 붙잡히게 된다.
+						PRINTFORML 붙잡힌 %CALLNAME:조교대상%는 마치 %TEXTR("그렇게 하는 것이 당연한 것처럼/자신이 해야 할 일/패배한 잡몹 암컷으로서 수컷에게 아양 떨듯이")% 스스로 옷을 벗어던지고 %TEXTR("전라 도게자/쩍벌 허리 흔들며 아양/자지님께 아양 떨며 구멍 드러내고 자위/암컷 구멍 드러내고 만개 자세")%를 취한다.
+						PRINTFORML "부디… 이, %CALLNAME:MASTER%님께 대항한 %TEXTR("불쌍한 암컷/변태 패배 마조 암컷 구멍/자지님을 너무 좋아하는 보지/보지 처형당하고 싶어하는 개변태 보지")%에게……%TEXTR("벌을 내려주세요/보지 처형을 해주세요/이 선택을 후회할 만한 능욕을 해주세요")%……❤"
+						PRINTFORML 그렇게 말하는 %CALLNAME:조교대상%의 %TEXTR("암컷 구멍/아양 떠는 보지/변태 마조 보지/패배 버릇 붙은 잡몹 보지")%은 앞으로 행해질 "%TEXTR("벌/능욕/보지 처형/유린")%"에 대한 기대로 젖어 있었다……
+				ENDSELECT
+				;『광서의 기계用関数』にある個別 이벤트用의関数
+				CALL MADORGASM_DRILLVIBE_FALLCHARA_TXT(조교대상)
+				;드릴 바이브による性器破壊１回目
+				FOR カウンタ,0,4
+				SELECTCASE RAND:2
+					CASE 0 
+						CALL MADORGASM_DRILLVIBE_TXT(1,0)
+						CALL MADORGASM_DRILLVIBE_TXT(1,4)
+						CALL EROTIC_MOVE("前穴凌辱",조교대상,-1,100)
+					CASE 1
+						CALL MADORGASM_DRILLVIBE_TXT(1,1)
+						CALL MADORGASM_DRILLVIBE_TXT(1,5)
+						CALL EROTIC_MOVE("後穴凌辱",조교대상,-1,100)
+				ENDSELECT
+				NEXT
+				;ドリルバイブによる性器破壊終了時の演出
+				SELECTCASE RAND:3
+					CASE 0 
+						PRINTFORML 푹 꺼진 %TEXTR("보지/암컷 구멍/잡몹 마조 보지/패배 버릇 암컷 보지")%뿐만 아니라 %TEXTR("자궁 입구/아기 주머니 입구/임신당하고 싶어하는 수정 마조 자궁/자지님을 원하는 음란 자궁")%까지 구멍이 뚫려 자궁 안의 살까지 보이게 된 %CALLNAME:조교대상%의 %TEXTR("보지/암컷 구멍/잡몹 마조 보지/패배 버릇 암컷 보지/개통된 오나홀")%,
+						PRINTFORMW 그럼에도 불구하고 %CALLNAME:조교대상%의 육체는 %TEXTR("더한 능욕을 원하며/더욱더❤라고 쾌락을 원해서//")%드릴 바이브에 살을 밀어붙여 삽입을 조르고 있다…
+					CASE 1
+						PRINTFORML %CALLNAME:조교대상%는 %TEXTR("보지/암컷 구멍/잡몹 마조 항문/패배 버릇 마조 보지/굴절 버릇 있는 잡몹 항문")%에 대한 성기 처형으로 %TEXTR("보지/암컷 구멍/잡몹 마조 보지/패배 버릇 암컷 보지")%과 %TEXTR("항문/마조 항문/잡몹 마조 애널/패배 버릇 암컷 보지/이상 성행위용 임신당하고 싶어하는 마조 항문")%에 푹 구멍이 뚫려버린다…….
+						PRINTFORML 그런 육체 상태임에도 불구하고, %CALLNAME:조교대상%는 능욕과 유린에 대한 감사를 %TEXTR("전라 도게자/쩍벌 허리 흔드는 모습/질척질척 보지를 만지며 그 모습을 드러내는 것으로")% 표하며,
+						PRINTFORMW 더한 벌을 받기 위해, 그 %TEXTR("양쪽 구멍/잡몹 구멍/개통된 암컷 구멍/처형당하고 싶어하는 꼴사나운 보지")%을 내밀어버린다……
+					CASE 2
+						PRINTFORML %CALLNAME:조교대상%의 몸은 드릴 바이브에 의해 망가져 %TEXTR("히끅히끅/움찔움찔”/덜컹덜컹")%❤하며 %TEXTR("땅바닥에 구르며/땅바닥에서 몸부림치며/허리를 위아래로 움직이며")% 애액을 뿜어내고 있다…….
+						PRINTFORML %TEXTR("풀리고/휘저어지고/비틀리고/")%, 파헤쳐져, 지금은 푹 꺼진 %TEXTR("자궁 안쪽마저/자궁의 살/빠져나온 자궁의 살")%이 보이는 %TEXTR("보지/암컷 구멍/잡몹 마조 보지/패배 버릇 암컷 보지")%을 질질 끌며,
+						PRINTFORMW %CALLNAME:조교대상%는 『%TEXTR("에…에헤…헤”헤”…/오”❤오히오”♡오”ㅅ/히”ㅅㅅ”❤하힛ㅅ”❤힛/니기오”❤오”❤오”❤오”❤오”오”")%❤』라고 입에서 흘리며 다시 능욕을 원하며 %TEXTR("허리를 흔들며/허리를 위아래로 움직이며/스스로 클리토리스를 잡아당겨 암컷 구멍을 더 벌리고/보지를 손가락으로 잡아 벌리고")% 어필해버린다……
+				ENDSELECT
+				;『광서의 기계用関数』にある個別 이벤트用의関数
+				CALL MADORGASM_DRILLVIBE_END_FALLCHARA_TXT(조교대상)
+			ENDIF
+		ENDIF
+	ENDIF
+
+
+ELSEIF 종류 == 攻守変動
+    攻撃횟수 = GETVAR(@"%듀얼리스트%_MZ_薬Ｃ:場所") + 1
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"追戦",攻撃횟수)
+    ELSEIF 종류 == 攻撃後強制誘発
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",-99,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"追戦",-99,1)
+	
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39901,3)
+	IF RESULT == 0
+		破壊枚数 = GETVAR(@"%듀얼리스트%_MZ_薬Ｃ:場所")
+			PRINTFORML
+			PRINTFORML 파괴가능 매수는 {破壊枚数}！
+			PRINTFORMW
+
+
+		CALL FULLRESET
+		効果範囲相手戦場 = 1
+		効果範囲相手魔罠 = 1
+		효과条件複数 = 100 - 破壊枚数
+		CALL CARD_REMOVAL_ADV(決闘者,"単体除去",場所,"墓地")
+		
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"薬Ｃ",0,1)
+		SIF RESULT != 1
+			RETURN 0
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"薬Ｃ",1)
+	ENDIF
+ENDIF
+
+
+
+

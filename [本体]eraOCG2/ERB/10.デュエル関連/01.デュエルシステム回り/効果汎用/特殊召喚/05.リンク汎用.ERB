@@ -41,6 +41,8 @@
 #DIM DYNAMIC 효과추가종류보존,20
 #DIM DYNAMIC 素材ID起動 ;Anonym추가
 #DIM DYNAMIC 보존素材ID
+#DIM DYNAMIC 素材攻撃力起動
+#DIM DYNAMIC 合計攻撃力
 
 
 VARSET 選択カード, -1
@@ -49,6 +51,8 @@ VARSET 使用素材名前
 
 SIF 素材条件素材数起動 >= 1
 	素材数起動 = 1
+	SIF 素材条件素材攻撃力起動 >= 1 ;Anonym追加
+	素材攻撃力起動 = 1
 SIF 素材条件素材ID起動 >= 1 ;Anonym추가
 	素材ID起動 = 素材条件素材ID起動
 
@@ -93,7 +97,7 @@ IF 듀얼리스트 == "자신"
 	PRINTFORML 소환카드：《%カード名%》
 	PRINTL 소재로 할 몬스터를 골라주세요：
 	PRINTFORML 필요소 링크 수：{링크合計}/{必要링크数}
-	PRINTFORML 필요 조건 링크：{素材条件링크}　소재 수：{素材数}
+	;PRINTFORML 필요 조건 링크：{素材条件링크}　소재 수：{素材数}
 	IF オプション_略표시 == 1
 		PRINTBUTTON "[간이표시중]", 6666
 	ELSE
@@ -250,14 +254,18 @@ IF 링크合計 == 必要링크数
 					CONTINUE
 				検出종류:カウンタC = RESULT:カウンタC
 			NEXT
-			PRINTFORML 검출종류1:{検出종류}
+			;PRINTFORML 검출종류1:{検出종류}
 			FOR カウンタC,0,5
 				SIF MATCH(検出종류:カウンタC, 지정素材종류)
 					条件달성 = 1
-				PRINTFORML 검출종류2:{検出종류:カウンタC}
+				;PRINTFORML 검출종류2:{検出종류:カウンタC}
 				SIF MATCH(지정素材종류, 検出종류:カウンタC)
 					条件달성 = 1
 			NEXT
+		ENDIF
+		IF 素材攻撃力起動 == 1
+			TRYCALLFORM CARD_{選択カード_ID:カウンタ}, "攻撃力"
+			合計攻撃力 += RESULT
 		ENDIF
 
 		CALL CARD_DISPOSE(듀얼리스트,"필드",選択カード:カウンタ,0)
@@ -276,6 +284,13 @@ IF 링크合計 == 必要링크数
 	PRINTFORMW 링크소환、링크{必要링크数}！%カード名%！！
 	IF 素材数起動 == 1
 		SETVAR @"%듀얼리스트%_MZ_汎数:現필드(듀얼리스트)", 素材数
+	ENDIF
+	IF 素材攻撃力起動 == 1
+		;PRINTFORML 合計攻撃力：{合計攻撃力}
+		SETVAR @"%듀얼리스트%_MZ_汎数:現필드(듀얼리스트)", 合計攻撃力
+	ENDIF
+	IF 保存素材ID > 0 ;Anonym追加
+		SETVAR @"%듀얼리스트%_MZ_汎数:現필드(듀얼리스트)", 保存素材ID
 	ENDIF
 
 	VARSET 효과추가종류 ;Anonym修正

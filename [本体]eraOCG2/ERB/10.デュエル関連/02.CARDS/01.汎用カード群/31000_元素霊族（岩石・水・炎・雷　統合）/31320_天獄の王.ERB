@@ -1,0 +1,166 @@
+﻿@CARDNAME_31320,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 천옥의 왕
+	CASE "略称"
+		RESULTS = 천옥의 왕
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_31320(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 元素霊族
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 3000
+	CASE "追加日"
+		RETURN 250809
+ENDSELECT
+
+RETURN 0
+@CARD_EXPLANATION_31320(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 이 카드명의 ①②의 효과는 １턴에 １번、어느것인가 １개밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,手札起動)
+PRINTL ①：자신 메인 페이즈에 발동할 수 있다。
+PRINTL 패의 이 카드를 공개한다。
+PRINTL 이 턴 필드에 세트된 카드는 파괴내성을 얻는다。
+CALLFORM CARD_ABLE(1,効果後誘発)
+PRINTL ②：일반마법、속공마법、또는 일반함정 카드의 효과가 발동한 경우에 발동할 수 있다。
+PRINTL 이 카드를 패에서 특수 소환한다。
+
+PRINTL 이 카드가 패에서 공개되어있는 상태로 이 효과를 발동한 경우、
+PRINTL 추가로 덱에서 일반마법、속공마법、또는 일반함정 카드１장을 자신 필드에 세트할 수 있다。
+
+
+@CARDCAN_31320(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,31320)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF 発動済_1(決闘者,31320)
+		RETURN 0
+	SIF 発動済_2(決闘者,31320)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン終了時強制
+	SIF ゾーン != "手札"
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_手_公開:場所") == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "手札"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_手_公開:場所") == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 効果後誘発
+	SIF 発動済_1(決闘者,31320)
+		RETURN 0
+	SIF 発動済_2(決闘者,31320)
+		RETURN 0
+	SIF ゾーン != "手札"
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,31320,"手札")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果条件種類:0 = 通常魔法
+	効果条件種類:2 = 速攻魔法
+	効果条件種類:3 = 通常罠
+	CALL CARD_CHECK_FIN_DATA(決闘者,"効果発動",2)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_31320(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 条件達成
+
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,31320,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL STATCHANGE_HAND(決闘者,"指定",場所,"公開",2)
+	ENDIF
+ELSEIF 種類 == ターン終了時強制
+	CALL FULLRESET
+	CALL STATCHANGE_HAND(決闘者,"指定",場所,"公開",-1)
+ELSEIF 種類 == 永続効果
+	CALL FULLRESET
+	効果条件表示 = 裏側表示
+	CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"破耐")
+
+	CALL FULLRESET
+	効果条件表示 = 裏側表示
+	CALL STATCHANGE_EFFECT(決闘者,"相手戦場",場所,"破耐")
+
+	CALL FULLRESET
+	効果条件表示 = 裏側表示
+	CALL STATCHANGE_EFFECT(決闘者,"魔罠",場所,"破耐")
+
+	CALL FULLRESET
+	効果条件表示 = 裏側表示
+	CALL STATCHANGE_EFFECT(決闘者,"相手魔罠",場所,"破耐")
+
+ELSEIF 種類 == 効果後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,31320,2)
+	IF RESULT == 0
+		SIF GETVAR(@"%決闘者%_手_公開:場所") >= 1
+			条件達成 = 1
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者, "手札", 場所)
+		IF 条件達成 == 1
+			CALL FULLRESET
+			効果条件種類:0 = 通常魔法
+			効果条件種類:2 = 速攻魔法
+			効果条件種類:3 = 通常罠
+			CALL CARD_SET_BASIC(決闘者,"デッキ",ゾーン,場所,"裏側表示")
+		ENDIF
+	ENDIF
+ENDIF

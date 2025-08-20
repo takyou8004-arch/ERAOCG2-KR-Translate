@@ -1,0 +1,184 @@
+﻿@CARDNAME_73605,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 랜스 오브 나이트메어
+	CASE "略称"
+		RESULTS = 환혹의 창
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+		RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_73605(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 速攻魔法
+	CASE "追加日"
+		RETURN 250812
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73605(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,魔罠起動 ,手札起動 ,フリー誘発)
+PRINTL ①：フィールドのモンスター１体を対象として発動できる。
+PRINTL そのモンスターの攻撃力分のＬＰを回復する。
+PRINTL この効果で２０００以上回復した場合、さらに手札・デッキからレベル６以上の未確認族モンスター１体を特殊召喚できる。
+PRINTL この効果で特殊召喚したモンスターはこのターン、直接攻撃できない。
+CALLFORM CARD_ABLE(2,墓地起動)
+PRINTL ②：自分メインフェイズに、自分フィールドのレベル７以上の未確認族モンスター１体を対象として発動できる。
+PRINTL そのモンスターに墓地のこのカードを装備カード扱いで装備する。
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ③：装備モンスターが戦闘を行う場合、戦闘を行う相手モンスターの攻撃力はダメージステップの間、装備モンスターの攻撃力分ダウンする。
+
+@CARDCAN_73605(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,73605)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	SIF !GROUPMATCH(ゾーン,"手札","魔罠")
+		RETURN 0
+	SIF 発動済_1(決闘者,73605)
+		RETURN 0
+	IF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") != 2
+			RETURN 0
+	ELSEIF ゾーン == "手札"
+		SIF ターンプレイヤー != 決闘者
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲相手戦場 = 1
+	効果条件表示 = 表側表示
+	効果条件除去種 = 選択
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 墓地起動
+	SIF 発動済_2(決闘者,73605)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件種族 = 未確認族
+	CALLFORM 効果条件レベル_ADV(7,"以上")
+	効果条件表示 = 表側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 攻撃時強制誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 装備先
+		RETURN 0
+	SIF 戦闘場所(決闘者,1) == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73605(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73605,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲相手戦場 = 1
+		効果条件表示 = 表側表示
+		効果条件除去種 = 選択
+		CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_SELECT(決闘者,RESULT)
+			選択カード = RESULT
+			攻撃力修正 = GETVAR(@"%対象者（CS）%_MZ_攻:選択カード")
+			CALL LIFE_CHANGE(決闘者,"増加","効果",攻撃力修正)
+			IF 攻撃力修正 >= 2000
+				CALL FULLRESET
+				効果範囲手札 = 1
+				効果範囲デッキ = 1
+				効果条件種族 = 未確認族
+				CALLFORM 効果条件レベル_ADV(6,"以上")
+				効果条件任意 = 1
+				CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+				SIF RESULT == 1
+					CALL SET_FIELD_INFO(決闘者,"戦場",カード召喚先,"直無",1)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,73605,2)
+	IF RESULT == 0
+		;手札から発動後、魔法トラップゾーンにカード移動
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件種族 = 未確認族
+		CALLFORM 効果条件レベル_ADV(7,"以上")
+		CALLFORM CARD_EQUIP_ADV(決闘者,場所,ゾーン)
+	ENDIF
+
+ELSEIF 種類 == 攻撃時強制誘発
+	攻撃力修正 = GETVAR(@"%決闘者%_MZ_攻:装備先")
+	CALL SET_FIELD_INFO(対面者,"戦場",戦闘場所(決闘者,1),"一時",-攻撃力修正)
+ENDIF
+

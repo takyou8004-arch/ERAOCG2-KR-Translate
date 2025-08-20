@@ -1,0 +1,327 @@
+﻿@CARDNAME_5521,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 반령반인분 요우무
+	CASE "略称"
+		RESULTS = 콘파쿠 요우무
+	CASE "カテゴリ"
+		RESULTS:0 = 백옥루
+		RESULTS:1 = 환상소녀
+		RESULTS:4 = 동방 Project
+ENDSELECT
+
+
+@CARD_5521(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 地属性
+	CASE "種族"
+		RETURN アンデット族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 0
+	CASE "チューナー"
+		RETURN 1
+	CASE "性別"
+		RETURN 牝性
+	CASE "生成カード"
+		RETURN 205521
+	CASE "追加日"
+		RETURN 250808
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_5521(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+;半人반령 
+CALLFORM CARD_ABLE(1,召喚時,特殊召喚時)
+PRINTL ①：フィールドに「반인반령분 요우무」が存在しない場合、このカードが召喚・特殊召喚に成功した場合に発動できる。
+PRINTL 「반인반령분 요우무」１体をデッキ・手札・墓地から特殊召喚する。
+PRINTL この効果の発動後、自分はアンデット族モンスターしかEXデッキから特殊召喚できない。
+;スペカ確保
+CALLFORM CARD_ABLE(2,戦場起動)
+PRINTL ②：自分メインフェイズに発動できる。
+PRINTL お互いのプレイヤーは手札を２枚捨て、それぞれカードを２枚ドローする。
+PRINTL その後、お互いいずれかの墓地にアンデット族モンスターが存在する場合、
+PRINTL 自分の手札に「인부　현세참」を１枚手札に加える。
+
+@CARDCAN_5521(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件達成
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,5521)
+SIF RESULT == 1
+	RETURN 0
+IF 種類 == 召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_1(決闘者,5521)
+		RETURN 0
+
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件名前 = 반인반령분 요우무
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲デッキ = 1
+	効果範囲墓地 = 1
+	効果条件名前 = 반인반령분 요우무
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場起動
+	SIF 発動済_2(決闘者,5521)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手手札 = 1
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_5521(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC ドロー枚数
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,5521,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果範囲デッキ = 1
+		効果範囲墓地 = 1
+		効果条件名前 = 반인반령분 요우무
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+
+		EX召喚可能種族 = アンデット族
+		CALL CARD_EX_RESTRICTION(決闘者)
+	ENDIF
+ELSEIF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,5521,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果条件複数 = 2
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		SIF RESULT == 1
+			CALL CARDDRAW_BASIC(決闘者,2)
+
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果条件複数 = 2
+		CALL CARD_ADD_GY_ADV(対面者,ゾーン,場所)
+		SIF RESULT == 1
+			CALL CARDDRAW_BASIC(対面者,2)
+
+
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果範囲相手墓地 = 1
+		効果条件種族 = アンデット族
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT == 1
+			CALL CARD_GENERATE_HAND(決闘者,205521)
+	ENDIF
+ENDIF
+
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+
+@CARDNAME_205521,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 인부　현세참
+	CASE "略称"
+		RESULTS = 인부　현세참
+	CASE "カテゴリ"
+		RESULTS:0 = 스펠 카드
+ENDSELECT
+
+
+@CARD_205521(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 速攻魔法
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_205521(種類)
+#DIM DYNAMIC 種類
+PRINTL このカード名の効果は１ターンに１度しか使用できない。
+
+CALLFORM CARD_ABLE(10,魔罠起動 ,手札起動)
+PRINTL ①：相手フィールドに存在するモンスター１体を選択して発動できる。
+PRINTL そのカードを破壊する。
+PRINTL 自分フィールドの「반령반인분 요우무」が破壊されていた場合、
+PRINTL 自分の墓地から「楽반령반인분 요우무」を特殊召喚し、このカードは「ラストワード」となる。
+CALL TEXT_DECORATION("LASTWORD")
+PRINTL ●相手フィールドの魔法・罠カードを１枚を選び破壊する。
+PRINTL その後、相手のデッキの上から１０枚を墓地に送る。
+
+@CARDCAN_205521(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,205521)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	SIF 発動済_1(決闘者,205521)
+		RETURN 0
+	IF ゾーン == "手札"
+		SIF ターンプレイヤー != 決闘者
+			RETURN 0
+	ELSEIF ゾーン == "魔罠"
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果条件除去種 = 墓地
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_205521(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC ドロー枚数
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 || 種類 == フリー誘発
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,205521,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+
+
+
+		CALL FULLRESET
+		効果条件名前 = 반령반인분 요우무
+		CALL CARD_CHECK_FIN_DATA(決闘者,"破壊全般")
+		IF RESULT == 1
+			CALL FULLRESET
+			効果範囲墓地 = 1
+			効果条件名前 = 반령반인분 요우무
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+			CALLFORM CHARA_CUTIN("Last Word","待　宵　反　射　衛　星　斬",,,,,1)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"戦場単体",場所,"墓地")
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"魔罠単体",場所,"墓地")
+
+
+			CALL URARA_CHANCE(決闘者,処理中_効果ID,"雑多")
+			IF RESULT == 0
+				FOR カウンタ,0,紙束最大値
+					SIF GETVAR(@"%決闘者%_手札:カウンタ") == -1
+						CONTINUE
+					CALL CARD_DISPOSE(決闘者,"手札",カウンタ)
+					ドロー枚数 ++
+				NEXT
+				CALL CARDDRAW_BASIC(決闘者,ドロー枚数,2)
+
+				VARSET ドロー枚数
+				FOR カウンタ,0,紙束最大値
+					SIF GETVAR(@"%対面者%_手札:カウンタ") == -1
+						CONTINUE
+					CALL CARD_DISPOSE(対面者,"手札",カウンタ)
+					ドロー枚数 ++
+				NEXT
+				CALL CARDDRAW_BASIC(対面者,ドロー枚数,2)
+			ENDIF
+		ELSE
+			CALLFORM CHARA_CUTIN("Spell Card","「인부」현세참",,,,,1)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"戦場単体",場所,"墓地")
+		ENDIF
+
+
+	ENDIF
+ENDIF

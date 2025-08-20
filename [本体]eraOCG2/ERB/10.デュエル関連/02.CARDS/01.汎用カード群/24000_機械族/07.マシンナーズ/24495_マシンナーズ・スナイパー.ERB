@@ -1,0 +1,102 @@
+﻿@CARDNAME_24495,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 머시너즈 스나이퍼
+	CASE "略称"
+		RESULTS = 기갑 스나이퍼
+	CASE "カテゴリ"
+		RESULTS:0 = 머시너즈
+ENDSELECT
+
+
+@CARD_24495(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+	
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 地属性
+	CASE "種族"
+		RETURN 機械族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 800
+	CASE "追加日"
+		RETURN 250809
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24495(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,手札起動)
+PRINTL ①：相手フィールドにモンスターが存在する場合に発動できる。
+PRINTL このカードを手札から特殊召喚する。
+
+@CARDCAN_24495(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,24495)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+
+IF 種類 == 手札起動
+	SIF ゾーン != "手札"
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,24080,"手札")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24495(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,24080)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+	ENDIF
+ENDIF
+

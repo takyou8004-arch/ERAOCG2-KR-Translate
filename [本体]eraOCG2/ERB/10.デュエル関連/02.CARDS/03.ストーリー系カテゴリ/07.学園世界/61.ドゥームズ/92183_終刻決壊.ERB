@@ -1,0 +1,194 @@
+@CARDNAME_92183,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 둠즈 디스트럭션
+	CASE "略称"
+		RESULTS = 둠즈 디스트럭션
+	CASE "カテゴリ"
+		RESULTS:0 = 둠즈
+ENDSELECT
+
+@CARD_92183(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常罠
+	CASE "追加日"
+		RETURN 250809
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_92183(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,魔罠起動,フリー誘発)
+PRINTL ①：自分フィールドの「둠즈」Ｘモンスター１体を対象としてこのカードを発動できる。
+PRINTL このカードを以下の効果を持つ装備カード扱いでそのモンスターに装備する。
+CALLFORM CARD_ABLE(0,効果後誘発)
+PRINTL ●相手が効果でデッキからカードを手札に加えた場合に発動できる。
+PRINTL 相手の手札をランダムに１枚デッキに戻す。
+CALL CARD_ABLE(2,破壊→墓地)
+PRINTL ②：このカードが効果で破壊された場合、
+PRINTL フィールドの表側表示モンスター１体を対象として発動できる。
+PRINTL デッキから「둠즈」モンスター１体を装備魔法カード扱いで対象のモンスターに装備する。
+
+@CARDCAN_92183(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,92183)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF 発動済_1(決闘者,92183)
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 둠즈
+	効果条件種類 = エクシーズ
+	効果条件表示 = 表側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 破壊→墓地
+	SIF 発動済_2(決闘者,92183)
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲相手戦場 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 둠즈
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 効果後誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	CALL CARD_CHECK_FIN_BIT(決闘者,"離移動元",4,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(決闘者,"手札取得+D",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_92183(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+#DIM DYNAMIC 選択カードB_ID
+#DIM DYNAMIC 修正値
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+#DIMS DYNAMIC 対象者
+#DIMS DYNAMIC 出処
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,92183,1)
+	IF RESULT == 0
+		効果範囲戦場 = 1
+		効果条件カテゴリ = 둠즈
+		効果条件種類 = エクシーズ
+		効果条件表示 = 表側表示
+		CALLFORM CARD_EQUIP_ADV(決闘者,場所,ゾーン)
+	ENDIF
+ELSEIF 種類 == 破壊→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,92183,0)
+	IF RESULT == 0
+		CALL FULLRESET
+		SETCOLOR C_YELLOW
+		PRINTL 【装備対象を選んでください】
+		RESETCOLOR
+		効果範囲戦場 = 1
+		効果範囲相手戦場 = 1
+		効果条件表示 = 表側表示
+		CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SELECT(決闘者,選択カード)
+			選択カード = RESULT
+			対象者 = %対象者（CS）%
+			出処 = %参照先（CS）%
+			SETCOLOR C_YELLOW
+			PRINTL 【装備する「둠즈」モンスターを選んでください】
+			RESETCOLOR
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件カテゴリ = 둠즈
+			効果条件種類 = モン全般
+			CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+			選択カードB = RESULT
+			選択カードB_ID = RESULT:99
+			IF 選択カードB != 9999
+				CALL CARD_SELECT(決闘者,選択カードB)
+				選択カードB = RESULT
+				CALL FULLRESET
+				IF 対象者 == "相手"
+					出処 = 相手デッキ
+				ELSE
+					出処 = デッキ
+				ENDIF
+				CALL CARD_EQUIP_MONSTER(対象者,選択カード,出処,選択カードB)
+				TRYCALLFORM CARDNAME_{選択カードB_ID},"名前"
+				SETCOLOR C_YELLOW
+				PRINTFORMW 【%RESULTS%が装備されました】
+				RESETCOLOR
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 効果後誘発
+	CALL CARD_REMOVAL_BASIC(決闘者,"手札破壊",場所,"デッキ")
+ENDIF

@@ -1,0 +1,93 @@
+﻿@CARDNAME_1762,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 트릭 데몬
+	CASE "略称"
+		RESULTS = 트릭 Ｄ
+	CASE "カテゴリ"
+		RESULTS:0 = 데몬
+ENDSELECT
+
+
+@CARD_1762(参照先)
+;名前専用
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 悪魔族
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 0
+	CASE "性別"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1762(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,戦場→墓地 ,手札→墓地 ,デッキ→墓地 ,破壊→墓地 ,戦闘→墓地)
+PRINTL ①このカードが墓地へ送られた場合に発動できる。
+PRINTL デッキから「트릭 데몬」以外の「데몬」カード１枚を手札に加える。
+PRINTL 
+
+@CARDCAN_1762(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,1762)
+SIF RESULT == 1
+	RETURN 0
+IF 種類 == 戦場→墓地 || 種類 == 手札→墓地 || 種類 == デッキ→墓地 || 種類 == 破壊→墓地 || 種類 == 戦闘→墓地
+	SIF 発動済_1(決闘者,1762)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件固名前 = 트릭 데몬
+	効果条件カテゴリ = 데몬
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1762(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM サーチカード 
+
+
+
+
+IF 種類 == 戦場→墓地 || 種類 == 手札→墓地 || 種類 == デッキ→墓地 || 種類 == 破壊→墓地 || 種類 == 戦闘→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,1762,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件固名前 = 트릭 데몬
+		効果条件カテゴリ = 데몬
+		CALL CARD_ADD_BASIC(決闘者,"デッキ",ゾーン,場所)
+	ENDIF
+ENDIF

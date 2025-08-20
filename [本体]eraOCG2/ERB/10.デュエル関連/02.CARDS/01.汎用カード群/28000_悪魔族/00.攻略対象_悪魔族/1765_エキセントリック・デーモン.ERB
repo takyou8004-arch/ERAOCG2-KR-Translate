@@ -1,0 +1,141 @@
+﻿@CARDNAME_1765,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 익센트릭 데몬
+	CASE "略称"
+		RESULTS = 익센트릭 데몬
+	CASE "カテゴリ"
+		RESULTS:0 = 데몬
+ENDSELECT
+
+
+@CARD_1765(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+	
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 悪魔族
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 1000
+	CASE "分割"
+		RETURN ペンデュラム
+	CASE "性別"
+		RETURN 牝性
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1765(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名のP効果は、１ターンに１度しか発動できない。
+CALLFORM CARD_ABLE(1,魔罠起動)
+PRINTL ①：自分メインフェイズに、相手フィールドの魔法・罠カード１枚を対象として発動できる。
+PRINTL そのカードとこのカードを破壊する。
+CALL TEXT_DECORATION("P_MAGIC_2")
+
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(2,戦場起動)
+PRINTL ①：自分メインフェイズにこのカードをリリースし、相手フィールドのモンスター１体を対象として発動できる。
+PRINTL そのモンスターを破壊する。
+PRINTL 
+
+@CARDCAN_1765(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,1765)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 魔罠起動
+	SIF 発動済_1(決闘者,1765)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手魔罠 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 戦場起動
+	SIF 発動済_2(決闘者,1765)
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_1765(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+IF 種類 == 手札起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,1765)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == 魔罠起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,1765,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,破壊行き)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(決闘者,"魔罠単体",場所,"墓地")
+	ENDIF
+
+ELSEIF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,1765,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(決闘者,"戦場単体",場所,"墓地")
+	ENDIF
+ENDIF
+
+

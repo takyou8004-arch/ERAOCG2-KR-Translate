@@ -1,0 +1,116 @@
+@CARDNAME_65522,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 생을 이룬 사령혼
+	CASE "略称"
+		RESULTS = 생을 이룬 사령혼
+	CASE "カテゴリ"
+		RESULTS:0 = 백옥루
+		RESULTS:4 = 동방 Project
+ENDSELECT
+
+@CARD_65522(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "生成カード"
+		RETURN 165522
+	CASE "追加日"
+		RETURN 250808
+ENDSELECT
+RETURN 0
+
+
+@CARD_EXPLANATION_65522(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,手札起動,魔罠起動)
+PRINTL ①：自分の墓地からアンデット族モンスターを最大２体まで手札に加える。
+CALL CARD_ABLE(2,墓地起動)
+PRINTL ②：このカードが墓地に存在する状態で、相手の墓地にアンデット族モンスターが送られた場合、このカードを除外して発動できる。
+PRINTL お互いのデッキの上から２枚墓地に送る。
+
+
+@CARDCAN_65522(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,65522)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF 発動済_1(決闘者,65522)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件種族 = アンデット族
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 効果後誘発
+	SIF 発動済_2(決闘者,65522)
+		RETURN 0
+	SIF ゾーン != "墓地"
+		RETURN 0
+	CALL FULLRESET
+	効果条件種族 = アンデット族
+	CALL CARD_CHECK_FIN_DATA(決闘者,"墓地送り全般+HD",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_65522(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 戦闘カード
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,65522,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果条件種族 = アンデット族
+		効果条件複数 = 98
+		CALL CARD_ADD_BASIC(決闘者,"墓地",ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 効果後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,65522,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL CARD_DECK_DISPOSE(決闘者,"デッキ",2)
+		CALL CARD_DECK_DISPOSE(決闘者,"デッキ",2,0,1)
+	ENDIF
+ENDIF

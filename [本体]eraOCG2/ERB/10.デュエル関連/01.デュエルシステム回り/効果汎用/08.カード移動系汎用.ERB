@@ -29,19 +29,6 @@ ELSEIF 出処 == "마함"
 		표시플래그 = 1
 ENDIF
 
-IF 듀얼리스트 == "자신" && 추가場所 == "필드" && 표시形式 == ""
-	PRINTL 【표시 형식을 선택해 주세요】
-	PRINTL 
-	PRINTL [0] 공격표시
-	PRINTL [1] 수비표시
-	PRINTL 
-	BINPUT
-	IF RESULT == 0
-		표시形式 = 攻撃표시
-	ELSE
-		표시形式 = 守備표시
-	ENDIF
-ENDIF
 
 
 IF 듀얼리스트 == "자신"
@@ -81,6 +68,22 @@ SELECTCASE 出処
 	CASE "제외", "상대제외"
 		実行出処 = 제외
 ENDSELECT
+
+
+IF 듀얼리스트 == "자신" && 추가場所 == "필드" && 표시形式 == ""
+	TRYCALLFORM CARD_UI(GETVAR(@"%保有者%_%実行出処%:選択カード"),2)
+	PRINTL 【표시 형식을 선택해 주세요】
+	PRINTL 
+	PRINTL [0] 공격표시
+	PRINTL [1] 수비표시
+	PRINTL 
+	BINPUT
+	IF RESULT == 0
+		표시形式 = 攻撃표시
+	ELSE
+		표시形式 = 守備표시
+	ENDIF
+ENDIF
 
 IF 표시形式 != "完全묘지"
 	;EX덱送り
@@ -434,12 +437,13 @@ RESULT = LRESULT
 
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
-@CARD_SP_SUMMON(듀얼리스트, 出処, 選択カード,표시形式,反転플래그)
+@CARD_SP_SUMMON(듀얼리스트, 出処, 選択カード,표시形式,反転플래그,チェーン불가)
 #DIMS DYNAMIC 듀얼리스트
 #DIMS DYNAMIC 対面者
 
 #DIMS DYNAMIC 소환者
 #DIMS DYNAMIC 保有者
+#DIM DYNAMIC チェーン불가
 
 
 #DIMS DYNAMIC 出処;덱、패、필드、마함のいずれかを渡す
@@ -519,7 +523,7 @@ SIF GETVAR(@"%保有者%_%実行出処%:選択カード") == -1
 SETVAR @"%듀얼리스트%_특수소환횟수", GETVAR(@"%듀얼리스트%_특수소환횟수") + 1
 
 IF 듀얼리스트 == "자신" && 표시形式 == ""
-	PRINTL
+	TRYCALLFORM CARD_UI(GETVAR(@"%保有者%_%実行出処%:選択カード"),2)
 	PRINTL 【표시형식을 선택해 주세요】
 	PRINTL 
 	PRINTL [0] 공격표시
@@ -625,12 +629,14 @@ CALL CARD_LOADUP
 IF カードID
 	CALL CARD_FIN_BIT_SET(듀얼리스트,実行出処)
 	CALLFORM CARD_SS_USE(듀얼리스트,カードID)
-	CALL CARD_SUMRESERV(듀얼리스트,"특수",カード소환先 ,カードID,出処)
 
+
+	CALL CARD_SUMRESERV(듀얼리스트,"특수",カード소환先 ,カードID,出処)
 	SIF 反転플래그 >= 1
 		CALL CARD_SUMRESERV(対面者,"특수",カード소환先 ,カードID,出処)
-	;효과발동前に
-	CALL CARD_SUMACT(듀얼리스트,"특수",カード소환先,カードID,듀얼리스트,出処)
+	SIF チェーン불가 != 1
+	CALL CARD_SUMACT(듀얼리스트,"특수",カード소환先,カードID,召喚者,出処)
+
 	IF カードID == GETVAR(@"%듀얼리스트%_필드:カード소환先")
 		IF GETVAR(@"%対面者%_みずき효과")
 			회복量 = GETVAR(@"%소환者%_MZ_攻:カード소환先")
@@ -715,6 +721,7 @@ ENDIF
 SETVAR @"%듀얼리스트%_특수소환횟수", GETVAR(@"%対面者%_특수소환횟수") + 1
 
 IF 듀얼리스트 == "자신" && 표시形式 == ""
+	TRYCALLFORM CARD_UI(GETVAR(@"자신_%出処%:選択カード"),2)
 	PRINTL 【표시형식을 선택해 주세요】
 	PRINTL 
 	PRINTL [0] 공격표시
@@ -870,7 +877,7 @@ RETURN 1
 #DIMS DYNAMIC 이동カード名
 #DIM DYNAMIC 횟수플래그
 #DIM DYNAMIC 회복量
-
+#DIMS DYNAMIC 표시形式選択
 LRESULT = RESULT
 
 
@@ -898,6 +905,7 @@ SETVAR @"%듀얼리스트%_특수소환횟수", GETVAR(@"%対面者%_특수소�
 SETVAR @"%듀얼리스트%_モン出現数", GETVAR(@"%듀얼리스트%_モン出現数") + 1
 
 IF 듀얼리스트 == "자신" && 표시形式 == ""
+	TRYCALLFORM CARD_UI(カードID,2)
 	PRINTL 【표시형식을 선택해 주세요】
 	PRINTL 
 	PRINTL [0] 공격표시
@@ -905,12 +913,14 @@ IF 듀얼리스트 == "자신" && 표시形式 == ""
 	PRINTL 
 	BINPUT
 	IF RESULT == 0
-		표시形式 = 攻撃표시
+		표시形式選択 = 攻撃표시
 	ELSE
-		표시形式 = 守備표시
+		표시形式選択 = 守備표시
 	ENDIF
 ELSEIF 듀얼리스트 == "상대" && 표시形式 == ""
-	표시形式 = 守備표시
+	표시形式選択 = 守備표시
+ELSE
+	표시形式選択 = %표시形式%
 ENDIF
 
 カード소환先 = 現필드(듀얼리스트)
@@ -918,9 +928,9 @@ SETVAR @"%듀얼리스트%_MZ_所有:カード소환先 ", 所有先
 SETVAR @"%듀얼리스트%_MZ_戦:カード소환先 ", 1
 個IDカウンタ ++
 SETVAR @"%듀얼리스트%_MZ_個ID:カード소환先", 個IDカウンタ
-IF 표시形式 == "守備표시"
+IF 표시形式選択 == "守備표시"
 	SETVAR @"%듀얼리스트%_MZ_表:カード소환先 ", 2
-ELSEIF 표시形式 == "裏側표시"
+ELSEIF 표시形式選択 == "裏側표시"
 	SETVAR @"%듀얼리스트%_MZ_表:カード소환先 ", 3
 ELSE 
 	SETVAR @"%듀얼리스트%_MZ_表:カード소환先 ", 1
@@ -1218,6 +1228,9 @@ IF 마함플래그 == 0
 			SETVAR @"%듀얼리스트%_MZ_魔耐:カード소환先", 1
 		ELSEIF 효과추가종류:カウンタ == 36
 			SETVAR @"%듀얼리스트%_MZ_함정耐:カード소환先", 1
+			
+		ELSEIF 효과추가종류:カウンタ == 38
+			SETVAR @"%듀얼리스트%_MZ_表固:カード소환先", 1
 
 
 		ELSEIF 효과추가종류:カウンタ == 40

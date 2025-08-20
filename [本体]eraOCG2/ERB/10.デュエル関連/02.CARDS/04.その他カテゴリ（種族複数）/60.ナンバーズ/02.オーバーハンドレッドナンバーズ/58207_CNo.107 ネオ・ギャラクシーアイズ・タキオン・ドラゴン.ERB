@@ -1,0 +1,142 @@
+﻿@CARDNAME_58207,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = CNo.107 네오 갤럭시아이즈 타키온 드래곤
+	CASE "略称"
+		RESULTS = C#H7 超銀河眼
+	CASE "カテゴリ"
+		RESULTS:0 = 넘버즈
+		RESULTS:1 = 오버 헌드레드
+		RESULTS:2 = 카오스
+		RESULTS:3 = 갤럭시
+		RESULTS:4 = 타키온
+ENDSELECT
+
+
+@CARD_58207(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN エクシーズ
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN ドラゴン族
+	CASE "レベル"
+		RETURN 9
+	CASE "攻撃力"
+		RETURN 4500
+	CASE "守備力"
+		RETURN 3000
+	CASE "追加日"
+		RETURN 250809
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_58207(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 9
+
+IF EX参照 == 1
+	CALL XYZCAN(決闘者,召喚カード,58207) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_58207(種類)
+#DIM DYNAMIC 種類
+
+PRINTL レベル９モンスター×３
+CALLFORM CARD_ABLE(10,戦場起動)
+PRINTL ①：１ターンに１度、このカードのX素材を１つ取り除いて発動できる。
+PRINTL このターン相手はフィールドで発動する効果を発動できず、
+PRINTL このカード以外のフィールドの全ての表側表示カードの効果はターン終了時まで無効化される。
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ②：このカードが「No.107 銀河眼の時空竜」をX素材としている場合、以下の効果を得る。
+PRINTL このカードは１度のバトルフェイズ中に３回まで攻撃できる。
+
+@CARDCAN_58207(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,58207)
+SIF RESULT == 1
+	RETURN 0
+IF 種類 == 戦場起動
+	SIF 効果発動済(決闘者,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_MZ_条達:場所") == 0
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_58207(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 発動誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,58207,10,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件他所 = 1
+		CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"無効",1)
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(決闘者,"魔罠",場所,"無効",1)
+
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(決闘者,"相手戦場",場所,"無効",1,58207)
+
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(決闘者,"相手魔罠",場所,"無効",1,58207)
+
+		CALL CARD_RESERV(決闘者,58207,短紋章予約)
+	ENDIF
+ELSEIF 種類 == 短紋章起動
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(決闘者,"相手戦場",場所,"発無",3)
+ELSEIF 種類 == 永続効果
+	CALL FULLRESET
+	CALL SET_FIELD_INFO(決闘者,"戦場",場所,"戦",3,1)
+ENDIF

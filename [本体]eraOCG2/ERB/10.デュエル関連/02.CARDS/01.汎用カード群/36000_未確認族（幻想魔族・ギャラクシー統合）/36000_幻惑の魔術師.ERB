@@ -1,0 +1,146 @@
+﻿@CARDNAME_36000,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 나이트메어 매지션
+	CASE "略称"
+		RESULTS = 환혹의 마술사
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_36000(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN 未確認族
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	CASE "性別"
+		RETURN 雄性
+	CASE "追加日"
+		RETURN 250804
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_36000(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ①：このカードがモンスターと戦闘を行う場合、その２体はその戦闘では破壊されない。
+CALLFORM CARD_ABLE(0,攻撃後誘発)
+PRINTL ②：このカードが相手モンスターと戦闘を行ったダメージステップ終了時に発動できる。
+PRINTL その相手モンスターのコントロールを得る。
+CALLFORM CARD_ABLE(10,攻撃時誘発)
+PRINTL ③：１ターンに１度、このカード以外のモンスターの攻撃宣言時に発動できる。
+PRINTL フィールドのカード１枚を破壊する。
+
+@CARDCAN_36000(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,36000)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 攻撃後誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 場所
+		RETURN 0
+	SIF 戦闘場所(決闘者,1) == 5
+		RETURN 0
+	SIF モンスター数(決闘者) >= 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 攻撃時誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 効果発動済(決闘者,場所,ゾーン)
+		RETURN 0
+	IF ターンプレイヤー == 決闘者
+		SIF 戦闘場所(決闘者) == 場所
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	IF 決闘者 == "自分"
+		効果範囲戦場 = 1
+		効果範囲魔罠 = 1
+	ENDIF
+	効果範囲相手戦場 = 1
+	効果範囲相手魔罠 = 1
+	効果条件除去種 = 墓地
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 戦闘場所(決闘者,1) == 5
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_36000(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戦闘カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 攻撃後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,36000)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(決闘者,"自動処理",戦闘場所(決闘者,1),"強奪")
+	ENDIF
+
+ELSEIF 種類 == 攻撃時誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,36000,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(決闘者,"両全場単体",場所,"墓地")
+	ENDIF
+
+ELSEIF 種類 == 永続効果
+	CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(対面者,"自身",戦闘場所(決闘者,1),"戦耐")
+ENDIF

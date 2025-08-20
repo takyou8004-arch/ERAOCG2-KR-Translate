@@ -1,0 +1,143 @@
+﻿@CARDNAME_62302,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 따끈따끈한 배달
+	CASE "略称"
+		RESULTS = 따끈따끈한 배달
+	CASE "カテゴリ"
+		RESULTS:0 = 핸디
+ENDSELECT
+
+
+@CARD_62302(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_62302(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,魔罠起動 ,手札起動)
+PRINTL ①：このカード以外の自分の手札・フィールドのカード１枚を墓地へ送って発動できる。
+PRINTL 相手は１０００LP回復し、自分は１枚ドローする。
+PRINTL その後、自分の手札・墓地のレベル４以下の攻撃力１２００のモンスター１体を選んで自分フィールドに特殊召喚できる。
+CALL CARD_ABLE(2,墓地起動)
+PRINTL ②：自分の除外・墓地の「핸디」カードを３枚デッキに戻し、
+PRINTL 自分の墓地の天使族・光属性モンスター１体を対象として発動できる。
+PRINTL そのモンスターを特殊召喚する。
+PRINTL 
+@CARDCAN_62302(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,62302)
+SIF RESULT == 1
+	RETURN 0
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF 発動済_1(決闘者,62302)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲魔罠 = 1
+	効果範囲戦場 = 1
+	効果条件他所 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	SIF ゾーン != "墓地"
+		RETURN 0
+	;既に使用してるなら
+	SIF 発動済_2(決闘者,62302)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	;除外が行えない状況なら当然ダメ
+	SIF GETVAR(@"%決闘者%_除外NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果範囲除外 = 1
+	効果条件カテゴリ = 핸디
+	効果条件他所 = 1
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_62302(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 召喚カード
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,62302,1)
+	IF RESULT == 0
+		;通常魔法汎用発動後墓地送り処理
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果範囲魔罠 = 1
+		効果範囲戦場 = 1
+		効果条件他所 = 1
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(決闘者,1)
+			CALL LIFE_CHANGE(決闘者,"増加","効果",1000,1)
+			CALL FULLRESET
+			効果範囲手札 = 1
+			効果範囲墓地 = 1
+			効果条件固守備力 = 1200
+			CALLFORM 効果条件レベル_ADV(4, "以下")
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,62302,2)
+	IF RESULT == 0
+		;通常魔法汎用処理
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果範囲除外 = 1
+		効果条件カテゴリ = 핸디
+		効果条件複数 = 3
+		効果条件行先フラグ = デッキ行き
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARDDRAW_BASIC(決闘者,1)
+		ENDIF
+	ENDIF
+ENDIF

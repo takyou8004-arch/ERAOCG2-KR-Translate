@@ -1,0 +1,132 @@
+﻿@CARDNAME_15522,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 프리즘리버 유령악단
+	CASE "略称"
+		RESULTS = 유령악단
+	CASE "カテゴリ"
+		RESULTS:0 = 환상소녀
+		RESULTS:4 = 동방 Project
+ENDSELECT
+
+
+@CARD_15522(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN アンデット族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 1800
+	CASE "チューナー"
+		RETURN 2
+	CASE "性別"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250808
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_15522(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果は１ターンに１度しか使用できない。
+;テンション高いメルラン
+CALLFORM CARD_ABLE(1,召喚時,特殊召喚時)
+PRINTL ①：このカードがドロー以外の方法で手札に加わった場合に発動できる。
+PRINTL このカードを特殊召喚する。
+;なんかテンション下がる効果
+CALLFORM CARD_ABLE(2,召喚時,特殊召喚時)
+PRINTL ②：このカードが召喚・特殊召喚に成功した場合、相手フィールドの表側表示モンスター１体を対象として発動できる。
+PRINTL そのモンスターを裏側守備表示にする。
+;大体頑張るリリカ
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ③：このカードをＳ素材とする場合、このカードはチューナー以外のモンスターとして扱うことができる。
+
+
+@CARDCAN_15522(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件達成
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,15522)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 効果後誘発
+	SIF 発動済_1(決闘者,15522)
+		RETURN 0
+	SIF ゾーン != "手札"
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,15522,"手札")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	効果条件名前 = 프리즘리버 유령악단
+	CALL CARD_CHECK_FIN_DATA(決闘者,"手札取得")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_2(決闘者,15522)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果条件表示 = 表側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_15522(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件達成
+
+IF 種類 == 効果後誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,15522,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者, "手札", 場所)
+	ENDIF
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,15522,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件表示 = 表側表示
+		CALL CARD_REMOVAL_BASIC(決闘者,"戦場単体",場所,"表示変更")
+	ENDIF
+ENDIF
+

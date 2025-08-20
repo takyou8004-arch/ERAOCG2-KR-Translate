@@ -1,0 +1,131 @@
+﻿@CARDNAME_71240,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 테오리얼라이즈 오버드라이브
+	CASE "略称"
+		RESULTS = 파멸의 예환시
+	CASE "カテゴリ"
+		RESULTS:0 = 테오리얼라이즈
+ENDSELECT
+
+
+@CARD_71240(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "追加日"
+		RETURN 250813
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71240(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,魔罠起動,手札起動)
+PRINTL ①：自分の墓地・除外状態の「무구한 자 메디우스」１体を対象として発動できる。
+PRINTL そのモンスターを特殊召喚する。
+CALLFORM CARD_ABLE(2,効果後誘発)
+PRINTL ②：自分メインフェイズに墓地のこのカードを除外し、自分フィールドの表側表示モンスター１体を対象とし、
+PRINTL １～１０までの任意のレベルを宣言して発動できる。
+PRINTL そのモンスターのレベルをターン終了時まで宣言したレベルにする。
+
+
+@CARDCAN_71240(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,71240)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF 発動済_1(決闘者,71240)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲除外 = 1
+	効果範囲墓地 = 1
+	効果条件名前 = 무구한 자 메디우스
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	SIF 発動済_2(決闘者,71240)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_71240(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 行先フラグ
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,71240,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲除外 = 1
+		効果範囲墓地 = 1
+		効果条件名前 = 무구한 자 메디우스
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,71240,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_CHOOSE_BASIC(決闘者,"戦場",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			IF 決闘者 == "自分"
+				PRINTL レベルを選んでください
+				PRINTL 
+				PRINTL [1] [2] [3] [4] [5] [6] [7] [8] [9] [10]
+				BINPUT
+			ELSE
+				RESULT = 8
+			ENDIF
+			CALL SET_FIELD_INFO(決闘者,"戦場",選択カード,"一星",RESULT,1)
+		ENDIF
+	ENDIF
+ENDIF

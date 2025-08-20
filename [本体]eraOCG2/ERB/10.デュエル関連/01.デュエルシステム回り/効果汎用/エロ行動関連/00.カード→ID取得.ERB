@@ -13,52 +13,7 @@ SIF RESULT > 0
 	カードID = RESULT
 
 SELECTCASE カードID
-;儚幻の花嫁リース→イヴリース
-	CASE 52053
-		確認カードID = 1872
-	;마나둠・トリロスークタ
-	CASE 54661
-		確認カードID = 1950
-	;No.29 マネキン캣
-	CASE 58029
-		確認カードID = 1115
-	;クラヴィス
-	CASE 50501,52305,52306,52505,54566,55504,57552
-		確認カードID = 1646
-
-	;블랙매지션걸.zin
-	CASE 39820
-		確認カードID = 1000
-	;라뷰린스.zin
-	CASE 39821
-		確認カードID = 2110
-	;マスカレーナ.zin
-	CASE 39822
-		確認カードID = 1335
-	;レイちゃん.zin
-	CASE 39823
-		確認カードID = 2000
-	;가가가ガール.zin
-	CASE 39824
-		確認カードID = 1110
-	
-	;影령수사－セフィラウェンディ
-	CASE 33255
-		確認カードID = 1821
-	;ミドラーシュ
-	CASE 11830, 59530
-		確認カードID = 1830
-	;アプカローネ
-	CASE 11831, 59531
-		確認カードID = 1831
-	;エル섀도르・ネフィリムは巨人サイズにつき対応しない
-	;CASE 41832, 59532
-	;	確認カードID = 1832
-	;ウェンディゴ
-	CASE 11833, 41833 , 59533
-		確認カードID = 1833
-
-	;謎のレウス헌터さん
+;謎のレウス헌터さん
 	CASE 36650
 		IF 듀얼리스트 == "자신"
 			確認カードID = MASTER
@@ -66,70 +21,18 @@ SELECTCASE カードID
 			確認カードID = OPPOSER
 		ENDIF
 
-	;"네가스타ー 윈다"
-	CASE 59555
-		確認カードID = 1815
-	;"네가스타ー カーム"
-	CASE 59556
-		確認カードID = 1816
-	;"Anスフィアード 네가스타ー"
-	CASE 59557
-		確認カードID = 1817
-	;네가스타ー 피리카／아누스피어 NpNp피리카
-	CASE 59554,59558
-		確認カードID = 1818
-
-	;パンドラ・매지션 걸
-	CASE 59591,59592,59593
-		確認カードID = 1669
-	;마인드잭・캐슬린
-	CASE 59640
-		確認カードID = 1655
-
-	;カズーラ
-	CASE 39570
-		確認カードID = 1373
-	;ジーナ
-	CASE 39571
-		確認カードID = 1379
-	;ティオ
-	CASE 39572
-		確認カードID = 1375
-	;リセ
-	CASE 39573
-		確認カードID = 1378
-	;プティカ
-	CASE 39574
-		確認カードID = 1381
-	;セラ
-	CASE 59810
-		確認カードID = 1370
-	;クラリア
-	CASE 59811
-		確認カードID = 1380
-	;フレシア
-	CASE 59812
-		確認カードID = 1371
-	;シトリス
-	CASE 59813
-		確認カードID = 1385
-	;ホールティア
-	CASE 99821
-		確認カードID = 1383
-		
-	;伊吹翼
-	CASE 51842,51844
-		確認カードID = 4642
-	;七尾百合子
-	CASE 51840,51845
-		確認カードID = 4640
-	;高坂海美
-	CASE 51841,51843
-		確認カードID = 4641
-
-
 	CASE MASTER補助, 9990
 		確認カードID = MASTER
+		
+	CASE 相手プレイヤー
+		IF 듀얼리스트 == "자신"
+			RETURN OPPOSER
+		ELSE
+			RETURN MASTER
+		ENDIF
+		RETURN -1
+
+
 	CASE 상대プレイヤー
 		IF 듀얼리스트 == "자신"
 			RETURN OPPOSER
@@ -148,23 +51,6 @@ FOR カウンタ,1,CHARANUM
 		RETURN 캐릭터_ID
 	ENDIF
 NEXT
-[SKIPSTART]
-IF 確認カードID > 10000 && 確認カードID < 19999
-	FOR カウンタ,1,CHARANUM
-		IF NO:カウンタ == (確認カードID - 10000)
-			캐릭터_ID = カウンタ
-			RETURN 캐릭터_ID
-		ENDIF
-	NEXT
-ELSEIF 確認カードID > 40000 && 確認カードID < 49999
-	FOR カウンタ,1,CHARANUM
-		IF NO:カウンタ == (確認カードID - 40000)
-			캐릭터_ID = カウンタ
-			RETURN 캐릭터_ID
-		ENDIF
-	NEXT
-ENDIF
-[SKIPEND]
 RETURN -1
 
 
@@ -190,62 +76,12 @@ IF ENUMFILES("RESOURCES/DUEL", @"{カードID}_DUEL.*")
 		RETURN カードID
 	ENDIF
 ENDIF
-
-
-;＞＞　第１チェック、強化版カード　＜───────────────────────────────────
-;+10000の카드가 会ったら次のチェック
-カードID = NO:캐릭터_ID + 10000
-TRYCALLFORM CARDNAME_{カードID}, "名前"
-SIF RESULTS == ""
-	GOTO CHECK_2
-
-;カードIDの캐릭터と캐릭터IDが違うならNG
-CALL CARD_EROTICS(カードID)
-SIF RESULT != 캐릭터_ID
-	GOTO CHECK_2
-
-;【条件달성１】そのカード_IDがあるなら返す
-IF ENUMFILES("RESOURCES/DUEL", @"{カードID}_DUEL.*")
-	IF CNT설정 == 1
-		条件合致ID:条件合致数 = カードID
-		条件合致数 ++
-	ELSE
-		RETURN カードID
-	ENDIF
-ENDIF
-
-;＞＞　第２チェック、EXカード　＜─────────────────────────────────────
-$CHECK_2
-;+40000の카드가 会ったら次のチェック
-カードID = NO:캐릭터_ID + 40000
-TRYCALLFORM CARDNAME_{カードID}, "名前"
-SIF RESULTS == ""
-	GOTO CHECK_3
-;カードIDの캐릭터と캐릭터IDが違うならNG
-CALL CARD_EROTICS(カードID)
-SIF RESULT != 캐릭터_ID
-	GOTO CHECK_3
-
-;【条件달성２】そのカード_IDがあるなら返す
-IF ENUMFILES("RESOURCES/DUEL", @"{カードID}_DUEL.*")
-	IF CNT설정 == 1
-		条件合致ID:条件合致数 = カードID
-		条件合致数 ++
-	ELSE
-		RETURN カードID
-	ENDIF
-ENDIF
-;＞＞　第３チェック、その他カード　＜─────────────────────────────────────
+;＞＞　第２チェック、その他カード　＜─────────────────────────────────────
 ;総当たり
-$CHECK_3
 FOR カードID,10000,70000
 	VARSET RESULTS
 	TRYCALLFORM CARDNAME_{カードID}, "名前"
 	SIF RESULTS == ""
-		CONTINUE
-	SIF カードID == NO:캐릭터_ID + 10000
-		CONTINUE
-	SIF カードID == NO:캐릭터_ID + 40000
 		CONTINUE
 	CALL CARD_EROTICS(カードID)
 	SIF RESULT != 캐릭터_ID
@@ -298,8 +134,14 @@ IF ゾーン == "필드"
 	ENDIF
 ELSEIF ゾーン == "마함"
 	カード_ID = GETVAR(@"%대상者%_마함:場所")
+	IF GETVAR(@"%대상者%_魔_変化元ID:場所") > -1
+		カード_ID = GETVAR(@"%대상者%_魔_変化元ID:場所")
+	ENDIF
 ELSE
 	カード_ID = GETVAR(@"%対面者%_%ゾーン%:場所")
 ENDIF
 CALL CARD_EROTICS(カード_ID)
+
+
+
 RETURN RESULT

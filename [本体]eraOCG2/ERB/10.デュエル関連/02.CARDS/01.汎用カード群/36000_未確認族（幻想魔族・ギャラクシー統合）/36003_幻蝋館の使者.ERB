@@ -1,0 +1,140 @@
+﻿@CARDNAME_36003,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 환랍관의 사자
+	CASE "略称"
+		RESULTS = 환랍관의 사자
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_36003(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 炎属性
+	CASE "種族"
+		RETURN 未確認族
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 1800
+	CASE "追加日"
+		RETURN 250804
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_36003(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,攻撃時誘発)
+PRINTL ①：相手モンスターの攻撃宣言時に発動できる。
+PRINTL このカードを手札から特殊召喚する。
+PRINTL それが直接攻撃だった場合、さらに攻撃対象をこのカードに移す。
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ②：このカードがモンスターと戦闘を行う場合、その２体はその戦闘では破壊されない。
+CALLFORM CARD_ABLE(0,バトル終了時)
+PRINTL ③：自分・相手のバトルフェイズ終了時に発動できる。
+PRINTL 相手フィールドの全ての攻撃表示モンスターは次の自分スタンバイフェイズまで、
+PRINTL 表示形式を変更できず、融合・Ｓ・Ｘ・Ｌ召喚の素材にできず、効果は無効化される。
+
+@CARDCAN_36003(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,36003)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 攻撃時誘発
+	SIF 発動済_1(決闘者,36003)
+		RETURN 0
+	SIF ターンプレイヤー == 決闘者
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,36003,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == バトル終了時
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果条件表示 = 攻撃表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 戦闘場所(決闘者,1) == 5
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_36003(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戦闘カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 攻撃時誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,36003,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,ゾーン,場所)
+		SIF RESULT == 1 && 戦闘場所(決闘者) == 5
+			CALL COVER_ATTACK(決闘者,カード召喚先)
+	ENDIF
+
+ELSEIF 種類 == バトル終了時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,36003)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件表示 = 攻撃表示
+		CALL STATCHANGE_EFFECT(決闘者,"相手戦場",場所,"無効",4,36003)
+		CALL STATCHANGE_EFFECT(決闘者,"相手戦場",場所,"表固",4,36003)
+		CALL STATCHANGE_EFFECT(決闘者,"相手戦場",場所,"不材",4,36003)
+	ENDIF
+
+ELSEIF 種類 == 永続効果
+	CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(対面者,"自身",戦闘場所(決闘者,1),"戦耐")
+ENDIF

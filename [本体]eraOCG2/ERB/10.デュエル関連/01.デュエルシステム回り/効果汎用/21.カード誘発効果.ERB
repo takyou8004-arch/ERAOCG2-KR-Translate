@@ -41,8 +41,8 @@ VARSET 開始_場所
 #DIM DYNAMIC ゾーン起動
 #DIM DYNAMIC 条件달성
 #DIM DYNAMIC 想定数値
-
-IF 想定数値 == 0
+#DIM DYNAMIC 대상효과種
+IF 想定数値 <= 0
 	想定数値 = 1
 ENDIF
 
@@ -55,13 +55,14 @@ ELSE
 	実行者 = %対面者%
 ENDIF
 
-SIF 効後_カウンタ - 想定数値 <= 0
+SIF 効後_カウンタ - 想定数値 < 0
 	RETURN 0
 
 대상효과ID = 効後_효과ID:(効後_カウンタ - 想定数値)
 대상듀얼리스트 = %効後_実行者:(効後_カウンタ - 想定数値)%
 대상ゾーン = %効後_ゾーン:(効後_カウンタ - 想定数値)%
 대상場所 = 効後_設場所:(効後_カウンタ - 想定数値)
+대상효과種 = 効後_효과種:(効後_カウンタ - 想定数値)
 
 SIF 대상ゾーン == "효과処理"
 	RETURN 0
@@ -92,14 +93,24 @@ IF 효과範囲필드 || 효과範囲마함 || 효과範囲묘지 || 효과範�
 		RETURN 0
 	ENDIF
 ENDIF
-
+IF GROUPMATCH(대상효과種,필드→묘지,손패→묘지,덱→묘지,破壊→묘지,戦闘→묘지,필드→戦離,제외時,戦破壊→묘지,R素材時효과,F素材時효과,S素材時효과,X素材時효과,L素材時효과)
 VARSET 条件달성
-CALL CARD_S_FILTER_SET(대상듀얼리스트,대상ゾーン,대상場所,듀얼리스트)
+CALL CARD_S_FILTER_SET(대상듀얼리스트,대상ゾーン,대상場所,듀얼리스트,6,대상효과ID)
 SIF RESULT == 1
 	条件달성 = 1
-CALL CARD_FILTER_SET(대상듀얼리스트,대상ゾーン,대상場所,듀얼리스트)
+CALL CARD_FILTER_SET(대상듀얼리스트,대상ゾーン,대상場所,듀얼리스트,6,대상효과ID)
 SIF RESULT == 1
 	条件달성 = 1
+ELSE
+	VARSET 条件달성
+	CALL CARD_S_FILTER_SET(대상듀얼리스트,대상ゾーン,대상場所,듀얼리스트)
+	SIF RESULT == 1
+		条件달성 = 1
+	CALL CARD_FILTER_SET(대상듀얼리스트,대상ゾーン,대상場所,듀얼리스트)
+	SIF RESULT == 1
+		条件달성 = 1
+ENDIF
+;PRINTFORML ここ通過４.3：条件달성:{条件달성}
 
 SIF 条件달성 == 1
 	RETURN 1
@@ -1124,7 +1135,7 @@ FOR カウンタ,0,5
 		TRYCALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_마함:カウンタ")}(듀얼리스트,ライフ変強制誘発,"마함",カウンタ)
 NEXT
 
-IF ERA起動 == 2 && 듀얼리스트 == "자신"
+IF ERA起動 >= 2 && 듀얼리스트 == "자신"
 	IF ダメージ受者 == "상대" && ダメージ増減 == "減少"
 		CALL CARD_EROTICS(상대プレイヤー,"자신")
 		IF RESULT != -1

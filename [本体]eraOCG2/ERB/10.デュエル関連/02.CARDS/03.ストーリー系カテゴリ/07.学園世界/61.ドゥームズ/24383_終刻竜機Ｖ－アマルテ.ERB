@@ -1,0 +1,190 @@
+@CARDNAME_24383,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 둠즈Ｖ－아말테
+	CASE "略称"
+		RESULTS = 둠즈V 아말테
+	CASE "カテゴリ"
+		RESULTS:0 = 둠즈
+ENDSELECT
+
+
+@CARD_24383(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 闇属性
+	CASE "種族"
+		RETURN ドラゴン族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1200
+	CASE "性別"
+		RETURN 雄性
+	CASE "追加日"
+		RETURN 250809
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24383(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,召喚時,特殊召喚時,破壊→墓地)
+PRINTL ①：このカードが召喚・特殊召喚した場合、または効果で破壊された場合に発動できる。
+PRINTL デッキから「둠즈Ｖ－아말테」以外の「둠즈」モンスター１体を手札に加える。
+CALLFORM CARD_ABLE(2,戦場起動,フリー誘発)
+PRINTL ②：自分・相手ターンに、このカードが装備カードを装備している場合に発動できる。
+PRINTL このカードのレベルと同じ数値のランクを持つ機械族・風属性Ｘモンスター１体をＸ召喚扱いでＥＸデッキから特殊召喚し、
+PRINTL このカードに装備されているカードの数＋１だけそのモンスターのＸ素材を増やす。
+PRINTL その後、このカード及びこのカードの装備カードを全て墓地へ送る。
+
+@CARDCAN_24383(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
+#DIMS DYNAMIC 対面者
+
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,24383)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 召喚時 || 種類 == 特殊召喚時 || 種類 == 破壊→墓地
+	SIF 発動済_1(決闘者,24383)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件カテゴリ = 둠즈
+	効果条件種類 = モン全般
+	効果条件固名前 = 둠즈Ｖ－아말테
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場起動 || 種類 == フリー誘発
+	SIF 発動済_2(決闘者,24383)
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF モンスター数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EQUIP_CHECK(決闘者,場所,ゾーン)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲EXデッキ = 1
+	効果条件種類 = エクシーズ
+	効果条件種族 = 機械族
+	効果条件属性 = 風属性
+	効果条件召喚可 = 1
+	効果条件特不無視 = 1
+	効果条件レベル = GETVAR(@"%決闘者%_MZ_星:場所")
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24383(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 装備数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 出処
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 召喚時 || 種類 == 特殊召喚時 || 種類 == 破壊→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,24383,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲デッキ = 1
+		効果条件カテゴリ = 둠즈
+		効果条件種類 = モン全般
+		効果条件固名前 = 둠즈Ｖ－아말테
+		CALL CARD_ADD_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 戦場起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,24383,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件CNT = 1
+		CALL CARD_EQUIP_CHECK(決闘者,場所,ゾーン)
+		SIF RESULT > 0
+			装備数 = RESULT
+		;
+		;DOOMDURGの③効果の処理用
+		CALL FULLRESET
+		効果条件名前 = 終刻起動『Ｄ.Ｏ.Ｏ.Ｍ.Ｄ.Ｕ.Ｒ.Ｇ.』
+		CALL CARD_EQUIP_CHECK(決闘者,場所,ゾーン)
+		SIF RESULT == 1
+			条件達成 = 1
+		;
+		CALL FULLRESET
+		効果条件種類 = エクシーズ
+		効果条件種族 = 機械族
+		効果条件属性 = 風属性
+		効果条件レベル = GETVAR(@"%決闘者%_MZ_星:場所")
+		CALL CARD_CHOOSE_BASIC(決闘者,"EXデッキ",ゾーン,場所)
+		選択カード = RESULT
+		選択カード_ID = RESULT:99
+		IF 選択カード != 9999
+			CALL FULLRESET
+			効果条件特不無視 = 1
+			CALL CARD_EX_SUMMON(決闘者,"EXデッキ",選択カード)
+			CALL SET_FIELD_INFO(決闘者,"戦場",カード召喚先,"Ｘ",装備数 + 1)
+			CALL FULLRESET
+			CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+			IF 条件達成 == 1
+				SETCOLOR C_YELLOW
+				PRINTL 【終刻起動『Ｄ.Ｏ.Ｏ.Ｍ.Ｄ.Ｕ.Ｒ.Ｇ.』が装備されます】
+				RESETCOLOR
+				CALL FULLRESET
+				効果範囲墓地 = 1
+				効果条件名前 = 終刻起動『Ｄ.Ｏ.Ｏ.Ｍ.Ｄ.Ｕ.Ｒ.Ｇ.』
+				CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+				選択カード = RESULT
+				IF 選択カード != 9999
+					CALL CARD_SELECT(決闘者,選択カード)
+					選択カード = RESULT
+					出処 = %参照先（CS）%
+					CALL FULLRESET
+					効果条件固定 = カード召喚先
+					CALLFORM CARD_EQUIP_ADV(決闘者,選択カード,出処)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

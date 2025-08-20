@@ -1,0 +1,128 @@
+﻿@CARDNAME_58104,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = No.104 마스커레이드 매지션 샤이닝
+	CASE "略称"
+		RESULTS = #H4 가면마도사
+	CASE "カテゴリ"
+		RESULTS:0 = 넘버즈
+		RESULTS:1 = 오버 헌드레드
+ENDSELECT
+
+
+@CARD_58104(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN エクシーズ
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 魔法使い族
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2700
+	CASE "守備力"
+		RETURN 1200
+	CASE "追加日"
+		RETURN 250809
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_58104(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 3
+素材条件レベル = 4
+
+IF EX参照 == 1
+	CALL XYZCAN(決闘者,召喚カード,58104) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_58104(種類)
+#DIM DYNAMIC 種類
+
+PRINTL レベル４モンスター×３
+CALLFORM CARD_ABLE(10,戦場起動)
+PRINTL ①：１ターンに１度、自分メインフェイズに発動できる。
+PRINTL 相手のデッキの上からカードを３枚墓地へ送る。
+CALLFORM CARD_ABLE(0,発動誘発)
+PRINTL ②：自分・相手のバトルフェイズに相手がモンスターの効果を発動した時、このカードのX素材を１つ取り除いて発動できる。
+PRINTL その発動を無効にし、相手に８００ダメージを与える。
+
+@CARDCAN_58104(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,58104)
+SIF RESULT == 1
+	RETURN 0
+IF 種類 == 戦場起動
+	SIF 効果発動済(決闘者,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 発動誘発
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	CALL FULLRESET
+	効果条件種類 = モン全般
+	CALL CARD_CHECK_START_DATA(決闘者,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_58104(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,58104,10)
+	IF RESULT == 0
+		CALL CARD_DECK_DISPOSE(決闘者,"デッキ",3,0,1)
+	ENDIF
+ELSEIF 種類 == 発動誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,58104,0,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(決闘者,"発動無効",場所,"無効")
+		CALL LIFE_CHANGE(決闘者,"減少","効果",800,1)
+	ENDIF
+ENDIF

@@ -1,0 +1,149 @@
+﻿@CARDNAME_58202,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = CNo.102 다크 라이트닝 노블 데몬
+	CASE "略称"
+		RESULTS = C#H2 노블 D
+	CASE "カテゴリ"
+		RESULTS:0 = 홀리 라이트닝
+		RESULTS:1 = 카오스
+		RESULTS:2 = 넘버즈
+		RESULTS:3 = 오버 헌드레드
+ENDSELECT
+
+
+@CARD_58202(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN エクシーズ
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 天使族 
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 2400
+	CASE "追加日"
+		RETURN 250809
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_58202(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL RESETCONDITION_MAT
+必要素材数 = 4
+素材条件レベル = 5
+指定素材名前 = No.102 홀리 라이트닝 글로리어스 헤일로
+
+IF EX参照 == 1
+	CALL XYZCAN(決闘者,召喚カード,58202) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_58202(種類)
+#DIM DYNAMIC 種類
+
+PRINTL レベル５モンスター×４
+CALLFORM CARD_ABLE(10,戦場起動,フリー誘発)
+PRINTL ①：お互いのターンに１度、このカードのX素材を１つ取り除き、
+PRINTL 相手フィールドの表側表示モンスター１体を対象として発動できる。
+PRINTL そのモンスターの効果を無効にし、攻撃力を０にする。
+CALLFORM CARD_ABLE(0,身代効果)
+PRINTL ②：自分フィールドのカードが戦闘・効果で破壊される場合、
+PRINTL 代わりにこのカードのX素材を１つ取り除く事ができる。
+PRINTL このカードが「No.102 홀리 라이트닝 글로리어스 헤일로」をＸ素材としている場合、
+PRINTL その後、相手ライフポイントに１５００ダメージを与える。
+
+@CARDCAN_58202(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,58202)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 戦場起動 || 種類 == フリー誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 効果発動済(決闘者,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 身代効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF !GROUPMATCH(破壊種類,"効果","戦闘")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_58202(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 最大選択数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 戦場起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,58202,10,X消費1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件表示 = 表側表示
+		効果追加種類 = 21
+		CALL CARD_REMOVAL_BASIC(決闘者,"戦場単体",場所,"永続無効")
+	ENDIF
+ELSEIF 種類 == 身代効果
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,58202,0,X消費1)
+	IF RESULT == 0
+		IF GETVAR(@"%決闘者%_MZ_条達:場所") >= 1
+			CALL LIFE_CHANGE(決闘者,"減少","効果",1500,1)
+		ENDIF
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

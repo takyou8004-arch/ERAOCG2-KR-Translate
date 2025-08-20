@@ -551,8 +551,12 @@ ELSEIF ゾーン == "필드"
 		효과대상者 = 상대
 	ENDIF
 	IF 行先플래그 != 完全묘지行き
-		SIF GETVAR(@"%듀얼리스트%_MZ_除処:場所") >= 1
+		IF GETVAR(@"%듀얼리스트%_MZ_除処:場所") >= 1
 			行先플래그 = 제외行き
+			IF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+				行先플래그 = 完全묘지行き
+			ENDIF
+		ENDIF
 	ENDIF
 ELSEIF ゾーン == "마함"
 	IF GETVAR(@"%듀얼리스트%_魔_所有:場所") == 1
@@ -561,8 +565,12 @@ ELSEIF ゾーン == "마함"
 		효과대상者 = 상대
 	ENDIF
 	IF 行先플래그 != 完全묘지行き
-		SIF GETVAR(@"%듀얼리스트%_魔_除処:場所") >= 1
+		IF GETVAR(@"%듀얼리스트%_魔_除処:場所") >= 1
 			行先플래그 = 제외行き
+			IF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+				行先플래그 = 完全묘지行き
+			ENDIF
+		ENDIF
 	ENDIF
 ELSEIF ゾーン == "묘지"
 	SIF 行先플래그 == 묘지行き
@@ -980,10 +988,13 @@ ELSEIF 行先플래그 == 손패行き
 
 ELSEIF 行先플래그 == 破壊行き
 	CALL CARD_FIN_ID_SET(듀얼리스트,選択カード_ID,"효과破壊")
+	CALL CARD_FIN_ID_SET(듀얼리스트,選択カード_ID,"直前破壊")
 	SIF ゾーン == "필드"
 		ターン破壊数 += 1
 ELSEIF 行先플래그 == 戦闘破壊行き
 	CALL CARD_FIN_ID_SET(듀얼리스트,選択カード_ID,"戦闘破壊")
+	CALL CARD_FIN_ID_SET(듀얼리스트,選択カード_ID,"直前破壊")
+
 	SETVAR @"%듀얼리스트%_直前戦闘破壊", 選択カード_ID
 	SIF ゾーン == "필드"
 		ターン破壊数 += 1
@@ -1168,3 +1179,88 @@ IF GETVAR(@"상대_%효과종류%_保_CT") >= 1
 		SETVAR @"상대_%효과종류%:カウンタ", GETVAR(@"상대_%효과종류%_保:カウンタ")
 	NEXT
 ENDIF
+
+
+
+@SET_EXIST_CARDS(듀얼리스트,参照先지정)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 参照先지정
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC カウンタC
+#DIM DYNAMIC カード설정
+#DIM DYNAMIC サーチ範囲
+#DIM DYNAMIC 参照先セットアップ, 30
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 条件달성
+
+IF 参照先지정 == 필드지정
+	;필드+魔罠
+	参照先セットアップ:0 = 1
+	参照先セットアップ:1 = 1
+ELSEIF 参照先지정 == 손패지정
+	;손패
+	参照先セットアップ:2 = 1
+ELSEIF 参照先지정 == 묘지지정
+	;묘지
+	参照先セットアップ:3 = 1
+ELSEIF 参照先지정 == 필드묘지지정
+	;필드+魔罠＋묘지
+	参照先セットアップ:0 = 1
+	参照先セットアップ:1 = 1
+	参照先セットアップ:3 = 1
+ELSEIF 参照先지정 == 필드손패지정
+	;필드+魔罠＋손패
+	参照先セットアップ:0 = 1
+	参照先セットアップ:1 = 1
+	参照先セットアップ:2 = 1
+ENDIF
+
+효과条件固名前:0 = 仮置き
+
+$INPUTLOOP
+IF 参照先セットアップ:カウンタB == 0
+	カウンタB ++
+	IF カウンタB <= 10
+		GOTO INPUTLOOP
+	ELSE
+		RETURN 1
+	ENDIF
+ENDIF
+IF カウンタB == 0
+	参照先 = 필드
+	サーチ範囲 = 5
+ELSEIF カウンタB == 1
+	参照先 = 魔罠
+	サーチ範囲 = 5
+ELSEIF カウンタB == 2
+	参照先 = 손패
+	サーチ範囲 = 紙束最大値
+ELSEIF カウンタB == 3
+	参照先 = 묘지
+	サーチ範囲 = 紙束最大値
+ENDIF
+FOR カウンタ,0,サーチ範囲
+	VARSET 条件달성
+	CALL CARD_S_FILTER_SET(듀얼리스트,参照先,カウンタ,듀얼리스트)
+	SIF RESULT == 1
+		条件달성 = 1
+	CALL CARD_FILTER_SET(듀얼리스트,参照先,カウンタ,듀얼리스트)
+	SIF RESULT == 1
+		条件달성 = 1
+	SIF 条件달성 != 1
+		CONTINUE
+	カウンタC ++
+	VARSET RESULTS
+	TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")},"名前"
+	효과条件固名前:カウンタC = %RESULTS%
+NEXT
+
+IF カウンタB <= 10
+	カウンタB ++
+	GOTO INPUTLOOP
+ENDIF
+
+RETURN 1

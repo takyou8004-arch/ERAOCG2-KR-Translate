@@ -7,11 +7,11 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 시간 정지 스위치（Ｔ Ｓ Ｐ）
+		RESULTS = 시간 정지 스위치（Ｔ Ｓ Ｐ）
 	CASE "略称"
-RESULTS = 시간 정지 스위치
+		RESULTS = 시간 정지 스위치
 	CASE "カテゴリ"
-RESULTS:0 = 없음
+		RESULTS:0 = 없음
 RESULTS:2 = E.R.A
 ENDSELECT
 
@@ -37,8 +37,8 @@ CALL TEXT_DECORATION("ROGUE")
 CALL CARD_ABLE(1,마함起動,フリー誘発)
 PRINTL ①：패를 1장 버리고, 필드 위의 암컷 몬스터 1장을 대상으로 이 카드를 발동할 수 있다.
 PRINTL 그 몬스터는 완전 내성을 얻고, 전투로는 파괴되지 않으며, 표시 형식을 변경할 수 없게 되고, 효과는 무효화되며,
-PRINTL 소재로 릴리스할 수 없다.
-PRINTL 자신은 자신 / 상대 턴에 이 카드의 효과를 무효화할 수 있다.
+PRINTL 특수 소환의 소재로 릴리스할 수 없다.
+PRINTL 자신의 패에 "해제 버튼"을 생성한다.
 CALL TEXT_DECORATION("ROGUE")
 
 @CARDCAN_99602(듀얼리스트,종류,ゾーン,場所)
@@ -49,8 +49,6 @@ CALL TEXT_DECORATION("ROGUE")
 #DIM DYNAMIC カウンタ
 #DIMS DYNAMIC 対面者
 #DIM DYNAMIC 選択カード
-#DIMS DYNAMIC 操作者
-
 
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
@@ -78,18 +76,6 @@ IF 종류 == 마함起動 || 종류 == フリー誘発
 	효과条件성별 = 牝性	
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
-		RETURN 0
-	RETURN 1
-
-
-ELSEIF 종류 == 필드起動付与 || 종류 == 84 
-	IF 종류 == 필드起動付与
-		操作者 = %듀얼리스트%
-	ELSEIF 종류 == 84
-		操作者 = %対面者%
-	ENDIF
-
-	SIF 발동済_1(操作者,99602)
 		RETURN 0
 	RETURN 1
 ENDIF
@@ -139,50 +125,149 @@ IF 종류 == 마함起動 || 종류 == フリー誘発
 				CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"表固",2,1)
 				CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"無効",2,1)
 				CALL SET_FIELD_INFO(대상者（CS）,"필드",選択カード（CS）,"不材",2,1)
+				CALL CARD_GENERATE_HAND(決闘者,199602)
 			ENDIF
-		ENDIF
-	ENDIF
-ELSEIF 종류 == 필드起動付与 || 종류 == 84
-	IF 종류 == 필드起動付与
-		操作者 = %듀얼리스트%
-	ELSEIF 종류 == 84
-		操作者 = %対面者%
-	ENDIF
-	CALL CARD_CHOICE(操作者,종류,ゾーン,場所,99602,1)
-	IF RESULT == 0
-PRINTL 시간 정지를 해제하시겠습니까?
-		CALL YN_CHOICE(操作者)
-		IF RESULT == 0
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"특수状態",0,1)
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"接可",0,1)
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"モ耐",0,1)
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"魔耐",0,1)
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"함정耐",0,1)
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦耐",0,1)
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦無",0,1)
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表固",0,1)
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"無効",0,1)
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"不材",0,1)
-
-
-
-			효과蓄積 = GETVAR(@"%듀얼리스트%_MZ_조교:場所")
-			SIF 효과蓄積 > 10
-				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"発情",2)
-			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",場所)
-			IF RESULT != -1
-				조교대상 = RESULT
-				PRINTFORML %CALLNAME:조교대상%의 시간이 움직이기 시작함과 동시에 ...... 멈춰있던 쾌락이 한꺼번에 밀려들어왔다.
-				FOR カウンタ,0,효과蓄積
-					SIF カウンタ > 10
-						PRINTFORML %CALLNAME:조교대상%은 끝나지 않는 쾌락에 고통의 비명을 지르고 말았다.
-					CALL EROTIC_MOVE("全身애무",조교대상)
-				NEXT
-			ENDIF
-		ELSEIF RESULT == 1
-			CALL CARD_REACT(듀얼리스트,場所,"필드")
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"조교",3)
 		ENDIF
 	ENDIF
 ENDIF
 
+
+
+
+@CARDNAME_199602,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 해제 버튼（TSP）
+	CASE "略称"
+		RESULTS = 해제 버튼
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_199602(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 速攻魔法
+	CASE "トークン"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_199602(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+CALL CARD_ABLE(1,魔罠起動,フリー誘発)
+PRINTL ①：이 카드는 상대 턴에도 패에서 발동할 수 있다。
+PRINTL 자신 / 상대 필드의 "시간 정지 스위치"의 효과를 받은 몬스터 １장을 골라、그 받고있는 효과를 해제한다。
+PRINTL 해제（딸깍！
+
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_199602(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 操作者
+
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,199602)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 種類 == 手札起動 || 種類 == 魔罠起動 || 種類 == フリー誘発
+	SIF !GROUPMATCH(ゾーン,"手札","魔罠")
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲相手戦場 = 1
+	効果条件特殊状態 = 99602
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+	ENDIF
+
+
+@CARDEFFECT_199602(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 対象者
+
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 調教対象
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 効果蓄積
+#DIMS DYNAMIC 操作者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+IF 種類 == 手札起動 || 種類 == 魔罠起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(操作者,종류,ゾーン,場所,199602,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲相手戦場 = 1
+		効果条件特殊状態 = 99602
+		CALL CARD_CHOOSE_ADV(決闘者,ゾーン,場所)
+		IF RESULT >= 0
+			選択カード = RESULT
+			CALL CARD_SELECT(決闘者,選択カード)
+			PRINTL 시간 정지를 해제하시겠습니까?
+			CALL YN_CHOICE(操作者)
+			IF RESULT == 0
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"특수状態",0,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"接可",0,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"モ耐",0,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"魔耐",0,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"함정耐",0,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦耐",0,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦無",0,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表固",0,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"無効",0,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"不材",0,1)
+				효과蓄積 = GETVAR(@"%듀얼리스트%_MZ_조교:場所")
+				SIF 효과蓄積 > 10
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"発情",2 * 効果蓄積)
+				CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",場所)
+				IF RESULT != -1
+					조교대상 = RESULT
+					PRINTFORML %CALLNAME:조교대상%의 시간이 움직이기 시작함과 동시에 ...... 멈춰있던 쾌락이 한꺼번에 밀려들어왔다.
+					FOR カウンタ,0,효과蓄積
+						SIF カウンタ > 10
+							PRINTFORML %CALLNAME:조교대상%은 끝나지 않는 쾌락에 고통의 비명을 지르고 말았다.
+						CALL EROTIC_MOVE("全身애무",조교대상)
+					NEXT
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

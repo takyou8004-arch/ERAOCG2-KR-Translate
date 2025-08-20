@@ -1,0 +1,186 @@
+﻿@CARDNAME_99734,参照先
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마인드컨트롤 리시버
+	CASE "略称"
+		RESULTS = MC 리시버
+	CASE "カテゴリ"
+		RESULTS:0 = MC
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99734(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 機械族
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 1800
+	CASE "チューナー"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_99734(種類)
+#DIM DYNAMIC 種類
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL このカード名の①②③の効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,手札起動)
+PRINTL ①：自分メインフェイズに発動できる。
+PRINT 手札のこのカードを特殊召喚する。その後、
+SETCOLOR C_D_GRAY
+PRINT 相手デッキにランダムなマインド・コントロールカード２枚を加え、
+RESETCOLOR
+PRINTL 相手と自分はデッキから１枚ドローする。
+CALLFORM CARD_ABLE(2,召喚時,特殊召喚時)
+PRINTL ②：このカードが召喚・特殊召喚に成功した場に発動できる。
+PRINTL 自分の墓地・手札・EXデッキからEX以外の「MC」モンスター１体を特殊召喚する。
+CALLFORM CARD_ABLE(3,墓地起動)
+PRINTL ③：自分メインフェイズに墓地のこのカードを除外して発動できる。
+PRINTL 相手墓地の「MC」カード３枚を相手のデッキの上に置く。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_99734(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,99734)
+SIF RESULT == 1
+	RETURN 0
+IF 種類 == 手札起動
+	SIF 発動済_1(決闘者,99734)
+		RETURN 0
+	CALL CARD_SS_CHECK(決闘者,99734,"手札")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	SIF 発動済_2(決闘者,99734)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲墓地 = 1
+	効果範囲EXデッキ = 1
+	効果条件カテゴリ = MC
+	効果条件種類 = EX以外全般
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 墓地起動
+	SIF 発動済_3(決闘者,99734)
+		RETURN 0
+	SIF ゾーン != "墓地"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手墓地 = 1
+	効果条件カテゴリ = MC
+	効果条件種類 = 魔法全般
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT < 3
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99734(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 設定レベル
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 手札起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99734,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(決闘者,"手札",場所)
+
+		CALL FULLRESET
+		REPEAT 2
+			SELECTCASE RAND:9
+				CASE 0
+					CALL CARD_GENERATE_DECK(対面者,79840)
+				CASE 1
+					CALL CARD_GENERATE_DECK(対面者,79841)
+				CASE 2
+					CALL CARD_GENERATE_DECK(対面者,79842)
+				CASE 3
+					CALL CARD_GENERATE_DECK(対面者,79843)
+				CASE 4
+					CALL CARD_GENERATE_DECK(対面者,79844)
+				CASE 5
+					CALL CARD_GENERATE_DECK(対面者,79845)
+				CASE 6
+					CALL CARD_GENERATE_DECK(対面者,79846)
+				CASE 7
+					CALL CARD_GENERATE_DECK(対面者,79847)
+				CASE 8
+					CALL CARD_GENERATE_DECK(対面者,79848)
+			ENDSELECT
+		REND
+		SETCOLOR C_PINK 
+		PRINTFORMW 마인드컨트롤 리시버が小さく音を立てると相手のデッキに催眠カードが２枚生成された…。
+		RESETCOLOR
+		CALL SHUFFLE(対面者)
+		CALL CARDDRAW_BASIC(対面者,1)
+		CALL CARDDRAW_BASIC(決闘者,1)
+	ENDIF
+ELSEIF 種類 == 召喚時 || 種類 == 特殊召喚時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99734,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果範囲墓地 = 1
+		効果範囲EXデッキ = 1
+		効果条件カテゴリ = MC
+		効果条件種類 = EX以外全般
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 墓地起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,99734,3)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		FOR カウンタ,0,3
+			CALL FULLRESET
+			効果条件カテゴリ = MC
+			効果条件種類 = 魔法全般
+			CALL CARD_CHOOSE_BASIC(決闘者,"相手墓地",ゾーン,場所)
+			IF RESULT != 9999
+				CALL CARD_ADD_DECK_SPC(対面者,"墓地",RESULT)
+			ENDIF
+		NEXT
+	ENDIF
+ENDIF

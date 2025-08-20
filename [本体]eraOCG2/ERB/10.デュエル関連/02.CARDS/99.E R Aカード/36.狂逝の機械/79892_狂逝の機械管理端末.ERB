@@ -1,0 +1,367 @@
+﻿@CARDNAME_79892,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 이쿠기어 아쿠메 매니지먼트
+	CASE "略称"
+		RESULTS = 광서관리단말
+	CASE "カテゴリ"
+		RESULTS:0 = 광서의 기계
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79892(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "追加日"
+		RETURN 250706
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79892(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL
+PRINTL 이 카드명의 카드는 １턴에 １장밖에 발동할 수 없다.
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①: 이하의 효과에서 １개를 선택해서 발동할 수 있다.
+PRINTL ●덱에서 "광서의 기계"몬스터를 １장 묘지로 보내고,
+PRINTL 자신 필드 위의 기계족 / 암컷몬스터를 １장을 대상으로 발동할 수 있다.
+PRINTL 그 몬스터는 발정하고 공격력 1000 올리고,
+PRINTL "광서의 기계"카드로도 취급한다.
+PRINTL ●자신의 패 / 묘지에서 "광서의 기계"몬스터카드를 ２장 제외하고 발동할 수 있다.
+PRINTL 패 / 묘지 / 덱에서 레벨８이상의 "광서의 기계"몬스터를 １체 특수 소환한다.
+PRINTL
+SETCOLOR C_RED
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー경고ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL ②: 이 카드가 효과를 발동했을 때, 상대의 덱에서 무작위로 암컷 몬스터를 붙잡는다.
+PRINTL 그 후, 붙잡은 몬스터를 능욕하고 묘지로 보낸다。
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー주의ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL
+RESETCOLOR
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79892(듀얼리스트,종류,ゾーン,場所)
+
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 효과条件플래그 = 0
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79892)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,79892)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+    CALL FULLRESET
+    효과範囲손패 = 1
+    효과範囲묘지 = 1
+	효과条件カテゴリ = 광서의 기계
+	효과条件종류 = モン全般
+	효과条件CNT = 2
+    CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT < 2
+		CALL FULLRESET
+    	효과範囲덱 = 1
+    	효과条件종류 = モン全般
+    	효과条件カテゴリ = 광서의 기계
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		;条件を満たしている場合はデッキ・墓地の「墓守」モンスターと「アポピス」カードを確認
+		CALL FULLRESET
+    	효과範囲묘지 = 1
+		효과条件カテゴリ = 광서의 기계
+		CALL 효과条件レベル_ADV(8, "以上")
+    	효과条件소환可 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 1
+				RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+		IF 종류 == 마함起動
+			SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+				RETURN 0
+		ENDIF
+		SIF メインフェイズ != 1
+		RETURN 0
+		SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79892(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 戦闘カードID
+#DIM DYNAMIC 攻撃力上昇
+#DIM DYNAMIC 選択結果
+#DIM DYNAMIC 효과条件플래그 = 0
+#DIM DYNAMIC 捕縛대상
+#DIM DYNAMIC 捕縛場所,紙束最大値
+#DIM DYNAMIC 捕縛候補,紙束最大値
+#DIM DYNAMIC 捕縛場所B
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 절정횟수
+#DIM DYNAMIC 묘지送り位置
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+
+CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79892,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 광서의 기계
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			효과条件플래그 |= 1
+
+		CALL FULLRESET
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79892)
+		SIF RESULT == 0
+			효과条件플래그 |= 2
+
+		IF 효과条件플래그 & 1 && 효과条件플래그 & 2
+			IF 듀얼리스트 == "상대"
+				選択結果 = はい
+			ELSE
+				CUSTOMDRAWLINE -
+				PRINTL 광서의 기계관리단말의 어느쪽의 효과를 적용하시겠습니까？
+				CUSTOMDRAWLINE -
+				CALL YN_CHOICE(듀얼리스트,"덱에서 「광서의 기계」몬스터를 １장 묘지로 보내고、자신 필드 위의 기계족의 암컷몬스터를 １장의 공격력을 １０００올린다","자신의 손패 / 묘지에서 「광서의 기계」카드를 ２장 제외하고、덱 / 손패 / 묘지에서 레벨８이상의 「광서의 기계」몬스터를 １장 특수 소환한다。")
+				選択結果 = RESULT
+			ENDIF
+		ELSEIF 효과条件플래그 & 2
+			選択結果 = いいえ
+		ELSE
+			選択結果 = はい
+		ENDIF
+
+	    IF 選択結果 == はい
+			CALL FULLRESET
+			CUSTOMDRAWLINE -
+			PRINTL 【덱에서 "광서의 기계"몬스터를 １장 묘지로 보내는 것을 선택했습니다。】
+			CUSTOMDRAWLINE -
+			효과範囲덱 = 1
+			효과条件종류 = モン全般
+			효과条件カテゴリ = 광서의 기계
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CUSTOMDRAWLINE -
+				PRINTL 【자신 필드 위의 암컷 몬스터 １장의 공격력을 １０００ 올리고、발정시켜、"광서의 기계"로서 취급하는것이 가능합니다、】
+				PRINTL 【효과를 부여할 몬스터를 선택해 주세요。】
+				CUSTOMDRAWLINE -
+				효과条件종족 = 기계족
+				효과条件성별 = 牝性
+				효과条件표시 = 表側표시
+				CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+				選択カード = RESULT
+				IF 選択カード != 9999
+					CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永攻",1000)
+					CALL STATCHANGE_EFFECT(듀얼리스트,"필드",選択カード,"発情",1)
+				ENDIF
+				CALL FULLRESET
+					FOR カウンタ,0,現山札数(対面者)
+					捕縛대상 = GETVAR(@"%対面者%_덱:カウンタ") ;0→カウンタ
+					SIF 捕縛대상 == -1 ;念のため-1の場合は次へ
+						CONTINUE
+					CALLFORM CARD_{捕縛대상},"성별"
+					SIF RESULT == 無性 || RESULT == 雄性
+						CONTINUE
+					CALL CARD_EROTICS(捕縛대상)
+					SIF RESULT < 1 ;CSV持ち以外は제외
+						CONTINUE
+					捕縛候補:カウンタB = 捕縛대상 ;牝性を候補に格納
+					捕縛場所:カウンタB = カウンタ
+					カウンタB++ ;候補数加算
+				NEXT
+				SIF カウンタB < 1 ;カウンタが0以下=候補0
+					RETURN
+				捕縛대상 = 捕縛候補:(RAND:カウンタB) ;カウンタBまでの乱数で捕縛候補の中からランダムに捕縛대상を決定
+				捕縛대상 = 捕縛候補:묘지送り位置
+				捕縛場所B = 捕縛場所:묘지送り位置
+				CALL CARD_EROTICS(捕縛대상) ;必ずCARD_EROTICSを挟む
+				조교대상 = RESULT
+				IF 조교대상 > 0 ;조교대상条件はあなたを想定しないなら>0で
+					SELECTCASE RAND:6
+						CASE 0
+							PRINTFORML
+							PRINTFORML 새로운 광서의 기계를 증산하기 위해, 붙잡혀 있던 %CALLNAME:조교대상%는 그 암컷 구멍을 소모당하고 있다。
+							PRINTFORML 쾌락을 전달하는 신호, 그 체액, 고통, 공포, 쾌감의 모든 것이 광서의 기계를 움직이는 양식이 되어간다。
+							PRINTFORMW %CALLNAME:조교대상%는, 새로운 암컷 육체를 얻기 위한 양식을 광서의 기계에 바치기 위해서만 소모되어간다……
+						CASE 1
+							PRINTFORML
+							PRINTFORML 광서의 기계에 힘을 주기 위해 이미 붙잡혀 있던 %CALLNAME:조교대상%에게 가해지는 책임이 가속된다。
+							PRINTFORML 쿵쿵, 하고 자궁을 계속 짓누르던 생식기의 모조품 피스톤 운동이 더 무겁고 빨라진다。
+							PRINTFORMW 사지를 잃은 %CALLNAME:조교대상%는 그 몸통을 젖히며, 혀를 내밀고 절정하는 것밖에 할 수 없다……
+						CASE 2
+							PRINTFORML
+							PRINTFORML %CALLNAME:조교대상%를 포함한 암컷 구멍에 대한 능욕이 갑자기 격렬해져, 육체의 소모를 따지지 않는 격렬함이 되었다。
+							PRINTFORML 광서의 기계에 일시적인 강화의 양식을 얻기 위해, 암컷 구멍들의 성적 능욕이 강화되었다。
+							PRINTFORMW %CALLNAME:조교대상%는 부서질 것 같은 공포와 고통에서 필사적으로 도움을 구하며 절정을 반복한다……
+
+						CASE 3
+							PRINTFORML
+							PRINTFORML 손발을 잃고, 철봉으로 조립된 프레임 안에 밀어넣어져, 기계의 팔로 운반되는 %CALLNAME:조교대상%,
+							PRINTFORML 팔이 그녀를 넣으려는 철 상자에는 틈이 없을 정도로 촉수가 가득 들어 있었다。
+							PRINTFORMW %CALLNAME:조교대상%는 필사적으로 고개를 흔들며 도움을 구하지만, 프레임째로 넣어져 밀폐되어 줄지어 놓인다……
+
+						CASE 4
+							PRINTFORML
+							PRINTFORML %CALLNAME:조교대상%는 미약을 체내에 흘려넣어지며 입으로는 호흡을 하게 하면서 최음 가스를 들이마시게 된다,
+							PRINTFORML 육체를 완전히 수컷 자지를 물기에 적합한 상태로 만들어진 채 촉수가 가득 찬 상자에 넣어진다。
+							PRINTFORMW 쾌락을 받고, 발광하며, 절정만을 위해 쓰이는 암컷 구멍으로서 %CALLNAME:조교대상%는 그 역할을 다한다……
+
+						CASE 5
+							PRINTFORML
+							PRINTFORML %CALLNAME:조교대상%는 필사적으로 도움을 구하지만, 그 목소리는 허무하게 기계성에 울려 퍼질 뿐이었다。
+							PRINTFORML 그렇게 해도 촉촉하게 열기를 띤 숨을 내쉬며, 온몸에서 넘치는 땀과 함께 양 구멍에서 넘치는 애액이 흘러내린다。
+							PRINTFORMW 기계성을 움직이는 양식이 되기 위해 살아남아 능욕당하는 암컷 육체로서, 촉수 상자에 %CALLNAME:조교대상%는 넣어져간다……
+					ENDSELECT
+					FOR カウンタ,0,4
+						CALL EROTIC_MOVE("全身凌辱",조교대상,MASTER,500)
+						PRINTFORML 
+						CALL MADORGASM_RAND_ROB_TXT(1,0)
+						CALL MADORGASM_RAND_ROB_TXT(1,3)
+						PRINTFORML
+					NEXT
+					CALL MADORGASM_RAND_ROB_TXT(1,5);うるさい鳴き声
+					PRINTFORML %CALLNAME:조교대상%는 온몸에서 체액을 흘리며, 눈물을 흘리면서 필사적으로 구원을 구하고 있다。
+					PRINTFORMW 이 광서의 기계는 언제든 움직일 수 있을 것 같으며, 듀얼의 판에 올려도 효과를 발휘할 것이다
+				ENDIF
+				CALL CARD_DISPOSE(対面者,"덱",捕縛場所B)
+			ENDIF
+		ELSE
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件종류 = モン全般
+			효과条件カテゴリ = 광서의 기계
+			효과条件行先플래그 = 제외行き
+			효과条件複数 = 2
+			CUSTOMDRAWLINE -
+			PRINTL 레벨 ８이상의 광서의 기계를 소환하려면 패 / 묘지에 존재하는 "광서의 기계" 몬스터를 ２장 제외하지 않으면 안됩니다、
+			CUSTOMDRAWLINE -
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과範囲묘지 = 1
+				효과条件カテゴリ = 광서의 기계
+				CALL 효과条件レベル_ADV(8, "以上")
+				효과条件소환可 = 1
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+				IF RESULT == 1
+					FOR カウンタ,0,現山札数(対面者)
+						捕縛대상 = GETVAR(@"%対面者%_덱:カウンタ") ;0→カウンタ
+						SIF 捕縛대상 == -1 ;念のため-1の場合は次へ
+							CONTINUE
+						CALLFORM CARD_{捕縛대상},"성별"
+						SIF RESULT == 無性 || RESULT == 雄性
+							CONTINUE
+						CALL CARD_EROTICS(捕縛대상)
+						SIF RESULT < 1 ;CSV持ち以外は제외
+							CONTINUE
+						捕縛候補:カウンタB = 捕縛대상 ;牝性を候補に格納
+						捕縛場所:カウンタB = カウンタ
+						カウンタB++ ;候補数加算
+					NEXT
+					SIF カウンタB < 1 ;カウンタが0以下=候補0
+						RETURN
+					捕縛대상 = 捕縛候補:(RAND:カウンタB) ;カウンタBまでの乱数で捕縛候補の中からランダムに捕縛대상を決定
+					捕縛대상 = 捕縛候補:묘지送り位置
+					捕縛場所B = 捕縛場所:묘지送り位置
+					CALL CARD_EROTICS(捕縛대상) ;必ずCARD_EROTICSを挟む
+					조교대상 = RESULT
+					IF 조교대상 > 0 ;조교대상条件はあなたを想定しないなら>0で
+						SELECTCASE RAND:4
+							CASE 0
+								PRINTFORML
+								PRINTFORML 강대한 기계병을 움직이기 위한 양식을 얻기 위해, 암컷 구멍들은 가공된 육체로 계속 능욕당하고 있다.
+								PRINTFORML 붙잡혀 있던 %CALLNAME:조교대상%도 어느새 그 중 하나가 되어 있었다.
+								PRINTFORMW 기계성의 시설 중 하나인 밀폐된 미약이 가득 찬 캡슐 안에서, %CALLNAME:조교대상%는 계속 능욕당하고 있다……
+						CASE 1
+								PRINTFORML
+								PRINTFORML 대형 광서의 기계를 움직이기 위한 에너지를 얻기 위해, %CALLNAME:조교대상%를 포함한 암컷 육체는 계속 능욕당하고 있었다
+								PRINTFORML 절정과 발광을 반복하며, 정신이 무너질 것 같으면 억지로 보강되어 제정신을 유지하게 된다.
+								PRINTFORMW %CALLNAME:조교대상%는 끝나지 않는 성적 유린에 절정과 신음소리로 반응하며, 광서의 기계에 바치고 있다……
+						CASE 2
+								PRINTFORML
+								PRINTFORML %CALLNAME:조교대상%는 대형 광서의 기계를 작동시키기 위한 에너지원이 되기 위해,
+								PRINTFORML 사지가 절단되어, 기계성의 시설 안에서 끝없이 능욕당하는 암컷 구멍으로 편입되어 있었다.
+								PRINTFORMW %CALLNAME:조교대상%를 포함한 무수한 암컷 구멍들의 신음소리가 기계성에 울려 퍼진다……
+					
+						CASE 3
+								PRINTFORML
+								PRINTFORML 이미 포획되어 있던 암컷 중 하나가 기계병으로 손에 옮겨진다
+								PRINTFORML 손발이 잘리고, 고통을 계속 주는 기계에 의존하지 않으면 움직일 수도 없는 그런 암컷 육체.
+								PRINTFORMW %CALLNAME:조교대상%는 기계에 편입된 암컷의 복부에 그 안이 새겨져 있었다.
+						ENDSELECT
+						FOR カウンタ,0,4
+							PRINTFORML 
+							CALL MADORGASM_RAND_ROB_TXT(1,0)
+							CALL MADORGASM_RAND_ROB_TXT(1,3)
+							PRINTFORML
+							CALL EROTIC_MOVE("全身凌辱",조교대상,MASTER,500)
+						NEXT
+						CALL MADORGASM_RAND_ROB_TXT(1,5);うるさい鳴き声
+						PRINTFORML %CALLNAME:조교대상%는 온몸에서 체액을 흘리며, 눈물을 흘리면서 필사적으로 구원을 구하고 있다。
+						PRINTFORMW 이 광서의 기계는 언제든 움직일 수 있을 것 같으며, 듀얼의 판에 올려도 효과를 발휘할 것이다
+					ENDIF
+					CALL CARD_DISPOSE(対面者,"덱",捕縛場所B)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79892)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ENDIF
+
+
+
+
+

@@ -14,9 +14,6 @@ SELECTCASE 参照先
 		RESULTS:0 = HERO
 		RESULTS:1 = I HERO
 		RESULTS:2 = 밀리언 라이브!
-		; RESULTS:2 = THE IDOLM@STER
-		; RESULTS:4 = MILLION LIVE!
-		; RESULTS:5 = 伊吹翼
 		RESULTS:4 = 이부키 츠바사
 ENDSELECT
 
@@ -43,6 +40,8 @@ SELECTCASE 参照先
 		RETURN 2000
 	CASE "성별"
 		RETURN 牝性
+	CASE "追加日"
+		RETURN 250601
 ENDSELECT
 RETURN 0
 
@@ -54,8 +53,11 @@ CALL CARD_ABLE(1,손패起動)
 PRINTL ①: 자신 메인 페이즈에 자신 필드에 몬스터가 존재하지 않는 경우에 발동할 수 있다.
 PRINTL 패의 이 카드명 이외의 "I HERO" 몬스터 1장을 상대에게 보여주고, 패의 이 카드를 특수 소환한다.
 CALL CARD_ABLE(2,효과後誘発)
-PRINTL ②: 자신 필드에 "I HERO" 몬스터가 일반 소환 / 특수 소환된 경우에 발동할 수 있다.
-PRINTL 패의 이 카드를 버리고, 덱에서 "HERO" 마법 / 함정 카드 1장을 패에 넣는다.
+PRINTL ②: 자신 필드에 "I HERO" 몬스터가 소환 / 특수 소환된 경우에 발동할 수 있다.
+PRINTL 패의 이 카드를 버리고, 이 턴, 상대 필드 몬스터의 공격력 / 수비력은 300 내린다.
+CALL CARD_ABLE(3,戦場→墓地,手札→墓地,デッキ→墓地,破壊→墓地,戦闘→墓地)
+PRINTL ③：자신의 턴에 이 카드가 묘지로 보내진 경우에 발동할 수 있다。
+PRINTL 묘지에서 이 카드명 이외 이며 ＥＸ몬스터 이외인 "HERO" 몬스터 １장을 패에 넣는다。
 
 @CARDCAN_4642(듀얼리스트,종류,ゾーン,場所)
 #DIMS DYNAMIC 듀얼리스트
@@ -101,13 +103,22 @@ ELSEIF 종류 == 효과後誘発
 	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
 	SIF RESULT != 1
 		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場→墓地 || 種類 == 手札→墓地 || 種類 == デッキ→墓地 || 種類 == 破壊→墓地 || 種類 == 戦闘→墓地
+	SIF 発動済_3(決闘者,4642)
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
 	CALL FULLRESET
 	효과範囲덱 = 1
 	효과条件カテゴリ = I HERO
-	효과条件종류 = 마함全般
+	효과条件종류 = モン全般
+	効果条件固名前 = I HERO 마이티 세일러 츠바사
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 攻紋章起動
 	RETURN 1
 ENDIF
 
@@ -144,10 +155,19 @@ ELSEIF 종류 == 효과後誘発
 	IF RESULT == 0
 		CALL FULLRESET
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL CARD_RESERV(決闘者,4642,攻紋章予約)
+	ENDIF
+ELSEIF 種類 == 戦場→墓地 || 種類 == 手札→墓地 || 種類 == デッキ→墓地 || 種類 == 破壊→墓地 || 種類 == 戦闘→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,4642,3)
+	IF RESULT == 0
 		CALL FULLRESET
 		효과範囲덱 = 1
 		효과条件カテゴリ = I HERO
 		효과条件종류 = 마함全般
+		効果条件固名前 = I HERO 마이티 세일러 츠바사
 		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
 	ENDIF
+ELSEIF 種類 == 攻紋章起動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(決闘者,"相手戦場",場所,-300,-300)
 ENDIF

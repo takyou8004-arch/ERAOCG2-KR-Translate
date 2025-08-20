@@ -1,0 +1,275 @@
+﻿@CARDNAME_39690,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 만지기머신　조물조물 핸드
+	CASE "略称"
+		RESULTS = 조물손
+	CASE "カテゴリ"
+		RESULTS:0 = 만지기머신
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39690(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 風属性
+	CASE "種族"
+		RETURN 未確認族
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 500
+	CASE "守備力"
+		RETURN 500
+	CASE "追加日"
+		RETURN 250804
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39690(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ①：このカードがモンスターと戦闘を行う場合、その２体はその戦闘では破壊されない。
+CALLFORM CARD_ABLE(10,戦場起動,フリー誘発)
+PRINTL ②：自分・相手ターンに１度、相手フィールドの牝性モンスター１体を対象として発動できる。
+PRINTL そのモンスターの攻撃力・守備力は５００ダウンし、ターン終了時まで攻撃できない。
+CALLFORM CARD_ABLE(0,戦破壊→墓地)
+PRINTL ③：このカードがモンスターゾーンから墓地へ送られた場合、相手フィールドの牝性モンスター１体を対象として発動できる。
+PRINTL このカードをそのモンスターに装備する。
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ④：このカードを装備している相手モンスターの攻撃宣言時に発動する。
+PRINTL その攻撃を無効にする。
+
+
+@CARDCAN_39690(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,39690)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 戦場起動 || 種類 == フリー誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 効果発動済(決闘者,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果条件性別 = 牝性
+	効果条件表示 = 表側表示
+	効果条件除去種 = 選択
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 戦破壊→墓地
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF !GROUPMATCH(墓地送り種類,"戦闘破壊","破壊","リリース")
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		RETURN 0
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	効果条件性別 = 牝性
+	効果条件表示 = 表側表示
+	効果条件除去種 = 選択
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 攻撃時強制誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF 装備者 == 決闘者
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	SIF 戦闘場所(決闘者,1) != 装備先
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 攻撃後強制誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 場所
+		RETURN 0
+	IF 戦闘場所(決闘者,1) == 5
+		CALL CARD_EROTICS(相手プレイヤー,対面者)
+		SIF RESULT == -1
+			RETURN 0
+	ELSE
+		TRYCALLFORM CARD_{戦闘カードID(決闘者,1)},"性別"
+		SIF RESULT == 雄性
+			RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 戦闘場所(決闘者,1) == 5
+		RETURN 0
+	SIF 戦闘場所(決闘者) != 場所
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == リアクション効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_39690(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 装備場所
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備先 = RESULT	
+装備者 = %RESULTS%
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 戦場起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39690,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件性別 = 牝性
+		効果条件表示 = 表側表示
+		CALL CARD_REMOVAL_BASIC(決闘者,"戦場単体",場所,"選択")
+		IF RESULT == 1
+			選択カード = RESULT:1
+			CALL CARD_EROTICS_FIELD(決闘者,"戦場",選択カード,1)
+			IF RESULT != -1
+				조교대상 = RESULT
+				PRINTFORMW 조물조물 핸드は%CALLNAME:조교대상%へ飛んでいき、その胸をもみもみと揉み込んだ！
+				CALL EROTIC_MOVE("Ｂ単発",조교대상,-1,1000)
+			ELSE
+				TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_戦場:選択カード")},"名前"
+				PRINTFORML 조물조물 핸드は%RESULTS%へ飛んでいき、その胸をもみもみと揉み込んだ！
+				PRINTFORMW %RESULTS%はハンドの巧みな愛撫に高められ、瞬く間に絶頂してしまった。
+			ENDIF
+			CALL SET_FIELD_INFO(対面者,"戦場",選択カード,"戦無",1,1)
+			CALL SET_FIELD_INFO(対面者,"戦場",選択カード,"永攻",-500)
+			CALL SET_FIELD_INFO(対面者,"戦場",選択カード,"永守",-500)
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 戦破壊→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39690)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果条件名前 = 만지기머신　조물조물 핸드
+		CALL CARD_CHOOSE_BASIC(決闘者,"墓地",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			CALL FULLRESET
+			効果範囲相手戦場 = 1
+			効果条件性別 = 牝性
+			効果条件表示 = 表側表示
+			CALLFORM CARD_EQUIP_ADV(決闘者,選択カード,"墓地")
+			IF RESULT == 1
+				装備場所 = RESULT:2 - 6
+				CALL CARD_EROTICS_FIELD(決闘者,"戦場",装備場所,1)
+				IF RESULT != -1
+					조교대상 = RESULT
+					PRINTFORMW 조물조물 핸드は%CALLNAME:조교대상%の胸に張り付き、じわじわと揉み始めた！
+					CALL EROTIC_MOVE("Ｂ単発",조교대상,-1,10)
+				ELSE
+					TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_戦場:装備場所")},"名前"
+					PRINTFORMW 조물조물 핸드は%RESULTS%の胸に張り付き、じわじわと揉み始めた！
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 攻撃時強制誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,39690)
+	IF RESULT == 0
+		CALL CARD_EROTICS_FIELD(決闘者,"戦場",装備先,1)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML %CALLNAME:조교대상%が動き出した瞬間、조물조물 핸드が胸を潰すようにぐにゅぐにゅと揉み始めた！
+			PRINTFORMW %CALLNAME:조교대상%は胸から迸る快感に耐えきれず、その場に膝を着いてしまった。
+			CALL EROTIC_MOVE("Ｂ単発",조교대상,-1,1000)
+		ELSE
+			TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_戦場:装備先")},"名前"
+			PRINTFORML %RESULTS%が動き出した瞬間、조물조물 핸드が胸を潰すようにぐにゅぐにゅと揉み始めた！
+			PRINTFORMW %RESULTS%は胸から迸る快感に耐えきれず、その場に膝を着いてしまった。
+		ENDIF
+		CALL EVADE_ATTACK(決闘者)
+	ENDIF
+
+ELSEIF 種類 == 攻撃後強制誘発
+	IF 戦闘場所(決闘者,1) == 5
+		CALL CARD_EROTICS(相手プレイヤー,対面者)
+		조교대상 = RESULT
+		PRINTFORMW %CALLNAME:조교대상%は胸をギュッと揉み込まれた！
+		CALL EROTIC_MOVE("Ｂ単発",조교대상,-1,200)
+	ELSE
+		CALL CARD_EROTICS(戦闘カードID(決闘者,1))
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORMW %CALLNAME:조교대상%は胸をギュッと揉み込まれた！
+			CALL EROTIC_MOVE("Ｂ単発",조교대상,-1,200)
+		ELSE
+			TRYCALLFORM CARDNAME_{戦闘カードID(決闘者,1)},"名前"
+			PRINTFORMW %RESULTS%は胸をギュッと揉み込まれた！
+		ENDIF
+	ENDIF
+
+ELSEIF 種類 == 永続効果
+	CALL STATCHANGE_EFFECT(決闘者,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(対面者,"自身",戦闘場所(決闘者,1),"戦耐")
+
+ELSEIF 種類 == リアクション効果
+	CALL CARD_EROTICS(GETVAR(@"%装備者%_戦場:装備先"))
+	IF RESULT != -1
+		조교대상 = RESULT
+		PRINTFORMW %CALLNAME:조교대상%はねっとりとした手付きで胸を揉まれている……
+		CALL EROTIC_MOVE("Ｂ単発",조교대상,-1,50)
+	ENDIF
+ENDIF

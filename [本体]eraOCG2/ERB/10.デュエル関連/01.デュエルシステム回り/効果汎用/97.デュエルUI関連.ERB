@@ -253,11 +253,11 @@ PRINTL
 CALL COLOR_LINE(설정カラー)
 IF 덱플래그 == 1
 	VARSET RESULTS
-	PRINTFORM [0] - 돌아간다　　　　　
+	PRINTFORM [0] - 돌아간다　　　
 	VARSET RESULT
 	TRYCALLFORM CARD_{選択カード_ID}, "生成カード"
 	SIF RESULT >= 1
-		PRINTFORM [1] - 관련 카드 확인
+		PRINTFORM [1] - 생성 카드 확인
 	PRINTL
 	BINPUT
 	IF RESULT == 1
@@ -269,8 +269,16 @@ IF 덱플래그 == 1
 		トークン보존:4 = RESULT:4
 		FOR カウンタ,0,5
 			IF トークン보존:カウンタ >= 1
+				$LOOP_BACK_HERE
 				TRYCALLFORM CARD_UI(トークン보존:カウンタ,2)
+				PRINTFORM [0] - 다음 카드
+				PRINTL
+				BINPUT
+				IF RESULT == 1000
+					CALL PRINT_STATE_DUEL(トークン보존:カウンタ,2)
 				WAIT
+					GOTO LOOP_BACK_HERE
+				ENDIF
 			ENDIF
 		NEXT
 		GOTO RESETVIEW
@@ -1185,10 +1193,13 @@ ENDIF
 CALL 対面者판정(대상者)
 対面者 = %RESULTS%
 
+
+
+
 IF GETVAR(@"%대상者%_コスト無効") >= 1 && 種別 == "コスト"
 	PRINTFORM　　　　　　【코스트무효중！！】
-	PRINTFORMW %대상者%으로의 코스트는 ０가됩니다。
-	増減 = 0
+	PRINTFORMW %대상者%으로의 코스트는 ０이됩니다。
+	RETURN 0
 ENDIF
 
 IF GETVAR(@"%대상者%_ダメージ反転") >= 1 && 増減 == "減少" && 種別 != "コスト"
@@ -1217,6 +1228,16 @@ IF 種別 == "戦闘" || 種別 == "直接戦闘"
 			ENDIF
 		ELSEIF GETVAR(@"%대상者%_ダメージ反射")
 			PRINTFORM　　　　　　【데미지 반사！！】
+			
+			IF GETVAR(@"%대상者%_ダメージ倍化")
+				PRINTFORM　　　　　　【데미지 배화！！】
+				変動値 = 変動値 * 2
+			ENDIF
+			IF GETVAR(@"%대상者%_ダメージ半化")
+				PRINTFORM　　　　　　【데미지 반감！】
+				変動値 = 変動値 / 2
+			ENDIF
+
 			PRINTFORMW 데미지가 반사되어、%対面者%의 라이프가{変動値}포인트 줄었습니다。
 			SETVAR @"ライフ_%対面者%", GETVAR(@"ライフ_%対面者%") - 変動値
 			IF 種別 == "戦闘"
@@ -1232,6 +1253,16 @@ IF 種別 == "戦闘" || 種別 == "直接戦闘"
 			SETVAR @"%対面者%_被弾者_保" , 1
 		ELSEIF GETVAR(@"%대상者%_ダメージ乱反射")
 			PRINTFORM　　　　　　【데미지 난반사！！】
+
+			IF GETVAR(@"%대상者%_ダメージ倍化")
+				PRINTFORM　　　　　　【데미지 배화！！】
+				変動値 = 変動値 * 2
+			ENDIF
+			IF GETVAR(@"%대상者%_ダメージ半化")
+				PRINTFORM　　　　　　【데미지 반감！】
+				変動値 = 変動値 / 2
+			ENDIF
+
 			PRINTFORMW 데미지가 반사되어、서로의 라이프가{変動値}포인트 줄었습니다。
 			SETVAR @"ライフ_%対面者%", GETVAR(@"ライフ_%対面者%") - 変動値
 			SETVAR @"ライフ_%대상者%", GETVAR(@"ライフ_%대상者%") - 変動値
@@ -1253,16 +1284,15 @@ IF 種別 == "戦闘" || 種別 == "直接戦闘"
 		ELSE
 			IF GETVAR(@"%대상者%_ダメージ倍化")
 				PRINTFORM　　　　　　【데미지 배화！！】
-				PRINTFORMW %대상者%의 라이프가{変動値 * 2}포인트 줄었습니다。
-				SETVAR @"ライフ_%대상者%", GETVAR(@"ライフ_%대상者%") - 変動値 * 2
-			ELSEIF GETVAR(@"%대상者%_ダメージ半化")
-				PRINTFORM　　　　　　【데미지 반감！】
-				PRINTFORMW %대상者%의 라이프가{変動値 / 2}포인트 줄었습니다。
-				SETVAR @"ライフ_%대상者%", GETVAR(@"ライフ_%대상者%") - 変動値 / 2
-			ELSE
-				PRINTFORMW %대상者%의 라이프가{変動値}포인트 줄었습니다。
-				SETVAR @"ライフ_%대상者%", GETVAR(@"ライフ_%대상者%") - 変動値
+				変動値 = 変動値 * 2
 			ENDIF
+			IF GETVAR(@"%대상者%_ダメージ半化")
+				PRINTFORM　　　　　　【데미지 반감！】
+				変動値 = 変動値 / 2
+			ENDIF
+
+			PRINTFORMW %대상者%의 라이프가 {変動値}포인트 줄었습니다。
+			SETVAR @"ライフ_%대상者%", GETVAR(@"ライフ_%대상者%") - 変動値
 			IF 種別 == "戦闘"
 				CALL CARD_FIN_BIT_SET(듀얼리스트,"戦闘",3)
 			ELSEIF 種別 == "直接戦闘" 
@@ -1276,6 +1306,16 @@ IF 種別 == "戦闘" || 種別 == "直接戦闘"
 		ENDIF
 	ELSEIF 増減 == "増加"
 		PRINTFORM　　　　　　【데미지 흡수！】
+
+		IF GETVAR(@"%대상者%_ダメージ倍化")
+			PRINTFORM　　　　　　【데미지 배화！！】
+			変動値 = 変動値 * 2
+		ENDIF
+		IF GETVAR(@"%대상者%_ダメージ半化")
+			PRINTFORM　　　　　　【데미지 반감！】
+			変動値 = 変動値 / 2
+		ENDIF
+
 		PRINTFORMW %대상者%의 라이프가{変動値}포인트 회복되었습니다。
 		SETVAR @"ライフ_%대상者%", GETVAR(@"ライフ_%대상者%") + 変動値
 			IF 대상者 == "상대"
@@ -1346,6 +1386,14 @@ ELSEIF 種別 == "コスト"
 	IF 대상者 == "상대"
 		CALL KOJO_MESSAGE_SEND("DUEL",OPPOSER,10,変動値)
 	ENDIF
+ELSEIF 種別 == "変更"
+	IF 増減 == "半分"
+		変動値 = GETVAR(@"ライフ_%대상者%") / 2
+	ELSE
+		変動値 = 変動値
+	ENDIF
+	PRINTFORMW %대상者%의 라이프가 {変動値}가 되었습니다。
+	SETVAR @"ライフ_%대상者%", 変動値
 ENDIF
 
 
@@ -1367,7 +1415,7 @@ PRINTFORMW %対面者%라이프 포인트：【{対面元ライフ}】→【{GET
 RESETCOLOR
 
 
-IF 種別 != "コスト"
+IF GROUPMATCH(破壊종류, "戦闘", "直接戦闘", "효과")
 	IF 変動値 > 0
 		ダメージ종류 = %種別%
 		IF GETVAR(@"%대상者%_ダメージ反射")
@@ -1938,6 +1986,13 @@ IF GETVAR(@"%듀얼리스트%_MZ_薬Ｃ:選択カード") > 0
 	RESETCOLOR
 ENDIF
 
+IF GETVAR(@"%듀얼리스트%_MZ_조교:選択カード") > 0
+	SETCOLOR C_V_PINK
+	RESULTS = 【조교절정횟수】:{GETVAR(@"%듀얼리스트%_MZ_조교:選択カード")}
+	PRINTBUTTON @"%RESULTS,12,LEFT%", 9072
+	RESETCOLOR
+ENDIF
+
 
 SIF SKIP플래그 == 1
 	GOTO SKIP_BUTTONS
@@ -2158,6 +2213,13 @@ IF RESULT >= 9000
 		PRINTFORML 【Ｄ카운터】:{GETVAR(@"%듀얼리스트%_MZ_薬Ｃ:選択カード")}
 		PRINTL 약에 대한 중독도・오염도。
 		PRINTL 
+		
+	ELSEIF RESULT == 9072
+		SETCOLOR C_V_PINK
+		PRINTFORML 【조교절정】:{GETVAR(@"%듀얼리스트%_MZ_조교:選択カード")}
+		PRINTL 이 몬스터의 조교강도
+		PRINTL 
+		RESETCOLOR
 	ELSEIF RESULT == 9999
 		특수カード_ID = GETVAR(@"%듀얼리스트%_MZ_특수状態:{選択カード}")
 		TRYCALLFORM CARD_UI(특수カード_ID);　특수状態관리（受け渡し必要なし）
@@ -2241,6 +2303,11 @@ IF 듀얼리스트 == "자신" || (듀얼리스트 == "상대" && 상대_魔_表
 	IF RESULTS != ""
 		TRYCALLFORM CARDNAME_{選択カード_ID}, "要塞名"
 		PRINTFORM （요새명）<<%RESULTS%>>
+	ENDIF
+
+	IF GETVAR(@"%듀얼리스트%_魔_変化元ID:選択カード") >= 1
+		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_魔_変化元ID:選択カード")}, "名前"
+		PRINTFORM （추가명칭）<<%RESULTS%>>
 	ENDIF
 
 
@@ -2728,7 +2795,7 @@ RETURN 0
 
 @DIPLAY_BOARD(설정플래그)
 #DIM DYNAMIC カウンタ
-#DIM DYNAMIC 勝利판정
+#DIM DYNAMIC 승리판정
 #DIM DYNAMIC 選択カード
 #DIM DYNAMIC 덱選択
 #DIM DYNAMIC 상대덱選択
@@ -3359,7 +3426,7 @@ IF 설정플래그 == 0
 			ENDIF
 		ENDIF
 	ELSEIF ターンプレイヤー == "상대"
-		IF 상대ターン終了 == 1 || ERA起動 == 2
+		IF 상대ターン終了 == 1 || ERA起動 >= 2
 			PRINTFORM %"　[1000] - 행동없음:（턴 엔드）",64,LEFT%
 		ELSEIF メインフェイズ２移行 == 1
 			PRINTFORM %"　[950] - 행동없음:（메인２개시）",64,LEFT%
@@ -3370,7 +3437,7 @@ IF 설정플래그 == 0
 		ENDIF
 	ENDIF
 
-	IF ERA起動 == 2
+	IF ERA起動 >= 2
 		PRINTFORM %"[9013] - 듀얼을 종료한다",64,LEFT%
 	ELSE
 		PRINTFORM %"[999] - 항복한다",64,LEFT%
@@ -4463,7 +4530,7 @@ ELSE
 		PRINTL
 		IF 상대_薬Ｃ > 0
 			SETCOLOR C_FUSE_PUR
-			RESULTS = 【薬物カウンタ】:{상대_薬Ｃ}
+			RESULTS = 【약물カウンタ】:{상대_薬Ｃ}
 			PRINTBUTTON @"%RESULTS,12,LEFT%", 9071
 			RESETCOLOR
 		ENDIF

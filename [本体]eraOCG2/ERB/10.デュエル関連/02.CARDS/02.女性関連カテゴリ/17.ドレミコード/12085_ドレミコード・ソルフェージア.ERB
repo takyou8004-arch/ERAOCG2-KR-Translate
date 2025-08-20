@@ -1,0 +1,281 @@
+﻿@CARDNAME_12085,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 도레미코드 솔페지아
+	CASE "略称"
+		RESULTS = 솔페지아
+	CASE "カテゴリ"
+		RESULTS:0 = 도레미코드
+ENDSELECT
+
+
+@CARD_12085(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 効果モン
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 天使族
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 400
+	CASE "守備力"
+		RETURN 400
+	CASE "性別"
+		RETURN 牝性
+	CASE "分割"
+		RETURN ペンデュラム
+	CASE "追加日"
+		RETURN 250817
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_12085(種類)
+#DIM DYNAMIC 種類
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名の①②のP効果は１ターンに１度しか使用できず、
+PRINTL 自分の魔法＆罠ゾーンにこのカード名が存在しない場合に手札から永続魔法として発動できる。
+CALLFORM CARD_ABLE(1,魔罠起動)
+PRINTL ①：自分メインフェイズに発動できる。
+PRINTL 手札・EXデッキからレベルが５以上の「도레미코드」モンスター１体を特殊召喚する。
+CALLFORM CARD_ABLE(2,発動誘発)
+PRINTL ②：相手がフィールドで発動したモンスターの効果の処理時に、
+PRINTL 自分フィールドに「도레미코드」Lモンスターが存在する場合、その発動した効果を無効にできる。
+PRINTL その後、このカードを破壊する。
+
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL このカード名の①②のモンスター効果はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(3,手札起動)
+PRINTL ①：自分フィールドのモンスターが、存在しない場合または「도레미코드」モンスターのみの場合に発動できる。
+PRINTL このカードを手札から特殊召喚する。
+CALLFORM CARD_ABLE(4,戦場起動)
+PRINTL ②：自分メインフェイズに発動できる（このカードをリリースして発動する事もできる）。
+PRINTL 手札から「도레미코드 솔페지아」以外の「도레미코드」モンスター１体を特殊召喚する。
+PRINTL このカードをリリースして発動した場合、特殊召喚するモンスターを自分のEXデッキ（表側）・墓地から選ぶ事もできる。
+
+@CARDSUMMON_AA_12085
+
+
+@CARDCAN_12085(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 効果使用不可,3
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,12085)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 魔罠数(決闘者) >= 5
+		効果使用不可:0 = 1
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果条件名前 = 도레미코드 솔페지아
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		効果使用不可:0 = 1
+
+	SIF 発動済_3(決闘者,12085)
+		効果使用不可:1 = 1
+	CALL CARD_SS_CHECK(決闘者,12085,"手札")
+	SIF RESULT == 1
+		効果使用不可:1 = 1
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件固カテゴリ = 도레미코드
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 0
+		効果使用不可:1 = 1
+
+	SIF 効果使用不可:0 == 1 && 効果使用不可:1 == 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 種類 == 魔罠起動
+	SIF 発動済_1(決闘者,12085)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲EXデッキ = 1
+	効果条件カテゴリ = 도레미코드
+	効果条件種類 = EX以外全般
+	CALL 効果条件レベル_ADV(5, "以上")
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 発動誘発
+	SIF 発動済_2(決闘者,12085)
+		RETURN 0
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	CALL CARD_CHECK_START_DATA(決闘者,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = 도레미코드
+	効果条件種類 = リンク
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 戦場起動
+	SIF 発動済_4(決闘者,12085)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果範囲墓地 = 1
+	効果範囲EXデッキ = 1
+	効果条件カテゴリ = 도레미코드
+	効果条件固名前 = 도레미코드 솔페지아
+	効果条件召喚可 = 2
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_12085(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 条件A
+#DIM DYNAMIC 条件B
+#DIM DYNAMIC 効果使用不可,3
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+
+IF 種類 == 手札起動
+	SIF 魔罠数(決闘者) >= 5
+		効果使用不可:0 = 1
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果条件名前 = 도레미코드 솔페지아
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT == 1
+		効果使用不可:0 = 1
+
+	SIF 発動済_2(決闘者,12085)
+		効果使用不可:1 = 1
+	CALL CARD_SS_CHECK(決闘者,12085,"手札")
+	SIF RESULT == 1
+		効果使用不可:1 = 1
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果条件カテゴリ = 도레미코드
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		効果使用不可:1 = 1
+
+	IF 効果使用不可:0 == 0 && 効果使用不可:1 == 0
+		PRINTL 永続魔法として도레미코드 솔페지아を発動しますか？
+		CALL YN_CHOICE(決闘者)
+	ELSEIF 効果使用不可:1 == 1
+		RESULT = はい
+	ELSEIF 効果使用不可:0 == 1
+		RESULT = いいえ
+	ENDIF
+
+	IF RESULT == はい
+		CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,12085)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+		ENDIF
+	ELSEIF RESULT == いいえ
+		CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,12085,3)
+		IF RESULT == 0
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(決闘者, "手札", 場所)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == 魔罠起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,12085,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果範囲EXデッキ = 1
+		効果条件カテゴリ = 도레미코드
+		効果条件種類 = EX以外全般
+		CALL 効果条件レベル_ADV(5, "以上")
+		CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 発動誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,12085,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,破壊行き)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(決闘者,"発動無効",場所,"無効")
+	ENDIF
+ELSEIF 種類 == 戦場起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,12085,4)
+	IF RESULT == 0
+		IF モンスター数(決闘者) >= 5
+			RESULT = はい
+		ELSE
+			CALL YN_CHOICE(決闘者,"이 카드를 릴리스한다","이 카드를 릴리스하지 않는다")
+		ENDIF
+		IF RESULT == はい
+			CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+
+			CALL FULLRESET
+			効果範囲手札 = 1
+			効果範囲墓地 = 1
+			効果範囲EXデッキ = 1
+			効果条件カテゴリ = 도레미코드
+			効果条件固名前 = 도레미코드 솔페지아
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ELSE
+			CALL FULLRESET
+			効果範囲手札 = 1
+			効果条件カテゴリ = 도레미코드
+			効果条件固名前 = 도레미코드 솔페지아
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+

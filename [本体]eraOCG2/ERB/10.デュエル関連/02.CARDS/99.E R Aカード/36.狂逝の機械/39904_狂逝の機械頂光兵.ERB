@@ -1,0 +1,232 @@
+﻿@CARDNAME_39904,参照先
+;여기서 지정 카드의 이름, 약칭을 반환할 예정
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 이쿠기어 아쿠메 레이저 폰
+	CASE "略称"
+		RESULTS = 광서의정광병
+	CASE "カテゴリ"
+		RESULTS:0 = 광서의 기계
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_39904(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+	CASE "追加日"
+		RETURN 250706
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_39904(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ①②③의 효과는 각각 １턴에 １번밖에 사용할 수 없다.
+CALLFORM CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①：이 카드가 패 / 묘지에 존재하고, 자신 필드에 "광서의 기계" 카드가 존재할 경우에 발동할 수 있다.
+PRINTL 이 카드를 특수 소환한다.
+CALLFORM CARD_ABLE(2,소환時,특수소환時)
+PRINTL ②：이 카드가 소환 / 특수 소환한 경우에 발동할 수 있다.
+PRINTL 덱에서 "광서의 기계" 마법 / 함정 카드 １장을 패에 넣는다.
+CALLFORM CARD_ABLE(3,필드起動)
+PRINTL ③：자신 / 상대의 메인 페이즈에 １번, 상대 필드의 앞면 표시 몬스터 １장을 대상으로 하고 발동할 수 있다.
+PRINTL 그 몬스터의 공격력 / 수비력은 이 카드의 공격력만큼 다운하고, 발정시킨다.
+PRINTL 그 후, 필드의 "광서의 기계" 카드를 １장 선택하여, 그 카드에 미약 카운터를 １개 놓는다.
+PRINTL
+SETCOLOR C_RED
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー경고ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL ④：이 카드가 암컷 몬스터의 능력을 내릴 때、
+PRINTL 절정광선을 맞게해、강제적으로 절정아쿠메를 정해버린다。
+PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー주의ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
+PRINTL
+RESETCOLOR
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_39904(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39904)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,39904)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39904,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+    효과範囲마함 = 1
+	효과条件カテゴリ = 광서의 기계
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+    
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,39904)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = 마함全般
+	효과条件カテゴリ = 광서의 기계
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_3(듀얼리스트,39904)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+    효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_39904(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 減少値
+
+
+
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39904,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果追加種類:0 = 24
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39904,2)
+	IF RESULT == 0
+		CALL FULLRESET
+        효과範囲덱 = 1
+		효과条件カテゴリ = 광서의 기계
+        효과条件종류 = 마함全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39904,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件표시 = 表側표시
+        減少値 = GETVAR(@"%듀얼리스트%_MZ_攻:場所")
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"永攻DOWN",減少値)
+		CALL CARD_REMOVAL_BASIC(決闘者,"戦場単体",場所,"永守DOWN",減少値)
+		IF RESULT == 1
+			CALL CARD_EROTICS(RESULT:2)
+				IF RESULT != -1
+				조교대상 = RESULT
+				IF NO: 調教対象 == 2130
+
+					PRINTFORMW 機械頂光兵に不意に撃ち抜かたプリメラの肉体は全身をビクッビクッと跳ね上げてしまう、
+					PRINTFORMW その反応に遅れ桃色の光線で撃ち抜かれたプリメラは身に纏う鎧の下半身に愛液と潮を撒き散らして濡らしながら、
+					PRINTFORMW 困惑を快楽と喘ぎ声で上書きされ、がくがくと膝を揺らして地面に転び、絶頂を繰り返してしまう……
+
+					CALL MADORGASM_RAND_ROB_TXT(1,1)
+					CALL EROTIC_MOVE("절정光線",조교대상,-1,300)
+
+				ELSE
+				SELECTCASE RAND:3
+					CASE 0
+					PRINTFORMW 기계정광병은 오른쪽 어깨에 탑재된 강제 절정 광선을 발사하기 위한 저격포를 %CALLNAME:조교대상%에게 발사한다.
+					PRINTFORMW 몇 콤마 정도의 차이로, 분홍색 광선에 관통당한 %CALLNAME:조교대상%은 그 자리에서 갑자기 애액과 조수를 뿜어내며,
+					PRINTFORMW 뒤늦게 애액을 흘리듯이 신음소리를 퍼뜨리며 절정했다……
+					CASE 1
+					PRINTFORMW 기계정광병이 쏘는 절정 광선에 관통당한 %CALLNAME:조교대상%의 몸은 그 자리에서 애액과 조수를 뿜어내며 절정한다.
+					PRINTFORMW 육체에 무슨 일이 일어났는지도 모르는 %CALLNAME:조교대상%은 뜻밖의 사태에 대응할 수도 없고,
+					PRINTFORMW 그저 그 자리에서 육체를 『움찔❤움찔”❤』하고 튀어 오르며 계속 절정할 수밖에 없다……
+					CASE 2
+					PRINTFORMW %CALLNAME:조교대상%은 갑자기 자신의 육체를 관통한 분홍색 광선을 감지했다,
+					PRINTFORMW 그것을 자각하면서 몸이 계속 이키고 있다는 것을 인식한 %CALLNAME:조교대상%에게 몸에 받은 절정 광선에 대해 할 수 있는 것은 없었고,
+					PRINTFORMW 그저 가버리는 목소리를 내며, 절정할 때마다 "간다♡"라고 보고할 뿐인 비참한 암컷이 되어버렸다……
+				ENDSELECT
+				CALL MADORGASM_RAND_ROB_TXT(1,1)
+				CALL EROTIC_MOVE("절정光線",조교대상,-1,300)
+				ENDIF
+
+        	CALL STATCHANGE_EFFECT(듀얼리스트,"필드単体",場所,"発情")
+			ENDIF
+    	CALL FULLRESET
+        SETCOLOR C_PINK
+		PRINTFORML
+		PRINTFORML
+		PRINTFORML 　　　"광서의 기계" 에 미약카운터를 １개 올릴 수 있습니다, 대상을 선택해주세요.
+		PRINTFORML
+		RESETCOLOR
+		효과範囲필드 = 1
+		효과条件カテゴリ = 광서의 기계
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択カード = RESULT
+			IF 選択カード != 9999
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"薬Ｃ",1)
+			ENDIF
+	ENDIF
+	
+ENDIF
+
+
+
+
