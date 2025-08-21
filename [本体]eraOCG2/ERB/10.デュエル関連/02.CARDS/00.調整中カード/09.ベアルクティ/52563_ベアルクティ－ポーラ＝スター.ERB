@@ -1,0 +1,199 @@
+﻿@CARDNAME_52563,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 베어루크티－폴라＝스타
+	CASE "略称"
+		RESULTS = BeR폴라☆
+	CASE "カテゴリ"
+		RESULTS:0 = 베어루크티
+ENDSELECT
+
+
+@CARD_52563(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 700
+	CASE "守備力"
+		RETURN 2000
+	CASE "추가日"
+		RETURN 250818
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_52563(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(3,EX덱起動)
+PRINTL このカードはS소환できず、１ターンに１度、
+PRINTL 자신フィールドのレベル７と８の「베어루크티」モンスターを묘지に送った場合のみEX덱から특수소환できる。
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,EX소환時,특수소환時)
+PRINTL ①：このカードと자신の손패・フィールドのレベル８の「베어루크티」モンスター１体をリリースして발동できる。
+PRINTL レベル７の「베어루크티」Sモンスター１体を소환条件を無視してEX덱から특수소환する。
+PRINTL この효과で특수소환したモンスターは以下の효과を得る。
+PRINTL ●상대フィールドのレベルを持つEXモンスターの효과を발동できない。
+
+
+
+
+@CARDSUMMON_52563(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+
+RETURN 0
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52563) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_52563(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 싱크로レベル
+#DIM DYNAMIC 選択カード
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52563)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_3(듀얼리스트,52563)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,52563)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 베어루크티
+	효과条件レベル = 7
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 베어루크티
+	효과条件レベル = 8
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,52563)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	SIF GROUPMATCH(GETVARS(@"%듀얼리스트%_フィールド名"), "빅디퍼","베어트론")
+		효과範囲묘지 = 1
+	효과範囲필드 = 1
+	효과範囲손패 = 1
+	효과条件カテゴリ = 베어루크티
+	효과条件レベル = 8
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 베어루크티
+	효과条件レベル = 7
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52563(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 싱크로レベル
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52563,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件レベル = 8
+		효과条件튜너 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件レベル = 7
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52563,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		SIF GROUPMATCH(GETVARS(@"%듀얼리스트%_フィールド名"), "빅디퍼","베어트론")
+			효과範囲묘지 = 1
+		효과範囲필드 = 1
+		효과条件レベル = 8
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件カテゴリ = 베어루크티
+			효과条件レベル = 7
+			CALL CARD_CHOOSE_BASIC(듀얼리스트, "EX덱",ゾーン,場所)	
+			選択カード = RESULT
+			IF 選択カード != 9999
+				CALL FULLRESET
+				효과추가종류 = 9
+				CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+

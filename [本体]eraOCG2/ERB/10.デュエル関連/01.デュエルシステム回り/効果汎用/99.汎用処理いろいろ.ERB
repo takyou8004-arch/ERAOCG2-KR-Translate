@@ -176,6 +176,7 @@ VARSET 효과元カードID
 VARSET 효과条件攻撃可
 VARSET 효과설정改名
 VARSET 효과条件うらら解除
+VARSET 효과条件元々
 
 VARSET 強制必要素材名前
 VARSET 強制必要素材名前２
@@ -1220,6 +1221,14 @@ ENDIF
 
 
 IF SS소환可能종류 >= 1
+	IF SS소환可能종류 == レベル持ち
+		FOR カウンタ,1,40
+			VARSET 条件달성
+			IF GROUPMATCH(カウンタ,링크,엑시즈)
+				SETVAR @"%듀얼리스트%_SS可종류番号:{カウンタ}", 0
+			ENDIF
+		NEXT
+	ELSE
 	FOR カウンタ,1,40
 		VARSET 条件달성
 		FOR カウンタB,0,40
@@ -1232,8 +1241,11 @@ IF SS소환可能종류 >= 1
 			CONTINUE
 		SETVAR @"%듀얼리스트%_SS可종류番号:{カウンタ}", 0
 	NEXT
+	ENDIF
 ENDIF
 VARSET SS소환可能종류, -1
+
+
 
 IF SS소환可能속성 >= 1
 	FOR カウンタ,1,7
@@ -1672,11 +1684,12 @@ RETURN 条件달성
 ;특수소환（SS）可否判断
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 ;특수소환된 카드의 체크、넘어갈 경우엔 RETURN 0,불가능한 경우엔 RETURN 1
-@CARD_SS_CHECK(듀얼리스트,カードID,ゾーン,EX소환플래그)
+@CARD_SS_CHECK(듀얼리스트,カードID,ゾーン,EX소환플래그,反転플래그)
 #DIMS DYNAMIC 듀얼리스트
 #DIM DYNAMIC カードID
 #DIMS DYNAMIC ゾーン
 #DIM DYNAMIC EX소환플래그
+#DIM DYNAMIC 反転플래그
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC カウンタB
 
@@ -1688,8 +1701,14 @@ CALL 対面者판정(듀얼리스트)
 
 SIF GETVAR(@"%듀얼리스트%_SS阻害状態") >= 1
 	RETURN 1
+IF 反転플래그 == 1
+	SIF モンスター数(듀얼리스트) >= 5 && EX소환플래그 == 0
+		RETURN 1
+	ELSE
 SIF モンスター数(듀얼리스트) >= 5 && EX소환플래그 == 0
 	RETURN 1
+ENDIF
+
 
 ;ターン1、SS制限
 IF カードID > 0
@@ -3015,9 +3034,10 @@ SIF TARGET >= 1
 PRINTFORML 합계DP:{FLAG:듀얼포인트}
 
 
+;Anonym추가
 IF 상대_듀얼패배플래그 >= 1
 	レート増減 = (획득DP / 100)
-	;Anonym추가
+	IF TARGET == -1 ;オンラインレート戦
 	IF オンラインレート < 100
 		レート増減 *= 5
 	ELSEIF INRANGE(オンラインレート,100,199)
@@ -3027,16 +3047,39 @@ IF 상대_듀얼패배플래그 >= 1
 	ELSEIF INRANGE(オンラインレート,300,399)
 		レート増減 *= 2
 	ENDIF
+	ELSE ;오프라인레이트戦
+		IF CFLAG:MASTER:오프라인레이트 < 2000
+			レート増減 *= 4
+		ELSEIF INRANGE(CFLAG:MASTER:오프라인레이트,2000,3999)
+			レート増減 *= 3
+		ELSEIF INRANGE(CFLAG:MASTER:오프라인레이트,4000,7999)
+			レート増減 *= 2
+		ENDIF
+	ENDIF
 ELSEIF 자신_듀얼패배플래그 >= 1
-	レート増減 = 8 + (オンラインレート / 1000 * 3)
+	IF TARGET == -1 ;オンラインレート戦
+		レート増減 = 8 + (オンラインレート / 1000 * 3)
+	ELSE ;오프라인레이트戦
+		レート増減 = 20 + (CFLAG:MASTER:오프라인레이트 / 100)
+	ENDIF
 ENDIF
 
 
 CUSTOMDRAWLINE —
 
 EXP:MASTER:듀얼경험 ++
+;Anonym추가。듀얼승리、패배경험
 SIF TARGET >= 1
 	EXP:TARGET:듀얼경험 ++
+IF 자신_듀얼패배플래그 >= 1
+	EXP:MASTER:듀얼패배경험 ++
+	SIF TARGET >= 1
+		EXP:TARGET:듀얼승리경험 ++
+ELSE
+	EXP:MASTER:듀얼승리경험 ++
+	SIF TARGET >= 1
+		EXP:TARGET:듀얼패배경험 ++
+ENDIF
 RETURN 획득DP
 
 

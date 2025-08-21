@@ -208,6 +208,9 @@ CASE 3
 		PRINTFORMW %CALLNAME:MASTER%가 어둠의 게임을 선언한 순간、주위 일대가 어둠에 휩싸였다。
 		PRINTFORMW 서로 지는것이 용서되지 않는 듀얼이 시작된다……！
 	ENDSELECT
+CASE 5
+	TFLAG:SELECTCOM분기 = 10
+	CALL KOJO_MESSAGE_SEND("COMMAND")
 ENDSELECT
 
 ;ターゲットの보존
@@ -225,7 +228,7 @@ CASEELSE
 	IF 選択モード == 2
 		CALL DUEL_SYSTEM(2,,,先攻플래그설정)
 	;オンラインレートマッチ
-	ELSEIF 選択モード == 4
+	ELSEIF 選択モード == 4 || 選択モード == 5
 		CALL DUEL_SYSTEM(3)
 	;公式デュエル
 	ELSE
@@ -281,6 +284,24 @@ ELSEIF 選択モード == 4
 		PRINTFORML 패배해서 레이트가 내려갔다…
 		PRINTFORMW 현재 온라인 레이트:{オンラインレート} - {レート増減}
 		オンラインレート -= レート増減
+	ENDIF
+ELSEIF 選択モード == 5 && TALENT:TARGET:듀얼리스트 >= 1
+	IF デュエル結果 == 結果_승리
+		PRINTFORML 승리해서 레이트가 올랐다！
+		PRINTFORML 현재 자신의 오프라인 레이트:{CFLAG:MASTER:오프라인레이트} + {レート増減}
+		PRINTFORML 현재 %CALLNAME:TARGET%의 오프라인 레이트:{CFLAG:TARGET:오프라인레이트} - {レート増減 }
+		CFLAG:MASTER:오프라인레이트 += レート増減
+		CFLAG:TARGET:오프라인레이트 -= レート増減 * 3
+		SIF CFLAG:TARGET:오프라인레이트 == 0
+			CFLAG:TARGET:오프라인레이트 = -1
+	ELSEIF デュエル結果 == 結果_패배
+		PRINTFORML 패배해서 레이트가 내려갔다…
+		PRINTFORML 현재의 자신의 오프라인 레이트:{CFLAG:MASTER:오프라인레이트} - {レート増減 * 3}
+		PRINTFORML 현재의 %CALLNAME:TARGET%의 오프라인 레이트:{CFLAG:TARGET:오프라인레이트} + {レート増減 * 3}
+		CFLAG:MASTER:오프라인레이트 -= レート増減
+		SIF CFLAG:MASTER:오프라인레이트 == 0
+			CFLAG:MASTER:오프라인레이트 = -1
+		CFLAG:TARGET:오프라인레이트 += レート増減 * 3
 	ENDIF
 ENDIF
 SIF 賭け内容 == 0
@@ -434,7 +455,7 @@ IF デュエル結果 == 結果_승리
 						;PRINTFORMW えっちな絵違いだ！やったね！
 				ELSE
 					IF TCVAR:TARGET:질내사정횟수 >= 1
-						;用意した画像が질내사정ありきの事後なので
+						;用意した화상が질내사정ありきの事後なので
 						CALLFORM IMAGE_PRODUCTION(TARGET,9999)
 						SIF RESULT == 1
 							PRINTFORMW ────찰칵、하고。
@@ -500,7 +521,7 @@ IF デュエル結果 == 結果_승리
 		PRINTFORMW %CALLNAME:TARGET%의 소극적 합의를 받고、어깨를 야릇하게 쓰다듬으며 %CALLNAME:MASTER%의 입이 히죽하며 비틀린다。
 		PRINTL
 		;0418改
-		;特定の場所で있는 경우、ホテル以外にも行ける。ただし画像の관계で弱みは握れない。用意してくれても……いいのよ？
+		;特定の場所で있는 경우、ホテル以外にも行ける。ただし화상の관계で弱みは握れない。用意してくれても……いいのよ？
 		;서술문の書きやすさの관계で女のみ。성별のIF外す場合は、서술문の齟齬を무시하고 ね♥
 		IF TALENT:TARGET:성별 == 1 && (CFLAG:MASTER:현재위치 == 場所_カドショ || CFLAG:MASTER:현재위치 == 場所_カフェ || CFLAG:MASTER:현재위치 == 場所_公園 || CFLAG:MASTER:현재위치 == 場所_教会 || CFLAG:MASTER:현재위치 == 場所_学校内 || CFLAG:MASTER:현재위치 == 場所_裏通り)
 			PRINTFORML [1] - 호텔로 데리고간다
@@ -930,7 +951,7 @@ IF デュエル結果 == 結果_승리
 				PRINTFORML %CALLNAME:MASTER%은 역할을 끝낸 소년을 방에서 내쫒았다、
 				PRINTFORMW 오늘이라는 날을 기념으로、마지막으로 한장、듬뿍 범해준 %CALLNAME:TARGET%의 있을수 없는 사후사진을 찍고、 %CALLNAME:MASTER%는 호텔방을 뒤로했다……。
 				IF TCVAR:TARGET:질내사정횟수 >= 1
-					;用意した画像が질내사정ありきの事後なので
+					;用意した화상が질내사정ありきの事後なので
 					CALLFORM IMAGE_PRODUCTION(TARGET,9999)
 				ENDIF
 				PRINTL
@@ -976,7 +997,7 @@ IF デュエル結果 == 結果_승리
 				PRINTFORMW %CALLNAME:TARGET%의 몸은 충분히 즐겼다。
 				PRINTL
 				IF TCVAR:TARGET:질내사정횟수 >= 1
-					;用意した画像が질내사정ありきの事後なので
+					;用意した화상が질내사정ありきの事後なので
 					CALLFORM IMAGE_PRODUCTION(TARGET,9999)
 					SIF RESULT == 1
 						PRINTFORML ────찰칵、하고。
@@ -1318,7 +1339,7 @@ IF デュエル結果 == 結果_승리
 				PRINTFORMW 꽤 만족한 한때 였다……。
 				PRINTL
 				IF TCVAR:TARGET:질내사정횟수 >= 1 && ラブホ以外 == 0
-					;用意した画像が질내사정ありきの事後なので
+					;用意した화상が질내사정ありきの事後なので
 					CALLFORM IMAGE_PRODUCTION(TARGET,9999)
 					SIF RESULT == 1
 						PRINTFORMW ────찰칵、하고。

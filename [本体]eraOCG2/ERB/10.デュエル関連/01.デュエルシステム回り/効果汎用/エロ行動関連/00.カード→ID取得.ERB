@@ -1,12 +1,13 @@
-﻿@CARD_EROTICS(カードID,듀얼리스트,正規起動)
+﻿@CARD_EROTICS(カードID,듀얼리스트,듀얼外処理)
 #DIMS DYNAMIC 듀얼리스트
 #DIM DYNAMIC カードID
 #DIM DYNAMIC 確認カードID
 #DIM DYNAMIC 캐릭터_ID
 #DIM DYNAMIC カウンタ
-#DIM DYNAMIC 正規起動
+#DIM DYNAMIC 듀얼外処理
 VARSET RESULT
 
+VARSET 캐릭터_ID, -1
 
 TRYCALLFORM CARD_{カードID}("連動ID")
 SIF RESULT > 0
@@ -44,7 +45,7 @@ SELECTCASE カードID
 		確認カードID = カードID
 ENDSELECT
 
-VARSET 캐릭터_ID, -1
+;캐릭터番号総当たりで、確認カードIDと同じ番号なら、その캐릭터IDを返す
 FOR カウンタ,1,CHARANUM
 	IF NO:カウンタ == 確認カードID
 		캐릭터_ID = カウンタ
@@ -61,7 +62,7 @@ RETURN -1
 #DIM DYNAMIC 確認カードID
 #DIM DYNAMIC 캐릭터_ID
 #DIM DYNAMIC カウンタ
-#DIM DYNAMIC 正規起動
+#DIM DYNAMIC 듀얼外処理
 #DIM DYNAMIC CNT설정
 #DIM DYNAMIC 条件合致数
 #DIM DYNAMIC 条件合致ID,100
@@ -69,7 +70,7 @@ RETURN -1
 ;【条件달성０】そのカード_IDがあるなら返す
 カードID = NO:캐릭터_ID
 IF ENUMFILES("RESOURCES/DUEL", @"{カードID}_DUEL.*")
-	IF CNT설정 == 1
+	IF CNT설정 >= 1
 		条件合致ID:条件合致数 = カードID
 		条件合致数 ++
 	ELSE
@@ -78,25 +79,49 @@ IF ENUMFILES("RESOURCES/DUEL", @"{カードID}_DUEL.*")
 ENDIF
 ;＞＞　第２チェック、その他カード　＜─────────────────────────────────────
 ;総当たり
-FOR カードID,10000,70000
+FOR カウンタ,10000,70000
 	VARSET RESULTS
-	TRYCALLFORM CARDNAME_{カードID}, "名前"
+	;名前のないカードは弾く
+	TRYCALLFORM CARDNAME_{カウンタ}, "名前"
 	SIF RESULTS == ""
 		CONTINUE
-	CALL CARD_EROTICS(カードID)
+
+	;複数캐릭터は弾く
+	TRYCALLFORM CARD_{カウンタ}, "連動ID"
+	SIF RESULT:1 >= 1
+		CONTINUE
+	;GIDの취득であるためゲーム外での処理
+	CALL CARD_EROTICS(カウンタ,0,1)
 	SIF RESULT != 캐릭터_ID
 		CONTINUE
-	IF ENUMFILES("RESOURCES/DUEL", @"{カードID}_DUEL.*")
-		IF CNT설정 == 1
-			条件合致ID:条件合致数 = カードID
+	;カードIDに当たるリソースを確認して、설정する
+	IF ENUMFILES("RESOURCES/DUEL", @"{カウンタ}_DUEL.*")
+		IF CNT설정 >= 1
+			条件合致ID:条件合致数 = カウンタ
 			条件合致数 ++
 		ELSE
-			RETURN カードID
+			RETURN カウンタ
 		ENDIF
 	ENDIF
 NEXT
-IF CNT설정 == 1
-	FOR カウンタ,0,10
+;＞＞　第３チェック、ALTカードグラ　＜─────────────────────────────────────
+;総当たり
+IF CNT설정 >= 2
+	FOR カウンタ,2,20
+		;カードIDに当たるリソースを確認して、설정する
+		IF ENUMFILES("RESOURCES/DUEL", @"{カードID}_DUEL_{カウンタ}.*")
+			IF CNT설정 >= 1
+				条件合致ID:条件合致数 = カードID + (100000 * カウンタ)
+				条件合致数 ++
+			ELSE
+				RETURN 100000 * カウンタ
+			ENDIF
+		ENDIF
+	NEXT
+ENDIF
+
+IF CNT설정 >= 1
+	FOR カウンタ,0,20
 		RESULT:(カウンタ + 1) = 条件合致ID:カウンタ
 	NEXT	
 	RETURN 条件合致数
@@ -140,6 +165,7 @@ ELSEIF ゾーン == "마함"
 ELSE
 	カード_ID = GETVAR(@"%対面者%_%ゾーン%:場所")
 ENDIF
+;正規起動は必要ない
 CALL CARD_EROTICS(カード_ID)
 
 

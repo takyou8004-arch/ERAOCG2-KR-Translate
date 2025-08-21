@@ -65,6 +65,7 @@ IF 反転플래그 == 1
 ELSE
 	대상者 = %対面者%
 ENDIF
+;VARSET 選択カード, -1
 
 $CHOICE_LOOP
 CUSTOMDRAWLINE —
@@ -145,7 +146,7 @@ SELECTCASE 효과範囲
 		RETURN 1
 ;――――――――――――――――――――――――――――――単体破壊―――――――――――――――――――――――――
 	CASE "単体除去"
-		VARSET 選択カード, -1
+
 		VARSET 現在最大攻撃力, -1
 		IF 효과条件複数
 			FOR カウンタ,0,複数カウンタ
@@ -157,6 +158,10 @@ SELECTCASE 효과範囲
 			FOR カウンタ,0,5
 				IF 효과条件他所 > 0
 					SIF カウンタ == 場所
+						CONTINUE
+				ENDIF
+				IF 효과条件複数 > 0
+					SIF MATCH(효과条件選択済, カウンタ)
 						CONTINUE
 				ENDIF
 				CALL CARD_REMOVAL_ABLE(듀얼리스트,듀얼리스트,"単体",カウンタ,除去種,カードID)
@@ -183,6 +188,10 @@ SELECTCASE 효과範囲
 		ENDIF
 		IF 효과範囲상대필드 == 1
 			FOR カウンタ,0,5
+				IF 효과条件複数 > 0
+					SIF MATCH(효과条件選択済, カウンタ + 2000)
+						CONTINUE
+				ENDIF
 				CALL CARD_REMOVAL_ABLE(対面者,듀얼리스트,"単体",カウンタ,除去種,カードID)
 				IF RESULT == 0 
 					CONTINUE
@@ -238,6 +247,10 @@ SELECTCASE 효과範囲
 					SIF カウンタ == 場所
 						CONTINUE
 				ENDIF
+				IF 효과条件複数 > 0
+					SIF MATCH(효과条件選択済, カウンタ + 10)
+						CONTINUE
+				ENDIF
 				CALL CARD_REMOVAL_ABLE(듀얼리스트,듀얼리스트,"単体",カウンタ,除去種,カードID,1)
 				IF RESULT == 0 
 					CONTINUE
@@ -261,6 +274,11 @@ SELECTCASE 효과範囲
 
 		IF 효과範囲상대마함 == 1
 			FOR カウンタ,0,5
+				IF 효과条件複数 > 0
+					SIF MATCH(효과条件選択済, カウンタ + 2010)
+						CONTINUE
+				ENDIF
+
 				CALL CARD_REMOVAL_ABLE(対面者,듀얼리스트,"単体",カウンタ,除去種,カードID,1)
 				IF RESULT == 0 
 					CONTINUE
@@ -353,7 +371,7 @@ SELECTCASE 효과範囲
 				PRINTL 　(9999) - 돌아간다(선택할 수 있는 카드가 없습니다)
 				RESETCOLOR
 			ELSE
-				PRINTFORM 　%"[9999] - 돌아간다",41,LEFT%
+				PRINTL 　[9999] - 돌아간다
 			ENDIF
 			PRINTL
 			BINPUT
@@ -424,11 +442,11 @@ SELECTCASE 효과範囲
 		ELSE
 			CALL CARD_SELECT(듀얼리스트,選択カード)
 			他参照選択カードID = GETVAR(@"%대상者（CS）%_%参照先（CS）%:選択カード（CS）")
-			他参照選択カード = 選択カード:複数カウンタ
+			他参照選択カード = 選択カード（CS）
 			IF 除去種 == "選択"
 				RESULT:99 = 他参照選択カードID
-				RESULT:10 = 選択カード
-				RESULT:1 = 選択カード:複数カウンタ
+				;RESULT:10 = 選択カード
+				RESULT:1 = 選択カード（CS）
 				RETURN 1
 			ENDIF
 			IF 参照先（CS） == "마함"

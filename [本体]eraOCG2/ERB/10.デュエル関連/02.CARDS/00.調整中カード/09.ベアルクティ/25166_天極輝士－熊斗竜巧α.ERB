@@ -1,0 +1,274 @@
+﻿@CARDNAME_25166,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 천극휘사－베어트론알파
+	CASE "略称"
+		RESULTS = 베어트론α
+	CASE "カテゴリ"
+		RESULTS:0 = 베어루크티
+		RESULTS:1 = 드라이트론
+ENDSELECT
+
+@CARD_25166(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 700
+	CASE "소환불가"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250818
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_25166(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の효과は①②の효과はそれぞれ１ターンに１度しか使用できない。
+PRINTL このカードは通常소환できず、カードの효과でのみ특수소환できる。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①：「천극휘사－베어트론α」を除く、「베어루크티」モンスターか「드라이트론」モンスターが자신フィールドに存在する場合に발동できる。
+PRINTL このカードを손패から특수소환する。
+PRINTL その後、덱から「베어루크티」마법・함정カードか「드라이트론」마법・함정カード１枚を손패に加える事ができる。
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：자신の손패・フィールドから、フィールド마법カードを１枚묘지に送って발동できる。
+PRINTL このカードは「천극휘함－베어트론」となり、마법・함정ゾーンにセットする。
+
+@CARDCAN_25166(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과使用불가,10
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25166)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,25166)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ:0 = 베어루크티
+	효과条件カテゴリ:1 = 드라이트론
+	효과条件固名前 = 천극휘사－베어트론알파
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,25166,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,25166)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	SIF 마함数(듀얼리스트) < 5
+		효과範囲손패 = 1
+	효과範囲마함 = 1
+	효과条件종류 = フィールド
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_25166(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과使用불가,10
+#DIMS DYNAMIC 選択名前
+#DIM DYNAMIC 選択カード_ID
+
+IF 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25166,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 베어루크티
+		효과条件종류 = 마함全般
+		효과条件任意 = 1
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)		
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25166,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		SIF 마함数(듀얼리스트) < 5
+			효과範囲손패 = 1
+		효과範囲마함 = 1
+		효과条件종류 = フィールド
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL CARD_RECONSTRUCT(듀얼리스트,ゾーン,場所,125166)
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+@CARDNAME_125166,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 천극휘함－베어트론
+	CASE "略称"
+		RESULTS = 천극휘함베어트론
+	CASE "カテゴリ"
+		RESULTS:0 = 베어루크티
+		RESULTS:1 = 드라이트론
+ENDSELECT
+
+
+@CARD_125166(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+	CASE "추가日"
+		RETURN 250819
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_125166(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신フィールドは「베어트론」となる。
+PRINTL このカード名の②の효과は１ターンに２度しか使用できない。
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ①：자신の「베어루크티」モンスターが효과を발동するためにモンスターをリリースする場合、
+PRINTL 代わりに자신の묘지のカード１枚を제외できる。
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②：자신フィールドに他の효과モンスターが특수소환された場合に발동できる。
+PRINTL 제외されているカード及び덱から「베어루크티」または「드라이트론」モンスター１体を손패に加える。
+PRINTL その後、상대フィールドの表側표시モンスターのレベルは全て１つ下がる。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：의식마법カードの효과の발동及びその발동した효과は無効化されない。
+
+@CARDCAN_125166(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,125166)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,125166)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과範囲덱 = 1
+	효과条件カテゴリ:1 = 베어루크티
+	효과条件カテゴリ:0 = 드라이트론
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_125166(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,125166)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,125166,15)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과範囲덱 = 1
+		효과条件カテゴリ:1 = 베어루크티
+		효과条件カテゴリ:0 = 드라이트론
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		CALL STATCHANGE_OTHER(듀얼리스트,"상대필드",場所,"永星",-1,125166)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "베어트론")
+	CALL SET_CAT_SOGAI_INFO(듀얼리스트,"의식마법")
+ENDIF

@@ -156,7 +156,11 @@ ELSEIF 元参照先 == "덱"
 	参照先 = 덱
 	上級値 = 300
 ELSEIF 元参照先 == "EX덱"
-	サーチ範囲 = 紙束最大値
+	IF めくり数 != 0
+		サーチ範囲 = めくり数
+	ELSE
+		サーチ範囲 = 紙束最大値
+	ENDIF
 	実行者 = %듀얼리스트%
 	参照先 = EX덱
 	上級値 = 400
@@ -196,7 +200,12 @@ ELSEIF 元参照先 == "상대덱"
 	参照先 = 덱
 	上級値 = 2300
 ELSEIF 元参照先 == "상대EX덱"
-	サーチ範囲 = 紙束最大値
+
+	IF めくり数 != 0
+		サーチ範囲 = めくり数
+	ELSE
+		サーチ範囲 = 紙束最大値
+	ENDIF
 	実行者 = %対面者%
 	参照先 = EX덱
 	上級値 = 2400
@@ -421,6 +430,16 @@ ENDIF
 
 #DIM DYNAMIC 戻り値
 
+
+;チェック플래그
+;1： CARD_CHECK_BASIC用
+;2： 특수소환可否の確認
+;3： 除去판정用
+;4： CARD_START_2用確認
+;5： ERO효과用
+;6： CARD_START用確認
+
+
 IF チェック플래그 == 5
 	戻り値 = -1
 ELSE
@@ -430,7 +449,7 @@ SIF 듀얼리스트 == "" ;Anonym추가
 	듀얼리스트 = %実行者%
 
 
-
+;
 IF チェック플래그 == 6
 	参照先 = 묘지
 	カウンタ = 0
@@ -603,9 +622,8 @@ IF 효과条件カテゴリ != ""
 	NEXT
 	;PRINTFORML ここ通過２A　：효과条件カテゴリ：%효과条件カテゴリ%
 
-	IF 参照先 == "필드"
+	IF 参照先 == "필드" && 효과条件元々 == 0
 		;改名されてるとカテゴリをすべて失い、추가カテゴリのみ
-		
 		IF GETVAR(@"%実行者%_MZ_変化元ID:カウンタ") > -1
 			TRYCALLFORM CARDNAME_{GETVAR(@"%実行者%_MZ_変化元ID:カウンタ")}, "カテゴリ"
 			SIF MATCH(효과条件カテゴリ, RESULTS)
@@ -792,7 +810,7 @@ IF 효과条件종류  > 0
 		RETURN 戻り値
 ENDIF
 
-IF チェック플래그 == 2
+IF GROUPMATCH(チェック플래그,2,7)
 	TRYCALLFORM CARD_{설정カードID}, "종류"
 	SIF RESULT > 10
 		RETURN 戻り値
@@ -802,9 +820,15 @@ IF チェック플래그 == 2
 		TRYCALLFORM CARD_{설정カードID}, "특수불가"
 		SIF RESULT == 1
 			RETURN 戻り値
+		IF チェック플래그 == 2
 		CALL CARD_SS_CHECK(듀얼리스트,설정カードID,参照先) ;Anonym修正
 		SIF RESULT == 1
 			RETURN 戻り値
+	ELSE
+		CALL CARD_SS_CHECK(듀얼리스트,설정カードID,参照先) ;Anonym修正
+		SIF RESULT == 1
+			RETURN 戻り値
+		ENDIF
 	ELSE
 		SIF モンスター数(듀얼리스트) >= 5
 			RETURN 戻り値
@@ -872,6 +896,9 @@ IF 参照先 == "필드" || 参照先 == "마함"
 		SIF 효과条件표시 != 0 && 효과条件표시 <= 9 && GETVAR(@"%実行者%_%MZ魔판정%_表:カウンタ") != 효과条件표시
 			RETURN 戻り値
 	ENDIF
+
+
+
 	IF 효과条件個Ｃ所持 > 0
 		IF 효과条件個Ｃ所持 == 888
 			SIF GETVAR(@"%実行者%_%MZ魔판정%_個Ｃ:カウンタ") >= 1
@@ -946,6 +973,26 @@ IF 参照先 == "필드" || 参照先 == "마함"
 			CALL CARD_REMOVAL_ABLE(実行者,듀얼리스트,"単体",カウンタ,효과条件除去種,カードID,1)
 			SIF RESULT != 1
 				RETURN 戻り値
+		ENDIF
+	ENDIF
+	
+	IF 효과条件所有 >= 1
+		IF 효과条件所有 == 1
+			IF 듀얼리스트 == "자신"
+				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 1
+					RETURN 戻り値
+			ELSEIF 듀얼리스트 == "상대"
+				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 2
+					RETURN 戻り値
+			ENDIF
+		ELSEIF 효과条件所有 == 2
+			IF 듀얼리스트 == "자신"
+				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 2
+					RETURN 戻り値
+			ELSEIF 듀얼리스트 == "상대"
+				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 1
+					RETURN 戻り値
+			ENDIF
 		ENDIF
 	ENDIF
 ENDIF
@@ -1310,6 +1357,25 @@ ELSE
 		ENDIF
 	ENDIF
 
+	IF 효과条件所有 >= 1
+		IF 효과条件所有 == 1
+			IF 듀얼리스트 == "자신"
+				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 1
+					RETURN 0
+			ELSEIF 듀얼리스트 == "상대"
+				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 2
+					RETURN 0
+			ENDIF
+		ELSEIF 효과条件所有 == 2
+			IF 듀얼리스트 == "자신"
+				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 2
+					RETURN 0
+			ELSEIF 듀얼리스트 == "상대"
+				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 1
+					RETURN 0
+			ENDIF
+		ENDIF
+	ENDIF
 
 	IF 효과条件소환可 > 0
 		IF 효과条件特不無視 == 0
@@ -1728,25 +1794,7 @@ IF 参照先 == "필드" || 参照先 == "마함"
 		SIF 효과条件표시 != 0 && 효과条件표시 <= 9 && GETVAR(@"%実行者%_%MZ魔판정%_表:カウンタ") != 효과条件표시
 			RETURN 0
 	ENDIF
-	IF 효과条件所有 >= 1
-		IF 효과条件所有 == 1
-			IF 듀얼리스트 == "자신"
-				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 1
-					RETURN 0
-			ELSEIF 듀얼리스트 == "상대"
-				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 2
-					RETURN 0
-			ENDIF
-		ELSEIF 효과条件所有 == 2
-			IF 듀얼리스트 == "자신"
-				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 2
-					RETURN 0
-			ELSEIF 듀얼리스트 == "상대"
-				SIF GETVAR(@"%実行者%_%MZ魔판정%_所有:カウンタ") != 1
-					RETURN 0
-			ENDIF
-		ENDIF
-	ENDIF
+	
 ENDIF
 
 

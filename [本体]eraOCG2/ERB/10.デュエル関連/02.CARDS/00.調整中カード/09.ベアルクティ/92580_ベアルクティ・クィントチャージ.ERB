@@ -1,0 +1,164 @@
+@CARDNAME_92580,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 베어루크티 퀸트차지
+	CASE "略称"
+		RESULTS = BeR퀸트
+	CASE "カテゴリ"
+		RESULTS:0 = 베어루크티
+ENDSELECT
+
+
+@CARD_92580(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+	CASE "추가日"
+		RETURN 250818
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_92580(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
+PRINTL ①：７００LPを払い、자신フィールドの「베어루크티」モンスター１体を選択して발동できる。
+PRINTL そのカードの특수소환する際の효과を발동する。
+PRINTL この효과で「베어루크티－셉텐＝트리온」を選択した場合、상대フィールドのEXモンスター１体を제외する。
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②：자신の「베어루크티」Sモンスターが상대の攻撃で破壊された時に발동できる。
+PRINTL 상대は自身の손패・フィールド・묘지のカードの合計が７枚になるように持ち主の덱に戻さなければならない。
+
+@CARDCAN_92580(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92580)
+SIF RESULT == 1
+	RETURN 0
+
+;起動효과
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	IF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	ELSEIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 2
+		RETURN 1
+	ENDIF
+
+	SIF 발동済_1(듀얼리스트,92580)
+		RETURN 0
+	;戻すべき마법사족がいるかチェック
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 베어루크티
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,92580)
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과範囲상대손패 = 1
+	효과範囲상대묘지 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 7
+		RETURN 0
+
+	SIF 直前戦闘破壊ID(듀얼리스트) == 0
+		RETURN 0
+	TRYCALLFORM CARD_{直前戦闘破壊ID(듀얼리스트)}, "종류"
+	SIF RESULT != 싱크로
+		RETURN 0
+	TRYCALLFORM CARD_{直前戦闘破壊ID(듀얼리스트)}, "カテゴリ"
+	SIF RESULTS != "베어루크티"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_92580(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;①の효과
+IF 종류 == 마함起動 || (종류 == フリー誘発 && ゾーン == "마함")
+	IF GETVAR(@"%듀얼리스트%_魔_表:場所") == 2
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92580)
+		IF RESULT == 0
+			CALL CARDCAN_92580(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				CALL YN_CHOICE(듀얼리스트,"효과を使用する","효과を使用しない")
+				IF RESULT == 0
+					GOTO EFFECT_USE
+				ENDIF
+			ENDIF
+		ENDIF
+	ELSE
+		$EFFECT_USE
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92580,1)
+		IF RESULT == 0
+			CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",700)
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ = 베어루크티
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				CALLFORM CARDEFFECT_{RESULT:99}(듀얼리스트,특수소환時,"효과処理")
+			ENDIF
+		ENDIF
+	ENDIF
+;②の효과
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92580)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과条件複数 = 7
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(対面者,ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+

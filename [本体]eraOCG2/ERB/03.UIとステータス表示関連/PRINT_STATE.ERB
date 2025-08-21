@@ -21,18 +21,41 @@
 #DIM DYNAMIC 終了時LCOUNT
 #DIM DYNAMIC GDI値
 #DIM DYNAMIC サムネ_ID
+#DIMS DYNAMIC 화상パス지정
 #DIM DYNAMIC 顔グラ_ID
 #DIM DYNAMIC ALT_グラID,20
 #DIM DYNAMIC グラ数
+#DIM DYNAMIC 지정グラ番号
 #DIM GDI보존
 
 $INPUT_LOOP
+;そのままサムネ화상を취득する
 CALL FIND_CHARA_GID(캐릭터_ID)
 サムネ_ID = RESULT
-IF CFLAG:캐릭터_ID:그래픽설정 >= 1
+;PRINTFORM 그래픽설정 :{CFLAG:캐릭터_ID:그래픽설정}
+IF CFLAG:캐릭터_ID:그래픽설정 >= 100000
+	지정グラ番号 = (CFLAG:캐릭터_ID:그래픽설정 - NO:캐릭터_ID) / 100000
+	IF !ENUMFILES("RESOURCES/DUEL", @"{CFLAG:캐릭터_ID:그래픽설정}_DUEL_{지정グラ番号}.*")
+		サムネ_ID = CFLAG:캐릭터_ID:그래픽설정
+		화상パス지정 = {NO:캐릭터_ID}_DUEL_{지정グラ番号}.*
+	ELSE 
+		화상パス지정 = ""
+		CFLAG:캐릭터_ID:그래픽설정 = 0
+	ENDIF
+ELSEIF CFLAG:캐릭터_ID:그래픽설정 >= 1
 	IF ENUMFILES("RESOURCES/DUEL", @"{CFLAG:캐릭터_ID:그래픽설정}_DUEL.*")
 		サムネ_ID = CFLAG:캐릭터_ID:그래픽설정
+		화상パス지정 = {CFLAG:캐릭터_ID:그래픽설정}_DUEL.*
 	ELSE 
+		화상パス지정 = ""
+		CFLAG:캐릭터_ID:그래픽설정 = 0
+	ENDIF
+ELSEIF CFLAG:캐릭터_ID:그래픽설정 == 0
+	IF ENUMFILES("RESOURCES/DUEL", @"{NO:캐릭터_ID}_DUEL.*")
+		サムネ_ID = NO:캐릭터_ID
+		화상パス지정 = {NO:캐릭터_ID}_DUEL.*
+	ELSE 
+		화상パス지정 = ""
 		CFLAG:캐릭터_ID:그래픽설정 = 0
 	ENDIF
 ENDIF
@@ -98,12 +121,13 @@ IF デバッグシステム
 ELSE
 	PRINTFORM %"",62,LEFT%
 ENDIF
-;カード画像취득＆표시
-CALL PRINT_STATE_INFO(캐릭터_ID,サムネ_ID)
+;カード화상취득＆표시
+;CALL PRINT_STATE_INFO(캐릭터_ID,サムネ_ID)
+CALL PRINT_STATE_INFO(캐릭터_ID,화상パス지정)
 
 PRINTL
 PRINT ┃
-;顔画像취득
+;顔화상취득
 CALL SHOW_GRAPHICS(캐릭터_ID,GDI値,5)
 PRINT ┃
 PRINTFORM 【%NAME:캐릭터_ID%】
@@ -152,6 +176,9 @@ IF 캐릭터_ID != MASTER
 	PRINTFORM ・호감도 랭크:
 	CALL FAV_RANK(CFLAG:캐릭터_ID:호감도)
 	PRINTFORM ({CFLAG:캐릭터_ID:호감도})
+	;Anonym추가
+	SIF TALENT:캐릭터_ID:듀얼리스트 >= 1 && CFLAG:캐릭터_ID:오프라인레이트 > 0
+		PRINTFORM 　　　　 듀얼 레이트:{CFLAG:캐릭터_ID:오프라인레이트}
 ENDIF
 PRINTFORML
 
@@ -231,7 +258,7 @@ IF ENUMFILES("RESOURCES/CHARA", @"{NO:캐릭터_ID}_FACE_2*")
 	PRINTFORM [설정：{CFLAG:캐릭터_ID:ALT그림 + 1}]
 ENDIF
 ;캐릭터蔵が2つ以上あるとき
-CALL FIND_CHARA_GID(캐릭터_ID,1)
+CALL FIND_CHARA_GID(캐릭터_ID,2)
 PRINT 　　
 IF RESULT >= 2
 	PRINTBUTTON "[ALT카드 있음]", 9003
@@ -656,7 +683,7 @@ ELSEIF 설정モード == 2 || 설정モード == 5 || 설정モード == 6
 	CASE 9003
 		CALL FIND_CHARA_GID(캐릭터_ID,1)
 		グラ数 = RESULT
-		FOR カウンタ,0,10
+		FOR カウンタ,0,20
 			ALT_グラID:カウンタ = RESULT:(カウンタ + 1)
 		NEXT
 		PRINTFORML 설정한 그래픽을 선택해 주세요
@@ -667,23 +694,40 @@ ELSEIF 설정モード == 2 || 설정モード == 5 || 설정モード == 6
 				NEXT
 			ENDIF
 			CALL PRINT_STATE_DUEL(ALT_グラID:カウンタ,0,2)
-			CALLFORM CARDNAME_{ALT_グラID:カウンタ}("名前")
 		NEXT
 		FOR カウンタ,0,10 
 			PRINTL
 		NEXT
-
+;		[SKIPSTART]
+		;PRINTFORML 캐릭터_ID:{NO:캐릭터_ID}
+		IF ENUMFILES("RESOURCES/DUEL", @"{NO:캐릭터_ID}_DUEL_2*")
+			PRINTFORML 카드ALT화상：
+			FOR カウンタ,0,10
+				SIF !ENUMFILES("RESOURCES/DUEL", @"{NO:캐릭터_ID}_DUEL_{(カウンタ + 2)}*")
+					CONTINUE
+				CALL PRINT_STATE_DUEL(NO:캐릭터_ID,0,2,カウンタ + 2)
+			NEXT
+			FOR カウンタ,0,10 
+				PRINTL
+			NEXT
+		ENDIF
+;		[SKIPEND]
 		BINPUT
 		IF NO:캐릭터_ID == RESULT
 			CFLAG:캐릭터_ID:그래픽설정 = 0
 		ELSE
 			CFLAG:캐릭터_ID:그래픽설정 = RESULT
 		ENDIF
+
 	CASE 9010
 		CALL SHOW_GRAPHICS(캐릭터_ID,2021,6)
 		WAIT
 	CASE 9011
-		CALL PRINT_STATE_DUEL(サムネ_ID,2)
+		IF CFLAG:캐릭터_ID:그래픽설정 >= 100000
+			CALL PRINT_STATE_DUEL(NO:캐릭터_ID,2,3,지정グラ番号)
+		ELSE
+			CALL PRINT_STATE_DUEL(サムネ_ID,2,3)
+		ENDIF
 		WAIT
 	CASE 9050
 		IF デバッグシステム == 1

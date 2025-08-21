@@ -332,3 +332,204 @@ FOR カウンタ,770,790
 		SETVAR @"%듀얼리스트%_EX덱:POOL_COUNT(0)", CFLAG:캐릭터_ID:カウンタ
 	ENDIF
 NEXT
+
+
+;Anonym추가
+@ENEMY_DECK_AUTO_MAKE(캐릭터番号)
+#DIM DYNAMIC 캐릭터番号
+#DIM DYNAMIC 캐릭터ID
+#DIMS DYNAMIC 지정カテゴリ
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタCard
+#DIM DYNAMIC カウンタDeck
+#DIM DYNAMIC カウンタEXDeck
+#DIM DYNAMIC カード枚数チェック,999999
+
+;대상がモブならNGを返す
+SIF 캐릭터番号 <= 0
+	RETURN 0
+;개편덱확인（CFLAG:729)：最低限덱として成立しているという플래그설정
+SIF CFLAG:캐릭터番号:개편덱확인 >= 1
+	RETURN 100
+
+캐릭터ID = NO:캐릭터番号
+カウンタDeck = 700
+VARSET カウンタCard
+
+;대상캐릭터のカテゴリをチェック。なし、ERA、듀얼리스트はNG
+TRYCALLFORM CARDNAME_{캐릭터ID}("カテゴリ")
+지정カテゴリ = %RESULTS:0%
+SIF GROUPMATCH(지정カテゴリ,"なし","E.R.A","듀얼리스트")
+	RETURN 0
+
+FOR カウンタCard,1000,100000
+	;名前のない＝存在しない番号はスキップ
+	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
+	SIF RESULTS == ""
+		CONTINUE
+	;EX덱カードはスキップ
+	TRYCALLFORM CARD_{カウンタCard}("종류")
+	SIF INRANGE(RESULT,4,10)
+		CONTINUE
+	;ERAカードはスキップ
+	TRYCALLFORM CARDNAME_{カウンタCard}("カテゴリ")
+	SIF MATCH(RESULTS,"E.R.A")
+		CONTINUE
+	;同じカテゴリを持たないカードはスキップ
+	TRYCALLFORM CARDNAME_{カウンタCard}("カテゴリ")
+	SIF !MATCH(RESULTS,지정カテゴリ)
+		CONTINUE
+	;덱管理用CFLAGに入れる＆;덱枠を＋＆덱に入れたカード数を＋판정、を３回
+	CFLAG:캐릭터番号:カウンタDeck = カウンタCard
+	カウンタDeck ++
+	カード枚数チェック:カウンタCard ++
+	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
+	;PRINTFORML {カウンタDeck-700}枚目、%RESULTS%、덱in
+	;50枚になったら終了
+	SIF カウンタDeck > 748 ;개편덱확인=729
+		BREAK
+	CFLAG:캐릭터番号:カウンタDeck = カウンタCard
+	カウンタDeck ++
+	カード枚数チェック:カウンタCard ++
+	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
+	;PRINTFORML {カウンタDeck-700}枚目、%RESULTS%、덱in
+	;30枚になったら終了
+	SIF カウンタDeck > 748 ;개편덱확인=729
+		BREAK
+	CFLAG:캐릭터番号:カウンタDeck = カウンタCard
+	カウンタDeck ++
+	カード枚数チェック:カウンタCard ++
+	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
+	;PRINTFORML {カウンタDeck-700}枚目、%RESULTS%、덱in
+	;30枚になったら終了
+	SIF カウンタDeck > 748 ;개편덱확인=729
+		BREAK
+NEXT
+;덱の空きをちゃんと-1につぶす
+FOR カウンタ,700,750
+	SIF CFLAG:캐릭터番号:カウンタ == 0
+	CFLAG:캐릭터番号:カウンタ = -1
+NEXT
+
+;덱が30枚になってない場合
+IF CFLAG:캐릭터番号:개편덱확인 == 0
+	;まずうらら
+	カウンタDeck = 700
+	FOR カウンタDeck,700,730
+		;既にカードが入った枠はスキップ
+		SIF CFLAG:캐릭터番号:カウンタDeck > 0
+			CONTINUE
+		;うららが３枚以下ならうららをin
+		IF カード枚数チェック:1263 < 3
+			;うららin
+			CFLAG:캐릭터番号:カウンタDeck = 1263
+			;덱に入れたカード数を＋판정
+			カード枚数チェック:1263 ++
+			;덱枠を＋
+			カウンタDeck ++
+		;サンボルが３枚以下ならサンボルをin
+		ELSEIF カード枚数チェック:70003 < 3
+			;サンボルin
+			CFLAG:캐릭터番号:カウンタDeck = 70003
+			;덱に入れたカード数を＋판정
+			カード枚数チェック:70003 ++
+			;덱枠を＋
+			カウンタDeck ++
+		;無限泡影が３枚以下なら無限泡影をin
+		ELSEIF カード枚数チェック:90100 < 3
+			;無限泡影in
+			CFLAG:캐릭터番号:カウンタDeck = 90100
+			;덱に入れたカード数を＋판정
+			カード枚数チェック:90100 ++
+			;덱枠を＋
+			カウンタDeck ++
+		;他のが全部入ったのなら羽根帚をIN
+		ELSE
+			;羽根帚in
+			CFLAG:캐릭터番号:カウンタDeck = 70004
+			;덱に入れたカード数を＋판정
+			カード枚数チェック:70004 ++
+			;덱枠を＋
+			カウンタDeck ++
+		ENDIF
+		;30枚になったら終了
+		SIF カウンタDeck > 729 ;개편덱확인=729
+			BREAK
+	NEXT
+	;ここまでやっても덱が30枚にならないならさじを投げてNGを返す
+	SIF CFLAG:캐릭터番号:개편덱확인 == 0
+		RETURN 0
+ENDIF
+
+
+カウンタEXDeck = 770
+FOR カウンタCard,1000,100000
+	;名前のない＝存在しない番号はスキップ
+	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
+	SIF RESULTS == ""
+		CONTINUE
+	;EX덱カードじゃないのはスキップ
+	TRYCALLFORM CARD_{カウンタCard}("종류")
+	SIF !INRANGE(RESULT,4,10)
+		CONTINUE
+	;ERAカードはスキップ
+	TRYCALLFORM CARDNAME_{カウンタCard}("カテゴリ")
+	SIF MATCH(RESULTS,"E.R.A")
+		CONTINUE
+	;同じカテゴリを持たないカードはスキップ
+	TRYCALLFORM CARDNAME_{カウンタCard}("カテゴリ")
+	SIF !MATCH(RESULTS,지정カテゴリ)
+		CONTINUE
+	;덱管理用CFLAGに入れる＆;덱枠を＋＆덱に入れたカード数を＋판정、を３回
+	CFLAG:캐릭터番号:カウンタEXDeck = カウンタCard
+	カウンタEXDeck ++
+	カード枚数チェック:カウンタCard ++
+	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
+	;PRINTFORML {カウンタEXDeck-770}枚目、%RESULTS%、덱in
+	SIF カウンタEXDeck >= 785
+		BREAK
+	CFLAG:캐릭터番号:カウンタEXDeck = カウンタCard
+	カウンタEXDeck ++
+	カード枚数チェック:カウンタCard ++
+	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
+	;PRINTFORML {カウンタEXDeck-770}枚目、%RESULTS%、덱in
+	SIF カウンタEXDeck >= 785
+		BREAK
+	CFLAG:캐릭터番号:カウンタEXDeck = カウンタCard
+	カウンタEXDeck ++
+	カード枚数チェック:カウンタCard ++
+	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
+	;PRINTFORML {カウンタEXDeck-770}枚目、%RESULTS%、덱in
+	;15枚になったら終了
+	SIF カウンタEXDeck >= 785
+		BREAK
+NEXT
+
+;EX덱は特に15枚にならなくてもOK
+;EX덱の空きをちゃんと-1につぶす
+FOR カウンタ,770,785
+	SIF CFLAG:캐릭터番号:カウンタ == 0
+	CFLAG:캐릭터番号:カウンタ = -1
+NEXT
+
+;一旦덱中身をチェック、デバッグチェック用
+; カウンタDeck = 700
+; FOR カウンタDeck,700,750
+; 	TRYCALLFORM CARDNAME_{CFLAG:캐릭터番号:カウンタDeck}("名前")
+; 	SIF RESULTS != ""
+; 	PRINTFORML [{カウンタDeck-699}] %RESULTS%
+; 	RESULTS = ""
+; NEXT
+; カウンタEXDeck = 770
+; FOR カウンタEXDeck,770,785
+; 	SIF CFLAG:캐릭터番号:カウンタEXDeck <= 0
+; 		CONTINUE
+; 	TRYCALLFORM CARDNAME_{CFLAG:캐릭터番号:カウンタEXDeck}("名前")
+; 	SIF RESULTS != ""
+; 	PRINTFORML [{カウンタEXDeck-769}] %RESULTS%
+; 	RESULTS = ""
+; NEXT
+
+;無事ここまで来たらOKを返す
+RETURN 1
