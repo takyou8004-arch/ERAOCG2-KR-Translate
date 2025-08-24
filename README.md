@@ -3,6 +3,7 @@
 ERAOCG2 Korean tranlsate
 
 [공식화상팩(jpg)](https://mega.nz/folder/7ggUHJIS#BdeUx-0uQMwmSbV6LnS1Mw)
+갱신 중지
 
 [공식화상팩(webp)](https://mega.nz/folder/SgBgjQbK#C1nQK6fqHIGdd5l9BxIXng)
 앞으로는 webp쪽을 갱신한다고 합니다.
