@@ -1,0 +1,1206 @@
+﻿@CARDNAME_79525,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 조교대상 = -1
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = [　　　]의 계약서
+	CASE "略称"
+		RESULTS = [　　　]의 계약서
+	CASE "カテゴリ"
+		RESULTS:0 = 계약서
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79525(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "生成カード"
+		RETURN 179525
+	CASE "추가日"
+		RETURN 250824
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79525(종류)
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 조교대상 = -1
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 카드는 １턴에 １장밖에 발동할 수 없으며、발동한 이 카드는 묘지로 보내지지 않고 소멸한다。
+SETCOLOR C_D_GRAY
+PRINTL （발동자가 MASTER이고、상대 플레이어가 조교 가능한 캐릭터인 경우에만 발동할 수 있다。）
+RESETCOLOR
+CALLFORM CARD_ABLE(1,마함起動)
+PRINT ①：상대의 마법＆함정 존에 ""
+IF 듀얼モード == 0
+	PRINT [　　　]의 계약서
+ELSE
+	;デュエル中にテキストを確認すると、상대プレイヤーに応じたテキストに変化します。
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	조교대상 = RESULT
+	IF 조교대상 <= -1
+		PRINT [　　　]의 계약서
+	ELSE
+		;상대の状況を確認
+		IF TALENT:조교대상:굴복됨 && CFLAG:조교대상:호감도 >= 2000
+			SETCOLOR C_RED
+			PRINT 성노예의 계약서
+			RESETCOLOR
+		ELSEIF TALENT:조교대상:연모 >= 1
+			SETCOLOR C_PINK
+			PRINT 연인의 계약서
+			RESETCOLOR
+		ELSE
+			PRINT 듀얼조교의 계약서
+		ENDIF
+	ENDIF
+ENDIF
+
+PRINTL " １장을 생성하고 앞면 표시로 둔다。
+PRINTL 이 효과로 놓여진 카드에 대해、상대 플레이어는 자신 필드에 놓는것을 동의하고 서명할지 말지를 선택할 수 있다。
+PRINTL 서명한 경우、서명한 플레이어는 １０００ＬＰ회복하고、이 카드를 발동한 플레이어는 １장 드로우한다。
+PRINTL 그 후、서명한 플레이어는、이 카드를 발동한 플레이어의 ＬＰ를 반감시킬 수 있다。
+PRINTL 서명하지 않은 경우、이 효과로 놓여진 카드는 소멸한다。
+;まるで상대プレイヤーが署名するか選択できるようなテキストにはしてるけど、署名しないという事にはならない。
+CALL TEXT_DECORATION("ROGUE")
+
+;상대プレイヤーが조교可能なキャラクターである場合に、拘束力のある계약서にサインさせてなんかエロいことをする感じのやつ。
+;계약서にサインさせることで、발동者のＬＰ半分を失って成金ゴブリン효과を行うという高いコストを支払う。そのかわり後でエロい代償を상대に払わせる。
+;계약서の名称は상대プレイヤーの조교状況に応じて変わって、효과テキストも変化する。そのため通常마법カードの時点では[　　　]と空欄にしている。
+
+
+@CARDCAN_79525(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상 = -1
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79525)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79525)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 듀얼리스트 != "자신"
+		RETURN 0
+	
+	SIF 마함数(対面者) >= 5
+		RETURN 0
+	
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	SIF RESULT <= -1
+		RETURN 0
+	
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_79525(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 속성数
+#DIM DYNAMIC 조교대상 = -1
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79525,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+		CALL FULLRESET
+		CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+		조교대상 = RESULT
+		IF 조교대상 <= -1
+			RETURN 0
+		ELSE
+			RESULT = 1
+			;상대プレイヤーの陥落状況を確認して生成カードを変える
+			IF TALENT:조교대상:굴복됨 && CFLAG:조교대상:호감도 >= 2000
+				;성노예
+				CALL CARD_GENERATE_MAGIC(対面者,379525,1)
+				PRINTFORML 
+				PRINTFORML 듀얼하고 있는 %CALLNAME:조교대상%의 앞에, 1장의 계약서가 표시되었다.
+				PRINTFORM ""
+				SETCOLOR C_RED
+				PRINTFORM 『성노예의 계약서』
+				RESETCOLOR
+				PRINTFORML ""라고 피처럼 붉은 글씨로 쓰여진 서류에는, 동의하고 사인하는 것으로
+				PRINTFORML 자신의 LP를 회복하고 대전 상대는 1장 드로우. 그 후, 대전 상대의 LP를 절반으로 줄일 수 있다고 쓰여있다.
+				PRINTFORMW 하지만, 그 대상으로 자신의 분신이 필드에 특수 소환되어, 듀얼 중에는 받은 데미지에 따라 성적인 고통을 받게 된다고 쓰여있었다.
+				PRINTFORMW 게다가, 이 듀얼 중에는 카드의 효과를 발동할 때 『성노예』는 『주인님』의 허가가 필요하게 된다고도 쓰여있다.
+				PRINTFORMW …보통의 듀얼리스트라면, 이런 듀얼이 성립되지 않을 조건에 사인할 리가 없지만.
+				IF CFLAG:조교대상:호감도 >= 10000
+					PRINTFORMW 이미 실컷 조교를 받아, 몸도 마음도 『주인님』의 말대로가 된 %CALLNAME:조교대상%는, 황홀한 듯한 표정으로 서류에 사인했다.
+				ELSE
+					PRINTFORMW 조교에 의해 굴복해버린 %CALLNAME:조교대상%가 『주인님』을 거역할 수 있을 리도 없고, 떨리는 손으로 서류에 사인했다.
+				ENDIF
+			ELSEIF TALENT:조교대상:연모 >= 1
+				;연인
+				CALL CARD_GENERATE_MAGIC(対面者,279525,1)
+				PRINTFORML 
+				PRINTFORML 듀얼하고 있는 %CALLNAME:조교대상%의 앞에, 1장의 계약서가 표시되었다.
+				PRINTFORM "
+				SETCOLOR C_PINK
+				PRINTFORM 연인의 계약서
+				RESETCOLOR
+				PRINTFORML "라고 귀여운 폰트로 쓰여진 서류에는, 동의하고 사인하는 것으로
+				PRINTFORML 자신의 LP를 회복하고 대전 상대는 1장 드로우. 그 후, 대전 상대의 LP를 절반으로 줄일 수 있다고 쓰여있다.
+				PRINTFORMW 단, 그 대상으로 자신의 분신이 필드에 특수 소환되어, 듀얼 중에는 서로가 받은 데미지가 성적인 쾌감으로 변환되어 버린다고도 쓰여있었다.
+				PRINTFORMW …그 텍스트를 읽은 %CALLNAME:조교대상%는, 조금 부끄러운 듯이 서류에 사인했다.
+			ELSE
+				;デュエル조교
+				CALL CARD_GENERATE_MAGIC(対面者,179525,1)
+				PRINTFORML 
+				PRINTFORML 듀얼하고 있는 %CALLNAME:조교대상%의 앞에, 1장의 계약서가 표시되었다.
+				PRINTFORML "듀얼 조교의 계약서"라고 쓰여진 서류에는, 동의하고 사인하는 것으로
+				PRINTFORML 자신의 LP를 회복하고 대전 상대는 1장 드로우. 그 후, 대전 상대의 LP를 절반으로 줄일 수 있다고 쓰여있다.
+				PRINTFORMW 하지만, 그 대상으로 자신의 분신이 필드에 특수 소환되어, 듀얼 중에는 받은 데미지가 성적인 쾌감으로 변환되게 된다고도 쓰여있었다.
+				IF TALENT:조교대상:굴복됨
+					PRINTFORMW …망설이는 듯한 태도를 보인 %CALLNAME:조교대상%였지만, 굴복한 입장에서 명령을 거역할 수 있을 리도 없고, 비장한 표정으로 서류에 사인했다.
+				ELSE
+					PRINTFORMW …잠시 망설이고 있던 %CALLNAME:조교대상%였지만, 대전 상대의 LP를 절반으로 줄일 수 있다는 이점에는 저항하지 못하고, 서류에 사인했다.
+				ENDIF
+			ENDIF
+		ENDIF
+		
+		;CARD_GENERATE_MAGICの正常終了のRETURNがとれなかったので諦めてIF判定を消す。
+		;IF RESULT != 0
+			;成金ゴブリン효과
+			CALL LIFE_CHANGE(対面者,"増加","효과",1000)
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+			IF RESULT != 0
+				;半減효과は、条件によっては使わない。（연모または굴복됨で호감도2000以上、または패배버릇もちの場合）
+				
+				IF TALENT:조교대상:연모 >= 1
+					;연인
+					PRINTFORML LP를 절반으로 줄이는 처리를 할지 질문받은 %CALLNAME:조교대상%는, 절반으로 줄이는 처리를 하지 않는 것을 선택했다.
+					PRINTFORMW 그 이유를 물으려 하자, %CALLNAME:조교대상%는 "%CALLNAME:MASTER%와 오래 듀얼하고 싶으니까…"라며 뺨을 붉히며 대답했다.
+				ELSEIF TALENT:조교대상:굴복됨 && CFLAG:조교대상:호감도 >= 10000
+					;성노예（기쁘게 포기한다）
+					PRINTFORML LP를 절반으로 줄이는 처리를 할지 질문받은 %CALLNAME:조교대상%는, 아무런 명령도 없이 스스로 절반으로 줄일 권리를 포기했다.
+					PRINTFORMW 칭찬받고 싶다는 듯이 %CALLNAME:MASTER%에게 아양을 떠는 시선을 보내는 %CALLNAME:조교대상%를 보고, 당신은 만족스럽게 고개를 끄덕였다.
+				ELSEIF TALENT:조교대상:굴복됨 && CFLAG:조교대상:호감도 >= 2000
+					;성노예（거역할 수 없다）
+					PRINTFORML LP를 절반으로 줄이는 처리를 할지 질문받은 %CALLNAME:조교대상%는, 조심조심 이쪽의 눈치를 살피고 있다…
+					PRINTFORMW 알고 있겠지? 라는 시선을 보내자, %CALLNAME:조교대상%는 푹 고개를 숙이고, 절반으로 줄일 권리를 포기하는 것을 선택했다.
+				ELSEIF TALENT:조교대상:패배버릇
+					;패배버릇이 있는 경우도, 일부러 LP 절반으로 줄이지 않게 된다.
+					PRINTFORML LP를 절반으로 줄이는 처리를 할지 질문받은 %CALLNAME:조교대상%는, 꿀꺽 목을 울리고 절반으로 줄이는 처리를 하지 않는 선택을 했다.
+					PRINTFORMW 주어지는 핸디캡은 필요 없다고 %CALLNAME:조교대상%는 강한 척하고 있지만, 말과는 반대로, 질 가능성에 그 눈동자가 흔들리고 있다.
+				ELSEIF TALENT:조교대상:굴복됨
+					;굴복됨（거역하는 의지를 보인다）
+					PRINTFORMW LP를 절반으로 줄이는 처리를 할지 질문받은 %CALLNAME:조교대상%는, 부들부들 떨리는 손가락을 살짝 뻗어, 절반으로 줄이는 처리를 했다.
+					PRINTFORMW …좋은 배짱이다. LP를 절반으로 줄이면, 혹시 이길 가능성이 있을지도 모른다고 생각하는 걸까?
+					PRINTFORMW 저항의 의지를 보인 %CALLNAME:조교대상%에게는, 상응하는 벌과 보복을 줄 필요가 있을 것이다. 그렇게 생각하며 듀얼 디스크를 다시 잡았다.
+					CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",(GETVAR(@"ライフ_%듀얼리스트%")  / 2))
+				ELSE
+					;듀얼조교
+					PRINTFORMW LP를 절반으로 줄이는 처리를 할지 질문받은 %CALLNAME:조교대상%는, 특별히 주저하는 일 없이 절반으로 줄이는 처리를 한다.
+					PRINTFORMW %CALLNAME:조교대상%와 이제부터 행해질 "즐거운" 듀얼을 상상하며, 당신은 듀얼 디스크를 다시 잡았다.
+					CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",(GETVAR(@"ライフ_%듀얼리스트%")  / 2))
+				ENDIF
+			ELSE
+				;いま「うらら」等の효과でドロー無効にしましたよね？
+				PRINTL
+				PRINTFORMW "뭐라고! 라이프를 절반으로 줄이지 않는다고!"
+							;「큰일이야! 죠노우치군!」
+				PRINTL
+				PRINTFORML 계약도 맺었고, 아무 일 없이 카드의 효과 처리를 끝내려고 하자, %CALLNAME:조교대상%는 예상하지 못했는지 거친 목소리로 물어왔다.
+				PRINTFORML 그래. 무슨 문제라도 있는가? 라고 묻자, 역시 납득하기 어려운지 듀얼을 포기해서라도 따지려고 한다.
+				PRINTFORML …어이어이. 텍스트대로의 처리가 아니냐고 말하려다 조금 불길한 예감이 들었다. 좀 더 자세히 설명하는 편이 좋을까?
+				CALL YN_CHOICE(듀얼리스트)
+				IF RESULT == はい
+					;설명해주지! ;BGM 유세이가 「폴 포지션」을 해설할 때 흐르는 곡
+					PRINTFORMW 어쩔 수 없군, 설명해주지.
+					PRINTL
+					PRINTFORML 이 카드 게임의 효과 처리는, 텍스트에 기술된 순서에 따라 효과가 처리된다.
+					PRINTFORML 이 카드의 텍스트는, 처음에 상대 필드에 카드를 놓는 처리를 하고, 다음에 서명한 플레이어의 LP를 1000 회복하고 발동자가 1장 드로우한다.
+					PRINTFORML 그 후에, 발동자의 LP를 절반으로 줄일지 선택하는 처리에 들어간다. 이처럼 효과 처리가 『그 후,』 등으로 구분되어 있는 경우의 대부분은,
+					PRINTFORML 그 이전의 처리가 정상적으로 실행되지 않은 경우는 후속 처리를 하지 않고, 카드의 효과 처리가 도중에 종료된다.
+					PRINTFORMW (동시 처리인지, 후속 처리인지는 텍스트로 판단하기 어려운 경우도 있으므로, 카드의 공식 Q&A도 참조하는 것이 좋을 것이다)
+					PRINTL
+					PRINTFORML 그래서 이 경우, "하루 우라라" 등의 효과로 1장 드로우 처리가 정상적으로 종료되지 못했을 경우, 후속 처리인 LP 절반 처리도 행해지지 않는다.
+					PRINTFORML (원래의 "우라라"는 카드를 놓는 처리도 포함해서 막지만, 이 카드 게임은 효과를 막는 부분이 다른 사양으로 되어 있다.)
+					PRINTFORMW 이걸로 이해했냐고 묻자, %CALLNAME:조교대상%는 아직 납득하지 못한 모습이었다.
+					PRINTL
+					PRINTFORMW "이치는 알겠습니다. 하지만, 다른 비슷한 카드에서는 『그 후,』의 처리도 행해졌는데요?"
+					PRINTFORMW …뭐, 그런 경우는 많지.
+					PRINTFORMW 하지만, 거기까지 텍스트에 따른 엄밀한 효과 처리를, 룰대로 구현하는 것을 모두 철저히 하려고 하면 괴로워하는 사람도 있는 거야. 알아줘.
+					PRINTL
+					PRINTFORMW "하아. 그런데, 왜 이 카드의 처리는 이런 텍스트로 되어 있고, 이런 촌극이 시작된 건가요?"
+					PRINTL
+					PRINTFORMW …그건 말이지, 너처럼 바로바로 유발 효과를 던지는 녀석에게 따끔한 맛을 보여주기 위해 이런 효과 처리 텍스트로 되어 있는 거야.
+					PRINTFORMW 그리고, 『계약서의 텍스트는 잘 읽지 않으면, 언젠가 큰 손해를 보게 된다』라는 말장난을 위해, 이런 촌극을 준비한 거야.
+					PRINTFORMW 자, 알았으면 듀얼로 돌아갈까.
+					;언젠가 CPU가 우라라를 던져야 할지 판단할 수 있을 정도로 똑똑해지지는… 못하겠지. MD의 CPU도 그 정도고, 애초에 명확한 정답이 없는 영역이니까.
+					PRINTFORML ・・・
+					PRINTFORML ・・
+					PRINTFORMW ・
+				ELSE
+					;가르쳐주지 않습니다
+					PRINTFORML 귀찮다. 카드 텍스트를 보고 스스로 생각해라. 이걸 이해하지 못하면 현대 유희왕의 세계에서는 도저히 살아남을 수 없다고.
+					PRINTFORML 그렇게만 말하고 듀얼로 돌아가도록 재촉하자, 불만스러운 모습의 %CALLNAME:조교대상%는 마지못해 원래 위치로 돌아갔다.
+				ENDIF
+			ENDIF
+		;ENDIF
+	ENDIF
+ENDIF
+
+
+
+;---------------------------------------------------------------------------------------
+;179525_「듀얼 조교의 계약서」のカードデータ部分
+;---------------------------------------------------------------------------------------
+
+
+@CARDNAME_179525,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 조교대상 = -1
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 듀얼 조교의 계약서
+	CASE "略称"
+		RESULTS = DUEL조교의 계약서
+	CASE "カテゴリ"
+		RESULTS:0 = 계약서
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_179525(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "추가日"
+		RETURN 250824
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_179525(종류)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 조교대상 = -1
+#DIMS DYNAMIC 조교日時
+
+CALL TEXT_DECORATION("ROGUE")
+SETCOLOR C_D_GRAY
+PRINTL 이 카드명의 카드는、서명자가 조교 가능한 캐릭터이고、서명자가 본 대전 상대가 MASTER인 경우에만 효과처리가 이루어진다。
+RESETCOLOR
+CALLFORM CARD_ABLE(0,효과後強制誘発)
+PRINTL ①：서명자의 몬스터 존에 서명자 본인이 존재하지 않는 상태에서 카드의 효과가 발동한 경우、
+PRINTL 　　서명자의 필드에 서명자 본인을 공격 표시로 특수 소환합니다. 이 효과로 특수 소환한 서명자는, 특수 소환의 재료로 사용할 수 없습니다.
+CALLFORM CARD_ABLE(0,라이프変強制誘発)
+PRINTL ②：이 카드가 마법＆함정 존에 앞면 표시로 존재하는 한、서명자는 받은 데미지에 따른 쾌감 데미지를 받습니다。
+;デュエル中の場合だと、デュエルしてる実際の日にちと、상대プレイヤーの署名が표시されるよ
+IF 듀얼モード == 1
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	조교대상 = RESULT
+	;実時間を取ってきてRESULTS:0に格納するGETTIME
+	GETTIME
+	SUBSTRINGU RESULTS:0,0,10
+	조교日時 = %RESULTS:0%
+	PRINTFORML 
+	PRINTFORML 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　서명일　：　%조교日時%
+	PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　서명자　：　
+	FONTITALIC
+	FONTBOLD
+	PRINTFORML %NAME:조교대상%
+	FONTREGULAR
+ELSE
+	PRINTFORML 
+	PRINTFORML 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　서명일　：
+	PRINTFORML 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　서명자　：
+	
+ENDIF
+CALL TEXT_DECORATION("ROGUE")
+
+;듀얼 조교의 계약서は、常に自身をモンスターとして出力しつづける（ただし１体のみで、リンクなどの素材にも使えない）효과と、
+;快感ダメージを受ける효과を持った지속마법であり、通常마법の효과で상대フィールドに貼られる形で利用される。要は「ラブドール」＋「조교部屋」
+;ただし、通常마법の발동時の処理でプレイヤーのライフが半減するリスクがあるので、ライフ減少しても大丈夫な程度の상대か、ライフ減少を逆手に取れるデッキで使いたい。
+;快感ダメージは、조교部屋よりもレートが低く上限もある。１００００パンチとかしてもそんなに절정しない感じ、のはず。조교としての性能はかなり抑え気味にしている。
+;また、조교部屋のように「E.R.A」サーチはできず単純に１ドローするだけなので、자신の마함に余裕があるなら조교部屋、ない時の択としてこっちを選ぶ使い分けがよいだろう。
+;他の조교系の「E.R.A」テーマと併用して、상대プレイヤーを조교する補助にするのが良い。상대の마함に지속を置くことで자신の마함を占有しないのが一番のメリット。
+
+
+@CARDCAN_179525(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 조교대상ID = -1
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,179525)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;通常この処理は行われることはないが、仮に손패に戻った場合の処理も記述（상대の마함に表側표시で置かれる動きをする）
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	
+	SIF 마함数("상대") >= 5
+		RETURN 0
+	
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	조교대상 = RESULT
+	SIF 조교대상 <= -1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 듀얼리스트 != "상대"
+		RETURN 0
+	SIF 対面者 != "자신"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	조교대상 = RESULT
+	SIF 조교대상 <= -1
+		RETURN 0
+	조교대상ID = NO:조교대상
+	SIF 조교대상ID <= 0
+		RETURN 0
+	;PRINTFORML {조교대상}
+	;PRINTFORML {조교대상ID}
+	CALL FULLRESET
+	CALL CARD_SS_CHECK(듀얼리스트,조교대상ID,"")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件固名前 = 듀얼 조교의 계약서
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동",2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件ID = 조교대상ID
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ライフ変強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 듀얼리스트 != "상대"
+		RETURN 0
+	SIF 対面者 != "자신"
+		RETURN 0
+	SIF ダメージ受者 == "자신"
+		RETURN 0
+	SIF ダメージ増減 != "減少"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	SIF RESULT == -1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_179525(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 속성数
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 조교대상ID = -1
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,179525)
+	IF RESULT == 0
+		;손패・마함（セット状態）からの起動の場合、발동させたカードを消滅させて、改めて상대フィールドに生成して表側で置く処理を行う。
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+		
+		CALL CARD_GENERATE_MAGIC("상대",179525,1)
+		
+	ENDIF
+ELSEIF 종류 == 효과後強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,179525)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_EROTICS(상대プレイヤー,"자신")
+		조교대상 = RESULT
+		SIF 조교대상 <= -1
+			RETURN 0
+		조교대상ID = NO:조교대상
+		;自身がすでに居たらそれ以上はSSしてこない
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件ID = 조교대상ID
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 0
+			RETURN 0
+		
+		CALL FULLRESET
+		효과추가종류 = 効追永材
+		CALL CARD_GENERATE(듀얼리스트,조교대상ID,"攻撃표시")
+	ENDIF
+ELSEIF 종류 == ライフ変強制誘発
+	
+	;悪夢の조교部屋よりも조교효과は低く(1/10程度)、青眼パンチで「400」ぐらいの조교強度になる。上限で「600」
+	ダメージ量 = ダメージ受値
+	SIF ダメージ量 <= 4000
+		ダメージ量 = 100 + (ダメージ量 / 10)
+	SIF ダメージ量 > 4000
+		ダメージ量 = 460 + (ダメージ量 / 100)
+	SIF ダメージ量 > 10000
+		ダメージ量 = 600
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	IF RESULT != -1
+		조교대상 = RESULT
+		PRINTFORML
+		SETCOLOR C_PINK 
+		PRINTFORML %CALLNAME:조교대상%는 받은 데미지에 따른 쾌감 데미지를 받았다！
+		RESETCOLOR
+		CALL EROTIC_MOVE("조교部屋",조교대상,,ダメージ量)
+	ENDIF
+ENDIF
+
+
+
+;---------------------------------------------------------------------------------------
+;279525_「연인의 계약서」のカードデータ部分
+;---------------------------------------------------------------------------------------
+
+@CARDNAME_279525,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 조교대상 = -1
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 연인의 계약서
+	CASE "略称"
+		RESULTS = 연인의 계약서
+	CASE "カテゴリ"
+		RESULTS:0 = 계약서
+		;RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_279525(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "추가日"
+		RETURN 250824
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_279525(종류)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 조교대상 = -1
+#DIMS DYNAMIC 조교日時
+
+;CALL TEXT_DECORATION("ROGUE")
+SETCOLOR C_D_GRAY
+PRINTL 이 카드명의 카드는、컨트롤러가 조교 가능한 캐릭터이고、컨트롤러가 본 대전 상대가 MASTER인 경우에만 효과처리가 이루어진다。
+RESETCOLOR
+SETCOLOR C_PINK
+PRINTFORML ①：이 듀얼중에 한해、서명자와 상대 플레이어（%CALLNAME:MASTER%）는 서로를『연인』으로 취급합니다。
+RESETCOLOR
+CALLFORM CARD_ABLE(0,효과後強制誘発)
+SETCOLOR C_PINK
+PRINTL ②：서명자의 몬스터 존에 서명자 본인이 존재하지 않은 상태에서 카드의 효과가 발동된 경우、
+PRINTL 　　서명자의 필드에 서명자 본인을 공격 표시로 특수 소환합니다。이 효과로 특수 소환한 서명자는、특수 소환의 소재로 할 수 없습니다。
+RESETCOLOR
+CALLFORM CARD_ABLE(0,ライフ変強制誘発)
+SETCOLOR C_PINK
+PRINTL ③：이 카드가 마법＆함정 존에 앞면 표시로 존재하는 한、서명자 및 그 연인은 받는 데미지에 따른 쾌감 데미지를 받습니다。
+RESETCOLOR
+;デュエル中の場合だと、デュエルしてる実際の日にちと、상대プレイヤーの署名が표시されるよ
+IF 듀얼モード == 1
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	조교대상 = RESULT
+	;実時間を取ってきてRESULTS:0に格納するGETTIME
+	GETTIME
+	SUBSTRINGU RESULTS:0,0,10
+	조교日時 = %RESULTS:0%
+	PRINTFORML 
+	PRINTFORML 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　서명일　：　%조교日時%
+	PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　서명자　：　
+	FONTITALIC
+	FONTBOLD
+	SETCOLOR C_PINK
+	PRINTFORML %NAME:조교대상%　❤
+	RESETCOLOR
+	FONTREGULAR
+ELSE
+	PRINTFORML 
+	PRINTFORML 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　서명일　：
+	PRINTFORML 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　서명자　：
+	
+ENDIF
+;CALL TEXT_DECORATION("ROGUE")
+
+;연모のついたキャラに対して의 계약서は、연인의 계약서という扱いになり、お互いにダメージを受けると快感ダメージが入るようになる。
+;イチャイチャするイメージで書いているが、상대プレイヤーからダメージを受ける手段は特にフォローしないので、そこは자신で適度に調整してください。
+
+
+@CARDCAN_279525(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 조교대상ID = -1
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,279525)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;通常この処理は行われることはないが、仮に손패に戻った場合の処理も記述（상대の마함に表側표시で置かれる動きをする）
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	
+	SIF 마함数("상대") >= 5
+		RETURN 0
+	
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	조교대상 = RESULT
+	SIF 조교대상 <= -1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 듀얼리스트 != "상대"
+		RETURN 0
+	SIF 対面者 != "자신"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	조교대상 = RESULT
+	SIF 조교대상 <= -1
+		RETURN 0
+	조교대상ID = NO:조교대상
+	SIF 조교대상ID <= 0
+		RETURN 0
+	;PRINTFORML {조교대상}
+	;PRINTFORML {조교대상ID}
+	CALL FULLRESET
+	CALL CARD_SS_CHECK(듀얼리스트,조교대상ID,"")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件固名前 = 듀얼 조교의 계약서
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동",2)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件ID = 조교대상ID
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ライフ変強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 듀얼리스트 != "상대"
+		RETURN 0
+	SIF 対面者 != "자신"
+		RETURN 0
+	;SIF ダメージ受者 == "자신"
+	;	RETURN 0
+	SIF ダメージ増減 != "減少"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+	SIF RESULT == -1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_279525(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 속성数
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 조교대상ID = -1
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,279525)
+	IF RESULT == 0
+		;손패・마함（セット状態）からの起動の場合、발동させたカードを消滅させて、改めて상대フィールドに生成して表側で置く処理を行う。
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+		
+		CALL CARD_GENERATE_MAGIC("상대",279525,1)
+		
+	ENDIF
+ELSEIF 종류 == 효과後強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,279525)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_EROTICS(상대プレイヤー,"자신")
+		조교대상 = RESULT
+		SIF 조교대상 <= -1
+			RETURN 0
+		조교대상ID = NO:조교대상
+		;自身がすでに居たらそれ以上はSSしてこない
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件ID = 조교대상ID
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 0
+			RETURN 0
+		
+		CALL FULLRESET
+		효과추가종류 = 効追永材
+		CALL CARD_GENERATE(듀얼리스트,조교대상ID,"攻撃표시")
+	ENDIF
+ELSEIF 종류 == ライフ変強制誘発
+	
+	;悪夢の조교部屋よりも조교효과は低く(1/10程度)、青眼パンチで「400」ぐらいの조교強度になる。上限で「600」
+	ダメージ量 = ダメージ受値
+	SIF ダメージ量 <= 4000
+		ダメージ量 = 100 + (ダメージ量 / 10)
+	SIF ダメージ量 > 4000
+		ダメージ量 = 460 + (ダメージ量 / 100)
+	SIF ダメージ量 > 10000
+		ダメージ量 = 600
+	
+	IF ダメージ受者 == "자신"
+		CALL CARD_EROTICS(상대プレイヤー,"자신")
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML
+			SETCOLOR C_PINK 
+			PRINTFORML %CALLNAME:MASTER%는 %CALLNAME:조교대상%에게 뜨거운 키스를 받았다!
+			PRINTFORML 서로 분위기를 타버려서, 어느 쪽이 리드하고 있는지 모를 정도로 키스를 거듭해버렸다・・・
+			RESETCOLOR
+			CALL EROTIC_MOVE("딥키스",MASTER,,ダメージ量)
+			CALL EROTIC_MOVE("딥키스",조교대상,,ダメージ量)
+		ENDIF
+	ELSE
+		CALL CARD_EROTICS(상대プレイヤー,"자신")
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML
+			SETCOLOR C_PINK 
+			PRINTFORML %CALLNAME:조교대상%의 온몸을 부드럽게 페팅해간다.
+			PRINTFORML 듀얼 중인 것도 잊고, 기분 좋은 듯이 %CALLNAME:조교대상%는 한숨을 내쉬었다・・・
+			RESETCOLOR
+			CALL EROTIC_MOVE("全身애무",조교대상,,ダメージ量)
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+;---------------------------------------------------------------------------------------
+;379525_「성노예의 계약서」のカードデータ部分
+;---------------------------------------------------------------------------------------
+
+@CARDNAME_379525,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 조교대상 = -1
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 성노예의 계약서
+	CASE "略称"
+		RESULTS = 성노예의 계약서
+	CASE "カテゴリ"
+		RESULTS:0 = 계약서
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_379525(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "추가日"
+		RETURN 250824
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_379525(종류)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 조교대상 = -1
+#DIMS DYNAMIC 조교日時
+
+CALL TEXT_DECORATION("ROGUE")
+SETCOLOR C_D_GRAY
+PRINTL 이 카드명의 카드는、서명자가 조교 가능한 캐릭터이고、서명자가 본 대전 상대가 MASTER인 경우에만 효과처리가 이루어진다。
+RESETCOLOR
+;デュエル中の場合じゃないと、テキストの殆どは空白になっていて何も표시されない（通常の手段で見ることはない想定だが）
+IF 듀얼モード == 0
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 
+	PRINTFORML 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　서명일　：
+	PRINTFORML 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　서명자　：
+ELSE
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	조교대상 = RESULT
+	;実時間を取ってきてRESULTS:0に格納するGETTIME
+	GETTIME
+	SUBSTRINGU RESULTS:0,0,10
+	조교日時 = %RESULTS:0%
+		
+	SETCOLOR C_RED
+	PRINTFORML ①：이 듀얼 중、상대 플레이어[%CALLNAME:MASTER%]님을『주인님』으로 인정하고、주인님의 명령에는 절대복종할것을 맹세합니다。
+	PRINTFORML ②：[%NAME:조교대상%]은 주인님의 『성노예』로서 상응하는 태도를 하고、주인님에게 몸도 마음도 바쳐 성노예로서 일할것을 맹세합니다。
+	PRINTFORML ③：성노예는 주인님의 명령이라면、어떤 성적인 조교도 기쁘게 받으며、만족하실때까지 봉사할것을 맹세합니다。
+	PRINTFORML ④：성노예는 신체의 소유권 및 신체 / 정신에 관련된 권리를 주인님에게 전부 양도하고、어떠한 행위에 대해서도 일절 권리를 주장하지 않을것을 맹세합니다。
+	PRINTFORML 　　성노예 및 성노예가 사욕하는 몬스터의 어떠한 구멍（보지、애널、입、그 외 기관）도、주인님은 듀얼중 언제라도 자유롭게 이용할 수 있습니다。
+	PRINTFORML ⑤：상기 ①～④의 계약에 반하는 사항이 일어났을 시、어떠한 처벌도 감수하고、주인님의 자비를 받을 수 있도록 최대한의 충성을 표할것을 맹세합니다。
+	PRINTFORML 
+	RESETCOLOR
+	CALLFORM CARD_ABLE(0,효과後強制誘発)
+	PRINTFORML 
+	SETCOLOR C_RED
+	PRINTL ⑥：성노예는 주인님에게 교육을 받을수 있도록、가능한 한 필드에 존재하고、주인님의 교육을 기다립니다。
+	PRINTL 　　필드에 온 성노예는 효과를 무효화 합니다。또한、특수 소환의 소재가 되어 필드에서 도망칠수도 없습니다。
+	RESETCOLOR
+	CALLFORM CARD_ABLE(0,발동強制誘発)
+	PRINTFORML 
+	SETCOLOR C_RED
+	PRINTL ⑦：성노예는 "E.R.A" 카드 이외의 카드의 효과를 발동할 때엔、주인님의 허가를 무조건 받고나서 효과를 적용합니다。
+	PRINTL 　　주인님의 허가를 받지 못한 효과는 전부 발동을 무효화 할것을 맹세합니다。
+	RESETCOLOR
+	CALLFORM CARD_ABLE(0,ライフ変強制誘発)
+	PRINTFORML 
+	SETCOLOR C_RED
+	PRINTL ⑧：이 카드가 마법＆함정 존에 앞면 표시로 존재하는 한、성노예가 받는 데미지에 따른 쾌락을 탐할것을 용서하여주십시오。
+	RESETCOLOR
+	;デュエルしてる実際の日にちと、상대プレイヤーの署名が표시されるよ
+	;おもしろ肩書システム搭載！　いろんな奴隷を조교してみよう！　ところで성별なしの奴隷とか居るんだっけ？
+	PRINTFORML 
+	PRINTFORML 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　서명일　：　%조교日時%
+	SETCOLOR C_RED
+	IF TALENT:조교대상:성별 & 1 && TALENT:조교대상:처녀
+		PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　마조암컷처녀노예　：　
+	ELSEIF TALENT:조교대상:즉시타락 >= 2
+		PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　허접암컷마조노예：　
+	ELSEIF TALENT:조교대상:성별 == 0
+		PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　검품된출하대기마조노예　　：　
+	ELSEIF !(TALENT:조교대상:성별 & 1) || TALENT:조교대상:엉덩이광
+		PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　　　　엉덩이보지마조노예　：　
+	ELSEIF TALENT:조교대상:음호 && (TALENT:조교대상:임신 || EXP:조교대상:출산경험)
+		PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　　　　임신한마조암컷노예　：　
+	ELSEIF TALENT:조교대상:자위광 || TALENT:조교대상:허접클리 || TALENT:조교대상:허접유두
+		PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　허접오나마조노예　：　
+	ELSEIF TALENT:조교대상:메스가키 || TALENT:조교대상:연령 <= -2 || TALENT:조교대상:체형 <= -2
+		PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　메스가키마조노예　：　
+	ELSEIF TALENT:조교대상:음유 || TALENT:조교대상:가슴사이즈 >= 3
+		PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　　　　소젖마조암컷노예　　：　
+	ELSEIF TALENT:조교대상:음교의신도
+		PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　　　　음교의마조암컷노예　：　
+	ELSE
+		PRINTFORM 　　　　　　　　　　　　　　　　　　　　　　　　　　　마조암컷보지노예　　　：　
+	ENDIF
+	RESETCOLOR
+	FONTITALIC
+	FONTBOLD
+	SETCOLOR C_PINK
+	PRINTFORML %NAME:조교대상%　❤
+	RESETCOLOR
+	FONTREGULAR
+	PRINTFORML 
+ENDIF
+CALL TEXT_DECORATION("ROGUE")
+
+;성노예의 계약서は、普通にカードリストを見てるぶんには見えない隠れたカード。これを作りたくって계약서という名称にしていたわけですな。
+;デュエル的にはほぼ意味が無いフレーバーテキストで①～⑤の효과テキスト番号を使ってるだけなので、テキスト量に対してカード的な효과はそんなにない。
+;通常마법側の条件で、상대プレイヤーがすでに[굴복됨]＋호감도2000以上でほぼ陥落相当の条件を満たす必要があるので、상대プレイヤーへの拘束力も相応に高い。
+;발동強制誘発がだいぶイカレ面白い효과をしている。プレイヤーへのYN_CHOICEで許可するかどうか聞いてくる、無限回の万能無効妨害である。まあ陥落済みの奴隷상대なんで。
+;これ使うぐらいの상대へのデュエル조교だとMCカードとかもたっぷり使わせるとかそんな感じが多いと思うので、E.R.Aカードの발동は許可とりの대상外にしている。
+;（いちいちMCカードの발동許可を聞いてくると面倒だし、E.R.Aカードですり抜けてくるような조교대상はPMGぐらいでしょう。それも상대デッキ編集で対応できるし）
+;
+;奴隷へ의 계약서は、Selenとかの조교SLGのイメージで作成している。クラシックでレガシーだね。
+
+
+@CARDCAN_379525(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 조교대상ID = -1
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,379525)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;通常この処理は行われることはないが、仮に손패に戻った場合の処理も記述（상대の마함に表側표시で置かれる動きをする）
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	
+	SIF 마함数("상대") >= 5
+		RETURN 0
+	
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	조교대상 = RESULT
+	SIF 조교대상 <= -1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 듀얼리스트 != "상대"
+		RETURN 0
+	SIF 対面者 != "자신"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	조교대상 = RESULT
+	SIF 조교대상 <= -1
+		RETURN 0
+	조교대상ID = NO:조교대상
+	SIF 조교대상ID <= 0
+		RETURN 0
+	;PRINTFORML {조교대상}
+	;PRINTFORML {조교대상ID}
+	CALL FULLRESET
+	CALL CARD_SS_CHECK(듀얼리스트,조교대상ID,"")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件ID = 조교대상ID
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 0
+		RETURN 0
+	CALL FULLRESET
+	효과条件固名前 = 성노예의 계약서
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동",2)
+	SIF RESULT != 1
+		条件달성 |= 1
+	CALL FULLRESET
+	효과条件ID = 조교대상ID
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"필드離れ")
+	SIF RESULT != 1
+		条件달성 |= 2
+	SIF 条件달성 & 1 && 条件달성 & 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ライフ変強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 듀얼리스트 != "상대"
+		RETURN 0
+	SIF 対面者 != "자신"
+		RETURN 0
+	SIF ダメージ受者 == "자신"
+		RETURN 0
+	SIF ダメージ増減 != "減少"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	SIF RESULT == -1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 듀얼리스트 != "상대"
+		RETURN 0
+	SIF 対面者 != "자신"
+		RETURN 0
+	
+	CALL FULLRESET
+	효과条件固カテゴリ = E.R.A
+	CALL CARD_CHECK_START_DATA_2(듀얼리스트,0)
+	SIF RESULT != 1
+		RETURN 0
+	
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	SIF RESULT == -1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 듀얼리스트 != "상대"
+		RETURN 0
+	SIF 対面者 != "자신"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	SIF RESULT == -1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_379525(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 속성数
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 조교대상ID = -1
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 절정횟수
+
+CALL 対面者判定(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,379525)
+	IF RESULT == 0
+		;손패・마함（セット状態）からの起動の場合、발동させたカードを消滅させて、改めて상대フィールドに生成して表側で置く処理を行う。
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,消滅行き)
+		
+		CALL CARD_GENERATE_MAGIC("상대",379525,1)
+		
+	ENDIF
+ELSEIF 종류 == 효과後強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,379525)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_EROTICS(상대プレイヤー,"자신")
+		조교대상 = RESULT
+		SIF 조교대상 <= -1
+			RETURN 0
+		조교대상ID = NO:조교대상
+		;自身がすでに居たらそれ以上はSSしてこない
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件ID = 조교대상ID
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 0
+			RETURN 0
+		
+		CALL FULLRESET
+		효과추가종류:0 = 効追永材
+		효과추가종류:1 = 効追無効
+		CALL CARD_GENERATE(듀얼리스트,조교대상ID,"攻撃표시")
+	ENDIF
+ELSEIF 종류 == ライフ変強制誘発
+	
+	;悪夢の조교部屋よりも조교효과は低く(1/4程度)、青眼パンチで「400」ぐらいの조교強度になる。上限で「600」
+	;성노예への快感はデュエル조교と変わってない。代わりに追い打ちの苦痛系조교のソースを加えている。
+	ダメージ量 = ダメージ受値
+	SIF ダメージ量 <= 4000
+		ダメージ量 = 100 + (ダメージ量 / 4)
+	SIF ダメージ量 > 4000
+		ダメージ量 = 1060 + (ダメージ量 / 100)
+	SIF ダメージ量 > 10000
+		ダメージ量 = 1200
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	IF RESULT != -1
+		조교대상 = RESULT
+		PRINTFORML
+		SETCOLOR C_PINK 
+		PRINTFORML %CALLNAME:조교대상%는 받은 데미지에 상응하는 고통을 받고 있지만, 주인님의 교육에 황홀한 표정을 짓고 있다.
+		RESETCOLOR
+		CALL EROTIC_MOVE("조교部屋",조교대상,MASTER,ダメージ量)
+		절정횟수 = RESULT:1
+		IF 절정횟수 != 0
+			PRINTFORML
+			SETCOLOR C_RED
+			PRINTFORML 주인님의 허락도 받지 않고 마음대로 가버린 버릇없는 %CALLNAME:조교대상%에게, 성노예로서의 자각이 싹트도록 포상을 주었다.
+			RESETCOLOR
+			ダメージ量 /= 1
+			CALL EROTIC_MOVE("追い打ち",조교대상,MASTER,ダメージ量)
+		ELSE
+			PRINTFORML
+			SETCOLOR C_RED
+			PRINTFORML 가버리지 못한 변변찮은 성노예인 %CALLNAME:조교대상%를 나무라기 위해, 고통을 동반하는 징벌을 내렸다.
+			RESETCOLOR
+			ダメージ量 /= 2
+			CALL EROTIC_MOVE("追い打ち",조교대상,MASTER,ダメージ量)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 발동強制誘発
+	CALL FULLRESET
+	CALL CARD_EROTICS(상대プレイヤー,"자신")
+	IF RESULT != -1
+		조교대상 = RESULT
+	ELSE
+		RETURN 0
+	ENDIF
+	PRINTFORML 
+	PRINTFORML 성노예가, 카드의 효과를 발동하고 싶은 듯 간청하는 눈빛을 보내왔다…
+	PRINTFORML 효과 발동을 허가하겠습니까?
+	CALL YN_CHOICE("자신")
+	IF RESULT != はい
+		PRINTFORML 
+		PRINTFORMW ・・・안 되겠군.
+		PRINTFORML 허가하지 않겠다고 대답하자, %CALLNAME:조교대상%는 발동 무효된 카드를 아쉬운 듯이 바라보았지만,
+		PRINTFORML 그 비정한 명령에 따르는 것도 마조히즘을 부추기는 스파이스가 되는 것이리라.
+		PRINTFORML 얼굴을 들어 주인님을 향한 성노예의 눈동자에는, 정욕의 빛이 섞여 있었다.
+		PRINTFORMW 
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効2",場所,"無効")
+	ELSE
+		PRINTFORML 
+		PRINTFORML 좋겠지.
+		PRINTFORMW 허가해주자, %CALLNAME:조교대상%는 감사의 말을 하며 깊이 고개를 숙였다.
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",장소,"接可")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",장소,"発情")
+ENDIF
+

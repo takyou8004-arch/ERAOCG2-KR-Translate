@@ -37,8 +37,6 @@ SELECTCASE 参照先
 		RETURN 2500
 	CASE "성별"
 		RETURN 牝性
-	CASE "추가日"
-		RETURN 250706
 ENDSELECT
 RETURN 0
 
@@ -67,6 +65,10 @@ SETCOLOR C_RED
 PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー경고ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
 CALLFORM CARD_ABLE(4,지속효과)
 PRINTL ④: 융합 소환한 이 카드에는, 2장째 소재로 사용된 암컷 몬스터 1장이 끼워진다
+PRINTL ⑥：②의 효과로 제물이 된 암컷 몬스터는、광서의 기계에 끼워진다。
+CALL CARD_ABLE(5,ターン終了時強制)
+PRINTL ④：자신 / 상대 턴 종료시、타지음구기사가 된 암컷은、
+PRINTL 자신의 몸으로 광서의 기계의 조절과 관리를 한다。
 PRINTL ＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊ーー주의ーー＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊
 PRINTL
 RESETCOLOR
@@ -163,7 +165,6 @@ ELSEIF 종류 == 필드起動
 		CALL FULLRESET
 		효과範囲필드 = 1
 		효과条件종류 = モン全般
-		효과条件종족 = 기계족
 		효과条件성별 = 牝性
 		효과条件レベル = カウンタ
 		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
@@ -223,6 +224,15 @@ ELSEIF 종류 == 지속효과
 	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
 		RETURN 0
 	RETURN 1
+
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF	GETVAR(@"%듀얼리스트%_MZ_汎数:場所") > 0
+		RETURN 1
+	SIF	GETVAR(@"%듀얼리스트%_MZ_変化元ID:場所") >= 0
+		RETURN 1
+	RETURN 1
 ENDIF
 
 @CARDEFFECT_39909(듀얼리스트,종류,ゾーン,場所)
@@ -234,6 +244,7 @@ ENDIF
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC 攻撃力修正
 #DIM DYNAMIC 조교대상
+#DIM DYNAMIC 捕縛대상
 #DIM DYNAMIC 選択カード
 #DIMS DYNAMIC 選択カード名前
 #DIM DYNAMIC 戦闘カード
@@ -303,8 +314,8 @@ ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
 					CONTINUE
 				SIF GETVAR(@"%対面者%_MZ_表:カウンタ") == 3
 					CONTINUE
-			IF 攻撃力판정 < GETVAR(@"%対面者%_MZ_攻:{カウンタ}")
-				攻撃力판정 = GETVAR(@"%対面者%_MZ_攻:{カウンタ}")
+			IF 攻撃力판정 < GETVAR(@"%対面者%_MZ_攻:カウンタ")
+				攻撃力판정 = GETVAR(@"%対面者%_MZ_攻:カウンタ")
 				설정場所 = カウンタ
 			ENDIF
 		NEXT
@@ -327,7 +338,6 @@ ELSEIF 종류 == 필드起動
 		FOR カウンタ,1,13
 			CALL FULLRESET
 			효과範囲필드 = 1
-			효과条件종족 = 기계족
 			효과条件성별 = 牝性
 			효과条件レベル = カウンタ
 			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
@@ -350,16 +360,21 @@ ELSEIF 종류 == 필드起動
 			효과条件レベル:カウンタ = カウンタ
 		NEXT
 		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		捕縛대상 = RESULT:99
 		IF RESULT != 9999
+			PRINTFORML 카드ID={RESULT:1}
 			選択カードレベル = GETVAR(@"%듀얼리스트%_MZ_星:RESULT")
 			CALL CARD_DISPOSE(듀얼리스트,"필드",RESULT)
-
 			CALL FULLRESET
 			효과範囲덱 = 1
 			효과条件レベル = 選択カードレベル + 2
 		    효과条件カテゴリ = 광서의 기계
             효과条件종류 = モン全般
 			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			CALL CARD_EROTICS(捕縛대상)
+			IF 捕縛대상 != 1
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"変化元ID",捕縛대상,上書きモード)
+			ENDIF
 		ENDIF
 	ENDIF
 
@@ -399,13 +414,111 @@ ELSEIF 종류 == 지속효과
 			CALL CARD_EROTICS(取込カードID)
 			IF RESULT != -1
 				조교대상 = RESULT
-				PRINTFORMW 인격을 덮어씌워진、%NAME:조교대상%는 『타지음구기인』으로서 필드에 내려섰다
-				CALL EROTIC_MOVE("拷問処理",조교대상,-1,200)
+					SELECTCASE RAND:3
+						CASE 0
+						PRINTFORMW 타지 음구 기사로 개조되기 전 준비로서, %CALLNAME:조교대상%는 온몸을 범하기 위한 기계에 달라붙게 된다.
+						PRINTFORMW 성기를 깎아 부수기 위한 드릴 바이브나 실리콘 전기톱, 자궁을 두드려 부수기 위한 수많은 형태의 딜도, 머리를 감싸듯이 설치된 세뇌 장치,
+						PRINTFORMW 수많은 암컷을 망가뜨리기 위해서만 고안된 조교를 위한 기기에, %CALLNAME:조교대상%는 얼굴이 창백해지며 공포에 질려간다……
+						CASE 1
+						PRINTFORMW 붙잡힌 %CALLNAME:조교대상%는, 자신에게 연결되어 버리는 광서의 기계에 구속되어 온몸을 범하기 위한 기계에 편입된다,
+						PRINTFORMW 실오라기 하나 걸치지 않은 모습으로 양손은 등 뒤로 돌려지고, 다리를 벌린 자세로 삽입을 대기하게 되며, 온몸은 조금도 움직일 수 없게 구속,
+						PRINTFORMW 일체의 저항을 허락하지 않는 상태가 된 끝에, %CALLNAME:조교대상%는 기계에 의한 유린을 받기 시작한다……
+						CASE 2
+						PRINTFORMW %CALLNAME:조교대상%는 광서의 기계의 일부로서 범해지기 위해서만 편입되어 버린다,
+						PRINTFORMW 다양한 암컷들이, 헐떡이고, 몸부림치고, 괴로워하고, 교성을 지르며 절정을 반복하는 광서의 기계의 동력이 된 자들을 떠올리며, %CALLNAME:조교대상%의 표정은 창백해져 간다
+						PRINTFORMW %CALLNAME:조교대상%는 자신도 그렇게 될 것이라는 공포로부터 몸부림치며 벗어나려 하지만, 그 인격을 없애기 위한 기계가 갖추어져 버린다……
+					ENDSELECT
+
+					PRINTFORMW %CALLNAME:조교대상%의 머리 위에 설치된 세뇌 장치도 『키이이이이…』라고 소리를 내며 움직이기 시작한다
+
+					FOR カウンタ,0,4
+					SELECTCASE RAND:4
+						CASE 0
+						CALL MADORGASM_BRAINWASHING_TXT(1,0)
+						PRINTFORML %CALLNAME:조교대상%는, %CALLNAME:MASTER%의 자지에 적합한 봉사 방법을 뇌에 직접 새겨진다……
+						CALL MADORGASM_BRAINWASHING_TXT(1,1)
+						CALL EROTIC_MOVE("최면펠라",조교대상,-1,200)
+						CASE 1
+						CALL MADORGASM_BRAINWASHING_TXT(1,0)
+						PRINTFORML %CALLNAME:조교대상%는, 무의식적으로 혀를 입에서 내밀어, 뇌에 직접적인 정보 제공으로 %CALLNAME:MASTER%의 정액 맛을 기억해버린다……
+						CALL MADORGASM_BRAINWASHING_TXT(1,2)
+						CALL EROTIC_MOVE("최면정음",조교대상,-1,200)
+						CASE 2
+						CALL MADORGASM_BRAINWASHING_TXT(1,0)
+						PRINTFORML %CALLNAME:조교대상%는, 꼴사납고 더욱 음란한 자위 방법을 뇌 속에 새겨져 간다……
+						CALL MADORGASM_BRAINWASHING_TXT(1,3)
+						CALL EROTIC_MOVE("최면自発자위",조교대상,-1,200)
+						CASE 3
+						CALL MADORGASM_BRAINWASHING_TXT(1,0)
+						PRINTFORML %CALLNAME:조교대상%는 %CALLNAME:MASTER%의 자지가 어떻게 암컷을 함락시키는지에 대한 지식을 기억에 새겨진다……
+						CALL MADORGASM_BRAINWASHING_TXT(1,4)
+						CALL EROTIC_MOVE("최면自発기승위",조교대상,-1,200)
+					ENDSELECT
+					NEXT
+
+					SELECTCASE RAND:3
+						CASE 0
+						PRINTFORMW %CALLNAME:조교대상%는, 기계에서 해방됨과 동시에 %CALLNAME:MASTER%의 앞에서 몸에 걸친 의복을 벗어 던지기 시작한다.
+						PRINTFORMW 준비되어 있던 외장에 스스로 다리를 벌리면서, 딜도가 갖추어진 좌석에 허리를 놓고 온몸에 기계 관을 연결해간다,
+						PRINTFORMW %CALLNAME:조교대상%는 이전에 입고 있던 자신의 것을 걷어차며 입을 연다,
+						CASE 1
+						PRINTFORMW %CALLNAME:조교대상%는 세뇌를 마치고, 기계에서 해방되자 공허한 눈으로 비틀비틀 머리를 흔들며 준비된 외장을 걸치기 시작한다.
+						PRINTFORMW %CALLNAME:MASTER%가 보고 있는 눈앞에서, 스스로 양쪽 구멍에 딜도를 쑤셔 넣으며 자리에 앉아, 온몸에 박힌 삽입구에 관을 연결해간다,
+						PRINTFORMW 그리고 %CALLNAME:조교대상%는, %CALLNAME:MASTER%를 향해 의수로 손을 흔들며 입을 연다,
+						CASE 2
+						PRINTFORMW 처참한 세뇌 능욕을 받아 온몸이 희롱당한 끝에, 인격까지 다시 쓰여진 %CALLNAME:조교대상%.
+						PRINTFORMW 기계에서 해방되어, %CALLNAME:MASTER%의 눈앞에서 원래 입고 있던 옷을 벗어 던지며 준비되어 있던 타지 음구 기사로서의 외장에 몸을 맡긴다,
+						PRINTFORMW %CALLNAME:조교대상%는 %CALLNAME:MASTER%에게 얼굴을 향하고 입을 열었다,
+					ENDSELECT
+						PRINTFORML
+						PRINTFORMW "『%CALLNAME:조교대상%』하아, 에-... 타지 음구 기사로 다시 태어났어여~. 이제부터 %CALLNAME:MASTER%님에게 여러 암컷을 망가뜨릴 도구를 만들겠어여❤"
+						PRINTFORML
+						CALL EROTIC_MOVE("생체파츠",조교대상,-1,200)
 			ENDIF
 		ENDIF
 		;使い終わった汎数を削除
 		SIF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") >= 1000
 			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",0,上書きモード)
+		ENDIF
+
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 0
+	CALL CARD_EROTICS(GETVAR(@"%듀얼리스트%_MZ_変化元ID:場所"))
+		IF RESULT != -1
+		조교대상 = RESULT
+			SELECTCASE RAND:5
+				CASE 0
+					PRINTFORMW 타지 음구 기사로서 행동하는 %CALLNAME:조교대상%는 실리콘 전기톱의 조정을 몸으로 받으면서 확인하기 위해, 그 기기를 가랑이로 끼우듯이 타고 스스로 보지를 갖다 댄다
+					CALL MADORGASM_CHAINSAW_TXT(1,1)
+					CALL MADORGASM_SEXTOYENGINEER_TXT(1,0)
+					CALL EROTIC_MOVE("Ｃ単発",조교대상,-1,200)
+				CASE 1
+					PRINTFORMW 타지 음구 기사로서 행동하는 %CALLNAME:조교대상%는 기계 거착혈병용 드릴 바이브의 상태를 확인하기 위해, 스스로 뿌리까지 드릴 바이브를 보지에 삽입한다……
+					CALL MADORGASM_DRILLVIBERAPE_TXT(1,1)
+					CALL MADORGASM_SEXTOYENGINEER_TXT(1,1)
+					CALL EROTIC_MOVE("Ａ単発",조교대상,-1,200)
+				CASE 2
+					PRINTFORMW 모마라병의 상태를 확인하기 위해, 타지 음구 기사로서 행동하는 %CALLNAME:조교대상%는 스스로 붙잡혀 범해지기 시작한다……
+					CALL MADORGASM_FAKEPENISPAWN_TXT(1,2)
+					CALL MADORGASM_FAKEPENISPAWN_TXT(1,3)
+					CALL MADORGASM_SEXTOYENGINEER_TXT(1,2)
+					CALL EROTIC_MOVE("Ｖ単発",조교대상,-1,200)
+				CASE 3
+					PRINTFORMW 절정 광선을 조사하는 장치의 동작을 확인하기 위해, 타지 음구 기사로서 행동하는 %CALLNAME:조교대상%는 스스로를 표적으로 삼아 작동시킨다……
+					CALL MADORGASM_ORGASMLASER_TXT(1,0)
+					CALL MADORGASM_ORGASMLASER_TXT(1,1)
+					CALL MADORGASM_SEXTOYENGINEER_TXT(1,3)
+					CALL EROTIC_MOVE("절정光線",조교대상,-1,200)
+				CASE 4
+					PRINTFORMW 위견병의 외장 상태를 확인하기 위해, 타지 음구 기사로서 행동하는 %CALLNAME:조교대상%는 스스로 붙잡혀 범해지기 시작한다……
+					CALL MADORGASM_FEMALEDOGRAPE_TXT(1,0)
+					CALL MADORGASM_FEMALEDOGRAPE_TXT(1,1)
+					CALL MADORGASM_SEXTOYENGINEER_TXT(1,4)
+					CALL EROTIC_MOVE("全身凌辱",조교대상,-1,200)
+			ENDSELECT
+			CALL EROTIC_MOVE("생체파츠",조교대상,-1,200)
+		ENDIF
 	ENDIF
 ENDIF
 
