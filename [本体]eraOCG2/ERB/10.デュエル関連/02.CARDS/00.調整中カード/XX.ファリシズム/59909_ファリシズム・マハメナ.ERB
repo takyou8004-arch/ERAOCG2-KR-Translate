@@ -1,0 +1,267 @@
+﻿@CARDNAME_59909,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 퍼실리즘 마하메나
+	CASE "略称"
+		RESULTS = Pha마하메나
+	CASE "カテゴリ"
+		RESULTS:0 = 퍼실리즘
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59909(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_59909(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL "퍼실리즘" 몬스터를 포함하는 몬스터 ２장
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 링크 소환에 성공한 경우에、패에서 "퍼실리즘" 카드 １장을 묘지로 보내고 발동할 수 있다。
+PRINTL 자신은 덱에서 １장 드로우한다。
+CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
+PRINTL ②：자신 / 상대 턴에、자신 필드에 "어신체" 카드가 존재하는 경우、
+PRINTL 필드의 이 카드를 묘지로 보내고 발동할 수 있다。
+PRINTL 상대는 이하의 효과에서 １를 고른다。그 후、그 효과를 적용한다。
+PRINTL ●상대의 엑스트라 덱의 카드를 전부 제외한다。
+PRINTL ●상대와 생섹스를 한다。그 후、묘지에서 "퍼실리즘 마하메나" 이외의 "퍼실리즘" 몬스터 ２장을 특수 소환한다。
+PRINTL  이 효과의 적용 후、턴 종료시까지 자신은 "퍼실리즘" 몬스터밖에 특수 소환할 수 없다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_59909(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件カテゴリ = 퍼실리즘
+ELSE
+	PRINT
+ENDIF
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,59909) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_59909(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59909)
+SIF RESULT == 1
+	RETURN 0
+
+;링크소환時の효과
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,59909)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 퍼실리즘
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK		
+	RETURN 1
+
+;フリー誘発효과
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_3(듀얼리스트,59909)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 어신체
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 퍼실리즘
+	효과条件固名前 = 퍼실리즘 마하메나
+	효과条件소환可 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59909(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 選択後メッセージ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 카운터数
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 효과분기
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 조교효과
+#DIM DYNAMIC 상대エクストラ枚数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59909)
+SIF RESULT == 1
+	RETURN 0
+
+;손패を任意の枚数捨ててドローする효과
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59909,1)
+	IF RESULT == 0
+		;うららチェック
+		CALL URARA_CHANCE(듀얼리스트,,"덱")
+		IF RESULT == 1
+			CALL SHUFFLE(듀얼리스트)
+			CALL SHUFFLE(対面者)
+			RETURN 0
+		ENDIF
+		;捨てる処理
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 퍼실리즘
+		효과条件複数 = 99
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			カウンタ = RESULT:2 
+			CALL CARDDRAW_BASIC(듀얼리스트,カウンタ)
+		ENDIF
+	ENDIF
+
+;ダメージか固有のボーナス효과かを상대に選択させる효과
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59909,3)
+
+	IF RESULT == 0
+		;자신を묘지に送る
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;どの효과が選択されるか決定
+		CALL FULLRESET
+		CALL CALC_PROBABILITY_SYMMETRIA(듀얼리스트,종류,ゾーン,場所)
+		효과분기 = RESULT
+
+		;ダメージ量と조교효과、횟수の初期値を決定
+		조교효과 = 100
+		ダメージ量 = 200
+
+		;조교ダメージを決定
+		CALL DECIDE_DISCIPLINEDAMAGE_SYMMETRIA(듀얼리스트,ダメージ量)
+		ダメージ量= RESULT
+		;조교횟수の決定
+		CALL DECIDE_NUMBEROFLESSON_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,조교효과)
+		조교효과 = RESULT
+
+		IF 효과분기 == 1 || 효과분기 == 2
+			;RESULTが1なら確率によってボーナス효과が選択された
+			;RESULTが2ならダメージ的にボーナス효과を選択するしかなかった상황
+			;それぞれに違うメッセージを用意する予定があったが、今のところは結果は同じ
+			;EXモンスターをすべて제외
+			CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"마하메나",효과분기)
+			CALL FULLRESET
+			상대エクストラ枚数 = 現EX山札数(対面者)
+			FOR カウンタ, 0, 상대エクストラ枚数
+				CALL CARD_DISPOSE(対面者,"EX덱",0,소멸行き)
+			NEXT			
+		ELSEIF 효과분기 == 3
+			;RESULTが3なら使途が居るので両方の효과を適用させる
+			;モンスターが個別で持つボーナス효과の処理
+			;EXモンスターをすべて제외
+			CALL FULLRESET
+			상대エクストラ枚数 = 現EX山札数(対面者)
+			FOR カウンタ, 0, 상대エクストラ枚数
+				CALL CARD_DISPOSE(対面者,"EX덱",0,소멸行き)
+			NEXT
+			;奉仕処理
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"마하메나",효과분기)
+				CALL EROTIC_MOVE("前穴凌辱",조교대상,MASTER,조교효과)
+			ENDIF
+			;카운터を置く효과
+			;CALL FULLRESET
+			;CALL CARD_COUNTER_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,1)
+
+			;특수소환する処理
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件複数 = 2
+			효과条件固名前 = 퍼실리즘 마하메나
+			효과条件カテゴリ = 퍼실리즘
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			CALL CARD_EX_RESTRICTION(듀얼리스트,"퍼실리즘")
+		ELSE
+			;それ以外효과が選択されている。
+			;奉仕処理
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"마하메나",효과분기)
+				CALL EROTIC_MOVE("前穴凌辱",조교대상,MASTER,조교효과)
+			ENDIF
+			;카운터を置く효과の処理
+			;CALL FULLRESET
+			;CALL CARD_COUNTER_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,1)
+
+			;특수소환する処理
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件複数 = 2
+			효과条件固名前 = 퍼실리즘 마하메나
+			효과条件カテゴリ = 퍼실리즘
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			CALL CARD_EX_RESTRICTION(듀얼리스트,"퍼실리즘")
+
+			PRINTFORMW %CALLNAME:조교대상%는 제정신으로 돌아왔다！
+		ENDIF
+	ENDIF
+ENDIF
+
+

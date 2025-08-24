@@ -1,0 +1,533 @@
+@CALC_PROBABILITY_SYMMETRIA(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC 選択後メッセージ
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC ボーナス효과選択率
+#DIM DYNAMIC 조교済みボーナス효과選択率
+#DIM DYNAMIC 카운터数
+#DIM DYNAMIC ボーナス효과
+#DIM DYNAMIC 효과분기
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 굴복각인
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+ボーナス효과選択率 = 0
+조교済みボーナス효과選択率 = 0
+효과분기 = 0
+
+;場の카운터の数をチェック
+CALL FULLRESET
+효과範囲마함 = 1
+효과条件カテゴリ = 어신체
+효과条件個Ｃ所持 = 1
+효과条件CNT = 1
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+카운터数 = RESULT:9
+SIF 카운터数 >= 19
+	카운터数 = 19
+SIF 카운터数 >= 1
+	카운터数+=1
+
+;카운터数と상대のLPを元に確率を算出
+;상대のLPが「어신체で与えるダメージ量+1200」以下の場合、わずかながらボーナス효과を選ばれる可能性がある。
+SIF GETVAR(@"ライフ_%対面者%")  <= (카운터数*100)+1200
+	ボーナス효과選択率 = 5
+SIF GETVAR(@"ライフ_%対面者%")  <= (카운터数*100)+600
+	ボーナス효과選択率 = 10
+;ライフの現在値によってさらにボーナス
+SIF GETVAR(@"ライフ_%対面者%")  <= 4000
+	ボーナス효과選択率 = ボーナス효과選択率 + 5
+
+;対戦상대が조교대상かどうか一応確認
+CALL FULLRESET
+CALL CARD_EROTICS(상대プレイヤー, 듀얼리스트)
+;조교대상なら諸々の情報を취득
+IF RESULT != -1
+	조교대상 = RESULT
+	;굴복됨みなら選択肢率が変わる
+	IF MARK:조교대상:굴복각인 == 2 && MARK:조교대상:반발각인 <= 1
+		조교済みボーナス효과選択率 = 조교済みボーナス효과選択率 + 6
+	ELSEIF MARK:조교대상:굴복각인 == 3 && MARK:조교대상:반발각인 <= 1
+		조교済みボーナス효과選択率 = 조교済みボーナス효과選択率 + 9
+	ENDIF
+	;ABLの数値によって選択率が変動
+	SIF ABL:조교대상:순종 >= 4 || ABL:조교대상:욕망 >= 4 || ABL:조교대상:봉사정신 >= 4 || ABL:조교대상:마조끼 >= 4
+		조교済みボーナス효과選択率 = 조교済みボーナス효과選択率 + 8
+
+	;조교済みボーナス選択率を加算
+	ボーナス효과選択率 = ボーナス효과選択率 + 조교済みボーナス효과選択率
+	
+	PRINTFORMW 조교된 보너스 효과 선택률:{조교済みボーナス효과選択率}
+	;特定の素質なら100%選択
+	IF TALENT:조교대상:음란 || TALENT:조교대상:망신 || TALENT:조교대상:굴복됨 || TALENT:조교대상:패배버릇
+		PRINTFORMW %CALLNAME:조교대상%はカードの효과が無くても何でも言う事を聞きそうだ。
+		ボーナス효과選択率 = 102
+	ENDIF
+	;何でもいいから確率が変わっていれば専用のメッセージを出力
+	SIF 조교済みボーナス효과選択率 != 0
+		PRINTFORMW 조교済みである%CALLNAME:조교대상%は"어신체"による精神汚染を通常よりも強く受けているようだ。
+ENDIF
+
+;「어신체で与えるダメージ量+300」以下なら確実に選択される（即死が見えているため）。
+SIF GETVAR(@"ライフ_%対面者%")  <= (카운터数*100)+300
+	ボーナス효과選択率 = 101
+;어신체がパワーアップしているならボーナス효과が確定
+CALL FULLRESET
+효과範囲필드 = 1
+효과条件名前 = 신명현현전간천
+효과条件名前 = 어신체
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+IF RESULT == 1
+	ボーナス효과選択率 = 102
+ENDIF
+
+;ダイスを振って효과を確定させる
+ボーナス효과 = RAND:99 + 1
+
+[IF_DEBUG]
+	PRINTFORMW 100각 다이스:{ボーナス효과}
+	PRINTFORMW 보너스 효과 선택률:{ボーナス효과選択率}
+	PRINTFORMW "보너스 효과 선택률 >=100 각 다이스"라면 확률에 따라 보너스 효과가 선택되는 패턴
+	PRINTFORMW "보너스 효과 선택률=101" 이라면 LP적으로 보너스 효과를 거를수 밖에 없었던 패턴
+	PRINTFORMW "보너스 효과 선택률=102" 라면 어신체의 사도가 있는 패턴
+[ENDIF]
+
+;분기パターンは４つ
+IF ボーナス효과選択率 >= ボーナス효과 && 100 >= ボーナス효과選択率
+	효과분기 = 1
+ELSEIF ボーナス효과選択率 == 101
+	효과분기 = 2
+ELSEIF ボーナス효과選択率 == 102
+	효과분기 = 3
+ENDIF
+
+RETURN 효과분기
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+; ダメージを与え카운터を置く효과の共通化処理
+@CARD_DAMAGE_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,ダメージ量)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+
+;ダメージを与える
+CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+
+;快感ダメージも付与
+CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+IF RESULT != -1
+	조교대상 = RESULT
+	PRINTFORML
+	SETCOLOR C_PINK 
+	PRINTFORML %CALLNAME:조교대상%는 추가로 쾌감 데미지를 받았다！
+	RESETCOLOR
+	CALL EROTIC_MOVE("조교部屋",조교대상,,ダメージ量)
+ENDIF
+
+;카운터を置く
+PRINTFORMW "어신체" 카드에 카운터를 놓아주세요
+CALL FULLRESET
+효과条件カテゴリ = 어신체
+CALL CARD_CHOOSE_BASIC(듀얼리스트,"마함",ゾーン,場所)
+選択カード = RESULT
+SIF 選択カード != 9999
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",選択カード,"個Ｃ",1)
+
+RETURN 0
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+; ダメージだけを与える효과
+@CARD_DAMAGE_59904(듀얼리스트,종류,ゾーン,場所,ダメージ量)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+
+;ダメージを与える
+CALL LIFE_CHANGE(듀얼리스트,"減少","효과",ダメージ量,1)
+
+;快感ダメージも付与
+CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+IF RESULT != -1
+	조교대상 = RESULT
+	PRINTFORML
+	SETCOLOR C_PINK 
+	PRINTFORML %CALLNAME:조교대상%는 추가로 쾌감 데미지를 받았다！
+	RESETCOLOR
+	CALL EROTIC_MOVE("조교部屋",조교대상,,ダメージ量)
+ENDIF
+
+RETURN 0
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+; 어신체によるセクハラ효과（本番無し）
+@CARD_HOSTAGE_FORT_59904(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+
+CALL FULLRESET
+효과範囲필드 = 1
+효과範囲마함 = 1
+효과条件名前 = Pha슬레이브
+효과条件종류 = モン全般
+효과条件CNT = 1
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+IF RESULT >= 1
+	SELECTCASE RAND:3
+		CASE 0
+			PRINTFORMW "지금부터 어신체에 대한 봉사를 시작하겠습니다…… 교주님, 부디 모든 것을 받아주세요❤"
+		CASE 1
+			PRINTFORMW "신도 일동, 지금부터 봉사의 의식을 시작하겠습니다…… 각오해주세요, 교주님❤"
+		CASE 2
+			PRINTFORMW "자…… 어신체를 정화하고, 사랑하고, 채울 시간입니다……❤ 저희의 모든 것을 바치겠습니다, 교주님…❤"
+	ENDSELECT
+	PRINTFORMW 퍼실리즘이 말을 걸자, 신도들이 어신체를 둘러싸고 무릎을 꿇었다.
+	PRINTFORMW 달콤한 한숨과 함께 봉사가 시작되었다…….
+	PRINTFORML 
+
+	CALL FULLRESET
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_마함:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_魔_リ数:カウンタ") >= 10
+			CONTINUE
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"마함",カウンタ)
+		IF RESULT != -1
+			조교대상 = RESULT
+			;상대の성별によって분기
+			IF TALENT:조교대상:성별 >= 2
+				;男の時は퍼실리즘→あなたへ
+				;セリフはそれぞれ想定しているモンスターが居ますが、そんなにしっかり発言者を決めているわけではないです。イメージってだけ。
+				PRINTFORMW %CALLNAME:조교대상%는 알몸으로 도게자하고 있다.
+				PRINTFORMW 퍼실리즘들은 그를 비웃으면서, %CALLNAME:MASTER%의 몸을 부드럽게 어루만지고, 때때로 혀끝으로 핥는다.
+				PRINTFORMW 쾌락은 애태울수록 진해져, 신앙으로서 쌓여간다.
+				SELECTCASE RAND:4
+					CASE 0
+						;마뉴아想定
+						PRINTFORMW "어떠신가요 교주님……❤ 그 근처의 수컷에게는… 절~대로 맛볼 수 없는 사치랍니다……❤"
+					CASE 1
+						;블로우想定
+						PRINTFORMW "……저기, 교주님…❤ 저 사람, 정말 불쌍하네요……❤"
+					CASE 2
+						;이즈리想定
+						PRINTFORMW "……하아……❤ 이 감촉……❤ 이 냄새……❤ 모든 것이 최고예요……❤"
+					CASE 3
+						;세라프想定
+						PRINTFORMW "에헤헤❤ 좀 더 자랑하게 해주세요❤ 왜냐면…… 이런 최고의 수컷, 달리 없으니까요❤"
+				ENDSELECT
+				;20250803추가 セクハラの度に카운터が乗るようにしたつもりが、男の분기だと乗らなかった
+				CALL CARD_COUNTER_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"마함",カウンタ,"リ数",1)
+			ELSE
+				;女の時
+				SELECTCASE RAND:4
+					CASE 0
+						PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:조교대상%의 입술을 비집어 열고 혀를 얽었다.
+						PRINTFORMW 입술이 겹쳐지는 동시에, %CALLNAME:조교대상%의 몸에서 힘이 빠지고, 손끝이 옷자락을 꽉 쥔다.
+						PRINTFORMW 혀가 얽힐 때마다 목구멍에서 달콤한 한숨이 새어 나오고, 무릎이 살짝 떨렸다.
+						CALL EROTIC_MOVE("딥키스",조교대상,-1,500)
+					CASE 1
+						PRINTFORMW %CALLNAME:MASTER%의 손끝이 %CALLNAME:조교대상%의 부드러운 가슴을 덧그리고, 손가락으로 뾰족한 정점을 꾸물꾸물 희롱한다.
+						PRINTFORMW %CALLNAME:조교대상%의 입에서 달뜬 목소리가 새어 나오지만,
+						PRINTFORMW 그것은 거절이 아니라, "더 만져줬으면 좋겠다"는 기도였다.
+						CALL EROTIC_MOVE("全身애무",조교대상,-1,500)
+					CASE 2
+						PRINTFORMW %CALLNAME:MASTER%는 입으로 자신을 만족시키라고 명령했다.
+						PRINTFORMW %CALLNAME:조교대상%는, 마치 선물을 받은 아이처럼 환하게 표정을 빛내더니,
+						PRINTFORMW 바로 %CALLNAME:MASTER%의 발밑으로 이동하여, 이례이박수일친키스로 경의를 표했다.
+						PRINTFORMW 그리고, 낼름❤……낼름낼름❤하고 혀를 기게 하고, 끝부분에 작게 원을 그리듯이 핥아 돌린다.
+						CALL EROTIC_MOVE("펠라치오",조교대상,-1,500)
+					CASE 3
+						PRINTFORMW %CALLNAME:MASTER%는 가슴으로 봉사하라고 명령했다.
+						PRINTFORMW %CALLNAME:조교대상%가 양손으로 가슴을 아래에서 들어 올리자, 푹신하고 말랑❤한 감촉이, %CALLNAME:MASTER%의 "어신체"를 감싼다.
+						PRINTFORMW 그대로 위아래로 말랑❤말랑❤ 어신체가 그녀 안에서 미끄러질 때마다 가슴골 안에서 열이 스치고, 달콤한 마찰음이 츄릅❤꾸욱❤하고 울린다.
+						PRINTFORMW %CALLNAME:조교대상%는 %CALLNAME:MASTER%를 올려다보며, 가슴을 꽉 모으고 속도를 높여간다…….
+						CALL EROTIC_MOVE("파이즈리",조교대상,-1,500)
+				ENDSELECT
+				;20250729추가 セクハラ의 도에 따라 카운터가 오르도록
+				CALL CARD_COUNTER_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,1)
+				CALL SET_FIELD_INFO(듀얼리스트,"마함",カウンタ,"리数",1)
+			ENDIF
+		ENDIF
+	NEXT
+	PRINTFORMW 바쳐진 쾌락에 의해, 어신체는 힘을 얻었다.
+	CALL RECOVER_PERMIL(MASTER,1000,"체력",1)
+	CALL RECOVER_PERMIL(MASTER,1000,"기력",1)
+ENDIF
+RETURN 0
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+; 어신체によるセクハラ효과（本番あり）
+@CARD_HOSTAGE_MONSTER_59904(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 조교대상
+
+CALL FULLRESET
+효과範囲필드 = 1
+효과範囲마함 = 1
+효과条件名前 = Pha슬레이브
+효과条件종류 = モン全般
+효과条件CNT = 1
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+IF RESULT >= 1
+	SELECTCASE RAND:3
+		CASE 0
+			PRINTFORMW "지금부터 어신체에 대한 봉사를 시작하겠습니다…… 교주님, 부디 모든 것을 받아주세요❤"
+		CASE 1
+			PRINTFORMW "신도 일동, 지금부터 봉사의 의식을 시작하겠습니다…… 각오해주세요, 교주님❤"
+		CASE 2
+			PRINTFORMW "자…… 어신체를 정화하고, 사랑하고, 채울 시간입니다……❤ 저희의 모든 것을 바치겠습니다, 교주님…❤"
+	ENDSELECT
+	PRINTFORMW 퍼실리즘이 말을 걸자, 신도들이 어신체를 둘러싸고 무릎을 꿇었다.
+	PRINTFORMW 달콤한 한숨과 함께 봉사가 시작되었다…….
+	PRINTFORML 
+
+	CALL FULLRESET
+	FOR カウンタ,0,5
+		SIF GETVAR(@"%듀얼리스트%_마함:カウンタ") == -1
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_魔_リ数:カウンタ") >= 10
+			CONTINUE
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"마함",カウンタ)
+		IF RESULT != -1
+			조교대상 = RESULT
+			;상대の성별によって분기
+			IF TALENT:조교대상:성별 >= 2
+				;男の時は퍼실리즘→あなたへ
+				;セリフはそれぞれ想定しているモンスターが居ますが、そんなにしっかり発言者を決めているわけではないです。イメージってだけ。
+				;今回はモブ乱交えっち
+				PRINTFORMW %CALLNAME:MASTER%는 퍼실리즘들과 격렬하게 교미하고 있다.
+				PRINTFORMW 한 사람이 끝나면 또 다음을, 다음을 원하며, 젖은 넓적다리가 어신체에 걸터앉는다.
+				PRINTFORMW 교대는 끊이지 않고, "어신체"는 절え間なく脈動し、熱と香りと濡れた音で周囲は満たされていく……。
+				PRINTFORMW 
+				SELECTCASE RAND:4
+					CASE 0
+						;마뉴아想定
+						PRINTFORMW "아아…… 교주님…… 뜨거워…… 이것이 신의 힘……❤"
+						PRINTFORMW 끝난 자는 그 자리에서 입술이나 손끝으로 봉사하며, 전원이 어신체에 계속 닿아있다.
+						PRINTFORMW 쾌락은 끊이지 않고, "어신체"는 끊임없이 맥동하며, 신앙이라는 공물이 계속 넘쳐흘렀다.
+					CASE 1
+						;블로우想定
+						PRINTFORMW "정말……❤ 정말…… 제멋대로인 신이시라니까……❤"
+						PRINTFORMW 백탁액을 넓적다리 사이로 흘리면서 "어신체"에 혀를 기게 하고, 넘쳐흐른 정액을 한 방울도 남기지 않고 핥아내는 신도.
+						PRINTFORMW 젖은 소리와 달콤한 한숨이 겹쳐지고, "어신체"는 더욱 맥동을 강하게 한다.
+						PRINTFORMW 두 사람의 봉사가 겹쳐지는 동안, 전원의 시선이 그 신성한 남근에 쏠려 있었다.
+					CASE 2
+						;이즈리想定
+						PRINTFORMW 신도의 허리를 잡고, 용서 없이 안쪽까지 찔러 넣을 때마다, 찰싹찰싹 엉덩이 소리가 울린다.
+						PRINTFORMW "아앗…… 좀 더…… 좀 더 안쪽까지……❤"
+						PRINTFORMW 이전 봉사자의 윤활로 신성하게 빛나는 "어신체"가, 안쪽까지 단숨에 찔러 올린다.
+						PRINTFORMW 주위의 신도들이 그 몸을 지탱하고, 쾌락이 달아나지 않도록 억누른다.
+						PRINTFORMW 뒤에서 봉사를 받는 그 모습에, 주위 신도들의 한숨도 열을 띠어갔다.
+					CASE 3
+						;세라프想定
+						PRINTFORMW 깊이 이어진 채, 입술끼리 몇 번이고 겹쳐지고, 혀와 혀가 뜨겁게 얽힌다.
+						PRINTFORMW "응……❤ 이런 식으로 안는 건…… 반칙이에요……읏❤"
+						PRINTFORMW 서로의 한숨이 섞이고, 허리의 움직임과 혀의 움직임이 딱 맞는다.
+						PRINTFORMW 입술이 떨어질 때마다 실이 빛나고, 곧바로 다시 탐하듯이 겹쳐진다.
+						PRINTFORMW 안에서 맥박치는 "어신체"에 맞춰, 달콤한 신음이 계속 새어 나왔다.
+				ENDSELECT
+			ELSE
+				;女の時
+				SELECTCASE RAND:4
+					CASE 0
+						PRINTFORMW %CALLNAME:조교대상%는 "어신체"에 걸터앉아, 기승위로 봉사하고 있다.
+						PRINTFORMW 허리를 크게 내리찍을 때마다, 입술에서 억누른 목소리가 새어 나온다.
+						PRINTFORMW 안쪽을 찔리는 순간, 등이 휘고, 눈동자가 촉촉해지면……
+						PRINTFORMW 맥동과 함께 "축복"이 밀어넣어지고, %CALLNAME:조교대상%의 질 안은 경련하며 그것을 받아들였다.
+						CALL EROTIC_MOVE("기승위",조교대상,-1,2500)
+					CASE 1
+						PRINTFORMW %CALLNAME:MASTER%는 %CALLNAME:조교대상%를 격렬하게 범하고 있다.
+						PRINTFORMW 어깨를 억눌린 %CALLNAME:조교대상%는, 일정한 리듬으로 안쪽을 콕콕❤하고 찔릴 때마다, 호흡이 얕아진다.
+						PRINTFORMW 깊은 충격이 연속되자, 허리가 도망치듯 떨리기 시작한다.
+						PRINTFORMW 이윽고 깊이 파고들어, 따뜻한 축복이 안쪽으로 흘러 들어갔다…….
+						CALL EROTIC_MOVE("前穴凌辱",조교대상,-1,2500)
+					CASE 2
+						PRINTFORMW %CALLNAME:조교대상%는 허리를 붙잡혀, 뒷구멍을 용서 없이 범해지고 있다.
+						PRINTFORMW 그럴 때마다 등뼈가 흔들리고, 가슴이 위아래로 흔들린다.
+						PRINTFORMW 몇 번째인가의 찌르기에 온몸이 경직되고, 안쪽이 꽉 조여지자,
+						PRINTFORMW 단숨에 밀어넣어져, 뜨거운 분출이 장 안쪽으로 쏟아져 들어갔다.
+						CALL EROTIC_MOVE("後穴凌辱",조교대상,-1,2500)
+					CASE 3
+						PRINTFORMW "어신체"를 깊이 받아들이는 %CALLNAME:조교대상%의 허리를, 다른 자가 양손으로 눌러 찌르기의 충격을 강하게 하고 있다.
+						PRINTFORMW 가슴에는 다른 입술이 겹쳐지고, 혀끝이 민감한 부분을 덧그리자,
+						PRINTFORMW 교미의 진동이 온몸에 전해져, %CALLNAME:조교대상%의 다리가 얽혀 떨어지지 않는다.
+						PRINTFORMW 허리가 가라앉을 때마다, 여러 애무가 겹쳐지고, 피부가 땀으로 윤기나게 빛난다.
+						PRINTFORMW "어신체"는 한순간도 쉬지 않고, 모든 감각이 쾌락의 공물로 변해갔다.
+						CALL EROTIC_MOVE("全身凌辱",조교대상,-1,2500)
+				ENDSELECT
+				CALL SET_FIELD_INFO(듀얼리스트,"마함",カウンタ,"リ数",1)
+			ENDIF
+		ENDIF
+	NEXT
+	PRINTFORMW 바쳐진 쾌락에 의해, 어신체는 힘을 얻었다.
+	CALL RECOVER_PERMIL(MASTER,2000,"체력",1)
+	CALL RECOVER_PERMIL(MASTER,2000,"기력",1)
+ENDIF
+
+RETURN 0
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+; 카운터だけを乗せる효과
+@CARD_COUNTER_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,카운터個数)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 카운터個数
+#DIM DYNAMIC 選択カード
+
+;카운터を置く
+PRINTFORMW "어신체" 카드에 카운터를 놓아주세요
+CALL FULLRESET
+효과条件カテゴリ = 어신체
+CALL CARD_CHOOSE_BASIC(듀얼리스트,"마함",ゾーン,場所)
+選択カード = RESULT
+SIF 選択カード != 9999
+	CALL SET_FIELD_INFO(듀얼리스트,"마함",選択カード,"個Ｃ",카운터個数)
+
+RETURN 0
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+; 조교の횟수を決定する
+@DECIDE_NUMBEROFLESSON_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,조교횟수)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 카운터個数
+#DIM DYNAMIC 조교횟수
+#DIM DYNAMIC 選択カード
+
+;場の카운터の数をチェック
+CALL FULLRESET
+효과範囲마함 = 1
+효과条件カテゴリ = 어신체
+효과条件個Ｃ所持 = 1
+효과条件CNT = 1
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+조교횟수 = RESULT:9
+조교횟수 = 조교횟수*100
+PRINTFORMW "어신체"에 쌓여있는 신앙 카운터의 수만큼 "봉사"가 행해진다…….
+
+;パワーアップした어신체が場に居るなら＋20
+CALL FULLRESET
+효과範囲필드 = 1
+효과条件名前 = 신명현현전간천
+효과条件名前 = 어신체
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+IF RESULT == 1
+	조교횟수 = 조교횟수 + 2000
+	PRINTFORMW 위대하신 자지님의 효과에 의해 조교 횟수가 더욱 추가되었다!
+ENDIF
+
+;「퍼실리즘의 가호」が발동しているなら２倍
+IF 발동済_1(듀얼리스트,99320) == 1
+	조교횟수 = 조교횟수*2
+	PRINTFORMW "퍼실리즘의 가호"에 의해 조교 횟수가 두 배가 되었다!
+ENDIF
+PRINTFORMW …………………………
+PRINTFORML
+
+RETURN 조교횟수
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+; 조교の횟수を決定する（手コキ用）
+@DECIDE_NUMBEROFLESSON_SYMMETRIA_2(듀얼리스트,종류,ゾーン,場所,조교횟수)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 카운터個数
+#DIM DYNAMIC 조교횟수
+#DIM DYNAMIC 選択カード
+
+;場の카운터の数をチェック
+CALL FULLRESET
+효과範囲마함 = 1
+효과条件カテゴリ = 어신체
+효과条件個Ｃ所持 = 1
+효과条件CNT = 1
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+조교횟수 = RESULT:9
+PRINTFORMW "어신체"에 쌓여있는 신앙 카운터의 수만큼 "봉사"가 행해진다…….
+
+;パワーアップした어신체が場に居るなら＋20
+CALL FULLRESET
+효과範囲필드 = 1
+효과条件名前 = 신명현현전간천
+효과条件名前 = 어신체
+CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+IF RESULT == 1
+	조교횟수 = 조교횟수 + 20
+	PRINTFORMW 위대하신 자지님의 효과에 의해 조교 횟수가 더욱 추가되었다!
+ENDIF
+
+;「퍼실리즘의 가호」が발동しているなら２倍
+IF 발동済_1(듀얼리스트,99320) == 1
+	조교횟수 = 조교횟수*2
+	PRINTFORMW "퍼실리즘의 가호"에 의해 조교 횟수가 두 배가 되었다!
+ENDIF
+PRINTFORMW …………………………
+PRINTFORML 
+
+RETURN 조교횟수
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+; 조교のダメージを決定する
+@DECIDE_DISCIPLINEDAMAGE_SYMMETRIA(듀얼리스트,ダメージ量)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 카운터個数
+#DIM DYNAMIC 조교횟수
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 조교대상 = -1
+#DIM DYNAMIC 굴복각인
+
+;対戦상대が조교대상かどうか一応確認
+CALL FULLRESET
+CALL CARD_EROTICS(상대プレイヤー, 듀얼리스트)
+;조교대상なら諸々の情報を취득
+IF RESULT != -1
+	조교대상 = RESULT
+	굴복각인 = MARK:조교대상:굴복각인
+
+	IF 굴복각인 == 2
+		ダメージ量 = ダメージ量 + 200
+		PRINTFORMW 이미 굴복한 %CALLNAME:조교대상%는 효과 데미지를 받기 쉬운 상태다。
+	ELSEIF 굴복각인 == 3
+		ダメージ量 = ダメージ量 + 300
+		PRINTFORMW 이미 완전히 굴복한 %CALLNAME:조교대상%는 효과 데미지를 받기 쉬운 상태다。
+	ENDIF
+ENDIF
+
+RETURN ダメージ量

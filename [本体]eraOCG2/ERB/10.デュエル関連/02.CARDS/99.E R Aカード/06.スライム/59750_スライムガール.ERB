@@ -46,7 +46,7 @@ RETURN 0
 CALL TEXT_DECORATION("ROGUE")
 PRINTL "슬라임" 몬스터 1장 + 몬스터 1장
 PRINTL 이 카드명의  ②③의 효과는 각각 1턴에 1번밖에 사용할 수 없다.。
-CALL CARD_ABLE(1,EX소환時強制)
+CALL CARD_ABLE(0,지속효과)
 PRINTL ①：융합 소환한 이 카드의 이름은, 2번째의 사용한 여성 몬스터 1장과 동명의 카드로도 취급한다。
 CALL CARD_ABLE(0,攻守変動)
 PRINTL ②：이 카드의 공격력은 자신 묘지의 「슬라임」 몬스터 또는 여성 몬스터 1장당 공격력을 ３００ 올린다。（최대 １５００ 까지）
@@ -99,12 +99,7 @@ SIF RESULT == 1
 
 
 
-IF 종류 == EX소환時強制
-	;場にいないかチェック
-	SIF ゾーン != "필드"
-		RETURN 0
-	RETURN 1
-ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+IF 종류 == 필드起動 || 종류 == フリー誘発
 	SIF ゾーン != "필드"
 		RETURN 0
 	;효과②발동済みかチェック
@@ -131,7 +126,7 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 	효과範囲EX덱 = 1
 	효과条件종류 = 융합
 	효과条件소환可 = 1
-	強制必要素材名前 = 음란한 슬라임 소녀
+	強制素材場所 = 지정場所(場所,ゾーン)
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
@@ -166,26 +161,7 @@ CALL 対面者판정(듀얼리스트)
 
 
 
-IF 종류 == EX소환時強制
-	;汎数に기록した소재가 あるかチェック
-	IF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") >= 0
-		;汎数読み込み
-		取込カードID = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
-		;기록した素材の성별をチェック
-		TRYCALLFORM CARD_{取込カードID}, "성별"
-		;♀かふたなりなら続行
-		IF GROUPMATCH(RESULT,1,3)
-			;変化元IDに汎数を打ち込み
-			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",取込カードID,上書きモード)
-			;フレ-バ-、캐릭터リスト読み込み
-			CALL CARD_EROTICS(取込カードID)
-			SIF RESULT != -1
-				PRINTFORMW 슬라임 소녀는%NAME:RESULT%의 유전자를 이어 받고 있다…！
-		ENDIF
-	ENDIF
-	;使い終わった汎数を削除
-	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",0,上書きモード)
-ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+IF 종류 == 필드起動 || 종류 == フリー誘発
 	;カード발동確認
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59750,2)
 	IF RESULT == 0
@@ -205,7 +181,7 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 		효과条件종류 = 융합
 		효과条件소환可 = 1
 		;一体目の素材は必ず슬라임ガ-ルに
-		強制必要素材名前 = 음란한 슬라임 소녀
+		強制素材場所 = 지정場所(場所,ゾーン)
 		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
 		選択カード = RESULT
 		IF 選択カード != 9999
@@ -238,4 +214,27 @@ ELSEIF 종류 == 지속효과
 	CALL FULLRESET
 	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所")  == 1
 		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	
+	IF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") > 0
+		;汎数読み込み
+		取込カードID = GETVAR(@"%듀얼리스트%_MZ_汎数:場所")
+		;記録した素材の성별をチェック
+		TRYCALLFORM CARD_{取込カードID}, "성별"
+		;♀かふたなりなら続行
+		選択カード = NO_TO_CHARANUM(取込カードID)
+		IF 選択カード >= 1 && オプション_성별
+			RESULT = TALENT:選択カード:성별
+		ENDIF
+		IF GETBIT(RESULT,0)
+			;変化元IDに汎数を打ち込み
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",取込カードID,上書きモード)
+			;フレーバー、캐릭터リスト読み込み
+			CALL CARD_EROTICS(取込カードID)
+			SIF RESULT != -1
+				PRINTFORMW 슬라임 걸은 %NAME:RESULT%의 유전자를 잇고있다…！
+		ENDIF
+		;使い終わった汎数を削除
+		SIF GETVAR(@"%듀얼리스트%_MZ_汎数:場所") >= 1000
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",0,上書きモード)
+	ENDIF
 ENDIF

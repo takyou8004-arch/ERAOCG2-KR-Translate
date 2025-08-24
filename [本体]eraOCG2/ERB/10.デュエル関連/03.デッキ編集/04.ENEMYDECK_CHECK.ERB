@@ -341,177 +341,317 @@ NEXT
 #DIMS DYNAMIC 지정カテゴリ
 #DIMS DYNAMIC 듀얼리스트
 #DIM DYNAMIC カウンタ
-#DIM DYNAMIC カウンタCard
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC カード_ID
 #DIM DYNAMIC カウンタDeck
 #DIM DYNAMIC カウンタEXDeck
 #DIM DYNAMIC カード枚数チェック,999999
+#DIM DYNAMIC リピート횟수
+#DIM DYNAMIC 설정カード종류
+#DIM DYNAMIC 설정플래그
+#DIM DYNAMIC ERA플래그
+VARSET カード_ID
 
+
+IF 설정플래그 == 0
 ;대상がモブならNGを返す
-SIF 캐릭터番号 <= 0
-	RETURN 0
-;개편덱확인（CFLAG:729)：最低限덱として成立しているという플래그설정
-SIF CFLAG:캐릭터番号:개편덱확인 >= 1
-	RETURN 100
+	SIF 캐릭터番号 <= 0
+		RETURN 0
+	;개편덱확인（CFLAG:729)：最低限덱として成立しているという플래그설정
+	SIF CFLAG:캐릭터番号:개편덱확인 >= 1
+		RETURN 100
+	캐릭터ID = NO:캐릭터番号
+	TRYCALLFORM CARDNAME_{캐릭터ID}("カテゴリ")
+	지정カテゴリ = %RESULTS:0%
+	SIF GROUPMATCH(지정カテゴリ,"없음","E.R.A","듀얼리스트")
+		RETURN 0
+ELSE
+	캐릭터ID = 캐릭터番号
+	TRYCALLFORM CARDNAME_{캐릭터ID}("カテゴリ")
+	지정カテゴリ = %RESULTS:0%
+	SIF MATCH(RESULTS,"E.R.A")
+		ERA플래그 = 1
+	SIF GROUPMATCH(지정カテゴリ,"없음","듀얼리스트")
+		RETURN 0
+ENDIF
 
-캐릭터ID = NO:캐릭터番号
-カウンタDeck = 700
-VARSET カウンタCard
-
+;カウンタDeck = 700
 ;대상캐릭터のカテゴリをチェック。なし、ERA、듀얼리스트はNG
-TRYCALLFORM CARDNAME_{캐릭터ID}("カテゴリ")
-지정カテゴリ = %RESULTS:0%
-SIF GROUPMATCH(지정カテゴリ,"なし","E.R.A","듀얼리스트")
-	RETURN 0
 
-FOR カウンタCard,1000,100000
+
+;덱の空きをちゃんと-1につぶす
+VARSET 仮組_덱,-1
+VARSET 仮組_EX덱,-1
+
+
+FOR カード_ID,1000,100000
 	;名前のない＝存在しない番号はスキップ
-	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
+	TRYCALLFORM CARDNAME_{カード_ID}("名前")
 	SIF RESULTS == ""
 		CONTINUE
 	;EX덱カードはスキップ
-	TRYCALLFORM CARD_{カウンタCard}("종류")
+	TRYCALLFORM CARD_{カード_ID}("종류")
 	SIF INRANGE(RESULT,4,10)
 		CONTINUE
-	;ERAカードはスキップ
-	TRYCALLFORM CARDNAME_{カウンタCard}("カテゴリ")
-	SIF MATCH(RESULTS,"E.R.A")
+	
+	;トークンはスキップ
+	TRYCALLFORM CARD_{カード_ID}("トークン")
+	SIF RESULT == 1
 		CONTINUE
+	IF ERA플래그 == 0
+		;ERAカードはスキップ
+		TRYCALLFORM CARDNAME_{カード_ID}("カテゴリ")
+		SIF MATCH(RESULTS,"E.R.A")
+			CONTINUE
+	ENDIF
 	;同じカテゴリを持たないカードはスキップ
-	TRYCALLFORM CARDNAME_{カウンタCard}("カテゴリ")
+	TRYCALLFORM CARDNAME_{カード_ID}("カテゴリ")
 	SIF !MATCH(RESULTS,지정カテゴリ)
 		CONTINUE
+	;종류で入れる枚数を決める
+	VARSET 설정カード종류
+	TRYCALLFORM CARD_{カード_ID}("종류")
+	설정カード종류 = RESULT
+	SELECTCASE 설정カード종류
+	CASE 1 to 10
+		リピート횟수 = 3
+	CASE 20 to 29
+		IF GROUPMATCH(설정カード종류,지속마법, 速攻마법)
+			リピート횟수 = 2
+		ELSEIF RESULT == 装備마법 
+			リピート횟수 = 1
+		ELSE
+			リピート횟수 = 3		
+		ENDIF
+	CASE 30 to 39
+		リピート횟수 = 1
+	ENDSELECT
 	;덱管理用CFLAGに入れる＆;덱枠を＋＆덱に入れたカード数を＋판정、を３回
-	CFLAG:캐릭터番号:カウンタDeck = カウンタCard
-	カウンタDeck ++
-	カード枚数チェック:カウンタCard ++
-	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
-	;PRINTFORML {カウンタDeck-700}枚目、%RESULTS%、덱in
-	;50枚になったら終了
-	SIF カウンタDeck > 748 ;개편덱확인=729
+
+	FOR カウンタB,0,リピート횟수
+		SIF カード枚数チェック:カード_ID >= 3
+			BREAK
+;		CFLAG:캐릭터番号:カウンタDeck = カード_ID
+		仮組_덱:カウンタDeck = カード_ID
+		カウンタDeck ++
+		カード枚数チェック:カード_ID ++
+	SIF カウンタDeck > 49 ;改덱確認=729
+			BREAK
+	NEXT
+	SIF カウンタDeck > 49 ;改덱確認=729
 		BREAK
-	CFLAG:캐릭터番号:カウンタDeck = カウンタCard
-	カウンタDeck ++
-	カード枚数チェック:カウンタCard ++
-	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
-	;PRINTFORML {カウンタDeck-700}枚目、%RESULTS%、덱in
-	;30枚になったら終了
-	SIF カウンタDeck > 748 ;개편덱확인=729
-		BREAK
-	CFLAG:캐릭터番号:カウンタDeck = カウンタCard
-	カウンタDeck ++
-	カード枚数チェック:カウンタCard ++
-	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
-	;PRINTFORML {カウンタDeck-700}枚目、%RESULTS%、덱in
-	;30枚になったら終了
-	SIF カウンタDeck > 748 ;개편덱확인=729
-		BREAK
-NEXT
-;덱の空きをちゃんと-1につぶす
-FOR カウンタ,700,750
-	SIF CFLAG:캐릭터番号:カウンタ == 0
-	CFLAG:캐릭터番号:カウンタ = -1
+	[SKIPSTART]
+		CFLAG:캐릭터番号:カウンタDeck = カード_ID
+		カウンタDeck ++
+		カード枚数チェック:カード_ID ++
+		
+		;TRYCALLFORM CARDNAME_{カード_ID}("名前")
+		;PRINTFORML {カウンタDeck-700}枚目、%RESULTS%、덱in
+		;50枚になったら終了
+
+		SIF カウンタDeck > 749 ;改덱確認=729
+			BREAK
+
+		CFLAG:캐릭터番号:カウンタDeck = カード_ID
+		カウンタDeck ++
+		カード枚数チェック:カード_ID ++
+		
+		;TRYCALLFORM CARDNAME_{カード_ID}("名前")
+		;PRINTFORML {カウンタDeck-700}枚目、%RESULTS%、덱in
+		;50枚になったら終了
+		SIF カウンタDeck > 749 ;改덱確認=729
+			BREAK
+
+
+		CFLAG:캐릭터番号:カウンタDeck = カード_ID
+		カウンタDeck ++
+		カード枚数チェック:カード_ID ++
+		
+		;TRYCALLFORM CARDNAME_{カード_ID}("名前")
+		;PRINTFORML {カウンタDeck-700}枚目、%RESULTS%、덱in
+		;50枚になったら終了
+		SIF カウンタDeck > 749 ;改덱確認=729
+			BREAK
+	[SKIPEND]
 NEXT
 
+
 ;덱が30枚になってない場合
-IF CFLAG:캐릭터番号:개편덱확인 == 0
+IF 仮組_덱:29 <= 0
 	;まずうらら
-	カウンタDeck = 700
-	FOR カウンタDeck,700,730
+;	カウンタDeck = 700
+;	FOR カウンタDeck,700,730
+	FOR カウンタDeck,0,30
 		;既にカードが入った枠はスキップ
-		SIF CFLAG:캐릭터番号:カウンタDeck > 0
+;		SIF CFLAG:캐릭터番号:カウンタDeck > 0
+;			CONTINUE
+		SIF 仮組_덱:カウンタDeck > 0
 			CONTINUE
-		;うららが３枚以下ならうららをin
+
+		;うらら（3枚）
 		IF カード枚数チェック:1263 < 3
 			;うららin
-			CFLAG:캐릭터番号:カウンタDeck = 1263
+;			CFLAG:캐릭터番号:カウンタDeck = 1263
+			仮組_덱:カウンタDeck = 1263
 			;덱に入れたカード数を＋판정
 			カード枚数チェック:1263 ++
 			;덱枠を＋
 			カウンタDeck ++
-		;サンボルが３枚以下ならサンボルをin
-		ELSEIF カード枚数チェック:70003 < 3
+		;サンボル（1枚）
+		ELSEIF カード枚数チェック:70003 < 1
 			;サンボルin
-			CFLAG:캐릭터番号:カウンタDeck = 70003
-			;덱に入れたカード数を＋판정
+			仮組_덱:カウンタDeck = 70003
 			カード枚数チェック:70003 ++
-			;덱枠を＋
 			カウンタDeck ++
-		;無限泡影が３枚以下なら無限泡影をin
+		;無限泡影（3枚）
 		ELSEIF カード枚数チェック:90100 < 3
-			;無限泡影in
-			CFLAG:캐릭터番号:カウンタDeck = 90100
-			;덱に入れたカード数を＋판정
+			仮組_덱:カウンタDeck = 90100
 			カード枚数チェック:90100 ++
-			;덱枠を＋
 			カウンタDeck ++
-		;他のが全部入ったのなら羽根帚をIN
-		ELSE
-			;羽根帚in
-			CFLAG:캐릭터番号:カウンタDeck = 70004
-			;덱に入れたカード数を＋판정
+		;羽帚（1枚）
+		ELSEIF カード枚数チェック:70004 < 1
+			仮組_덱:カウンタDeck = 70004
 			カード枚数チェック:70004 ++
-			;덱枠を＋
+			カウンタDeck ++
+		;墓穴の指名者（2枚）
+		ELSEIF カード枚数チェック:70100 < 2
+			仮組_덱:カウンタDeck = 70100
+			カード枚数チェック:70100 ++
+			カウンタDeck ++
+		;わらし（2枚）
+		ELSEIF カード枚数チェック:1262 < 2
+			仮組_덱:カウンタDeck = 1262
+			カード枚数チェック:1262 ++
+			カウンタDeck ++
+		;うさぎ（2枚）
+		ELSEIF カード枚数チェック:1260 < 2
+			仮組_덱:カウンタDeck = 1260
+			カード枚数チェック:1260 ++
+			カウンタDeck ++
+		;大嵐（1枚）
+		ELSEIF カード枚数チェック:70005 < 1
+			仮組_덱:カウンタDeck = 70005
+			カード枚数チェック:70005 ++
+			カウンタDeck ++
+		;死者蘇生（1枚）
+		ELSEIF カード枚数チェック:70001 < 1
+			仮組_덱:カウンタDeck = 70001
+			カード枚数チェック:70001 ++
+			カウンタDeck ++
+
+		;禁じられた一滴（2枚）
+		ELSEIF カード枚数チェック:70115 < 2
+			仮組_덱:カウンタDeck = 70115
+			カード枚数チェック:70115 ++
+			カウンタDeck ++
+		;神の宣告（2枚）
+		ELSEIF カード枚数チェック:90500 < 2
+			仮組_덱:カウンタDeck = 90500
+			カード枚数チェック:90500 ++
+			カウンタDeck ++
+		;神の宣告（2枚）
+		ELSEIF カード枚数チェック:90501 < 2
+			仮組_덱:カウンタDeck = 90501
+			カード枚数チェック:90501 ++
+			カウンタDeck ++
+
+
+		;ヴェーラー（3枚）
+		ELSEIF カード枚数チェック:1095 < 3
+			仮組_덱:カウンタDeck = 1095
+			カード枚数チェック:1095 ++
+			カウンタDeck ++
+		;DDクロウ（3枚）
+		ELSEIF カード枚数チェック:26000 < 3
+			仮組_덱:カウンタDeck = 26000
+			カード枚数チェック:26000 ++
+			カウンタDeck ++
+		;パンクラ（3枚）
+		ELSEIF カード枚数チェック:27001 < 3
+			仮組_덱:カウンタDeck = 27001
+			カード枚数チェック:27001 ++
 			カウンタDeck ++
 		ENDIF
 		;30枚になったら終了
-		SIF カウンタDeck > 729 ;개편덱확인=729
+		SIF カウンタDeck > 29 ;改덱確認=729
 			BREAK
 	NEXT
 	;ここまでやっても덱が30枚にならないならさじを投げてNGを返す
-	SIF CFLAG:캐릭터番号:개편덱확인 == 0
+;	SIF CFLAG:캐릭터番号:改덱確認 == 0
+	SIF 仮組_덱:29 == 0
 		RETURN 0
 ENDIF
 
 
-カウンタEXDeck = 770
-FOR カウンタCard,1000,100000
+;カウンタEXDeck = 770
+FOR カード_ID,1000,100000
 	;名前のない＝存在しない番号はスキップ
-	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
+	TRYCALLFORM CARDNAME_{カード_ID}("名前")
 	SIF RESULTS == ""
 		CONTINUE
 	;EX덱カードじゃないのはスキップ
-	TRYCALLFORM CARD_{カウンタCard}("종류")
+	TRYCALLFORM CARD_{カード_ID}("종류")
 	SIF !INRANGE(RESULT,4,10)
 		CONTINUE
-	;ERAカードはスキップ
-	TRYCALLFORM CARDNAME_{カウンタCard}("カテゴリ")
-	SIF MATCH(RESULTS,"E.R.A")
+	;トークンはスキップ
+	TRYCALLFORM CARD_{カード_ID}("トークン")
+	SIF RESULT == 1
 		CONTINUE
+	IF ERA플래그 == 0
+		;ERAカードはスキップ
+		TRYCALLFORM CARDNAME_{カード_ID}("カテゴリ")
+		SIF MATCH(RESULTS,"E.R.A")
+			CONTINUE
+	ENDIF
 	;同じカテゴリを持たないカードはスキップ
-	TRYCALLFORM CARDNAME_{カウンタCard}("カテゴリ")
+	TRYCALLFORM CARDNAME_{カード_ID}("カテゴリ")
 	SIF !MATCH(RESULTS,지정カテゴリ)
 		CONTINUE
-	;덱管理用CFLAGに入れる＆;덱枠を＋＆덱に入れたカード数を＋판정、を３回
-	CFLAG:캐릭터番号:カウンタEXDeck = カウンタCard
-	カウンタEXDeck ++
-	カード枚数チェック:カウンタCard ++
-	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
-	;PRINTFORML {カウンタEXDeck-770}枚目、%RESULTS%、덱in
-	SIF カウンタEXDeck >= 785
-		BREAK
-	CFLAG:캐릭터番号:カウンタEXDeck = カウンタCard
-	カウンタEXDeck ++
-	カード枚数チェック:カウンタCard ++
-	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
-	;PRINTFORML {カウンタEXDeck-770}枚目、%RESULTS%、덱in
-	SIF カウンタEXDeck >= 785
-		BREAK
-	CFLAG:캐릭터番号:カウンタEXDeck = カウンタCard
-	カウンタEXDeck ++
-	カード枚数チェック:カウンタCard ++
-	TRYCALLFORM CARDNAME_{カウンタCard}("名前")
-	;PRINTFORML {カウンタEXDeck-770}枚目、%RESULTS%、덱in
+	FOR カウンタB,0,3
+		SIF カード枚数チェック:カード_ID >= 3
+			BREAK
+		;CFLAG:캐릭터番号:カウンタEXDeck = カード_ID
+		仮組_EX덱:カウンタEXDeck = カード_ID
+		カウンタEXDeck ++
+		カード枚数チェック:カード_ID ++
+	NEXT
+
+	[SKIPSTART]
+		;덱管理用CFLAGに入れる＆;덱枠を＋＆덱に入れたカード数を＋판정、を３回
+		CFLAG:캐릭터番号:カウンタEXDeck = カード_ID
+		カウンタEXDeck ++
+		カード枚数チェック:カード_ID ++
+		TRYCALLFORM CARDNAME_{カード_ID}("名前")
+		;PRINTFORML {カウンタEXDeck-770}枚目、%RESULTS%、덱in
+		SIF カウンタEXDeck >= 785
+			BREAK
+		CFLAG:캐릭터番号:カウンタEXDeck = カード_ID
+		カウンタEXDeck ++
+		カード枚数チェック:カード_ID ++
+		TRYCALLFORM CARDNAME_{カード_ID}("名前")
+		;PRINTFORML {カウンタEXDeck-770}枚目、%RESULTS%、덱in
+		SIF カウンタEXDeck >= 785
+			BREAK
+		CFLAG:캐릭터番号:カウンタEXDeck = カード_ID
+		カウンタEXDeck ++
+		カード枚数チェック:カード_ID ++
+		TRYCALLFORM CARDNAME_{カード_ID}("名前")
+		;PRINTFORML {カウンタEXDeck-770}枚目、%RESULTS%、덱in
+	[SKIPEND]
 	;15枚になったら終了
-	SIF カウンタEXDeck >= 785
+	SIF カウンタEXDeck >= 15
 		BREAK
 NEXT
 
 ;EX덱は特に15枚にならなくてもOK
 ;EX덱の空きをちゃんと-1につぶす
-FOR カウンタ,770,785
-	SIF CFLAG:캐릭터番号:カウンタ == 0
-	CFLAG:캐릭터番号:カウンタ = -1
-NEXT
+;FOR カウンタ,770,785
+;	SIF CFLAG:캐릭터番号:カウンタ == 0
+;		CFLAG:캐릭터番号:カウンタ = -1
+;NEXT
+
+
+
 
 ;一旦덱中身をチェック、デバッグチェック用
 ; カウンタDeck = 700
@@ -530,6 +670,37 @@ NEXT
 ; 	PRINTFORML [{カウンタEXDeck-769}] %RESULTS%
 ; 	RESULTS = ""
 ; NEXT
+
+IF 설정플래그 == 0
+;	CALLFORM DUELDECK_CFLAG("仮組",캐릭터番号)
+
+	FOR カウンタ,700,760
+		CFLAG:TARGET:カウンタ = -1
+	NEXT
+	FOR カウンタ,770,790
+		CFLAG:TARGET:カウンタ = -1
+	NEXT
+
+	FOR カウンタ,0,50
+		CFLAG:TARGET:(700 + カウンタ) = 仮組_덱:カウンタ
+	NEXT
+	FOR カウンタ,0,15
+		CFLAG:TARGET:(770 + カウンタ) = 仮組_EX덱:カウンタ
+	NEXT
+
+	RETURN 1
+ELSE
+	CALL CARD_DECK_CHECK(0,2,1)
+	SIF RESULT == 1
+		RETURN 0
+
+	FOR カウンタ,0,50
+		編集_덱:カウンタ = 仮組_덱:カウンタ
+	NEXT
+	FOR カウンタ,0,15
+		編集_EX덱:カウンタ = 仮組_EX덱:カウンタ
+	NEXT		
+ENDIF
 
 ;無事ここまで来たらOKを返す
 RETURN 1

@@ -7,11 +7,11 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-		RESULTS = 심메트리아 세라프
+		RESULTS = 퍼실리즘 세라프
 	CASE "略称"
-		RESULTS = Sym세라프
+		RESULTS = Pha세라프
 	CASE "カテゴリ"
-		RESULTS:0 = 심메트리아
+		RESULTS:0 = 퍼실리즘
 		RESULTS:1 = E.R.A
 ENDSELECT
 
@@ -47,19 +47,20 @@ RETURN 0
 #DIM DYNAMIC 종류
 
 CALL TEXT_DECORATION("ROGUE")
-PRINTL 이 카드명의 (1)(2)(3)의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+PRINTL 이 카드명의 ①②③의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
 CALL CARD_ABLE(0,身代효과)
-PRINTL ①：자신 필드의 "타천칭" 카드가 전투 / 효과로 파괴되는 경우、대신에 패의 이 카드를 버릴 수 있다。
+PRINTL ①：자신 필드의 "어신체" 카드가 전투 / 효과로 파괴될 경우、
+PRINTL 대신에 패 / 필드에 존재하는 이 카드를 묘지로 보낼 수 있다。
 CALL CARD_ABLE(2,묘지起動)
-PRINTL ②：이 카드가 묘지에 존재하는 경우에、
-PRINTL 자신의 패 / 필드의 카드１장을 묘지로 보내고 발동할 수 있다。이 카드를 특수 소환한다。
-PRINTL 그 후、묘지에서 "심메트리아 세라프"이외의 "심메트리아"카드 １장을 패에 넣는다。
+PRINTL ②：이 카드가 묘지에 존재하는 경우에、"퍼실리즘 세라프" 및 "어신체" 이외의
+PRINTL 자신의 패 / 필드의 카드 １장을 제외하고 발동할 수 있다。이 카드를 특수 소환한다。
+PRINTL 그 후、자신 묘지의 "퍼실리즘 세라프" 이외의 "퍼실리즘"카드 １장을 패에 넣을 수 있다。
 CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
-PRINTL ③：자신 / 상대 턴에、자신 필드에 "타천칭" 카드가 존재하는 경우、
+PRINTL ③：자신 / 상대 턴에、자신 필드에 "어신체" 카드가 존재하는 경우、
 PRINTL 필드의 이 카드를 묘지로 보내고 발동할 수 있다。
-PRINTL 상대는 이하의 효과에서 １개를 고른다。그 후、그 효과를 적용한다。
-PRINTL ●이 턴 상대는 마법/ 함정 카드를 발동할 수 없다。
-PRINTL ●상대에게 공개 자위를 시킨다。그 후 200 데미지를 주고、"타천칭" 카드에 개별 카운터를 １개 놓는다。
+PRINTL 상대는 이하의 효과에서 １를 고른다。그 후、그 효과를 적용한다。
+PRINTL ●이 턴 상대는 마법 / 함정 카드를 발동할 수 없다。
+PRINTL ●상대에게 공개 자위를 시킨다。그 후１００ 데미지를 주고、"어신체" 카드에 신앙 카운터를 １개 놓는다。
 CALL TEXT_DECORATION("ROGUE")
 
 @CARDCAN_59903(듀얼리스트,종류,ゾーン,場所)
@@ -78,22 +79,27 @@ SIF RESULT == 1
 
 ;身代わり효과
 IF 종류 == 身代효과
-	SIF ゾーン != "손패"
-		RETURN 0
+	IF ゾーン != "손패"
+		SIF ゾーン != "필드"
+			RETURN 0
+	ENDIF
 	TRYCALLFORM CARDNAME_{破壊대상ID}("カテゴリ")
-	SIF !MATCH(RESULTS,"타천칭")
+	SIF !MATCH(RESULTS,"어신체")
 		RETURN 0
 	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
 		RETURN 0
 	RETURN 1
 
-;묘지에서 のss효과
+;묘지からのss효과
 ELSEIF 종류 == 묘지起動
 	SIF 발동済_2(듀얼리스트,59903)
 		RETURN 0
 	SIF メインフェイズ != 1
 		RETURN 0
 	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	;제외불가チェック
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
 		RETURN 0
 	CALL CARD_SS_CHECK(듀얼리스트,59903,"묘지")
 	SIF RESULT == 1
@@ -103,7 +109,7 @@ ELSEIF 종류 == 묘지起動
 	효과範囲마함 = 1
 	효과範囲손패 = 1
 	효과条件他所 = 1
-	효과条件固カテゴリ = 타천칭
+	효과条件固カテゴリ = 어신체
 	효과条件CNT = 1
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所,1281)
 	SIF RESULT < 1
@@ -119,7 +125,7 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 	CALL FULLRESET
 	효과範囲필드 = 1
 	효과範囲마함 = 1
-	효과条件カテゴリ = 타천칭
+	효과条件カテゴリ = 어신체
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
@@ -137,8 +143,9 @@ ENDIF
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC 카운터数
 #DIM DYNAMIC ダメージ量
-#DIM DYNAMIC 효과分岐
+#DIM DYNAMIC 효과분기
 #DIM DYNAMIC 조교대상
+#DIM DYNAMIC 조교효과
 
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
@@ -157,27 +164,35 @@ IF 종류 == 身代효과
 	RETURN 0
 
 ELSEIF 종류 == 묘지起動
-	;묘지에서 자신を특수소환する효과
-	;이 카드의 み条件と효과가 違う
+	;묘지から자신を특수소환する효과
+	;このカードのみ条件と효과が違う
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59903,2)
 	IF RESULT == 0
-		;손패또는 필드의 카드를 묘지へ
+		;손패またはフィールドのカードを묘지へ
 		CALL FULLRESET
 		효과範囲필드 = 1
 		효과範囲마함 = 1
 		효과範囲손패 = 1
-		효과条件固カテゴリ = 타천칭
+		효과条件行先플래그 = 제외行き
+		효과条件固カテゴリ = 어신체
+		효과条件固名前 = 퍼실리즘 세라프
 		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
 		IF RESULT == 1
 			;自身を특수소환
 			CALL FULLRESET
 			CALL CARD_SP_SUMMON(듀얼리스트,"묘지",場所)
-			;テーマ카드를 回収
-			CALL FULLRESET
-			효과範囲묘지 = 1
-			효과条件カテゴリ = 심메트리아
-			효과条件固名前 = 심메트리아 세라프
-			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			;テーマカードを回収
+			IF 듀얼리스트 == "자신"
+				PRINTL 묘지의 "퍼실리즘" 카드를 패에 넣으시겠습니까？
+				CALL YN_CHOICE(듀얼리스트)
+				IF RESULT == はい && 듀얼리스트 == "자신"
+					CALL FULLRESET
+					효과範囲묘지 = 1
+					효과条件カテゴリ = 퍼실리즘
+					효과条件固名前 = 퍼실리즘 세라프
+					CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+				ENDIF
+			ENDIF
 		ENDIF
 	ENDIF
 
@@ -185,55 +200,62 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 	;ダメージか固有のボーナス효과かを상대に選択させる효과
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59903,3)
 	IF RESULT == 0
-		;자신を묘지에 送る
+		;자신を묘지に送る
 		CALL FULLRESET
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
-		;どの효과가 選択されるか決定
+		;どの효과が選択されるか決定
 		CALL FULLRESET
 		CALL CALC_PROBABILITY_SYMMETRIA(듀얼리스트,종류,ゾーン,場所)
-		효과分岐 = RESULT
+		효과분기 = RESULT
 
-		IF 효과分岐 == 1 || 효과分岐 == 2
-			;RESULTが1なら確率によってボーナス효과가 選択された
-			;RESULTが2ならダメージ的にボーナス효과를 選択するしかなかった
-			;각각 に違うメッセージを用意する予定があったが、今のところは結果は同じ
+		;ダメージ量と조교효과、횟수の初期値を決定
+		조교효과 = 100
+		ダメージ量 = 100
+
+		;조교ダメージを決定
+		CALL DECIDE_DISCIPLINEDAMAGE_SYMMETRIA(듀얼리스트,ダメージ量)
+		ダメージ量= RESULT
+		;조교횟수の決定
+		CALL DECIDE_NUMBEROFLESSON_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,조교효과)
+		조교효과 = RESULT
+
+		IF 효과분기 == 1 || 효과분기 == 2
+			;RESULTが1なら確率によってボーナス효과が選択された
+			;RESULTが2ならダメージ的にボーナス효과を選択するしかなかった
+			;それぞれに違うメッセージを用意する予定があったが、今のところは結果は同じ
 			;마법함정無効
+			CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"세라프",효과분기)
 			CALL SET_PLAYER_INFO(듀얼리스트,"마함無効",1,1)
-		ELSEIF 효과分岐 == 3
-			;RESULTが3なら使途が居るので両方の효과를 適用させる
-			;몬스터가 個別で持つボーナス효과の処理
+		ELSEIF 효과분기 == 3
+			;RESULTが3なら使途が居るので両方の효과を適用させる
+			;モンスターが個別で持つボーナス효과の処理
 			;마법함정無効
 			CALL SET_PLAYER_INFO(듀얼리스트,"마함無効",1,1)
 			;奉仕処理
 			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
 			IF RESULT != -1
 				조교대상 = RESULT
-				PRINTFORML
-				SETCOLOR C_PINK 
-				PRINTFORML %CALLNAME:조교대상%는 공개 자위를 강요받고있다……
-				RESETCOLOR
-				CALL EROTIC_MOVE("자위",조교대상,MASTER,500)
+				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"세라프",효과분기)
+				CALL EROTIC_MOVE("自慰",조교대상,MASTER,조교효과)
 			ENDIF
 			;ダメージを与え카운터を置く효과
 			CALL FULLRESET
 			ダメージ量 = 200
 			CALL CARD_DAMAGE_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,ダメージ量)
 		ELSE
-			;それ以外ならダメージを与える효과가 選択されている。
+			;それ以外ならダメージを与える효과が選択されている。
 			;奉仕処理
 			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
 			IF RESULT != -1
 				조교대상 = RESULT
-				PRINTFORML
-				SETCOLOR C_PINK 
-				PRINTFORML %CALLNAME:조교대상%는 공개 자위를 강요받고있다……
-				RESETCOLOR
-				CALL EROTIC_MOVE("자위",조교대상,MASTER,500)
+				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"세라프",효과분기)
+				CALL EROTIC_MOVE("自慰",조교대상,MASTER,조교효과)
 			ENDIF
 			;ダメージを与え카운터を置く효과の処理
 			CALL FULLRESET
 			ダメージ量 = 200
 			CALL CARD_DAMAGE_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,ダメージ量)
+			PRINTFORMW %CALLNAME:조교대상%는 제정신으로 돌아왔다！
 		ENDIF
 	ENDIF
 ENDIF

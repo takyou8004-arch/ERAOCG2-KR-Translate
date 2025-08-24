@@ -1,0 +1,241 @@
+﻿@CARDNAME_99321,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 퍼실리즘의 세례
+	CASE "略称"
+		RESULTS = Pha세례
+	CASE "カテゴリ"
+		RESULTS:0 = 퍼실리즘
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_99321(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250721
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99321(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ①②의 효과는 １턴에 １번、어느 쪽인가 １개밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,마함起動 ,フリー誘発)
+PRINTL ①：상대 필드 / 묘지의 몬스터 １장을 "퍼실리즘 슬레이브"로서、
+PRINTL 지속 마법 카드 취급으로 자신의 마법＆함정 존에 앞면 표시로 둔다。
+PRINTL 그 후、자신 필드에 존재하는 "어신체" 이외의 １장을 묘지로 보낼 수 있다。
+CALLFORM CARD_ABLE(2,마함起動 ,フリー誘発)
+PRINTL ②：묘지의 이 카드를 제외하고、덱에서 "퍼실리즘의 세례" 이외의 "퍼실리즘" 카드 １장을 묘지로 보내고 발동할 수 있다。
+PRINTL "어신체" 카드에 신앙 카운터를 ４개 놓는다. 그 후、상대의 덱에서 암컷 카드 １장을 묘지로 보낼 수 있다。
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_99321(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99321)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == フリー誘発 || 종류 == 묘지起動
+	IF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+		SIF 마함数(듀얼리스트) >= 5
+			RETURN 0
+		;상대の필드にカードがあるかチェック
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대묘지 = 1
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		;いずれか
+		SIF 발동済_1(듀얼리스트,99321)
+			RETURN 0
+		SIF 발동済_2(듀얼리스트,99321)
+			RETURN 0
+	ELSEIF ゾーン == "묘지"
+		;제외불가チェック
+		SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+			RETURN 0
+		;いずれか
+		SIF 발동済_1(듀얼리스트,99321)
+			RETURN 0
+		SIF 발동済_2(듀얼리스트,99321)
+			RETURN 0
+		;덱に同名以外の퍼실리즘が存在するかチェック
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 퍼실리즘
+		효과条件固名前 = 퍼실리즘의 세례
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		;어신체が存在するかチェック
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件カテゴリ = 어신체
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_99321(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カード추가先
+#DIM DYNAMIC 효과분기チェック
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 元カード名
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発 || 종류 == 묘지起動
+	IF RESULT == 0
+		IF ゾーン == "마함"
+			;①の효과
+			CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99321,1)
+			;마함を묘지へ
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			;상대のカードを마법함정ゾーンに置く효과の処理
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			;カードを置く位置の情報を취득
+			カード추가先 = 現마함(듀얼리스트)
+			;상대のカードを置く
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과範囲상대묘지 = 1
+			효과条件표시 = 10
+			효과条件종류 = モン全般
+			효과条件除去種 = 強奪
+			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+			;名前を「Pha슬레이브」に변경（処理上はこの表記）
+			選択カード_ID = GETVAR(@"%듀얼리스트%_마함:カード추가先")
+			TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
+			元カード名 = %RESULTS%
+			CALL FULLRESET
+			CALL CARD_SET_RENAME(듀얼리스트,"마함",カード추가先,"Pha슬레이브")
+			
+			;추가효과の대상が居るかチェック
+			효과분기チェック = 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과条件CNT = 1
+			효과条件固カテゴリ = 어신체
+			효과条件固名前 = 퍼실리즘의 세례
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT < 1
+				효과분기チェック = 0
+
+			;リアクション処理
+			;조교대상をチェック
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"마함",カード추가先)
+			조교대상 = RESULT
+			;텍스트を표시
+			IF RESULT != -1
+				;女の場合
+				IF TALENT:조교대상:성별 == 1
+					CALL KOJO_SYMMETRIA_99321(듀얼리스트,元カード名,TALENT:조교대상:성별,조교대상)
+				;男の場合
+				ELSEIF TALENT:조교대상:성별 >= 2
+					CALL KOJO_SYMMETRIA_99321(듀얼리스트,元カード名,TALENT:조교대상:성별,조교대상)
+				ENDIF
+			ELSE
+				PRINTFORMW %CALLNAME:MASTER%는 압도적인 "수컷력"으로 상대를 굴복시켰다！
+			ENDIF
+
+			;추가효과でカードを묘지に送る
+			;場が埋まったり、조교部屋を使っている場合のケア用
+			IF 효과분기チェック == 1
+				PRINTFORMW "어신체" 이외의 카드를 패 / 필드에서 묘지로 보내시겠습니까？
+				CALL YN_CHOICE(듀얼리스트)
+				IF RESULT == はい && 듀얼리스트 == "자신"
+					CALL FULLRESET
+					효과範囲필드 = 1
+					효과範囲마함 = 1
+					효과条件固カテゴリ = 어신체
+					CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+				ENDIF
+			ENDIF
+		ELSEIF ゾーン == "묘지"
+			;묘지から자신を제외
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			;うららチェック
+			CALL URARA_CHANCE(듀얼리스트,,"덱")
+			IF RESULT == 1
+				CALL SHUFFLE(듀얼리스트)
+				CALL SHUFFLE(対面者)
+				RETURN 0
+			ENDIF
+			;묘지送り処理
+			PRINTFORMW 묘지로 보낼 "퍼실리즘" 카드를 선택해주십시오.
+			CALL FULLRESET
+			효과条件カテゴリ = 퍼실리즘
+			효과条件固名前 = 퍼실리즘의 세례
+			CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+			;카운터を乗せる
+			CALL CARD_COUNTER_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,4)
+
+			;상대の덱から牝性モンスターを묘지へ
+			;대상が居るかチェック
+			효과분기チェック = 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = モン全般
+			효과条件성별 = 牝性
+			효과条件소환可 = 1
+			CALL CARD_CHECK_ADV(対面者,종류,ゾーン,場所)
+			SIF RESULT != 1
+				효과분기チェック = 0
+			;묘지送り処理
+			IF 효과분기チェック == 1
+				PRINTFORMW 상대의 덱에서 암컷 카드 １장을 묘지로 보내시겠습니까？
+				CALL YN_CHOICE(듀얼리스트)
+				IF RESULT == はい && 듀얼리스트 == "자신"
+					CALL FULLRESET
+					효과条件성별 = 牝性 
+					효과範囲상대덱 = 1
+					CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

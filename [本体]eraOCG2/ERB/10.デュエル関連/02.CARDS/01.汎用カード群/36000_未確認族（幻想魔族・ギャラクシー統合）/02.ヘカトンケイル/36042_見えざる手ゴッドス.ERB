@@ -1,0 +1,152 @@
+﻿@CARDNAME_36042,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 헤카톤케일 갓스
+	CASE "略称"
+		RESULTS = 갓스
+	CASE "カテゴリ"
+		RESULTS:0 = 헤카톤케일
+ENDSELECT
+
+
+@CARD_36042(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 0
+	CASE "レア度"
+		RETURN SPR
+	CASE "추가日"
+		RETURN 250823
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_36042(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①③의 효과는 각각 １턴에 １번밖에 사용할 수 없다
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①：드로우 페이즈 이외에 상대의 패에 카드가 더해진 경우에 발동할 수 있다。
+PRINTL 이 카드를 패에서 특수 소환한다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드가 몬스터와 전투를 행한 경우、그 ２장을 그 전투로는 파괴되지 않는다。
+CALLFORM CARD_ABLE(3,필드起動)
+PRINTL ③：상대 메인 페이즈에 발동할 수 있다。
+PRINTL 상대 묘지의 몬스터 １장을 자신 필드에 특수 소환한다。
+PRINTL 이 효과로 특수 소환한 몬스터는、필드에서 벗어난 경우에 제외된다。
+
+@CARDCAN_36042(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,36042)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,36042)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,36042,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF ドローフェイズ == 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"손패취득+D",1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_3(듀얼리스트,36042)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대묘지 = 1
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_36042(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 戦闘カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,36042,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(対面者,"自身",戦闘場所(듀얼리스트,1),"戦耐")
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,36042,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과추가종류:0 = 効追除処
+		효과추가종류:1 = 効追接触 ;隠し仕様
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

@@ -44,7 +44,9 @@ RETURN 0
 CALLFORM CARD_ABLE(10,필드起動)
 PRINTL ①: 1턴에 1번, 손패 1장을 묘지로 보내고 발동할 수 있다.
 PRINTL 손패 또는 덱에서 "광천사" 몬스터 1장을 특수 소환한다.
-PRINTL 
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신 필드에 빛속성 X몬스터가 존재하는 경우、묘지의 이 카드를 제외하고 발동할 수 있다。
+PRINTL 덱에서 "RUM" 마법카드를 １장 덱의 가장 위에 놓는다。
 
 @CARDCAN_29102(듀얼리스트,종류,ゾーン,場所)
 #DIMS DYNAMIC 듀얼리스트
@@ -76,6 +78,27 @@ IF 종류 == 필드起動
 	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = RUM
+	효과範囲덱 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件속성 = 빛속성
+	효과条件종류 = 엑시즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
 ENDIF
 
 
@@ -100,6 +123,16 @@ IF 종류 == 필드起動
 			효과範囲덱 = 1
 			효과条件カテゴリ = 홀리 라이트닝
 			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29102)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = RUM
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_ADD_DECK_SPC(듀얼리스트,"덱",RESULT)
 		ENDIF
 	ENDIF
 ENDIF

@@ -1,0 +1,250 @@
+﻿@CARDNAME_59911,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 퍼실리즘 이스크
+	CASE "略称"
+		RESULTS = Pha이스크
+	CASE "カテゴリ"
+		RESULTS:0 = 퍼실리즘
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59911(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_59911(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 링크 몬스터 이외의 "퍼실리즘" 몬스터 １장
+PRINTL 이 카드명의 ①②③의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 링크 소환에 성공한 경우에 발동할 수 있다。
+PRINTL 상대는 패에서 암컷 몬스터 １장을 효과를 무효로 하고 특수 소환한다。
+CALL CARD_ABLE(2,묘지起動)
+PRINTL ②：이 카드가 묘지에 존재하고、자신 필드에 "어신체" 카드가 존재하는 경우에 발동할 수 있다。
+PRINTL 이 카드를 특수 소환한다。
+CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
+PRINTL ③：자신 / 상대턴에、자신 필드에 "어신체" 카드가 존재하는 경우、
+PRINTL 필드의 이 카드를 묘지로 보내고 발동할 수 있다。
+PRINTL 상대는 이하의 효과에서 １를 고른다。그 후、그 효과를 적용한다。
+PRINTL ●자신은 덱에서 함정 카드를 패에 넣는다。
+PRINTL ●상대와 딥 키스를 한다。그 후１００ 데미지를 주고、"어신체" 카드에 신앙 카운터를 １개 놓는다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_59911(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件カテゴリ = 퍼실리즘
+素材条件종류 = 링크以外
+
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,59911) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_59911(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59911)
+SIF RESULT == 1
+	RETURN 0
+
+;링크소환時の효과
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,59911)
+		RETURN 0
+	RETURN 1
+
+;묘지からのss효과
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,59911)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,59911,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 어신체
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+;フリー誘発효과
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 발동済_3(듀얼리스트,59911)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 어신체
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_59911(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 選択後メッセージ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 카운터数
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 효과분기
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 조교효과
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59911)
+SIF RESULT == 1
+	RETURN 0
+
+;상대の손패から牝性モンスターを특수소환する효과
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59911,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件성별 = 牝性 
+		효과추가종류:0 = 効追無効
+		CALL CARD_SP_SUMMON_ADV(対面者,ゾーン,場所)
+		IF RESULT != 1
+			PRINTFORMW （패에 암컷 몬스터가 존재하지 않았기 때문에、처리가 되지 않았습니다）
+		ENDIF
+	ENDIF
+
+;묘지から자신を특수소환する효과
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59911,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,"묘지",場所)
+	ENDIF
+
+;ダメージか固有のボーナス효과かを상대に選択させる효과
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59911,3)
+
+	IF RESULT == 0
+		;자신を묘지に送る
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;どの효과が選択されるか決定
+		CALL FULLRESET
+		CALL CALC_PROBABILITY_SYMMETRIA(듀얼리스트,종류,ゾーン,場所)
+		효과분기 = RESULT
+
+		;ダメージ量と조교효과、횟수の初期値を決定
+		조교효과 = 100
+		ダメージ量 = 100
+
+		;조교ダメージを決定
+		CALL DECIDE_DISCIPLINEDAMAGE_SYMMETRIA(듀얼리스트,ダメージ量)
+		ダメージ量= RESULT
+		;조교횟수の決定
+		CALL DECIDE_NUMBEROFLESSON_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,조교효과)
+		조교효과 = RESULT
+
+		IF 효과분기 == 1 || 효과분기 == 2
+			;RESULTが1なら確率によってボーナス효과が選択された
+			;RESULTが2ならダメージ的にボーナス효과を選択するしかなかった상황
+			;それぞれに違うメッセージを用意する予定があったが、今のところは結果は同じ
+			;함정カードを손패に加える
+			CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"이스크",효과분기)
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = 함정全般
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)			
+		ELSEIF 효과분기 == 3
+			;RESULTが3なら使途が居るので両方の효과を適用させる
+			;モンスターが個別で持つボーナス효과の処理
+			;함정カードを손패に加える
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = 함정全般
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)	
+			;奉仕処理
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"이스크",효과분기)
+				CALL EROTIC_MOVE("ディープキス",조교대상,MASTER,조교효과)
+			ENDIF
+			;ダメージを与え카운터を置く효과
+			CALL FULLRESET
+			CALL CARD_DAMAGE_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,ダメージ量)
+		ELSE
+			;それ以外ならダメージを与える효과が選択されている。
+			;奉仕処理
+			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"이스크",효과분기)
+				CALL EROTIC_MOVE("ディープキス",조교대상,MASTER,조교효과)
+			ENDIF
+			;ダメージを与え카운터を置く효과の処理
+			CALL FULLRESET
+			CALL CARD_DAMAGE_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,ダメージ量)
+			PRINTFORMW %CALLNAME:조교대상%는 제정신으로 돌아왔다！
+		ENDIF
+	ENDIF
+ENDIF
+
+

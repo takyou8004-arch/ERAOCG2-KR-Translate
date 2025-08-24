@@ -7,11 +7,11 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-		RESULTS = 심메트리아 블로우
+		RESULTS = 퍼실리즘 블로우
 	CASE "略称"
-		RESULTS = Sym블로우
+		RESULTS = Pha블로우
 	CASE "カテゴリ"
-		RESULTS:0 = 심메트리아
+		RESULTS:0 = 퍼실리즘
 		RESULTS:1 = E.R.A
 ENDSELECT
 
@@ -47,19 +47,19 @@ RETURN 0
 #DIM DYNAMIC 종류
 
 CALL TEXT_DECORATION("ROGUE")
-PRINTL 이 카드명의 (1)(2)(3)의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+PRINTL 이 카드명의 ①②③의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
 CALL CARD_ABLE(1,손패起動)
 PRINTL ①：패의 이 카드를 묘지로 보내고 발동할 수 있다。
-PRINTL EX덱에서 "타천칭" 포트리스１장을 자신의 마법＆함정 존에 앞면 표시로 둔다。
+PRINTL EX덱에서 "어신체" 포트리스 １장을 자신의 마법＆함정 존에 앞면 표시로 둔다。
 CALL CARD_ABLE(2,묘지起動,フリー誘発)
-PRINTL ②：자신 / 상대 턴에 이 카드가 묘지에 존재하고、자신 필드에 "타천칭" 카드가 존재하는 경우에 발동할 수 있다。
+PRINTL ②：자신 / 상대턴에 이 카드가 묘지에 존재하고、자신 필드에 "어신체" 카드가 존재하는 경우에 발동할 수 있다。
 PRINTL 이 카드를 특수 소환한다。
 CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
-PRINTL ③：자신 / 상대 턴에、자신 필드에 "타천칭" 카드가 존재하는 경우、
+PRINTL ③：자신 / 상대턴에、자신 필드에 "어신체" 카드가 존재하는 경우、
 PRINTL 필드의 이 카드를 묘지로 보내고 발동할 수 있다。
-PRINTL 상대는 이하의 효과에서 １개를 고른다。그 후、그 효과를 적용한다。
+PRINTL 상대는 이하의 효과에서 １를 고른다。그 후、그 효과를 적용한다。
 PRINTL ●상대 필드의 마법 / 함정카드를 전부 제외한다。
-PRINTL ●상대에게 펠라로 봉사를 시킨다。그 후200 데미지를 주고、"타천칭" 카드에 개별 카운터를 １개 놓는다。
+PRINTL ●상대에게 펠라로 봉사시킨다。그 후 １００ 데미지를 준다、"어신체" 카드에 신앙 카운터를 １개 놓는다。
 CALL TEXT_DECORATION("ROGUE")
 
 @CARDCAN_59901(듀얼리스트,종류,ゾーン,場所)
@@ -88,14 +88,14 @@ IF 종류 == 손패起動
 	효과範囲EX덱 = 1
 	효과条件종류 = 초차원
 	효과条件カテゴリ = 포트리스
-	효과条件カテゴリ = 타천칭
+	효과条件カテゴリ = 어신체
 	CALL 효과条件レベル_ADV(11, "以下")
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
 
-;묘지에서 のss효과
+;묘지からのss효과
 ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
 	SIF 발동済_2(듀얼리스트,59901)
 		RETURN 0
@@ -107,7 +107,7 @@ ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
 	CALL FULLRESET
 	효과範囲필드 = 1
 	효과範囲마함 = 1
-	효과条件カテゴリ = 타천칭
+	효과条件カテゴリ = 어신체
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
@@ -122,7 +122,7 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 	CALL FULLRESET
 	효과範囲마함 = 1
 	효과範囲필드 = 1
-	효과条件カテゴリ = 타천칭
+	효과条件カテゴリ = 어신체
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
@@ -140,8 +140,9 @@ ENDIF
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC 카운터数
 #DIM DYNAMIC ダメージ量
-#DIM DYNAMIC 효과分岐
+#DIM DYNAMIC 효과분기
 #DIM DYNAMIC 조교대상
+#DIM DYNAMIC 조교효과
 
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
@@ -151,20 +152,21 @@ SIF RESULT == 1
 	RETURN 0
 
 IF 종류 == 손패起動
-	;패에서 자신を捨て、포트리스を置く효과
+	;손패から자신を捨て、포트리스を置く효과
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59901,1)
 	IF RESULT == 0
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
 		CALL FULLRESET
 		효과条件종류 = 초차원
 		효과条件カテゴリ = 포트리스
-		효과条件カテゴリ = 타천칭
+		효과条件カテゴリ = 어신체
 		CALL 효과条件レベル_ADV(11, "以下")
 		CALL DIMSUMMON(듀얼리스트,ゾーン,場所,4)
+		CALL KOJO_SYMMETRIA_BLOW_SS(듀얼리스트,ゾーン)
 	ENDIF
 
 ELSEIF 종류 == 묘지起動 || 종류 == フリー誘発
-	;묘지에서 자신を특수소환する효과（이 카드의 みフリーチェーン）
+	;묘지から자신を특수소환する효과（このカードのみフリーチェーン）
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59901,2)
 	IF RESULT == 0
 		CALL FULLRESET
@@ -175,56 +177,65 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 	;ダメージか固有のボーナス효과かを상대に選択させる효과
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59901,3)
 	IF RESULT == 0
-		;자신を묘지에 送る
+		;자신を묘지に送る
 		CALL FULLRESET
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
-		;どの효과가 選択されるか決定
+		;どの효과が選択されるか決定
 		CALL FULLRESET
 		CALL CALC_PROBABILITY_SYMMETRIA(듀얼리스트,종류,ゾーン,場所)
-		효과分岐 = RESULT
+		효과분기 = RESULT
 
-		IF 효과分岐 == 1 || 효과分岐 == 2
-			;RESULTが1なら確率によってボーナス효과가 選択された
-			;RESULTが2ならダメージ的にボーナス효과를 選択するしかなかった상황
-			;각각 に違うメッセージを用意する予定があったが、今のところは結果は同じ
+		;ダメージ量と조교효과、횟수の初期値を決定
+		조교효과 = 100
+		ダメージ量 = 100
+
+		;조교ダメージを決定
+		CALL DECIDE_DISCIPLINEDAMAGE_SYMMETRIA(듀얼리스트,ダメージ量)
+		ダメージ量= RESULT
+		;조교횟수の決定
+		CALL DECIDE_NUMBEROFLESSON_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,조교효과)
+		조교효과 = RESULT
+
+		IF 효과분기 == 1 || 효과분기 == 2
+			;RESULTが1なら確率によってボーナス효과が選択された
+			;RESULTが2ならダメージ的にボーナス효과を選択するしかなかった상황
+			;それぞれに違うメッセージを用意する予定があったが、今のところは結果は同じ
+			;마법함정をすべて제외
+			CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"블로우",효과분기)
+			CALL FULLRESET
+			효과範囲상대마함 = 1
+			CALL CARD_REMOVAL_ADV(듀얼리스트,"全体除去",場所,"제외")
+		ELSEIF 효과분기 == 3
+			;RESULTが3なら使途が居るので両方の효과を適用させる
+			;モンスターが個別で持つボーナス효과の処理
 			;마법함정をすべて제외
 			CALL FULLRESET
-			CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함全体",場所,"제외")
-		ELSEIF 효과分岐 == 3
-			;RESULTが3なら使途が居るので両方の효과를 適用させる
-			;몬스터가 個別で持つボーナス효과の処理
-			;마법함정をすべて제외
-			CALL FULLRESET
-			CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함全体",場所,"제외")
+			효과範囲상대마함 = 1
+			CALL CARD_REMOVAL_ADV(듀얼리스트,"全体除去",場所,"제외")
 			;奉仕処理
 			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
 			IF RESULT != -1
 				조교대상 = RESULT
-				PRINTFORML
-				SETCOLOR C_PINK 
-				PRINTFORML %CALLNAME:조교대상%는 펠라로 봉사를 강요받고있다……
-				RESETCOLOR
-				CALL EROTIC_MOVE("펠라치오",조교대상,MASTER,500)
+				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"블로우",효과분기)
+				CALL EROTIC_MOVE("펠라치오",조교대상,MASTER,조교효과)
 			ENDIF
 			;ダメージを与え카운터を置く효과
 			CALL FULLRESET
 			ダメージ量 = 200
 			CALL CARD_DAMAGE_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,ダメージ量)
 		ELSE
-			;それ以外ならダメージを与える효과가 選択されている。
+			;それ以外ならダメージを与える효과が選択されている。
 			;奉仕処理
 			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
 			IF RESULT != -1
 				조교대상 = RESULT
-				PRINTFORML
-				SETCOLOR C_PINK 
-				PRINTFORML %CALLNAME:조교대상%는 펠라로 봉사를 강요받고있다……
-				RESETCOLOR
-				CALL EROTIC_MOVE("펠라치오",조교대상,MASTER,500)
+				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"블로우",효과분기)
+				CALL EROTIC_MOVE("펠라치오",조교대상,MASTER,조교효과)
 			ENDIF
 			;ダメージを与え카운터を置く효과の処理
 			ダメージ量 = 200
 			CALL CARD_DAMAGE_SYMMETRIA(듀얼리스트,종류,ゾーン,場所,ダメージ量)
+			PRINTFORMW %CALLNAME:조교대상%는 제정신으로 돌아왔다！
 		ENDIF
 	ENDIF
 ENDIF

@@ -1,0 +1,113 @@
+﻿@CARDNAME_58522,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마스크드 히어로 애시드
+	CASE "略称"
+		RESULTS = MH애시드
+	CASE "カテゴリ"
+		RESULTS:0 = HERO
+		RESULTS:1 = M•HERO
+ENDSELECT
+
+
+@CARD_58522(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2600
+	CASE "守備力"
+		RETURN 2100
+	CASE "특수불가"
+		RETURN 1
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250823
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_58522(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드는 "마스크 체인지"의 효과로만 특수 소환할 수 있다。
+CALL CARD_ABLE(0,EX소환時強制,특수소환時強制)
+PRINTL ①：이 카드가 특수 소환된 경우에 발동한다。
+PRINTL 상대 필드의 마법 / 함정 카드를 전부 파괴한다。
+CALL CARD_ABLE(0,攻守変動)
+PRINTL ②：이 카드가 필드에 존재하는 한,
+PRINTL 상대 필드의 모든 몬스터의 공격력은 300 내린다。
+
+
+
+@CARDSUMMON_58522(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+
+@CARDCAN_58522(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,58522)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == EX소환時強制 || 종류 == 특수소환時強制
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+
+@CARDEFFECT_58522(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함全体",場所,"묘지")
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,-300,0,58522)
+ENDIF
