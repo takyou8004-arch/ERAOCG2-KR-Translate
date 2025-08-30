@@ -1,0 +1,78 @@
+﻿@CARDNAME_300211,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 런처 블래스터
+	CASE "略称"
+		RESULTS = 런처 블래스터
+	CASE "カテゴリ"
+		RESULTS:0 = 부스트
+ENDSELECT
+
+
+@CARD_300211(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN システム
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_300211(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 부스트는 １턴에 １번밖에 발동할 수 없다。
+CALLFORM CARD_ABLE(2,부스트起動)
+PRINTL ①：스피드 카운터를 １개 소비하고 발동할 수 있다。
+PRINTL 상대 필드의 카드 １장을 파괴한다。
+
+@CARDCAN_300211(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,300211)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 부스트起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,300211)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_SpＣ") < 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_300211(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択肢
+
+IF 종류 == 부스트起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,300211,1)
+	IF RESULT == 0
+		CALL SET_PLAYER_INFO(듀얼리스트,"SpＣ",-1,0,1)
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+	ENDIF
+ENDIF

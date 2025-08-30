@@ -24,6 +24,7 @@ SELECTCASE 参照先
 			PRINTL 특별히 예정이 없다면, 다시 방문해봐도 좋을 것이다。
 		ENDIF
 	CASE "条件"
+		RETURN 1
 		;３章クリア
 		SIF 依頼_完了횟수:34 == 0
 			RETURN 0
@@ -35,6 +36,8 @@ RETURN 0
 @IRAI_ACT_313(参照)
 #DIM DYNAMIC 参照
 #DIM DYNAMIC 이벤트主,5
+#DIM DYNAMIC 進行度修正
+#DIM DYNAMIC カウンタ
 
 이벤트主:0 = NO_TO_CHARANUM(2022)
 이벤트主:1 = NO_TO_CHARANUM(2024)
@@ -135,6 +138,7 @@ IF 依頼_完了횟수:313 == 0
 	PRINTFORMW 당신은 의뢰인을 찾아 저택 안을 거닐어도 좋고, 이대로 집에 돌아가도 좋다.
 
 ELSE
+	CALL EVENT_MOVE(MASTER,場所_依頼用エリア１,1,"ヴァンパイアの屋敷")
 	PRINTFORML "이런、또 온건가。
 	PRINTFORMW 　아름다운 소녀들과 어울리며 흥분하는 기분은 알겠지만, 저택을 어지럽히지는 말아다오"
 	PRINTFORML
@@ -143,18 +147,33 @@ ENDIF
 
 CALL REPEAT_PRINTL(3)
 
+;アプデ時の修正
+IF 依頼_進行보존:313 == 2
+	依頼_進行보존:313 -= 1
+	依頼_進行보존:313 += 10
+ENDIF
+
 IF CFLAG:(이벤트主:0):면식 == 1
 	PRINTL [0] - 서커의 방으로 향했다
 ELSE
 	PRINTL [0] - 사랑스러운 장식의 문을 노크했다
 ENDIF
-;工事中
-[SKIPSTART]
-IF CFLAG:(이벤트主:1):면식 == 1 || 依頼_進行보존:313 >= 3
+
+進行度修正 = 依頼_進行보존:313
+SIF 進行度修正 >= 10000
+	進行度修正 -= 10000
+SIF 進行度修正 >= 1000
+	進行度修正 -= 1000
+SIF 進行度修正 >= 100
+	進行度修正 -= 100
+IF CFLAG:(이벤트主:1):면식 == 1 || GROUPMATCH(進行度修正,20,21)
 	PRINTL [1] - グリムゾンの部屋へ向かった
-ELSEIF 依頼_進行보존:313 >= 2
+ELSEIF 進行度修正 >= 10
 	PRINTL [1] - 庭にある小屋の扉をノックした
 ENDIF
+
+;工事中
+[SKIPSTART]
 IF CFLAG:(이벤트主:2):면식 == 1 || 依頼_進行보존:313 >= 5
 	PRINTL [2] - フロイラインの部屋へ向かった
 ELSEIF 依頼_進行보존:313 >= 4
@@ -175,11 +194,14 @@ PRINTL
 PRINTL [100] - 돌아갔다
 BINPUT
 
-CALL REPEAT_PRINTL(3)
+REPEAT 3
+	PRINTL
+REND
 
 IF RESULT == 0
 	CALL IRAI_313_SUCKER
 ELSEIF RESULT == 1
+	CALL IRAI_313_GRIMZON
 ELSEIF RESULT == 2
 ELSEIF RESULT == 3
 ELSEIF RESULT == 4
@@ -197,6 +219,71 @@ CALL EVENT_MOVE(MASTER,場所_寝室)
 RETURN 2
 
 ;────────────────────────────────────────────────────────────────────────
+;호감도だけ上がって친밀とか伸びないのでここで調整
+@IRAI_313_SINMITSU(이벤트主)
+#DIM DYNAMIC 이벤트主
+#DIM DYNAMIC 만족度
+#DIM DYNAMIC 条件달성
+
+;上昇度合いはABL_UP_DATAを見ながらなんとなく
+SELECTCASE ABL:이벤트主:친밀
+	CASE 0
+		IF CFLAG:이벤트主:호감도 >= 500
+			ABL:이벤트主:친밀 ++
+			条件달성 = 1
+		ENDIF
+	CASE 1
+		IF CFLAG:이벤트主:호감도 >= 1000
+			ABL:이벤트主:친밀 ++
+			条件달성 = 1
+		ENDIF
+	CASE 2
+		IF CFLAG:이벤트主:호감도 >= 2000
+			ABL:이벤트主:친밀 ++
+			条件달성 = 1
+		ENDIF
+	CASE 3
+		IF CFLAG:이벤트主:호감도 >= 4000
+			ABL:이벤트主:친밀 ++
+			条件달성 = 1
+		ENDIF
+	CASE 4
+		IF CFLAG:이벤트主:호감도 >= 8000
+			ABL:이벤트主:친밀 ++
+			条件달성 = 1
+		ENDIF
+	CASE 5
+		IF CFLAG:이벤트主:호감도 >= 14000
+			ABL:이벤트主:친밀 ++
+			条件달성 = 1
+		ENDIF
+	CASE 6
+		IF CFLAG:이벤트主:호감도 >= 22000
+			ABL:이벤트主:친밀 ++
+			条件달성 = 1
+		ENDIF
+	CASE 7
+		IF CFLAG:이벤트主:호감도 >= 30000
+			ABL:이벤트主:친밀 ++
+			条件달성 = 1
+		ENDIF
+	CASE 8
+		IF CFLAG:이벤트主:호감도 >= 41000
+			ABL:이벤트主:친밀 ++
+			条件달성 = 1
+		ENDIF
+	CASE 9
+		IF CFLAG:이벤트主:호감도 >= 53000
+			ABL:이벤트主:친밀 ++
+			条件달성 = 1
+		ENDIF
+ENDSELECT
+PRINTL
+SIF 条件달성 == 1
+	PRINTFORMW %NAME:이벤트主%의 친밀이 올랐습니다
+PRINTL
+
+;────────────────────────────────────────────────────────────────────────
 
 @IRAI_313_SUCKER
 #DIM DYNAMIC 이벤트主
@@ -207,6 +294,7 @@ RETURN 2
 #DIM DYNAMIC えっち플래그
 #DIM DYNAMIC 호감도修正
 #DIM DYNAMIC 만족度
+#DIM DYNAMIC 進行度修正
 
 이벤트主 = NO_TO_CHARANUM(2022)
 IF CFLAG:이벤트主:면식 == 1
@@ -441,6 +529,8 @@ IF RESULT == 0
 	ELSEIF RESULT == 100
 		GOTO VAMPIA_LOOP
 	ENDIF
+	EXP:MASTER:대화경험 ++
+	EXP:이벤트主:대화경험 ++
 	制限時間 -= 1
 
 ELSEIF RESULT == 1
@@ -506,6 +596,8 @@ ELSEIF RESULT == 3
 	CALL RECOVER_PERMIL(이벤트主,-100,"체력")
 	CALL RECOVER_PERMIL(이벤트主,-100,"기력")
 	만족度 += 1
+	EXP:MASTER:운동경험 ++
+	EXP:이벤트主:운동경험 ++
 	制限時間 -= 1
 
 ELSEIF RESULT == 4
@@ -523,6 +615,9 @@ ELSEIF RESULT == 4
 		ELSEIF BASE:MASTER:체력 <= 1000
 			PRINTFORML "이 이상은 %CALLNAME:MASTER%가 죽을 것 같으니까, 그만둘게.
 			PRINTFORMW 　너무 많이 빨면 살찌기도 하고ー・・・"
+			GOTO VAMPIA_LOOP
+		ELSE
+			PRINTFORMW "역시 괜찮아. 배부르니까 그만둘게."
 			GOTO VAMPIA_LOOP
 		ENDIF
 
@@ -635,6 +730,7 @@ ELSEIF RESULT == 4
 		PRINTFORMW 아무래도 마음에 든 것 같다・・・
 		制限時間 -= 1
 	ENDIF
+	吸血플래그 = 1
 	CALL EVENT_FAVUP(이벤트主,호감도修正*100+700)
 
 
@@ -643,6 +739,7 @@ ELSEIF RESULT == 5
 	IF !GETBIT(CFLAG:이벤트主:기정사실 , 0)
 		PRINTFORML "에~? 싫어~"
 		PRINTFORMW %CALLNAME:이벤트主%에게 거절당했다・・・
+		만족度 -= 1
 		制限時間 -= 1
 		GOTO VAMPIA_LOOP
 	ENDIF
@@ -668,6 +765,7 @@ ELSEIF RESULT == 5
 		ELSEIF 만족度 < 3
 			PRINTFORMW "저기 말이야~, 좀 더 분위기 같은 거 생각하는 게 좋을걸~?"
 			PRINTFORMW %CALLNAME:이벤트主%에게 거절당했다・・・
+			만족度 -= 1
 			制限時間 -= 1
 			GOTO VAMPIA_LOOP
 		ENDIF
@@ -685,6 +783,7 @@ ELSEIF RESULT == 5
 		PRINTFORMW %CALLNAME:이벤트主%는 미묘한 표정을 짓고 있다・・・
 		만족度 += 1
 	ENDIF
+	えっち플래그 = 1
 	制限時間 -= 1
 
 ELSEIF RESULT == 100
@@ -723,10 +822,600 @@ IF !CFLAG:이벤트主:소유함 && CFLAG:이벤트主:호감도 > 1500
 	PRINTFORMW "듀얼 중에도 %CALLNAME:MASTER%와 함께 있고 싶고, 보고 싶어지면 언제든지 불러줘도 되니까!"
 ENDIF
 
-SIF 依頼_進行보존:313 == 0
-	依頼_進行보존:313 = 1
+;次の캐릭터まで進行度をマイナス
+進行度修正 = 依頼_進行보존:313
+SIF 進行度修正 >= 10000
+	進行度修正 -= 10000
+SIF 進行度修正 >= 1000
+	進行度修正 -= 1000
+SIF 進行度修正 >= 100
+	進行度修正 -= 100
+
+;この進行度が０なら추가
+SIF GROUPMATCH(進行度修正,0,10)
+	依頼_進行보존:313 += 1
+;次캐릭터解放
 SIF CFLAG:이벤트主:호감도 >= 1500 && 依頼_進行보존:313 == 1
-	依頼_進行보존:313 = 2
+	依頼_進行보존:313 += 10
+
+CALL IRAI_313_SINMITSU(이벤트主)
 
 RETURN 0
 
+
+;────────────────────────────────────────────────────────────────────────
+
+@IRAI_313_GRIMZON
+#DIM DYNAMIC 이벤트主
+#DIM DYNAMIC 制限時間
+#DIM DYNAMIC 吸血플래그
+#DIM DYNAMIC おやつ플래그
+#DIM DYNAMIC えっち플래그
+#DIM DYNAMIC 호감도修正
+#DIM DYNAMIC 만족度
+#DIM DYNAMIC 進行度修正
+
+이벤트主 = NO_TO_CHARANUM(2024)
+
+進行度修正 = 依頼_進行보존:313
+SIF 進行度修正 >= 10000
+	進行度修正 -= 10000
+SIF 進行度修正 >= 1000
+	進行度修正 -= 1000
+SIF 進行度修正 >= 100
+	進行度修正 -= 100
+
+IF 依頼_進行보존:313 == 11
+	PRINTFORMW 저택 주변을 헤매다 보니, 정원 같은 구역에서 오두막을 발견했다。
+	PRINTFORMW 이곳이 『저택 안』이라면, 여기에도 뱀파이어가 있는 걸까。
+	IF CFLAG:이벤트主:면식 == 1
+		PRINTFORML 그러고 보니, %CALLNAME:이벤트主%가 이런 느낌의 장소에서 숙식하고 있다고 들은 것 같다。
+		PRINTFORMW 확실히 그녀는 이런 사람이 오지 않을 것 같은 곳을 좋아할 것 같다。
+	ENDIF
+	PRINTFORMW 문을 노크했다。
+	PRINTFORML
+	PRINTFORMW ・・・똑똑똑
+	PRINTFORML
+	PRINTFORML 이쪽으로 다가오는 딱딱한 발소리。
+	PRINTFORMW 이윽고 문이 열렸다。
+	IF CFLAG:이벤트主:면식 == 1
+		PRINTFORMW 눈앞에 나타난 것은, 검붉은 로브를 몸에 두른 평소의 %CALLNAME:이벤트主%였다。
+		PRINTFORML
+		PRINTFORML "아아, 당신이었군요。
+		PRINTFORMW 　로드에게 이야기는 들었습니다, 안으로 들어오세요"
+	ELSE
+		PRINTFORMW 눈앞에 나타난 것은, 검붉은 로브를 몸에 두른 뱀파이어였다。
+		PRINTFORML
+		PRINTFORMW "・・・누구시죠, 당신은"
+		CALL SYOTAIMEN(이벤트主)
+		PRINTFORMW "아아, 당신이 로드와 서큐버스가 말했던・・・"
+		PRINTFORMW 붉은 로브는 잠시 생각하는 기색을 보이더니, 다시 입을 열었다。
+		PRINTFORMW "좋습니다, 안으로 들어오세요.　당신에게는 조금 흥미가 있습니다"
+	ENDIF
+	PRINTFORML
+	PRINTFORMW %CALLNAME:이벤트主%의 재촉을 받아 방으로 들어간다。
+	PRINTFORMW 방 안은 뭐랄까・・・ 검소했다。
+	PRINTFORML 책상, 의자, 책장・・・ 거실(아마도)이라고는 해도, 물건이 전혀 없다。
+	PRINTFORMW 생활감이 느껴지지 않는다, 정말로 이곳이 그녀의 방인 걸까?
+	PRINTFORML
+	PRINTFORMW 그런 느낌의 것을 물어보았다。
+	PRINTFORML
+	PRINTFORMW "네, 이곳은 제 방이 맞습니다"
+	PRINTFORML "주로 숙식에 사용하고 있고, 평소에는 다른 장소에 있습니다。
+	PRINTFORMW 　생활감이 없는 것은 그 때문이겠죠"
+	PRINTFORML
+	PRINTFORML 그렇구나・・・ 잘 보니, 가구 몇 개에는 먼지가 쌓여 있다。
+	PRINTFORMW 이건 청소도 안 했구나・・・
+	PRINTFORML
+	PRINTFORMW "손님 같은 건 거의 오지 않으니까요, 로드의 호출도 사역마를 통해 하고 있어서"
+	PRINTFORML
+	PRINTFORMW 그렇게 말하고, %CALLNAME:이벤트主%는 "홍차를 준비하겠습니다"라고, 부엌 같은 방으로 걸어갔다。
+	PRINTFORMW 일단 책상과 의자의 먼지를 걸레로 닦아둘까・・・
+	PRINTFORML
+	PRINTFORMW ・・・・・・
+	PRINTFORML
+	PRINTFORMW 몇 분 후, %CALLNAME:MASTER%와 %CALLNAME:이벤트主%는 책상을 사이에 두고 마주 보고 있었다。
+	PRINTFORML 장소를 감싸고 있는 것은 침묵。
+	PRINTFORMW 눈앞에 놓인 홍차에 손도 대지 않고, 완전히 초심자용 맞선 교실이 되어 있었다。
+	PRINTFORMW 1분인지 60초인지・・・ %CALLNAME:이벤트主%가 입을 열었다。
+	PRINTFORML
+	PRINTFORMW "이야기해보려고는 생각했지만, 막상 이렇게 마주 보니, 좀처럼 말이 나오지 않네요・・・"
+	PRINTFORML
+	PRINTFORMW %CALLNAME:이벤트主%는 화제에 곤란해하고 있는 것 같았다。
+	PRINTFORMW 여기서는 듀얼로 단련한 사교 파워를 최대한 발휘해서, %CALLNAME:이벤트主%를 즐겁게 해주도록 하자。
+
+ELSE
+	PRINTFORMW 문을 노크하고 잠시 후, 딱딱한 발소리가 다가온 뒤 문이 열렸다。
+	PRINTFORML
+	IF TALENT:이벤트主:연모
+		PRINTFORMW "기다리고 있었어요.　자, 안으로 들어오세요"
+		PRINTFORML
+		PRINTFORMW %CALLNAME:이벤트主%의 재촉을 받아 방으로 들어간다。
+		PRINTFORML 여전히 검소한 실내... 잘 보니, 전에는 없었던 쿠션 등이 놓여 있다。
+		PRINTFORMW 역시 허리가 아파진 걸까。
+		PRINTFORML
+		PRINTFORMW "자.　오늘은 무슨 일을 하실 생각이신가요?"
+		PRINTFORML
+		PRINTFORMW %CALLNAME:이벤트主%는 홍차와 쿠키와 이름을 잘 모르는 구운 과자를 책상 위에 놓고, 맞은편에 앉았다。
+		PRINTFORMW 이 과자, 조금 따뜻한... 것 같다。
+	ELSE
+		PRINTFORMW "또 오셨군요.　대단한 대접은 못하지만, 어울려드리죠"
+		PRINTFORML
+		PRINTFORMW %CALLNAME:이벤트主%를 따라 방으로 들어간다。
+		PRINTFORMW 여전히 검소한 실내지만, 불편하지는 않은 듯, 홍차를 준비해주고 있다。
+		PRINTFORML
+		PRINTFORMW "자.　과자 종류는 잘 몰라서, 이걸로 괜찮을지는 모르겠지만"
+		PRINTFORML
+		PRINTFORMW 홍차와 함께 쿠키 같은 둥근 무언가가 책상 위에 놓인다。
+		PRINTFORML 가볍게 손에 들고 한입 베어보니, 평범한 길거리에서 팔 것 같은 쿠키였다。
+		PRINTFORMW 맛없지는 않지만・・・ 응, 미묘。
+		PRINTFORMW %CALLNAME:이벤트主%는 조용히 그 모습을 지켜보고 있었다・・・
+	ENDIF
+ENDIF
+
+	CALL EVENT_MOVE(MASTER,場所_依頼用寝室エリア,1,"グリムゾンの部屋")
+
+制限時間 = 5
+
+$VAMPIA_LOOP
+VARSET 호감도修正
+CALL REPEAT_PRINTL(3)
+WAIT
+PRINTFORMW 뭘 할까・・・【남은 횟수 {制限時間}회】
+PRINTL
+PRINTL [0] - 대화
+PRINTL [1] - 게임
+PRINTL [2] - 간식
+PRINTL [3] - 산책
+PRINTL [4] - 흡혈
+PRINTL [5] - 섹스
+PRINTL
+PRINTL [100] - 돌아간다
+BINPUT
+PRINTL
+IF RESULT == 0
+	PRINTL 어떤 이야기를 할까・・・
+	PRINTL
+	PRINTL [0] - 잡담
+	PRINTL [1] - 개그
+	PRINTL [2] - 듀얼 이야기
+	PRINTL [3] - 야한 이야기
+	PRINTL [4] - 폭력적인 이야기
+	SIF ABL:MASTER:화술기능 >= 4
+		PRINTL [10] - 고도의 유연성을 유지하면서 임기응변으로 대화
+	PRINTL
+	PRINTL [100] - 역시 그만둔다
+	BINPUT
+	PRINTL
+	IF RESULT == 0
+		SELECTCASE RAND:5
+			CASE 0
+				PRINTFORML "묘지는 좋아요.　조용하고, 죽은 자의 신음소리가 들려서・・・"
+			CASE 1
+				PRINTFORML "가면은 제 개성이라고도 할 수 있는 존재입니다.　당신의 팔에 있는 그것과 비슷한 것이죠"
+			CASE 2
+				PRINTFORML "평소에는 고문실을 손질하고 있습니다.　최근에는 기회가 없었지만요"
+			CASE 3
+				PRINTFORML "오랫동안 밤을 보내다 보면, 시간의 흐름이 모호해집니다.
+				PRINTFORMW 　『저택 주변을 산책하다 보니 하늘이 밝아오기 시작했다』, 그런 일은 자주 있습니다"
+			CASE 4
+				PRINTFORML "──홍차가 식었네요, 다시 타오겠습니다"
+		ENDSELECT
+		PRINTFORMW %CALLNAME:이벤트主%는 불쾌하지 않은 것 같다・・・
+		만족度 += 1
+
+	ELSEIF RESULT == 1
+		SELECTCASE RAND:5
+			CASE 1,3
+				PRINTFORML "후훗・・・"
+				PRINTFORMW %CALLNAME:이벤트主%는 즐거워 보인다・・・
+				만족度 += 1
+			CASEELSE
+				PRINTFORML "・・・・・・？　무슨 일 있으신가요?"
+				PRINTFORMW %CALLNAME:이벤트主%에게는 전해지지 않은 것 같다・・・
+		ENDSELECT
+
+	ELSEIF RESULT == 2
+		SELECTCASE RAND:5
+			CASE 0
+				PRINTFORML "듀얼은 싫어하지는 않지만, 특별히 좋아할 정도는 아닙니다.
+				PRINTFORML 　신청받으면 받아주는 정도입니다"
+			CASE 1
+				PRINTFORML "역시 라이프 코스트가 걸림돌이네요.　절반 정도는 장식이지만, 0이 되면 패배하니까요"
+			CASE 2
+				PRINTFORML "좀 더 묘지를 채우고, 거기서부터 전개할 수단이 있었으면 좋겠네요・・・"
+			CASE 3
+				PRINTFORML "필드를 제대로 보지 않고 제거 카드를 썼다가 무효화되었을 때의 얼굴・・・ 언제 봐도 좋은 것입니다"
+			CASE 4
+				PRINTFORML "라이프가 줄어든 만큼, 그와 같은 비율의 혈액을 넣고 빼는 규칙・・・ 다시 해보고 싶네요・・・"
+		ENDSELECT
+		PRINTFORMW %CALLNAME:이벤트主%와 그럭저럭 즐겁게 대화했다・・・
+		IF RAND:3 == 0
+			만족度 += 1
+		ENDIF
+
+	ELSEIF RESULT == 3
+		IF ABL:이벤트主:친밀 < 5 && !GETBIT(CFLAG:이벤트主:기정사실 , 0)
+			PRINTFORML "・・・품위 없군요"
+			PRINTFORMW %CALLNAME:이벤트主%는 차가운 눈으로 당신을 보고 있다・・・
+			만족度 -= 1
+
+		ELSE
+			SELECTCASE RAND:5
+				CASE 0
+					PRINTFORML "싫어하지는 않네요.　기분이 내키면, 이라는 정도일까요"
+				CASE 1
+					PRINTFORML "즐겁다고는 생각하지만, 기분 좋은지는 별개네요.　아무래도, 감도는 그다지 높지 않아서"
+				CASE 2
+					PRINTFORML "인체에는 자신이 있습니다.　고문이나 심문이 필요할 때는 불러주세요"
+				CASE 3
+					PRINTFORML "종족 특성상, 피를 보면 흥분하게 됩니다.　이성으로 억누를 수 있는 정도지만요"
+				CASE 4
+					PRINTFORML "동족 중에는 성행위와 흡혈을 동시에 하는 자도 있는 것 같습니다.　저는 이해하기 어렵지만요"
+			ENDSELECT
+			PRINTFORMW %CALLNAME:이벤트主%는 이야기에 어울려주었다・・・
+			만족度 += 2
+		ENDIF
+
+	ELSEIF RESULT == 4
+		SELECTCASE RAND:5
+			CASE 0
+				PRINTFORML "목을 조른 채 비명을 지를 때, 조금 힘을 빼면 좋은 반응을 보여줍니다"
+			CASE 1
+				PRINTFORML "영화는 별로 보지 않네요, 실물과는 분명한 차이가 있어서"
+			CASE 2
+				PRINTFORML "상대는 두 명 정도 있는 것이 바람직하네요, 한쪽은 화려하게 고문할 수 있으니까요"
+			CASE 3
+				PRINTFORML "도구를 사용하는 것도 좋지만, 뼈를 으스러뜨리고, 손톱으로 살을 찢는 그 감각도 또한 좋은 것입니다"
+			CASE 4
+				PRINTFORML "목을 베어도, 잠시 동안은 생명 활동을 계속합니다.
+				PRINTFORML 　경련하면서 목에서 피를 토하는 육체를, 핏기가 가셔가는 주인과 함께 바라보는 것이 각별해서・・・ 당신도 어떠신가요?"
+		ENDSELECT
+		PRINTFORMW 등에 차가운 것을 느끼면서, %CALLNAME:이벤트主%와 즐겁게 대화했다・・・
+		만족度 += 2
+
+	ELSEIF RESULT == 10
+		PRINTFORMW %CALLNAME:이벤트主%에 맞춰 화제를 골라, 그녀를 즐겁게 했다・・・
+		만족度 += 2
+
+	ELSEIF RESULT == 100
+		GOTO VAMPIA_LOOP
+	ENDIF
+	EXP:MASTER:대화경험 ++
+	EXP:이벤트主:대화경험 ++
+	制限時間 -= 1
+
+ELSEIF RESULT == 1
+	SELECTCASE RAND:6
+		CASE 0
+			PRINTFORML "・・・막혔네요.　감사합니다"
+		CASE 1
+			PRINTFORML "그쪽으로 괜찮으신가요?　여기에 두면 이겨버리는데・・・"
+		CASE 2
+			PRINTFORML "어라, 그쪽으로 하시겠어요?　・・・정답, 이쪽이 조커입니다"
+		CASE 3
+			PRINTFORML "얼굴에 너무 드러나네요.　・・・끝입니다"
+		CASE 4
+			PRINTFORML "저는 정면으로 뛰어들 테니, 당신은 왼쪽에서 엄호를 부탁합니다"
+		CASE 5
+			PRINTFORML "이런・・・ 배후에서 습격당했군요.　다음엔 조심하죠"
+	ENDSELECT
+	PRINTFORMW %CALLNAME:이벤트主%와 즐겁게 놀았다・・・
+	만족度 += 1
+	制限時間 -= 1
+
+ELSEIF RESULT == 2
+	IF おやつ플래그 == 1
+		PRINTFORMW "호의는 감사하지만, 이 이상의 간식은 나중에 지장이 있으니・・・"
+		GOTO VAMPIA_LOOP
+	
+	ELSE
+		SELECTCASE RAND:4
+			CASE 0
+				PRINTFORML "흠・・・ 먹기 편하네요.　좀 비축해두고 싶군요"
+			CASE 1
+				PRINTFORML "이 저택의 쿠키 대부분은, 어떤 노파에게서 사 오고 있습니다.　맛은 그럭저럭이지만, 수량만은 많네요"
+			CASE 2
+				PRINTFORML "부스러기가 묻어있어요.　・・・거기가 아닙니다, 조금 가만히 계세요"
+			CASE 3
+				PRINTFORML "흠・・・ 고문 중인 한쪽에만 과자를 주는 수법도 있었군요・・・"
+		ENDSELECT
+		PRINTFORMW %CALLNAME:이벤트主%와 과자를 먹으며 담소했다・・・
+		만족度 += 1
+	ENDIF
+	制限時間 -= 1
+
+ELSEIF RESULT == 3
+	SELECTCASE RAND:4
+		CASE 0
+			PRINTFORML "정원이라고는 해도, 꽃 종류는 없습니다.　침입자를 자동으로 붙잡아 묘상으로 만드는 식물이라면 멋대로 자라고 있지만요"
+		CASE 1
+			PRINTFORML "너무 떨어지지 마세요.　지능이 낮은 들개가 드물게 들어오니까요"
+		CASE 2
+			PRINTFORML "・・・・・・계속 조용하시네요, 피곤하신가요?　슬슬 돌아갈까요"
+		CASE 3
+			PRINTFORMW "조금 실례하겠습니다"
+			PRINTFORMW ・・・・・・・・・・・・。
+			PRINTFORMW "돌아왔습니다.　커다란 쥐가 있어서, 처리했습니다"
+	ENDSELECT
+	PRINTFORM %CALLNAME:이벤트主%와
+	IF TALENT:이벤트主:연모
+		PRINTFORM 손을 잡고
+		만족度 += 1
+	ENDIF
+	PRINTFORMW 저택의 정원을 산책했다・・・
+	CALL RECOVER_PERMIL(MASTER,-100,"체력")
+	CALL RECOVER_PERMIL(MASTER,-100,"기력")
+	CALL RECOVER_PERMIL(이벤트主,-100,"체력")
+	CALL RECOVER_PERMIL(이벤트主,-100,"기력")
+	만족度 += 1
+	EXP:MASTER:운동경험 ++
+	EXP:이벤트主:운동경험 ++
+	制限時間 -= 1
+
+ELSEIF RESULT == 4
+	IF ABL:이벤트主:친밀 < 4
+		PRINTFORML "됐습니다.　그렇게 굶주린 건 아니니까요"
+		PRINTFORMW %CALLNAME:이벤트主%는 피를 빨 기분이 아닌 것 같다.
+		GOTO VAMPIA_LOOP
+	ENDIF
+	IF 吸血플래그 == 1
+		PRINTFORMW "어머, 아직 주시는 건가요?"
+		IF CFLAG:이벤트主:처녀버린상대 == MASTER || CFLAG:MASTER:처녀버린상대 == 이벤트主 || CFLAG:MASTER:동정버린상대 == 이벤트主
+			PRINTFORMW "・・・그럼, 사양하지 않고"
+			PRINTFORML
+			PRINTFORMW %CALLNAME:이벤트主%는, %CALLNAME:MASTER%의 등 뒤로 돌아, 머리카락을 한 번 쓰다듬고 나서 목덜미에 입을 맞췄다.
+		ELSEIF BASE:MASTER:체력 <= 1000
+			PRINTFORMW "・・・초점이 맞지 않아요.　제정신을 차리고 나서 다시 부탁합니다"
+			GOTO VAMPIA_LOOP
+		ELSE
+			PRINTFORMW "・・・아니요, 됐습니다.　이 이상은 토해버릴 가능성이 있으니"
+			GOTO VAMPIA_LOOP
+		ENDIF
+
+	ELSE
+		IF CFLAG:이벤트主:처녀버린상대 == MASTER || CFLAG:MASTER:처녀버린상대 == 이벤트主 || CFLAG:MASTER:동정버린상대 == 이벤트主
+			IF BASE:MASTER:체력 <= 1500
+				PRINTFORMW "그럼 실례해서・・・・・・"
+				PRINTFORMW "・・・혈색이 안 좋아요.　흡혈을 제안하시려면, 건강에 신경 써주세요"
+				PRINTFORML
+				PRINTFORMW %CALLNAME:이벤트主%는 아쉬운 듯 홍차를 입에 머금었다.
+				GOTO VAMPIA_LOOP
+			ELSE
+				PRINTFORMW "후우・・・❤　이런 냄새를 풍기고, 동족에게 습격당해도 모릅니다?"
+				PRINTFORML
+				PRINTFORML %CALLNAME:이벤트主%는 %CALLNAME:MASTER%를 뒤에서 껴안고,
+				PRINTFORMW 깊고 천천히 숨을 내쉬며, 목덜미에 이를 세워 피를 빨기 시작했다・・・
+			ENDIF
+		ELSE
+			IF BASE:MASTER:체력 <= 1000
+				PRINTFORMW "제정신이 아닌 것 같네요, 눈의 초점이 맞지 않아요"
+				PRINTFORMW "당신을 죽이는 데 저항은 없지만, 빨아 죽이는 건 취미가 아니라서요"
+				GOTO VAMPIA_LOOP
+			ELSE
+				PRINTFORMW "괜찮으시겠어요?　빨아 죽여버릴지도 모르는데요?"
+				PRINTFORMW "・・・당신이 그걸로 괜찮다면, 실례하겠습니다"
+				PRINTFORML
+				PRINTFORML %CALLNAME:이벤트主%는 %CALLNAME:MASTER%의 등 뒤로 돌아,
+				PRINTFORMW 머리에 손을 얹고 목덜미를 열어, 거기에 송곳니를 세워 피를 빨기 시작했다・・・
+			ENDIF
+		ENDIF
+	ENDIF
+	;ここからちゅっちゅタイム
+	;血のおいしさで量が変化
+	;基本６００、片方で１０００、両方で１５００
+	PRINTFORMW
+	PRINTFORMW "・・・・・・"
+	CALL RECOVER_PERMIL(MASTER,-100,"체력")
+	CALL RECOVER_PERMIL(MASTER,-100,"기력")
+	CALL RECOVER_PERMIL(이벤트主,100,"체력")
+	CALL RECOVER_PERMIL(이벤트主,100,"기력")
+	만족度 ++
+	호감도修正 ++
+	PRINTL
+	PRINTFORMW "음・・・ 꿀꺽・・・"
+	CALL RECOVER_PERMIL(MASTER,-200,"체력")
+	CALL RECOVER_PERMIL(MASTER,-200,"기력")
+	CALL RECOVER_PERMIL(이벤트主,200,"체력")
+	CALL RECOVER_PERMIL(이벤트主,200,"기력")
+	만족度 ++
+	호감도修正 ++
+	PRINTL
+	PRINTFORMW "으음・・・ 츄릅・・・"
+	CALL RECOVER_PERMIL(MASTER,-300,"체력")
+	CALL RECOVER_PERMIL(MASTER,-300,"기력")
+	CALL RECOVER_PERMIL(이벤트主,300,"체력")
+	CALL RECOVER_PERMIL(이벤트主,300,"기력")
+	만족度 ++
+	호감도修正 ++
+	PRINTL
+	IF CFLAG:이벤트主:처녀버린상대 == MASTER || CFLAG:MASTER:처녀버린상대 == 이벤트主 || CFLAG:MASTER:동정버린상대 == 이벤트主
+		SETCOLOR C_PINK
+		PRINTFORMW "하아・・・❤　응・・・❤"
+		CALL RECOVER_PERMIL(MASTER,-400,"체력")
+		CALL RECOVER_PERMIL(MASTER,-400,"기력")
+		CALL RECOVER_PERMIL(이벤트主,400,"체력")
+		CALL RECOVER_PERMIL(이벤트主,500,"기력")
+		만족度 += 3
+		호감도修正 += 2
+		SETCOLOR C_PINK
+	ENDIF
+	IF CFLAG:이벤트主:처녀버린상대 == MASTER && (CFLAG:MASTER:처녀버린상대 == 이벤트主 || CFLAG:MASTER:동정버린상대 == 이벤트主)
+		SETCOLOR C_V_PINK
+		PRINTFORMW "핫❤　응❤　츄르르르릅・・・❤"
+		CALL RECOVER_PERMIL(MASTER,-500,"체력")
+		CALL RECOVER_PERMIL(MASTER,-500,"기력")
+		CALL RECOVER_PERMIL(이벤트主,500,"체력")
+		CALL RECOVER_PERMIL(이벤트主,1000,"기력")
+		만족度 += 5
+		호감도修正 += 3
+		SETCOLOR C_V_PINK
+	ENDIF
+	PRINTL
+	PRINTFORMW "・・・・・・후우・・・"
+	IF 호감도修正 >= 5
+		PRINTFORMW "잘 먹었, 습니다・・・❤"
+	ELSE
+		PRINTFORMW "잘 먹었습니다"
+	ENDIF
+	RESETCOLOR
+	PRINTFORML
+	IF 호감도修正 >= 5
+		PRINTFORMW %CALLNAME:이벤트主%는 %CALLNAME:MASTER%를 강하게 껴안으며, 목덜미에 배어있는 남은 피를 핥아냈다.
+	ELSE
+		PRINTFORMW %CALLNAME:이벤트主%는 %CALLNAME:MASTER%에게서 떨어져, 입가를 손수건으로 닦았다.
+	ENDIF
+	IF BASE:MASTER:체력 < 500
+		PRINTFORMW 희미해져 가는 의식 속에서, 닿아있는 부분에 피가 모이는 것을 느꼈다・・・
+		PRINTL
+		PRINTFORMW ・・・・・・・・・・・・
+		PRINTL
+		PRINTFORMW 눈을 뜨자, %CALLNAME:이벤트主%와 눈이 마주쳤다.
+		PRINTFORML
+		PRINTFORMW "・・・좋은 아침입니다"
+		PRINTFORML 
+		PRINTFORMW %CALLNAME:이벤트主%가 어딘가 미안한 듯한 분위기로 그렇게 말해온다.
+		PRINTFORML 몸에 담요가 덮여 있다.
+		PRINTFORMW %CALLNAME:이벤트主%의 침대에 눕혀져 있었던 것 같다.
+		PRINTFORML
+		PRINTFORMW "죄송합니다.　배를 80%만 채우고 끝내려고 했는데, 상상 이상으로 맛있어서・・・❤"
+		PRINTFORML
+		PRINTFORML %CALLNAME:이벤트主%는 가면으로 가려지지 않은 부분을 붉히며, %CALLNAME:MASTER%의 가슴을 쓰다듬어왔다.
+		PRINTFORMW 아무래도, 자신의 피는 매우 맛있는 것 같다.
+		PRINTFORML
+		PRINTFORML 역시 피를 너무 많이 빨려서 몸이 나른하다.
+		PRINTFORMW 먼지투성이 속에서 희미한 %CALLNAME:이벤트主%의 냄새를 느끼며, 다시 눈을 감았다・・・
+		制限時間 = 0
+	ELSE
+		PRINTFORMW 아무래도 마음에 든 것 같다・・・
+		制限時間 -= 1
+	ENDIF
+	CALL EVENT_FAVUP(이벤트主,호감도修正*100+700)
+
+
+ELSEIF RESULT == 5
+	;押し倒しと同じ条件
+	IF !GETBIT(CFLAG:이벤트主:기정사실 , 0)
+		PRINTFORML "・・・・・・"
+		PRINTFORMW 낫에 손을 뻗은 %CALLNAME:이벤트主%에게 황급히 변명했다・・・
+		만족度 -= 1
+		制限時間 -= 1
+		GOTO VAMPIA_LOOP
+	ENDIF
+	IF えっち플래그 >= 1
+		PRINTFORMW "또인가요?　・・・네, 괜찮아요"
+	ELSE
+		IF TALENT:이벤트主:음란
+			PRINTFORML "후후・・・❤　애타게 기다리고 있었어요・・・❤"
+			PRINTFORMW %CALLNAME:이벤트主%는 옷을 풀어헤치며, %CALLNAME:MASTER%를 침실로 유혹해왔다・・・
+		ELSEIF TALENT:이벤트主:연모 == 2
+			IF 만족度 < 3
+				PRINTFORMW "조금 너무 막 대하는 거 아닌가요?　저에게도 예정이나 기분이라는 게 있는데요"
+				PRINTFORMW "・・・괜찮아요, 매력적으로 보인다는 건 나쁜 게 아니니까요・・・❤"
+			ELSE
+				PRINTFORML "그렇네요・・・ 그럼 갈까요・・・❤"
+				PRINTFORMW %CALLNAME:이벤트主%는 %CALLNAME:MASTER%의 손을 이끌고 침실로 향했다・・・
+			ENDIF
+		ELSEIF TALENT:TARGET:굴복됨
+			PRINTFORML "네, 오늘도 잘 부탁드립니다❤"
+			PRINTFORMW %CALLNAME:이벤트主%의 손을 이끌고, 침실로 향했다・・・
+		;하트 3개 정도
+		ELSEIF 만족度 < 3
+			PRINTFORML "권유는 기쁘지만, 이 이후에 예정이 있어서요"
+			PRINTFORMW %CALLNAME:이벤트主%에게 거절당했다・・・
+			만족度 -= 1
+			制限時間 -= 1
+			GOTO VAMPIA_LOOP
+		ENDIF
+	ENDIF
+	VARSET 依頼조교대상,-1
+	依頼조교대상 = 이벤트主
+	CALL EVENT_TRAIN
+	IF BASE:이벤트主:만족 >= 800
+		PRINTFORML "후우・・・❤"
+		PRINTFORMW %CALLNAME:이벤트主%는 만족스러운 듯 숨을 내쉬며, 몸가짐을 정돈하고 있다・・・
+		만족度 += 3
+		CALL EVENT_FAVUP(이벤트主,500)
+	ELSE
+		IF TALENT:이벤트主:연모 || TALENT:이벤트主:음란 || TALENT:이벤트主:굴복됨
+			PRINTFORML "벌써, 끝인가요・・・？"
+			PRINTFORMW %CALLNAME:이벤트主%는 아쉬운 듯한 얼굴을 하면서, 정리를 시작했다・・・
+		ELSE
+			PRINTFORML "어머, 벌써 끝인가요?"
+			PRINTFORMW 정사가 끝나자마자, %CALLNAME:이벤트主%는 흐트러진 옷을 정돈하기 시작했다・・・
+		ENDIF
+		만족度 += 1
+	ENDIF
+	えっち플래그 = 1
+	制限時間 -= 1
+
+ELSEIF RESULT == 100
+	PRINTFORML "어머, 돌아가시나요"
+	IF ABL:이벤트主:친밀 >= 4
+		PRINTFORMW 조금 쓸쓸한 분위기를 풍기는 %CALLNAME:이벤트主%를 뒤로하고, 짐을 챙겼다.
+	ELSE
+		PRINTFORMW 찻잔을 정리하는 %CALLNAME:이벤트主%를 뒤로하고, 짐을 챙겼다..
+	ENDIF
+	制限時間 = 0
+ENDIF
+
+TIME += 30
+
+SIF 制限時間 != 0
+	GOTO VAMPIA_LOOP
+PRINTL
+PRINTL
+PRINTFORMW
+IF TALENT:이벤트主:연모 || ABL:이벤트主:친밀 >= 4
+	PRINTFORMW "좀 더 있어도 괜찮지만・・・ 이 저택에 오래 머무는 것도 좋지 않겠죠"
+	PRINTFORMW "다음에 또 오시길 기다리고 있겠습니다"
+	PRINTFORMW %CALLNAME:이벤트主%가 아쉬워하는 가운데, 시간도 시간이니 귀가하기로 했다・・・
+
+ELSE
+	IF 만족度 >= 5
+		PRINTFORMW "유익한 시간이었습니다.　또 예정에 여유가 생기면 오세요"
+		PRINTFORMW 기분 좋아 보이는 %CALLNAME:이벤트主%에게 작별을 고하고, 귀가하기로 했다・・・
+	ELSE
+		PRINTFORMW "나쁘지 않은 시간이었습니다, 예정을 미룬 보람은 있었다고 생각합니다"
+		PRINTFORMW "당신의 사람됨은 대략 이해했습니다.　재방문은 거부하지 않겠지만, 억지로 올 필요는 없습니다"
+		PRINTFORMW %CALLNAME:이벤트主%에게 작별을 고하고, 귀가하기로 했다・・・
+	ENDIF
+ENDIF
+CALL EVENT_FAVUP(이벤트主,만족度*100)
+
+IF !CFLAG:이벤트主:소유함 && CFLAG:이벤트主:호감도 > 1500
+	PRINTFORMW "・・・그렇네요, 이걸 건네드리죠"
+	CALL CARD_GET_CHARA(이벤트主,1)
+	PRINTFORMW "카드로서의 능력은 높다고는 할 수 없지만, 그 외에 용무가 있다면 불러주셔도 괜찮습니다"
+ENDIF
+
+;進行度１０未満なら＋１０
+進行度修正 = 依頼_進行보존:313
+SIF 進行度修正 >= 10000
+	進行度修正 -= 10000
+SIF 進行度修正 >= 1000
+	進行度修正 -= 1000
+SIF 進行度修正 >= 100
+	進行度修正 -= 100
+
+SIF 進行度修正 < 10
+	依頼_進行보존:313 += 10
+
+
+;次の캐릭터まで進行度をマイナス
+進行度修正 = 依頼_進行보존:313
+SIF 進行度修正 >= 10000
+	進行度修正 -= 10000
+SIF 進行度修正 >= 1000
+	進行度修正 -= 1000
+
+;この進行度が０なら추가
+SIF GROUPMATCH(進行度修正,0,1,10,11,110,111)
+	依頼_進行보존:313 += 10
+;次캐릭터解放
+SIF CFLAG:이벤트主:호감도 >= 1500 && GROUPMATCH(進行度修正,20,21)
+	依頼_進行보존:313 += 100
+
+CALL IRAI_313_SINMITSU(이벤트主)
+
+RETURN 0

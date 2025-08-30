@@ -1,0 +1,164 @@
+﻿@CARDNAME_50191,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = Em트래피즈 하이 매지션
+	CASE "略称"
+		RESULTS = Em Ｈ트래피즈
+	CASE "カテゴリ"
+		RESULTS:0 = 엔터메이지
+ENDSELECT
+
+
+@CARD_50191(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2700
+	CASE "守備力"
+		RETURN 2200
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250829
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50191(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 5
+素材条件종족 = 마법사족
+지정素材名前 = Em트래피즈 매지션
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,50191) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARD_EXPLANATION_50191(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 마법사족レベル５モンスター×２
+PRINTL このカード名の③の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：X素材を持っているこのカードは戦闘耐性・破壊耐性を持つ。
+PRINTL ②：このカードがモンスターゾーンに存在する限り、자신が受ける효과ダメージは代わりに상대が受ける。
+
+CALLFORM CARD_ABLE(0,破壊→묘지 ,戦闘→묘지)
+PRINTL ③：このカードのX素材を１つ取り除いて발동できる。
+PRINTL カードを１枚ドローする。そのカードがモンスターカードである場合、お互いに５００ダメージを受ける。
+PRINTL このカードが「Em트래피즈 매지션」をX素材としている場合、さらに以下の효과を得る。
+PRINTL ●このターン、このカードは１度のバトルフェイズ中に３回攻撃できる。
+
+
+@CARDCAN_50191(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 装備者
+#DIM DYNAMIC 装備先
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL 装備판정(듀얼리스트,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50191)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,50191)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50191(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ反射",3)
+	CALL SET_PLAYER_INFO(듀얼리스트,"효과ダメージ反射",3)
+	IF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") >= 0
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50191,2)
+	IF RESULT == 0
+		TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_덱:0"))
+		PRINTW
+		CALLFORM CARD_{GETVAR(@"%듀얼리스트%_덱:0")}, "종류"
+		IF RESULT < 10
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",500)
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",500,1)
+		ENDIF
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+		IF GETVAR(@"%듀얼리스트%_MZ_条達:場所") >= 1
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",3,1)
+		ENDIF
+	ENDIF
+ENDIF

@@ -1,0 +1,291 @@
+﻿@CARDNAME_59884,参照先
+;ココで지정卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 경세 도레미아이돌 뷰티아
+	CASE "略称"
+		RESULTS = ♫ 뷰티아
+	CASE "カテゴリ"
+		RESULTS:0 = 도레미코드
+		RESULTS:1 = 도레미아이돌
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_59884(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2400
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "連動ID"
+		RETURN 2092
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_59884(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 천사족튜너＋튜너以外のモンスター1体以上
+PRINTL このカード名の④の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,특수소환時,EX소환時)
+PRINTL ①：このカードが특수소환に成功した場合、상대フィールドのモンスター１体を대상として발동できる。
+PRINTL そのモンスターを「뷰티아오시」にする。
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ②：상대が묘지のカードの효과を발동した時、
+PRINTL EX덱（表側）レベルが3以下と4以上の「도레미코드」Pモンスター各1枚を덱に戻して발동できる、その발동を無効にする。
+PRINTL そのカードがモンスターであった場合、さらにそのモンスターを상대フィールドに특수소환する。
+PRINTL この효과で특수소환したモンスターを「뷰티아오시」にする、は素材불가を得る。
+CALLFORM CARD_ABLE(3,ターン開始時)
+PRINTL ③：자신スタンバイフェイズに발동できる。この필드のカードをEX덱に戻す。その後、次の효과を適用する。
+PRINTL ● 묘지・제외されている자신の「도레미코드」カード5枚を選び、덱に戻す。
+PRINTL ● 덱から2枚ドローする。
+CALLFORM CARD_ABLE(4,攻撃時誘発)
+PRINTL ④：このカードが상대モンスターと戦闘を行う場合に발동できる。
+PRINTL その戦闘を無効にし、そのモンスターを「뷰티아오시」にする。
+
+
+@CARDSUMMON_59884(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 条件达成
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 7
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件종족 = 천사족
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,59884) 
+	RETURN RESULT
+ENDIF
+
+
+@CARDCAN_59884(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59884)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 특수소환時 || 종류 == EX소환時
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 도레미코드
+	효과条件종류 = EX以外全般
+	CALL 효과条件レベル_ADV(3, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 도레미코드
+	효과条件종류 = EX以外全般
+	CALL 효과条件レベル_ADV(4, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 도레미코드
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_4(듀얼리스트,59884)
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF モンスター数(듀얼리스트) != 1
+		RETURN 0
+	SIF モンスター数(対面者) != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件カテゴリ:0 = 뷰티아오시
+	효과条件カテゴリ:1 = 도레미 하코오시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+;---------------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------------
+@CARDEFFECT_59884(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択場所
+#DIM DYNAMIC レベル
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 実行役대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 특수소환時 || 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59884,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+		選択場所 = RESULT
+		조교대상 = NO_TO_CHARANUM(2092)
+		CALL Doremi_fans(対面者,選択場所,조교대상,"登場")
+	ENDIF
+	
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59884,2)
+	IF RESULT == 0
+		カウンタ = 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 도레미코드
+		효과条件종류 = EX以外全般
+		CALL 효과条件レベル_ADV(3, "以下")
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		SIF RESULT != 9999
+			カウンタ++
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 도레미코드
+		효과条件종류 = EX以外全般
+		CALL 효과条件レベル_ADV(4, "以上")
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		SIF RESULT != 9999
+			カウンタ++	
+		IF カウンタ == 2
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効",59884)
+		ENDIF
+
+		TRYCALLFORM CARD_{効後_효과ID:(処理中番号 - 1)},"종류"
+		IF RESULT <= 10
+			選択場所 = 効後_設場所:(処理中番号 - 1) 
+			CALL FULLRESET
+			효과추가종류 = 21	;素材불가
+			CALL CARD_SP_SUMMON(対面者,"묘지",選択場所)
+			CALL FULLRESET
+			選択場所 = カード소환先
+			조교대상 = NO_TO_CHARANUM(2092)
+			CALL Doremi_fans(対面者,選択場所,조교대상,"無効")
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59884,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,EX덱行き)
+		
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 도레미코드
+		효과条件複数 = 5
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		SIF RESULT == 1
+			CALL CARDDRAW_BASIC(듀얼리스트,2)
+		
+		조교대상 = NO_TO_CHARANUM(2092)
+		CALL Doremi_business(対面者,조교대상)
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59884,4)
+	IF RESULT == 0
+		CALL FULLRESET
+		選択場所 = 戦闘場所(듀얼리스트,1)
+		조교대상 = NO_TO_CHARANUM(2092)
+		CALL Doremi_fans(対面者,選択場所,조교대상,"汎用")
+		CALL EVADE_ATTACK(듀얼리스트)
+	ENDIF
+
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59884)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+			CONTINUE
+			選択場所 = カウンタ
+		NEXT
+		CALL Doremi_FansAttack(듀얼리스트,場所,選択場所)
+	ENDIF
+ENDIF

@@ -1,0 +1,182 @@
+﻿@CARDNAME_72435,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = RUM－매지컬 포스
+	CASE "略称"
+		RESULTS = RUM mF
+	CASE "カテゴリ"
+		RESULTS:0 = RUM
+ENDSELECT
+
+
+@CARD_72435(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "추가日"
+		RETURN 250829
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_72435(종류)
+#DIM DYNAMIC 종류
+PRINTL このカード名のカードは１ターンに１枚しか발동できない。
+CALLFORM CARD_ABLE(0,마함起動 ,손패起動 ,フリー誘発)
+PRINTL ①：자신のフィールド・묘지のランク４のXモンスター１体を대상として발동できる。
+PRINTL （묘지から選んだ場合そのモンスターを효과を無効にして특수소환し、）마법사족・ランク５のXモンスター１体を、
+PRINTL 대상のモンスターの上に重ねてX소환扱いでEX덱から특수소환する。そのモンスターのX素材を１つ増やす。
+
+
+
+@CARDCAN_72435(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72435)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,72435)
+		RETURN 0
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = 엑시즈
+	효과条件レベル = 4
+	효과条件RUM = 72435
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_72435(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 설정レベル
+
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72435,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;通常마법汎用処理
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲묘지 = 1
+		효과条件종류 = 엑시즈
+		효과条件レベル = 4
+		효과条件RUM = 72435
+		효과条件重ねてＸ = 1
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			CALL CARD_SELECT(듀얼리스트,選択カード)
+			選択カード = 選択カード（CS）
+			IF 参照先（CS） == "묘지"
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트, "묘지",選択カード（CS）)
+				選択カード = カード소환先
+			ENDIF
+			CALL FULLRESET
+			효과条件レベル = 5
+			효과条件종족 = 마법사족
+			효과条件종류 = 엑시즈
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カードB = RESULT
+			;戻る
+			IF 選択カードB != 9999
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カードB}")}(듀얼리스트,選択カードB)
+				CALL RESETCONDITION_MAT(1)
+				代替素材数 = 1
+				重ねてＸ = 1
+				素材条件固定 = 選択カード
+				TRYCALLFORM XYZSUMMON(듀얼리스트,選択カードB)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+
+
+@CARDRUM_72435(듀얼리스트,ゾーン,場所,カードID)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 설정カードID
+#DIM DYNAMIC 素材レベル
+VARSET RESULT
+
+IF ゾーン == "필드"
+	素材レベル = GETVAR(@"%듀얼리스트%_MZ_星:場所") + 1
+ELSE
+	TRYCALLFORM CARD_{설정カードID}, "レベル"
+	素材レベル = RESULT + 1
+ENDIF
+SIF 素材レベル != 5
+	RETURN 0
+FOR カウンタ,0,15
+	설정カードID =  GETVAR(@"%듀얼리스트%_EX덱:カウンタ")
+	SIF 설정カードID == -1 
+		CONTINUE
+	TRYCALLFORM CARD_{설정カードID}, "종류"
+	SIF RESULT != 엑시즈
+		CONTINUE
+	TRYCALLFORM CARD_{설정カードID}, "종족"
+	SIF RESULT != 마법사족
+		CONTINUE		
+	TRYCALLFORM CARD_{설정カードID}, "レベル"
+	SIF RESULT != 5
+		CONTINUE
+	VARSET RESULT
+	RETURN 1
+NEXT
+	
+VARSET RESULT
+RETURN 0

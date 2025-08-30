@@ -1,0 +1,270 @@
+﻿@CARDNAME_39834,参照先
+;ココで지정卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 도레미아이돌 그레이시아
+	CASE "略称"
+		RESULTS = ♫ 그레이시아
+	CASE "カテゴリ"
+		RESULTS:0 = 도레미코드
+		RESULTS:1 = 도레미아이돌
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39834(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 1400
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "튜너"
+		RETURN 1
+	CASE "連動ID"
+		RETURN 2090
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_39834(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名の①のP효과は1ターンに1度しか使用できない。
+CALLFORM CARD_ABLE(4,마함起動)
+PRINTL ①：자신のメインフェイズに발동できる。
+PRINTL このカードを表側표시でEX덱に加え、その後、덱からレベル3以下の「도레미아이돌」Pモンスター1枚を손패に加える。
+	SETCOLOR C_GRAY ;（隠し효과）
+PRINTL 상대フィールドに「그레이시아오시」モンスターが2体以上存在する場合。
+PRINTL それらのモンスターを耐性を無視して全て破壊する。
+PRINTL その後、破壊したモンスターの数×700ダメージを자신が受ける。
+	RESETCOLOR
+;------------------------------펜듈럼------------------------------
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,특수소환時)
+PRINTL ①：このカードが특수소환に成功した場合、묘지にある「도레미코드」カード1枚を대상として발동できる。
+PRINTL そのカードを손패に加える。
+CALLFORM CARD_ABLE(3,攻撃時誘発)
+PRINTL ③：자신の마법・함정ゾーンに「도레미아이돌 그레이시아」が存在せず、このカードが상대モンスターと戦闘を行う場合に발동できる。
+PRINTL このカードを자신の마법・함정ゾーンに表側표시で置き、その戦闘を無効にし、そのモンスターを「그레이시아오시」にする。
+
+@CARDCAN_39834(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39834)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 도레미아이돌 그레이시아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,39834)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 도레미코드
+	효과条件종류 = EX以外全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 도레미아이돌 그레이시아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動
+	SIF 발동済_4(듀얼리스트,39834)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 도레미아이돌
+	CALL 효과条件レベル_ADV(3, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF モンスター数(듀얼리스트) != 1
+		RETURN 0
+	SIF モンスター数(対面者) != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件カテゴリ:0 = 그레이시아오시
+	효과条件カテゴリ:1 = 도레미 하코오시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+;---------------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------------
+@CARDEFFECT_39834(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択場所
+#DIM DYNAMIC レベル
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 実行役대상
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39834)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39834,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 도레미코드
+		효과条件종류 = EX以外全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39834,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		選択場所 = 戦闘場所(듀얼리스트,1)
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		조교대상 = NO_TO_CHARANUM(2090)
+
+		CALL Doremi_fans(対面者,選択場所,조교대상,"汎用")
+		CALL EVADE_ATTACK(듀얼리스트)
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39834,4)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,EX덱行き)
+		
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 도레미아이돌
+		효과条件종류 = モン全般
+		CALL 효과条件レベル_ADV(3, "以下")
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+
+		조교대상 = NO_TO_CHARANUM(2090)
+		CALL Doremi_business(対面者,조교대상)
+		;（隠し효과）
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件カテゴリ:0 = 그레이시아오시
+		효과条件カテゴリ:1 = 도레미 하코오시
+		효과条件표시 = 表側표시
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT >= 2
+			カウンタ = RESULT
+			PRINTFORML 
+			PRINTFORMW %CALLNAME:조교대상%进出酒店的过程暴露了！
+			PRINTFORML %CALLNAME:조교대상%的粉丝们无法接受现实、自行破坏了！
+			PRINTFORMW
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"リリース")
+			
+			PRINTFORML
+			PRINTFORML 作为危机公关的费用，支付了{カウンタ*700}LP。
+			PRINTFORMW 
+			CALL FULLRESET
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",カウンタ * 700)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39834)
+	IF RESULT == 0
+		IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+			CONTINUE
+			選択場所 = カウンタ
+		NEXT
+		CALL Doremi_FansAttack(듀얼리스트,場所,選択場所)
+	ENDIF
+	ENDIF
+ENDIF
+RETURN

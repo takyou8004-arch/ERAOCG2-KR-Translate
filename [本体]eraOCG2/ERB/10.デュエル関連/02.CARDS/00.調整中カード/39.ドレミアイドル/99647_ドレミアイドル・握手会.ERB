@@ -1,0 +1,188 @@
+﻿@CARDNAME_99647,参照先
+;ココで지정卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 도레미아이돌 악수회
+	CASE "略称"
+		RESULTS = ♫ 악수회
+	CASE "カテゴリ"
+		RESULTS:0 = 도레미코드
+		RESULTS:1 = 도레미아이돌
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_99647(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99647(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과は１ターンに１度、いずれか１つしか使用できない。
+CALLFORM CARD_ABLE(1,フリー誘発)
+PRINTL ①：상대フィールドに「◯◯오시」モンスターが存在する場合、「◯◯오시」以外のモンスター1体を대상として발동できる。
+PRINTL そのモンスターを손패に戻す。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신フィールドの「도레미아이돌」モンスター1体と상대フィールドの表側표시モンスター1体を대상として발동できる、
+PRINTL 묘지のこのカードを제외し、その後、상대モンスターを「도레미아이돌」モンスターの「◯◯오시」にし。
+
+
+@CARDCAN_99647(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99647)
+SIF RESULT == 1
+	RETURN 0
+
+;IF 종류 == 마함起動 || 종류 == フリー誘発
+IF 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,99647)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件カテゴリ:0 = 큐티아오시
+	효과条件カテゴリ:1 = 드리미아오시
+	효과条件カテゴリ:2 = 엘리티아오시
+	효과条件カテゴリ:3 = 팬시아오시
+	효과条件カテゴリ:4 = 그레이시아오시
+	효과条件カテゴリ:5 = 엔제리아오시
+	효과条件カテゴリ:6 = 뷰티아오시
+	효과条件カテゴリ:7 = 쿨리아오시
+	효과条件カテゴリ:8 = 뮤제시아오시
+	효과条件カテゴリ:9 = 도레미 하코오시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件固カテゴリ:0 = 큐티아오시
+	효과条件固カテゴリ:1 = 드리미아오시
+	효과条件固カテゴリ:2 = 엘리티아오시
+	효과条件固カテゴリ:3 = 팬시아오시
+	효과条件固カテゴリ:4 = 그레이시아오시
+	효과条件固カテゴリ:5 = 엔제리아오시
+	효과条件固カテゴリ:6 = 뷰티아오시
+	효과条件固カテゴリ:7 = 쿨리아오시
+	효과条件固カテゴリ:8 = 뮤제시아오시
+	효과条件固カテゴリ:9 = 도레미 하코오시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,99647)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件종류 = モン全般
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 도레미아이돌
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_99647(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択場所
+#DIM DYNAMIC 選択상대場所
+#DIM DYNAMIC レベル
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 実行役대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	;卡片发动確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99647,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件종류 = モン全般
+		효과条件표시 = 表側표시
+		효과条件固カテゴリ:0 = 큐티아오시
+		효과条件固カテゴリ:1 = 드리미아오시
+		효과条件固カテゴリ:2 = 엘리티아오시
+		효과条件固カテゴリ:3 = 팬시아오시
+		효과条件固カテゴリ:4 = 그레이시아오시
+		효과条件固カテゴリ:5 = 엔제리아오시
+		효과条件固カテゴリ:6 = 뷰티아오시
+		효과条件固カテゴリ:7 = 쿨리아오시
+		효과条件固カテゴリ:8 = 뮤제시아오시
+		효과条件固カテゴリ:9 = 도레미 하코오시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場単体",場所,"손패")
+
+		PRINTFORML
+		PRINTFORML ファンたちが、악수회で騒ぎを起こした人を追い出しました！
+		PRINTFORMW
+	ENDIF
+
+ELSEIF 종류 == 묘지起動
+;卡片发动確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99647,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+		選択상대場所 = RESULT
+
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 도레미아이돌
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択場所 = RESULT
+
+		IF 選択상대場所 != 9999 &&  選択상대場所 != 9999
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",選択場所)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL Doremi_fans(対面者,選択상대場所,조교대상,"汎用")
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

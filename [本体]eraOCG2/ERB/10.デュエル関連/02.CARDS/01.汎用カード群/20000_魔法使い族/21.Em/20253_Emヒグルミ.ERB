@@ -1,0 +1,163 @@
+﻿@CARDNAME_20253,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = Em히구루미
+	CASE "略称"
+		RESULTS = Em히구루미
+	CASE "カテゴリ"
+		RESULTS:0 = 엔터메이지
+ENDSELECT
+
+
+@CARD_20253(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 마법사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "추가日"
+		RETURN 250829
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_20253(종류)
+#DIM DYNAMIC 종류
+
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名のP효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①：자신のメインフェイズに발동できる。
+PRINTL 손패・EX덱からEXモンスター以外の「EM」「Em」モンスター１体を특수소환する。
+PRINTL その後、자신は５００ダメージを受ける。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(2,戦闘→묘지,破壊→묘지)
+PRINTL ①：フィールドのこのカードが戦闘・효과で破壊された場合に발동できる。
+PRINTL 손패・덱から「Em히구루미」以外の「Em」モンスター１体を특수소환する。
+
+
+@CARDCAN_20253(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,20253)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,20253)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件カテゴリ:0 = 엔터메이지
+	효과条件カテゴリ:1 = エンタメイト
+	효과条件종류 = EX以外全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF 발동済_2(듀얼리스트,20253)
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"필드","마함")
+		RETURN 0
+	SIF !GROUPMATCH(묘지送り종류,"破壊","戦闘破壊")
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과条件カテゴリ = エンタメイト
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_20253(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択횟수
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20253)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20253,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ:0 = 엔터메이지
+		효과条件カテゴリ:1 = エンタメイト
+		효과条件종류 = EX以外全般
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",500)
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,20253,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과条件カテゴリ = エンタメイト
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+
+
+

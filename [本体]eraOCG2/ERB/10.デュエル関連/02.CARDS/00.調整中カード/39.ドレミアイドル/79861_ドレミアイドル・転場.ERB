@@ -1,0 +1,124 @@
+﻿@CARDNAME_79861,参照先
+;ココで지정卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 도레미아이돌 전장
+	CASE "略称"
+		RESULTS = ♫ 전장 
+	CASE "カテゴリ"
+		RESULTS:0 = 도레미코드
+		RESULTS:1 = 도레미아이돌
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79861(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79861(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名のカードは1ターンに1枚しか발동できない。
+CALLFORM CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신필드・마법・함정ゾーンの「도레미코드」モンスターカード1枚を대상として발동できる。
+PRINTL そのモンスターを손패に戻し、덱から대상モンスターとレベルが異なる「도레미아이돌」Pモンスター1体を특수소환する。
+
+@CARDCAN_79861(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79861)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,79861)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 도레미코드
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 도레미코드
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_79861(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 固レベル
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;卡片发动確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79861,1)
+	IF RESULT == 0
+		;通常마법汎用処理
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		
+		CALL FULLRESET
+		효과範囲필드 = 1
+		SIF モンスター数(듀얼리스트) < 5
+			효과範囲마함 = 1
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 도레미코드
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			TRYCALLFORM CARD_{RESULT:99},"レベル"
+			固レベル = RESULT
+			CALL CARD_DISPOSE(듀얼리스트,参照先（CS）,選択カード（CS）,손패行き)
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 도레미코드
+			효과条件종류 = モン全般
+			CALL 효과条件レベル_ADV(固レベル,"以外") 
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
