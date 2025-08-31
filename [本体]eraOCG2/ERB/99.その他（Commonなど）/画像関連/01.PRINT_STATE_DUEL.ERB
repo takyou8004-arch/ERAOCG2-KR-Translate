@@ -1,4 +1,4 @@
-﻿;顔グラ표시、캐릭터IDが必要
+﻿;顔グラ표시、캐릭터_IDが必要
 @SHOW_GRAPHICS(캐릭터_ID,SPR値,サムネ플래그)
 #DIM DYNAMIC 캐릭터_ID
 #DIM DYNAMIC SPR値
@@ -210,7 +210,7 @@ IF ALT화상플래그 >= 1
 	ENDIF
 ENDIF
 
-;カード화상があったらコッチを優先する。
+;カード화상があったらコッチを優先する。/PRINTSTATE表示なら必ずここを通る
 IF ENUMFILES("RESOURCES/DUEL", @"{화상ID}_DUEL.*") && 顔플래그 != 1
 	IF カード화상切り替え:화상ID >= 1 && 화상ID <= 999999 && 顔플래그 == 0
 		IF ENUMFILES("RESOURCES/DUEL", @"{화상ID}_DUEL_{(カード화상切り替え:화상ID + 1)}*")
@@ -254,6 +254,8 @@ IF ENUMFILES("RESOURCES/DUEL", @"{화상ID}_DUEL.*") && 顔플래그 != 1
 	RETURN 1
 ENDIF
 
+
+
 ;顔화상が会ったらそっちを표시。	
 IF ENUMFILES("RESOURCES/CHARA", @"{화상ID}_FACE.*")
 	STRMATCHING = _FACE
@@ -287,7 +289,6 @@ ENDIF
 RETURN 0
 
 ;PRINTSTATEで使われる短冊を설정する。
-;@PRINT_STATE_INFO(캐릭터_ID,サムネ_ID)
 @PRINT_STATE_INFO(캐릭터_ID,화상パス지정)
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC 캐릭터_ID
@@ -298,32 +299,32 @@ RETURN 0
 #DIMS DYNAMIC 캐릭터_HTML
 #DIM DYNAMIC サムネ_ID
 #DIMS DYNAMIC 화상パス지정
+#DIM DYNAMIC TOTAL
 #DIM GDI보존
 #DIM DYNAMIC GRAPH_SIZE
 
 
 GDI値 = 3000 + GDI보존
 GDISPOSE GDI値
-
-;IF サムネ_ID != 0
-;PRINTFORM 지정グラ番号:%화상パス지정%
+화상ID = NO:캐릭터_ID
+;PRINTFORML 화상パス指定:%화상パス指定%？
 IF 화상パス지정 != ""
+;	PRINTFORML えっここ？
 	IF ENUMFILES("RESOURCES/DUEL", @"%화상パス지정%")
 		SPLIT RESULTS, "\\", RESULTS
 		GCREATEFROMFILE GDI値, "DUEL/"+RESULTS:(RESULT-1)
 	ENDIF
 	GOTO SKIP_SET
 ENDIF
-IF サムネ_ID != 0 && LOCAL == 9999
-	화상ID = サムネ_ID
-	IF ENUMFILES("RESOURCES/DUEL", @"{화상ID}_DUEL.*")
-		SPLIT RESULTS, "\\", RESULTS
-		GCREATEFROMFILE GDI値, "DUEL/"+RESULTS:(RESULT-1)
+;PRINTFORML TALENT:캐릭터_ID:모브:{TALENT:캐릭터_ID:모브}
+IF TALENT:캐릭터_ID:모브 >= 1
+	화상ID = TALENT:캐릭터_ID:모브 + 9100
+	TOTAL = ENUMFILES(@"RESOURCES/MOB_UFUFU/{화상ID}", @"{화상ID}_BODY*", 0)
+	IF TOTAL >= 1
+		GCREATEFROMFILE GDI値, SUBSTRING(RESULTS:(RAND:TOTAL), 10, -1)
+		GOTO SKIP_SET
 	ENDIF
-	GOTO SKIP_SET
 ENDIF
-화상ID = NO:캐릭터_ID
-
 ;その캐릭터のIDを確認する
 CALL FIND_CHARA_GID(캐릭터_ID)
 IF RESULT == -1
@@ -340,15 +341,6 @@ GRAPH_SIZE = RESULT
 SPRITEDISPOSE @"{화상ID}_TACHIE"
 SPRITECREATE @"{화상ID}_TACHIE", GDI値, GRAPH_SIZE*5/32, 0, GRAPH_SIZE*22/32, GRAPH_SIZE
 IF SPRITECREATED(@"{화상ID}_TACHIE")
-	;求めるのは四角形から正方形を得ること
-	;四角形は1024, これを8進数で表すと 2000
-	;正方形は832,1216 8進数で表すと Width 1500,Hight 2300
-	;Hight 2300 to 2000　は　1.15倍スケール
-	;Width 1500 to 1300　は　大体1.15倍スケール
-	;8進数 1300 を戻すと704 
-	;1024 - 704 = 300で、袖で両端枠とすると150
-	;つまり、150,0ポイントからスタート、見てHight 2000のままである場合
-	;150,0,700,1024
 	캐릭터_HTML = <button value='{9011}'><img src='{화상ID}_TACHIE' srcb='' height='{3550}' width='{2320}'></button>
 	GDISPOSE 3030
 	IF ENUMFILES("RESOURCES/WAKU", @"WAKU_TACHI.*")
@@ -437,5 +429,70 @@ IF ENUMFILES("RESOURCES/CHARA", @"{화상ID}_FACE.*")
 	ENDIF
 	RETURN 1
 ENDIF
+
+RETURN 0
+
+
+
+
+
+
+;決闘などで表示されるカード화상を枠付きで表示する。
+@PRINT_STATE_MOBS(캐릭터_ID,倍率)
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 화상ID
+#DIM DYNAMIC カード_ID
+#DIMS DYNAMIC STRMATCHING
+#DIM DYNAMIC GDI値
+#DIM DYNAMIC 플래그
+#DIM DYNAMIC 설정플래그
+#DIMS DYNAMIC 설정名前
+#DIMS DYNAMIC 캐릭터_HTML
+#DIM DYNAMIC GRAPH_SIZE
+#DIM DYNAMIC 倍率
+#DIM DYNAMIC 캐릭터_ID
+#DIM GDI보존
+
+SIF TALENT:캐릭터_ID:모브 == 0
+	RETURN 0
+
+SIF 倍率 <= 1
+	倍率 = 1
+;そのままカードIDを取得していく感じ。
+화상ID = TALENT:캐릭터_ID:모브 + 9100
+VARSET RESULT
+GDI値 = 2000 + GDI보존
+GDISPOSE GDI値
+
+GDI보존 ++
+IF GDI보존 >= 20
+	GDI보존 = 0
+ENDIF
+
+IF ENUMFILES(@"RESOURCES/MOB_UFUFU/{화상ID}", @"{화상ID}_BODY*", 0)
+	SPLIT RESULTS, "\\", RESULTS
+	GCREATEFROMFILE GDI値, @"MOB_UFUFU/{화상ID}"+RESULTS:(RESULT-1)
+	SPRITEDISPOSE @"{GDI値}_DUEL"
+	SPRITECREATE @"{GDI値}_DUEL", GDI値
+	GWIDTH GDI値
+	GRAPH_SIZE = RESULT
+	IF SPRITECREATED(@"{GDI値}_DUEL")
+;		IF 倍率 <= 1
+			캐릭터_HTML = <button value='{1000}'><img src='{GDI値}_DUEL' srcb='' height='{2500 * 倍率}' width='{1200 * 倍率}'></button>
+;		ELSE
+;			캐릭터_HTML = <img src='{GDI値}_DUEL' srcb='' height='{2500 * 倍率}' width='{2500 * 倍率}'>
+;		ENDIF
+		GDISPOSE 2030
+		IF ENUMFILES("RESOURCES/WAKU", @"WAKU_DUEL.*")
+			SPLIT RESULTS, "\\", RESULTS
+			GCREATEFROMFILE 2030, "WAKU/"+RESULTS:(RESULT-1)
+			SPRITECREATE @"WAKU_DUEL", 2030
+		ENDIF
+		GDRAWSPRITE GDI値, @"WAKU_DUEL",0,0,GRAPH_SIZE,GRAPH_SIZE		
+		HTML_PRINT 캐릭터_HTML,1
+	ENDIF
+ENDIF
+RETURN 1
+
 
 RETURN 0

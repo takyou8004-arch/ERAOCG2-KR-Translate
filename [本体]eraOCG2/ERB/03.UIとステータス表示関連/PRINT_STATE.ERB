@@ -39,7 +39,7 @@ IF CFLAG:캐릭터_ID:그래픽설정 >= 100000
 		サムネ_ID = CFLAG:캐릭터_ID:그래픽설정
 		화상パス지정 = {NO:캐릭터_ID}_DUEL_{지정グラ番号}.*
 	ELSE 
-		화상パス지정 = ""
+		VARSET 화상パス지정
 		CFLAG:캐릭터_ID:그래픽설정 = 0
 	ENDIF
 ELSEIF CFLAG:캐릭터_ID:그래픽설정 >= 1
@@ -47,7 +47,7 @@ ELSEIF CFLAG:캐릭터_ID:그래픽설정 >= 1
 		サムネ_ID = CFLAG:캐릭터_ID:그래픽설정
 		화상パス지정 = {CFLAG:캐릭터_ID:그래픽설정}_DUEL.*
 	ELSE 
-		화상パス지정 = ""
+		VARSET 화상パス지정
 		CFLAG:캐릭터_ID:그래픽설정 = 0
 	ENDIF
 ELSEIF CFLAG:캐릭터_ID:그래픽설정 == 0
@@ -55,7 +55,7 @@ ELSEIF CFLAG:캐릭터_ID:그래픽설정 == 0
 		サムネ_ID = NO:캐릭터_ID
 		화상パス지정 = {NO:캐릭터_ID}_DUEL.*
 	ELSE 
-		화상パス지정 = ""
+		VARSET 화상パス지정
 		CFLAG:캐릭터_ID:그래픽설정 = 0
 	ENDIF
 ENDIF
@@ -122,7 +122,6 @@ ELSE
 	PRINTFORM %"",62,LEFT%
 ENDIF
 ;カード화상취득＆표시
-;CALL PRINT_STATE_INFO(캐릭터_ID,サムネ_ID)
 CALL PRINT_STATE_INFO(캐릭터_ID,화상パス지정)
 
 PRINTL
@@ -183,20 +182,6 @@ ENDIF
 PRINTFORML
 
 PRINTFORM ┃%"",20,LEFT%┃
-; IF TALENT:캐릭터_ID:성별 != 2
-; 	PRINT 
-; 	IF 가슴サイズ <= 限界値_가슴AWS || 限界値_가슴AWS == 0 || CFLAG:캐릭터_ID:가슴초기치 > 限界値_가슴AWS
-; 		PRINTFORM ・가슴 사이즈：{가슴サイズ}mm
-; 	ELSEIF 가슴サイズ >= 限界値_가슴AWS
-; 		PRINTFORM ・가슴 사이즈：{限界値_가슴AWS}mm
-; 	ENDIF
-; 	PRINT 　/　
-; 	IF 尻サイズ <= 限界値_尻AWS || 限界値_가슴AWS == 0 || CFLAG:캐릭터_ID:엉덩이초기치 > 限界値_尻AWS
-; 		PRINTFORM 엉덩이 사이즈：{尻サイズ}mm
-; 	ELSEIF 尻サイズ >= 限界値_가슴AWS
-; 		PRINTFORM 엉덩이 사이즈：{限界値_尻AWS}mm
-; 	ENDIF
-; ENDIF
 CALL SHOW_BODYSIZE(캐릭터_ID)
 PRINTL
 
@@ -608,6 +593,7 @@ IF 캐릭터_ID != MASTER && 설정モード == 1
 	NEXT
 	;PRINTFORML 현재치　TARGET:{現在値}
 	BINPUT
+	$INPUT_SELECT
 	SELECTCASE RESULT
 	CASE 20 TO 30
 		RESULT -= 20
@@ -632,12 +618,67 @@ IF 캐릭터_ID != MASTER && 설정モード == 1
 		SIF RESULT != 0
 			CALL CARD_DECK_CHECK(RESULT,4)
 
+
 	CASE 9002
-		IF CFLAG:캐릭터_ID:ALT그림 == 0
+		;現在値＋ALT絵がある場合に설정。
+		IF ENUMFILES("RESOURCES/CHARA", @"{NO:캐릭터_ID}_FACE_{(CFLAG:캐릭터_ID:ALT그림 + 2)}*")
 			CFLAG:캐릭터_ID:ALT그림 = 1
 		ELSE
 			CFLAG:캐릭터_ID:ALT그림 = 0
 		ENDIF
+	CASE 9003
+		CALL FIND_CHARA_GID(캐릭터_ID,1)
+		グラ数 = RESULT
+		FOR カウンタ,0,20
+			ALT_グラID:カウンタ = RESULT:(カウンタ + 1)
+		NEXT
+		PRINTFORML 설정하고 싶은 화상을 선택해주세요
+		FOR カウンタ,0,グラ数
+			IF GROUPMATCH(カウンタ,7,14,21)
+				FOR カウンタB,0,10 
+					PRINTL
+				NEXT
+			ENDIF
+			CALL PRINT_STATE_DUEL(ALT_グラID:カウンタ,0,2)
+		NEXT
+		FOR カウンタ,0,10 
+			PRINTL
+		NEXT
+		IF ENUMFILES("RESOURCES/DUEL", @"{NO:캐릭터_ID}_DUEL_2*")
+			PRINTFORML 카드ALT화상：
+			FOR カウンタ,0,10
+				SIF !ENUMFILES("RESOURCES/DUEL", @"{NO:캐릭터_ID}_DUEL_{(カウンタ + 2)}*")
+					CONTINUE
+				CALL PRINT_STATE_DUEL(NO:캐릭터_ID,0,2,カウンタ + 2)
+			NEXT
+			FOR カウンタ,0,10 
+				PRINTL
+			NEXT
+		ENDIF
+		BINPUT
+		IF NO:캐릭터_ID == RESULT
+			CFLAG:캐릭터_ID:グラ설정 = 0
+		ELSE
+			CFLAG:캐릭터_ID:グラ설정 = RESULT
+		ENDIF
+
+	CASE 9010
+		CALL SHOW_GRAPHICS(캐릭터_ID,2021,6)
+		WAIT
+	CASE 9011
+		IF CFLAG:캐릭터_ID:グラ설정 >= 100000
+			CALL PRINT_STATE_DUEL(NO:캐릭터_ID,2,3,지정グラ番号)
+		ELSE
+			IF TALENT:캐릭터_ID:モブ > 0
+				CALL PRINT_STATE_MOBS(캐릭터_ID,2)
+			ELSE
+				CALL PRINT_STATE_DUEL(サムネ_ID,2,3)
+			ENDIF
+		ENDIF
+		WAIT
+
+
+
 	CASE 0
 		RETURN 1
 	ENDSELECT
@@ -698,8 +739,6 @@ ELSEIF 설정モード == 2 || 설정モード == 5 || 설정モード == 6
 		FOR カウンタ,0,10 
 			PRINTL
 		NEXT
-;		[SKIPSTART]
-		;PRINTFORML 캐릭터_ID:{NO:캐릭터_ID}
 		IF ENUMFILES("RESOURCES/DUEL", @"{NO:캐릭터_ID}_DUEL_2*")
 			PRINTFORML 카드ALT화상：
 			FOR カウンタ,0,10
@@ -711,7 +750,6 @@ ELSEIF 설정モード == 2 || 설정モード == 5 || 설정モード == 6
 				PRINTL
 			NEXT
 		ENDIF
-;		[SKIPEND]
 		BINPUT
 		IF NO:캐릭터_ID == RESULT
 			CFLAG:캐릭터_ID:그래픽설정 = 0
@@ -726,7 +764,11 @@ ELSEIF 설정モード == 2 || 설정モード == 5 || 설정モード == 6
 		IF CFLAG:캐릭터_ID:그래픽설정 >= 100000
 			CALL PRINT_STATE_DUEL(NO:캐릭터_ID,2,3,지정グラ番号)
 		ELSE
-			CALL PRINT_STATE_DUEL(サムネ_ID,2,3)
+			IF TALENT:캐릭터_ID:모브 > 0
+				CALL PRINT_STATE_MOBS(캐릭터_ID,2)
+			ELSE
+				CALL PRINT_STATE_DUEL(サムネ_ID,2,3)
+			ENDIF
 		ENDIF
 		WAIT
 	CASE 9050
@@ -759,8 +801,11 @@ ELSEIF 설정モード == 2 || 설정モード == 5 || 설정モード == 6
 			PRINTFORML [0] - 예
 			PRINTFORML [1] - 아니오
 			BINPUT
-			SIF RESULT == 1
+			IF RESULT == 1
 				RETURN 2
+			ELSEIF RESULT == 0
+				RETURN 1
+			ENDIF
 		ENDIF
 		RETURN 1
 	CASE 9051
@@ -772,6 +817,8 @@ ELSEIF 설정モード == 2 || 설정モード == 5 || 설정モード == 6
 	CASE 9999
 		DELCHARA 캐릭터_ID
 		RETURN 1
+	CASEELSE
+		GOTO INPUT_SELECT
 	ENDSELECT
 	GOTO INPUT_LOOP	
 ENDIF
@@ -1587,7 +1634,40 @@ SELECTCASE ARG
 			RETURNF "이상한 리포터"
 		ELSEIF ARG:1 == 20
 			RETURNF "아카데미아 학생"
-
+		ELSEIF ARG:1 == 21
+			RETURNF "오시리스 레드"
+		ELSEIF ARG:1 == 21
+			RETURNF "오시리스 레드"
+		ELSEIF ARG:1 == 22
+			RETURNF "오벨리스크 블루"
+		ELSEIF ARG:1 == 23
+			RETURNF "라 옐로"
+		ELSEIF ARG:1 == 21
+			RETURNF "오시리스 레드"
+		ELSEIF ARG:1 == 31
+			RETURNF "마법소녀"
+		ELSEIF ARG:1 == 32
+			RETURNF "옥도 걸"
+		ELSEIF ARG:1 == 33
+			RETURNF "요괴 소녀"
+		ELSEIF ARG:1 == 34
+			RETURNF "한계OL"
+		ELSEIF ARG:1 == 35
+			RETURNF "파트의 엄마"
+		ELSEIF ARG:1 == 36
+			RETURNF "여의사"
+		ELSEIF ARG:1 == 37
+			RETURNF "Yu-ber배달"
+		ELSEIF ARG:1 == 40
+			RETURNF "시큐리티"
+		ELSEIF ARG:1 == 41
+			RETURNF "버니"
+		ELSEIF ARG:1 == 42
+			RETURNF "D-휠러"
+		ELSEIF ARG:1 == 43
+			RETURNF "폭주족"
+		ELSEIF ARG:1 == 44
+			RETURNF "스릴라이더"
 		ENDIF
 	CASEELSE
 		SIF ARG:1
