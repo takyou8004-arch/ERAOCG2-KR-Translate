@@ -1,4 +1,4 @@
-﻿@EROTIC_MOVE(実行コマンド, 조교대상 = -1, 実行役대상 = -1, 実보정 = 100)
+﻿@EROTIC_MOVE(実行コマンド, 조교대상 = -1, 実行役대상 = -1, 実보정 = 100,連続実行)
 #DIMS DYNAMIC 実行コマンド
 #DIM DYNAMIC 조교대상
 #DIM DYNAMIC 実行役대상
@@ -10,6 +10,8 @@
 #DIM DYNAMIC 절정カウント前B
 #DIM DYNAMIC 절정カウント後B
 #DIM DYNAMIC 절정횟수B
+#DIM DYNAMIC 連続実行
+#DIM DYNAMIC 試行횟수
 
 SIF 조교대상 == MASTER補助
 	조교대상 = MASTER
@@ -18,6 +20,7 @@ SIF 実行役대상 == MASTER補助
 
 IF 조교대상 >= 0
 	PRINTL
+	PRINTFORML 【%実行コマンド%】
 	PRINTFORML %NAME:조교대상%은 조교의 영향을 받아버렸습니다。
 ENDIF
 IF 조교대상 != -1
@@ -27,9 +30,9 @@ IF 実行役대상 != -1
 	절정カウント前B = EXP:実行役대상:절정경험
 ENDIF
 
+$INPUT_LOOP
 EXP:조교대상:듀얼조교경험 ++
 SELECTCASE 実行コマンド
-
 	CASE "Ｃ単発"
 		CALL SOURCE_CALC_쾌Ｃ(조교대상, 実行役대상, (100 * 実보정) / 100)
 	CASE "Ｖ単発"
@@ -221,6 +224,21 @@ SELECTCASE 実行コマンド
 		CALL SOURCE_CALC_노출(조교대상, 実行役대상, (50 * 実보정) / 100)
 		CALL SOURCE_CALC_접촉(조교대상, 実行役대상, (50 * 実보정) / 100)
 		CALL SOURCE_CALC_봉사(조교대상, 実行役대상, (250 * 実보정) / 100)
+
+	CASE "수음"
+		EXP:조교대상:정음경험 += (実보정 / 100)
+		EXP:조교대상:수음경험 += (実보정 / 100)
+		IF 実行役대상 != -1
+			TCVAR:実行役대상:사정쾌락강도 = 2000 * (実보정 / 100)
+			TCVAR:実行役대상:사정대상캐릭터_1 = 조교대상
+			TCVAR:実行役대상:사정부위플래그 = 3
+			CALL SOURCE_CALC_快Ｃ(実行役대상, 조교대상, (150 * 実보정) / 100)
+		ENDIF
+		CALL SOURCE_CALC_정복(조교대상, 実行役대상, (120 * 実보정) / 100)
+		CALL SOURCE_CALC_노출(조교대상, 実行役대상, (50 * 実보정) / 100)
+		CALL SOURCE_CALC_접촉(조교대상, 実行役대상, (100 * 実보정) / 100)
+		CALL SOURCE_CALC_奉仕(조교대상, 実行役대상, (50 * 実보정) / 100)
+
 
 	CASE "딥키스"
 		EXP:조교대상:키스경험 += (実보정 / 100)
@@ -736,6 +754,10 @@ SIF 조교대상 != -1
 	CALL CARD_EROTICS_END(조교대상)
 SIF 実行役대상 != -1
 	CALL CARD_EROTICS_END(実行役대상)
+
+試行횟수 ++
+SIF 試行횟수 < 連続実行 
+	GOTO INPUT_LOOP
 
 IF 조교대상 != -1
 	절정カウント後 = EXP:조교대상:절정경험

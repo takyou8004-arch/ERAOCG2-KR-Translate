@@ -1,0 +1,136 @@
+﻿@CARDNAME_79655,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 세뇌개변
+	CASE "略称"
+		RESULTS = 세뇌개변
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79655(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "추가日"
+		RETURN 250908
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79655(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드는 １턴에 １번밖에 발동할 수 없다。
+CALL CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①：이 카드의 발동시의 효과 처리로서、자신의 묘지에서、
+PRINTL "마음의 변심" "마음의 변화" "세뇌－브레인 컨트롤" "정신조작" 중 １장을 패에 넣을 수 있다。
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②：이 카드가 필드에 앞면 표시로 존재하는 한、
+PRINTL 자신 필드에 존재하는 암컷 몬스터의、엔드 페이즈에 필드를 벗어나는 효과를 지운다。
+PRINTL （【종료시처리】라고 적힌 효과가 사라진다）
+CALL TEXT_DECORATION("ROGUE")
+
+
+@CARDCAN_79655(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79655)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79655)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과 || 종류 == リアクション효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79655(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79655,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과条件名前:0 = 마음의 변심
+		효과条件名前:1 = 마음의 변화
+		효과条件名前:2 = 세뇌－브레인 컨트롤
+		효과条件名前:3 = 정신조작
+		CALL CARD_ADD_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 지속효과	
+	FOR カウンタ,0,5
+		CALL FULLRESET
+		효과条件성별 = 牝性
+		효과条件표시 = 表側표시
+		CALL CARD_FILTER_SET(듀얼리스트,"필드",カウンタ,듀얼리스트)
+		SIF RESULT != 1
+			CONTINUE
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"終処",0,1)
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"接可",3,1)
+		IF 듀얼리스트 == "자신"
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"所有",1,1)
+		ELSEIF 듀얼리스트 == "상대"
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",カウンタ,"所有",2,1)
+		ENDIF
+	NEXT
+ELSEIF 종류 == リアクション효과
+	FOR カウンタ,0,5
+		CALL FULLRESET
+		효과条件성별 = 牝性
+		효과条件표시 = 表側표시
+		CALL CARD_FILTER_SET(듀얼리스트,"필드",カウンタ,듀얼리스트,5)
+		SIF RESULT != 1
+			CONTINUE
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",カウンタ)
+		IF RESULT != -1
+			조교대상 = RESULT
+			PRINTFORML %CALLNAME:조교대상%는 상식대로、자신의 소유자에게 아양떨듯이 몸을 비벼온다。
+			CALL EROTIC_MOVE("晒しもの",조교대상)
+		ENDIF
+	NEXT
+ENDIF

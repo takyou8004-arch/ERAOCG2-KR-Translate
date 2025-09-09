@@ -22,6 +22,8 @@ SELECTCASE 参照先
 		SIF 依頼_完了횟수:2 == 0
 			RETURN 0
 		RETURN 1
+	CASE "回想可"
+		RETURN 1
 ENDSELECT
 
 RETURN 0
@@ -78,7 +80,8 @@ IF 依頼_달성상황 == 0
 	PRINTFORMW 
 	依頼_달성상황 += 1
 	依頼_場所 = 場所_寝室
-	TIME += 60
+	CALL EVENT_TIMER(60)
+	RETURN 1
 ELSEIF 依頼_달성상황 == 1
 	PRINTFORMW 발신자 미상의 인물로부터 도착한 메시지…… 꽤 의심스럽지만……。
 	PRINTFORMW "망설일 시간은 없어! 확인해야 해！"
@@ -109,11 +112,12 @@ ELSEIF 依頼_달성상황 == 1
 	PRINTFORMW 　우선 번화가로 가자！！"
 	依頼_달성상황 += 1
 	依頼_場所 = 場所_繁華街
-	TIME += 60
+	CALL EVENT_TIMER(60)
+	RETURN 1
 ELSEIF 依頼_달성상황 == 2
-	TIME += 60
-	CFLAG:(이벤트主:0):현재위치 = CFLAG:MASTER:현재위치
-	CFLAG:(이벤트主:1):현재위치 = CFLAG:MASTER:현재위치
+	CALL EVENT_TIMER(60)
+	CALL EVENT_MOVE((이벤트主:0),場所_繁華街)
+	CALL EVENT_MOVE((이벤트主:1),場所_繁華街)
 	CALL CLOTHES_SETTING((이벤트主:0),147)	
 	CALL CLOTHES_SETTING((이벤트主:1),148)
 	PRINTFORMW 일단 도착했지만... 용선녀와 가이드는 어느새 현대적인 옷을 입고 있었다.
@@ -142,7 +146,7 @@ ELSEIF 依頼_달성상황 == 2
 		PRINTFORMW 완전히 상황을 즐기고 있다……꽉 팔에 안기고, 목적지를 가리킨다.
 		PRINTFORMW "우선 저기 소프트아이스크림 가게가 수상하네요！조사 조사！"
 		PRINTFORMW "나는 이 주변을 찾아볼게! 부탁해, 두 사람！"
-		CFLAG:(이벤트主:0):동행 = 1440
+		CALL EVENT_DOUKOU(이벤트主:0)
 		CALL EVENT_FAVUP(이벤트主:0,300)
 		TARGET = (이벤트主:0)
 	ELSEIF RESULT == 1
@@ -150,7 +154,7 @@ ELSEIF 依頼_달성상황 == 2
 		PRINTFORMW 어쩌다 손을 잡아버렸지만…… 이런 일에 익숙하지 않은 건가, 얼굴이 갑자기 빨개졌다.
 		PRINTFORMW "쳇～……차여버렸네요ー、이젠 그냥 먹어치울 수밖에 없다! 저는 여기 근처에서 찾을 테니 두분은 데이트 즐기시기를"
 		PRINTFORMW "데, 데데데데이트가 아니라 이건, 잠깐！당기지 마！"
-		CFLAG:(이벤트主:1):동행 = 1440
+		CALL EVENT_DOUKOU(이벤트主:1)
 		CALL EVENT_FAVUP(이벤트主:1,400)
 		TARGET = (이벤트主:1)
 	ELSEIF RESULT == 2
@@ -164,8 +168,9 @@ ELSEIF 依頼_달성상황 == 2
 		PRINTFORMW "꺅！？　대, 대담하네……"
 		PRINTFORMW 미인 둘이 있는데, 양손에 시중들게 하지 않는 건 아까운 일이다.
 		PRINTFORMW 편하게 가자, 상황을 즐기는 것도 중요하니까.
-		CFLAG:(이벤트主:0):동행 = 1440
-		CFLAG:(이벤트主:1):동행 = 1440
+		CALL EVENT_DOUKOU(이벤트主:0)
+		CALL EVENT_DOUKOU(이벤트主:1)
+
 		CALL EVENT_FAVUP(이벤트主:0,500)
 		CALL EVENT_FAVUP(이벤트主:1,500)
 		TARGET = (이벤트主:0)
@@ -174,6 +179,9 @@ ELSEIF 依頼_달성상황 == 2
 	依頼_場所:1 = 場所_カフェ
 	依頼_場所:2 = 場所_식사通り
 	依頼_달성상황 += 1
+	IF 依頼_見返し中 == 1
+		GOTO INPUT_SKIP
+	ENDIF
 	RETURN 1
 ELSEIF 依頼_달성상황 >= 3
 	SIF CFLAG:(이벤트主:0):동행
@@ -183,7 +191,9 @@ ELSEIF 依頼_달성상황 >= 3
 	ランダム値 = RAND:3
 	PRINTFORMW %GETPLACENAME(CFLAG:MASTER:현재위치)%에서 탐문을 한 결과…….
 	IF ランダム値 == 2
-		IF CFLAG:MASTER:현재위치 == 場所_カドショ
+		IF IRAI_AREA_CHECK(場所_カドショ) == 1
+
+
 			PRINTFORMW 『수견사? 용사 토큰이요? 물론 알고 있습니다！』。
 			PRINTFORMW 역시 듀얼 몬스터에 대해서는 카드 가게. 어디서 보았는지 바로 물어보았더니...
 			PRINTFORMW 쇼케이스로 안내받았다. 당연히 그렇겠지.
@@ -269,7 +279,7 @@ ELSEIF 依頼_달성상황 >= 3
 			PRINTFORMW 『어머 복스럽게도 먹네! 여기, 돈가스 서비스해줄게! 근데 최근에 남편이……』
 			PRINTFORMW 틀렸다! 항복은 못 해!!
 			PRINTFORMW 결국 그 후, 1시간 가까이 아줌마의 이야기를 들어주게 되었다……。
-			TIME += 50
+			CALL EVENT_TIMER(50)
 			CALL RECOVER_PERMIL(MASTER,-100,"체력")
 			CALL RECOVER_PERMIL(MASTER,-200,"기력")
 			依頼_달성상황 += 1
@@ -277,21 +287,21 @@ ELSEIF 依頼_달성상황 >= 3
 		ENDIF
 
 	ELSE
-		IF CFLAG:MASTER:현재위치 == 場所_カドショ
+		IF IRAI_AREA_CHECK(場所_カドショ)
 			SIF ガイドさん동행中 == 1 || 龍仙女동행中 == 1
 				PRINTFORMW 당신의 파트너는 아이 쇼핑을 즐기고 있었다.
 			SIF ガイドさん동행中 == 1
 				PRINTFORMW "엑스트라 카드는 정말 비싸네요…… 알바, 알바를 더 해야……！"
 			SIF 龍仙女동행中 == 1
 				PRINTFORMW "상검? 이걸 섞으면 내 덱도 강해질 수 있을까？"
-		ELSEIF CFLAG:MASTER:현재위치 == 場所_カフェ
+		ELSEIF IRAI_AREA_CHECK(場所_カフェ)
 			SIF ガイドさん동행中 == 1 || 龍仙女동행中 == 1
 				PRINTFORMW 파트너는 주변 사람들과의 대전을 즐기고 있었다.
 			SIF ガイドさん동행中 == 1
 				PRINTFORMW "하하! 약하네여! 링크와 최신 카드를 알게 된 저는 무적입니다！"
 			SIF 龍仙女동행中 == 1
 				PRINTFORMW "크으으으으으윽！！　졌어 분해애애애애애……！　더, 더 강함을……！！"
-		ELSEIF CFLAG:MASTER:현재위치 == 場所_식사通り
+		ELSEIF IRAI_AREA_CHECK(場所_식사通り)
 			SIF ガイドさん동행中 == 1 || 龍仙女동행中 == 1
 				PRINTFORMW 당신은 파트너와 간식을 즐기고 있었다.
 			SIF ガイドさん동행中 == 1
@@ -308,6 +318,7 @@ ELSEIF 依頼_달성상황 >= 3
 	PRINTFORMW …
 	PRINTL 
 	IF 依頼_달성상황 >= 6
+		$INPUT_SKIP
 		PRINTFORMW 정보도 꽤 모였으니 당신들은 번화가에서 합류해 정보를 정리했다.
 		PRINTFORMW "우선, 내가 가진 정보 외에 수확은 교회에 다니고 있고, 용사 관련 카드를 수집하는 것, 그리고"
 		PRINTL
@@ -353,25 +364,28 @@ ELSEIF 依頼_달성상황 >= 3
 		PRINTFORMW 신경쓰지 말고! 이건 제가 드리는 선물이에요! 어서 열어보시죠ー
 		PRINTFORMW 그럼, 감사히…… 개봉！
 		CALL CARD_PACK_SHORI(10,4)
-		CALL CARD_PACK_RELEASE(4)
-		CALL CARD_PACK_RELEASE(5)
+
 
 		PRINTFORMW "좋은 카드는 있었어？"
 		PRINTFORMW "카드를 사서 덱을 강화해! 듀얼의 기본이에요！"
 		PRINTFORML
 		PRINTFORML
-
-		CFLAG:(이벤트主:0):현재위치 = 100
-		CFLAG:(이벤트主:1):현재위치 = 100
-		CALL SOURCE_CALC_환락((이벤트主:0), MASTER, 3000)
-		CALL SOURCE_CALC_환락((이벤트主:1), MASTER, 3000)
-		TIME += 30
+		CALL EVENT_MOVE(이벤트主:0,100)
+		CALL EVENT_MOVE(이벤트主:1,100)
+		CALL EVENT_FAVUP(이벤트主:0,200)
+		CALL EVENT_FAVUP(이벤트主:1,200)
+		CALL EVENT_TIMER(30)
 		RETURN 2
 	ENDIF
 ENDIF
-
-
 RETURN 1
+
+
+@IRAI_REWARD_3
+CALL CARD_PACK_RELEASE(4)
+CALL CARD_PACK_RELEASE(5)
+
+
 
 
 

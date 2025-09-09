@@ -69,8 +69,8 @@ CALLFORM CARD_ABLE(1,EX소환時,효과後誘発)
 PRINTL ①：이 카드가 X소환한 경우、또는 상대가 패 / 묘지의 몬스터의 효과를 발동한 경우、
 PRINTL 이 카드의 X소재를１개 제거하고 발동할 수 있다。
 PRINTL 상대 필드의 몬스터 １장을 파괴한다。
-CALLFORM CARD_ABLE(0,지속효과)
-PRINTL ②：이 카드가 묘지에 존재하는 동안、
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ②：상대가 패 / 묘지의 몬스터의 효과를 발동한 경우, 묘지의 이 카드를 제외하고 발동할 수 있다.
 PRINTL 자신의 "K9" X몬스터가 상대에게 주는 전투 데미지는 배가 된다。
 
 
@@ -103,6 +103,8 @@ IF 종류 == EX소환時
 ELSEIF 종류 == 효과後誘発
 	SIF 발동済_1(듀얼리스트,12191)
 		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
 	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
 		RETURN 0
 	CALL FULLRESET
@@ -120,13 +122,20 @@ ELSEIF 종류 == 효과後誘発
 	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
-ELSEIF 종류 == 지속효과
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,12191)
+		RETURN 0
 	SIF ゾーン != "묘지"
 		RETURN 0
-	RETURN 1
-ELSEIF 종류 == 攻撃時強制誘発
-	SIF ゾーン != "필드"
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
 		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 短紋章起動
 	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
 	IF !MATCH(RESULTS,"K9")
 		RETURN 0
@@ -157,10 +166,17 @@ IF 종류 == EX소환時 || 종류 == 효과後誘発
 		효과範囲상대마함 = 1
 		CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"묘지")
 	ENDIF
-ELSEIF 종류 == 攻撃時強制誘発
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,12191,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL CARD_RESERV(듀얼리스트,12191,短紋章予約)
+	ENDIF
+ELSEIF 종류 == 短紋章起動
 	CALL FULLRESET
 	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ倍化",3,1)
 ENDIF
+
 
 
 

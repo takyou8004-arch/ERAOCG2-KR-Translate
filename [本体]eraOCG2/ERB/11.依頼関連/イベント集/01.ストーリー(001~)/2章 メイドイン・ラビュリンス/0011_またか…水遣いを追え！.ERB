@@ -22,6 +22,8 @@ SELECTCASE 参照先
 		SIF 依頼_完了횟수:4 == 0
 			RETURN 0
 		RETURN 1
+	CASE "回想可"
+		RETURN 1
 ENDSELECT
 
 RETURN 0
@@ -65,10 +67,10 @@ IF 依頼_달성상황 == 0
 	PRINTFORMW 일단 번화가로 나가기 위해 준비를 시작했다.
 	依頼_달성상황 += 1
 	依頼_場所 = 場所_繁華街
-	TIME += 60
+	CALL EVENT_TIMER(60)
 ELSEIF 依頼_달성상황 == 1
-	CFLAG:(이벤트主:0):현재위치 = CFLAG:MASTER:현재위치
-	CFLAG:(이벤트主:1):현재위치 = CFLAG:MASTER:현재위치
+	CALL EVENT_MOVE((이벤트主:0),場所_繁華街)
+	CALL EVENT_MOVE((이벤트主:1),場所_繁華街)
 	CALL CLOTHES_SETTING((이벤트主:0),147)
 	CALL CLOTHES_SETTING((이벤트主:1),148)
 	PRINTFORMW 일단 번화가로 나왔지만…… 어디서부터 찾아볼까.
@@ -99,7 +101,11 @@ ELSEIF 依頼_달성상황 == 1
 	依頼_달성상황 += 1
 	RETURN 1
 ELSEIF 依頼_달성상황 >= 2
-	IF CFLAG:MASTER:현재위치 == 場所_カドショ
+	IF 依頼_見返し中 == 1
+		GOTO INPUT_SKIP
+	ENDIF
+
+	IF IRAI_AREA_CHECK(場所_カドショ)
 		IF 依頼_달성상황 <= 2
 			PRINTFORMW "………아! 역시…… 지켜보고 있길 잘했어."
 			PRINTL
@@ -135,7 +141,7 @@ ELSEIF 依頼_달성상황 >= 2
 		PRINTFORMW 그녀에게 감사하며, 바로 다음 목적지로 향했다.
 		依頼_달성상황:1 += 1
 		依頼_場所:0 = 0
-	ELSEIF CFLAG:MASTER:현재위치 == 場所_식사通り
+	ELSEIF IRAI_AREA_CHECK(場所_식사通り)
 		PRINTFORMW 『물짱? 아아! 인사하러 왔었어! 몇 번이나 꾸벅꾸벅하고! 어디서 샀는지 귀여운 옷까지 입고! 귀여운 옷이라고 하니 말인데!』
 		PRINTL
 		PRINTFORMW 카레 가게에 들어가서 질문하자, 점장에게 즉시 선수를 빼앗겼지만 용선녀가 방해를 내던졌다.
@@ -158,7 +164,7 @@ ELSEIF 依頼_달성상황 >= 2
 		PRINTFORMW ……이야기가 길어지기 전에!
 		依頼_달성상황 += 1
 		依頼_場所:1 = 0
-	ELSEIF CFLAG:MASTER:현재위치 == 場所_教会
+	ELSEIF IRAI_AREA_CHECK(場所_教会)
 		IF 依頼_달성상황 <= 2
 			PRINTFORMW 교회의 상태를 보러 오니, 지난번의 총격전으로 너덜너덜해진 교회가 눈에 들어왔다.
 			PRINTFORMW 뭐, 당연하지만…… 경찰 투성이다.
@@ -240,7 +246,7 @@ ELSEIF 依頼_달성상황 >= 2
 			CALL RECOVER_PERMIL(MASTER,-1000,"체력")
 			CALL RECOVER_PERMIL(MASTER,-1000,"기력")
 		ENDIF
-		TIME += 60
+		CALL EVENT_TIMER(60)
 		PRINTFORMW 우선 모두 진정하기 위해 한 시간 정도 차를 마셨고, 올해 최고의 거짓말쟁이가 되어본 결과……
 		PRINTL
 		PRINTFORMW "저의 성급한 착각으로 정말 죄송했습니다! 그렇죠, 이 세상에 악마 같은 건 없죠"
@@ -263,7 +269,7 @@ ELSEIF 依頼_달성상황 >= 2
 		PRINTFORMW "자, 가볼까, 강변으로"
 		依頼_달성상황 += 1
 		依頼_場所:2 = 0
-	ELSEIF CFLAG:MASTER:현재위치 == 場所_川沿い
+	ELSEIF IRAI_AREA_CHECK(場所_川沿い)
 		IF 依頼_달성상황 <= 3
 			PRINTFORMW 아무것도 없다, 이 강은 살짝 탁하다.
 			PRINTFORMW 보고 있으면 마음이, 씻기지 않는다. 보기만 해도 실망스러운 기분이 든다.
@@ -272,6 +278,8 @@ ELSEIF 依頼_달성상황 >= 2
 			PRINTFORMW ……좋아, 다른 곳을 찾아보자.
 			RETURN 1
 		ENDIF
+		$INPUT_SKIP
+
 		PRINTFORMW "……다시 보니, 강이 꽤 더럽네요오…… 앗, 거북이가 비닐 먹고 있어……"
 		PRINTL
 		PRINTFORMW 확실히, 어느 정도는 자원봉사 활동으로 깨끗해진 편이지만, 아마도 자연환경은 꽤 나쁠 것이다.
@@ -314,8 +322,8 @@ ELSEIF 依頼_달성상황 >= 2
 		PRINTFORMW "아무것도 해결되지 않았지만요…… 그래도 슬슬 지쳤을 테니 돌아갈까요?"
 		PRINTL
 		PRINTFORMW 뭐, 만약 폭주하더라도 그때는 그때고, 또 멈추게 하면 될 뿐이다.
-		PRINTFORMW ………...
-		PRINTFORMW …
+		PRINTFORMW …………
+		PRINTFORMW ……
 		PRINTFORMW …
 		CALL EVENT_MOVE(MASTER,場所_リビング)
 		;（家に이동処理）
@@ -336,8 +344,8 @@ ELSEIF 依頼_달성상황 >= 2
 		PRINTFORMW "왠지, 폐를 끼친 것 같아서 죄송합니다……"
 		CALL SOURCE_CALC_환락((이벤트主:0), MASTER, 3000)
 		CALL SOURCE_CALC_환락((이벤트主:1), MASTER, 3000)
-		CALL CARD_PACK_RELEASE(6)
-		TIME += 30
+
+		CALL EVENT_TIMER(30)
 		RETURN 2
 	ENDIF
 	PRINTFORMW …………
@@ -346,5 +354,7 @@ ELSEIF 依頼_달성상황 >= 2
 	PRINTL 
 ENDIF
 
-
 RETURN 1
+
+@IRAI_REWARD_11
+CALL CARD_PACK_RELEASE(6)

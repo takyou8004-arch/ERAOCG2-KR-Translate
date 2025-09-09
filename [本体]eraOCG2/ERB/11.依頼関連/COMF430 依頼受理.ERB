@@ -2,7 +2,28 @@
 ;依頼を確認する
 ;-------------------------------------------------
 @COM430
-;貯蔵を確認する
+CALLFORM IRAI_LIST
+
+;依頼受領
+@COM_ABLE430
+;이동実行판정
+SIF !TFLAG:100
+	RETURN 0
+;一括관리
+SIF GLOBAL_COMABLE(430)
+	RETURN RESULT
+SIF CFLAG:MASTER:빙의중 == 1
+	RETURN 0
+;玄関
+SIF CFLAG:MASTER:현재위치 != 8
+	RETURN 0
+SIF CFLAG:우후후 == 2
+	RETURN 0
+RETURN 1
+
+
+
+@IRAI_LIST(回想설정)
 #DIM DYNAMIC 캐릭터_ID
 #DIM DYNAMIC 소환_ページ送り
 #DIM DYNAMIC リスト_표시
@@ -16,12 +37,14 @@
 #DIM DYNAMIC 消去カード
 #DIM DYNAMIC 選択依頼
 #DIM DYNAMIC Continue数
-#DIM 現在モード
 #DIM DYNAMIC 표시モード
 #DIM DYNAMIC 依頼リスト最大値
-#DIM CONST 依頼リストサイズ = 15
+#DIM DYNAMIC 回想설정
 
-IF CFLAG:MASTER:감기플래그 >= 1
+#DIM CONST 依頼リストサイズ = 15
+#DIM 現在モード
+
+IF CFLAG:MASTER:감기플래그 >= 1 && 回想설정
 	PRINTFORMW 지금은 뭔가를 할 기분이 아니다……
 	PRINTFORMW 무리하지 말고 쉬자……。
 	RETURN 0
@@ -126,17 +149,14 @@ FOR カウンタ,0 + リストスタート,依頼リストサイズ + リスト�
 	VARSET RESULT
 	VARSET RESULTS
 	IF 依頼_リスト:カウンタ != 0
-
-
-
-		IF 依頼플래그:(依頼_リスト:カウンタ) == 2
+		IF 依頼플래그:(依頼_リスト:カウンタ) == 2 && 回想설정 == 0
 			SETCOLOR C_GRAY
 		ELSEIF 依頼_受領中 == (依頼_リスト:カウンタ)
 			SETCOLOR C_GREEN
 		ENDIF
 		VARSET RESULT
 		CALLFORM IRAI_EVENT_{(依頼_リスト:カウンタ)}("추가条件")
-		IF RESULT >= 1
+		IF RESULT >= 1 && 回想설정 == 0
 			SETCOLOR C_GRAY
 		ENDIF
 		
@@ -144,6 +164,7 @@ FOR カウンタ,0 + リストスタート,依頼リストサイズ + リスト�
 		PRINTFORM [{(カウンタ + 1),3}] - %RESULTS,63,LEFT%
 		IF 依頼플래그:(依頼_リスト:カウンタ) == 2
 			PRINT  (달성됨)
+
 		ELSEIF 依頼_受領中 == (依頼_リスト:カウンタ)
 			PRINT  (수주중)
 		ELSEIF 確認플래그:(依頼_リスト:カウンタ) == 0
@@ -285,18 +306,38 @@ IF 依頼플래그:選択依頼 == 2
 		PRINTL 이 의뢰는 회상할 수 없습니다。
 		GOTO INPUT_LOOP
 	ENDIF
-	PRINTL 이 의뢰는 이미 완료했습니다。
-	PRINTL 한번 더 받으시겠습니까？（보수는 얻을 수 없습니다）	
+	PRINTL 이 의뢰를 회상하시겠습니까?
 	PRINTL 
 	PRINTL [0] - 예
 	PRINTL [1] - 아니오
+
+	PRINTL
+	VARSET RESULT
+	CALLFORM IRAI_BADEND_{選択依頼}(1)
+	SIF RESULT == 1
+		PRINTL [2] - 배드엔드를 회상한다
+	PRINTL 
 	BINPUT
 	IF RESULT == 0
 		依頼_見返し中 = 1
 		依頼_受領中 = 選択依頼
+		$IRAI_INPUT_LOOP
+		PRINTFORML 
+		CUSTOMDRAWLINE ―
+		PRINTFORML ACT:{依頼_달성상황}
+		CUSTOMDRAWLINE ―
+		PRINTFORMW
 		CALLFORM IRAI_ACT_{依頼_受領中}
+		IF RESULT == 1
+			GOTO IRAI_INPUT_LOOP
+		ENDIF
 		依頼_見返し中 = 0
+		依頼_受領中 = 0
+		CALL IRAI_RESET 
+		VARSET 依頼_受領中
 		RETURN 1
+	ELSEIF RESULT == 2
+		CALLFORM IRAI_BADEND_{選択依頼}(2)
 	ENDIF
 	GOTO INPUT_LOOP
 ENDIF
@@ -326,6 +367,13 @@ ELSEIF RESULT == -1
 	PRINTFORML 지정장소:없음（바로시작）
 ENDIF
 CUSTOMDRAWLINE ―
+
+;条件の지정
+TRYCALLFORM IRAI_EVENT_{選択依頼}("추가条件")
+IF RESULT >= 1
+	PRINTFORMW %RESULTS%
+	GOTO INPUT_LOOP
+ENDIF
 
 IF 依頼_受領中 == 選択依頼
 	PRINTL 의뢰를 파기하겠습니까。
@@ -367,22 +415,6 @@ ENDIF
 
 
 
-;依頼受領
-@COM_ABLE430
-;이동実行판정
-SIF !TFLAG:100
-	RETURN 0
-;一括관리
-SIF GLOBAL_COMABLE(430)
-	RETURN RESULT
-SIF CFLAG:MASTER:빙의중 == 1
-	RETURN 0
-;玄関
-SIF CFLAG:MASTER:현재위치 != 8
-	RETURN 0
-SIF CFLAG:우후후 == 2
-	RETURN 0
-RETURN 1
 
 @IRAI_RESET
 
@@ -421,17 +453,18 @@ FOR カウンタ,1,999
 	ENDIF
 NEXT
 
-@IRAI_SORT(現在モード,표시モード)
+@IRAI_SORT(現在モード,표시モード,回想설정)
 #DIM DYNAMIC 依頼_ID_C
 #DIM DYNAMIC カウンタB
 #DIM DYNAMIC 現在モード
 #DIM DYNAMIC 표시モード
+#DIM DYNAMIC 回想설정
 
 VARSET 依頼_リスト
 FOR 依頼_ID_C,0,1000
 	VARSET RESULT
 	VARSET RESULTS
-	CALL IRAI_FILTER(依頼_ID_C,現在モード,표시モード)
+	CALL IRAI_FILTER(依頼_ID_C,現在モード,표시モード,回想설정)
 	IF RESULT == 1
 		依頼_リスト:カウンタB = 依頼_ID_C
 		カウンタB ++
@@ -441,10 +474,11 @@ NEXT
 RETURN カウンタB
 
 
-@IRAI_FILTER(依頼_ID_C,現在モード,표시モード)
+@IRAI_FILTER(依頼_ID_C,現在モード,표시モード,回想설정)
 #DIM DYNAMIC 依頼_ID_C
 #DIM DYNAMIC 現在モード
 #DIM DYNAMIC 표시モード
+#DIM DYNAMIC 回想설정
 
 VARSET RESULTS
 TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("名前")
@@ -465,9 +499,18 @@ ELSEIF デバッグシステム == 1
 	ENDIF
 ENDIF
 
-IF 표시モード == 1
-	SIF 依頼플래그:依頼_ID_C == 2
+
+IF 回想설정 == 1
+	TRYCALLFORM IRAI_EVENT_{依頼_ID_C}("回想可")
+	SIF RESULT != 1
 		RETURN 0
+	SIF 依頼플래그:依頼_ID_C != 2
+		RETURN 0
+ELSE
+	IF 표시モード == 1
+		SIF 依頼플래그:依頼_ID_C == 2
+			RETURN 0
+	ENDIF
 ENDIF
 
 IF 現在モード != 5

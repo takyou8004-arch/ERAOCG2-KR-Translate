@@ -345,10 +345,12 @@ CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 ;PRINTFORML　듀얼리스트,카드ID：%듀얼리스트%,{カードID}　효과번호：{효과番号}
 
-
 IF 종류 == 身代효과 || 종류 == 소환誘発 || 종류 == EX덱起動 || 종류 == 効後紋章起動
 	無効불가 = 2
 ENDIF
+
+
+
 IF 효과無効不能 == 1
 	無効불가 = 1
 	효과無効不能 = 0
@@ -356,7 +358,6 @@ ENDIF
 IF カードID >= 0
 	CALLFORM CHAIN_CAN(듀얼리스트,종류,ゾーン,場所,カードID)
 	IF RESULT == 1
-;		PRINTFORMW 이 카드의 효과 중、%듀얼리스트%는 효과를 발동할 수 없습니다！
 		無効불가 = 1
 	ENDIF
 ENDIF
@@ -3027,6 +3028,11 @@ IF 이벤트플래그 == 2
 	PRINTFORML %"연습시합",30,LEFT%: /10
 ENDIF
 
+IF 依頼_見返し中 >= 1
+	획득DP = 0
+	PRINTFORML %"연습시합",30,LEFT%: x0
+ENDIF
+
 $SKIP_RESULT
 FONTSTYLE 0
 PRINTL
@@ -3112,7 +3118,8 @@ RETURN 획득DP
 #DIM DYNAMIC 호감도キャップ
 #DIM CONST 호감도キャップ算出用 = 1500, 3000, 5000, 10000, 30000, 60000, 1000000
 
-
+SIF 획득DP == 0
+	RETURN 0
 SIF 選択덱 > 30
 	RETURN 0
 
@@ -3361,12 +3368,13 @@ PRINTFORMW %듀얼리스트%의 묘지에%RESULTS%가 추가되었다！
 
 @CHECK_PLAYERS_VIT
 IF BASE:MASTER:체력 <= 1000
-	;SETBGCOLOR C_Drk_RED
+	ALIGNMENT CENTER
 	SETCOLOR C_RED
 		PRINTL 　　　＊WARNING＊ 
 	PRINTFORML 체력이 한계에 가까워져있습니다！
 		PRINTL 　　　＊WARNING＊ 	
 	RESETCOLOR
+	ALIGNMENT LEFT
 ELSEIF BASE:MASTER:체력 > 1000
 	RESETBGCOLOR
 ENDIF
@@ -4012,7 +4020,7 @@ IF 추가２플래그 == 0
 	ELSEIF ゾーン == "마함"
 		SETVAR @"%듀얼리스트%_魔_追カテ:場所", 설정カテ
 	ENDIF
-ELSE
+ELSEIF 추가２플래그 == 1
 	IF ゾーン == "필드"
 		SETVAR @"%듀얼리스트%_MZ_追カテ2:場所", 설정カテ
 	ELSEIF ゾーン == "마함"

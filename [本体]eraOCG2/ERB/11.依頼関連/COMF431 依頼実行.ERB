@@ -42,6 +42,7 @@ IF リザルト == 2
 	SIF RESULT == 이벤트_物語
 		物語依頼_完了済 = 1
 
+
 	依頼_完了済 += 1
 	ALIGNMENT CENTER
 	PRINTL
@@ -50,6 +51,7 @@ IF リザルト == 2
 	ALIGNMENT LEFT
 	CUSTOMDRAWLINE ―
 	PRINTFORMW 의뢰를 달성했습니다！
+	TRYCALLFORM IRAI_REWARD_{依頼_受領中}
 	CALL IRAI_RESET
 	VARSET 依頼_受領中 
 ELSEIF リザルト == 3
@@ -160,6 +162,10 @@ NEXT
 @CARD_GET_CHARA(캐릭터_ID,이벤트外)
 #DIM DYNAMIC 캐릭터_ID
 #DIM DYNAMIC 이벤트外
+
+SIF CFLAG:캐릭터_ID:소유함 == 1 && アップデート処理 == 1
+	RETURN 0
+
 IF 이벤트外 != 1
 	CALLFORM IRAI_EVENT_{依頼_受領中}("이벤트種")
 	IF RESULT != 이벤트_ＲＥ && 依頼플래그:依頼_受領中 == 2
@@ -184,6 +190,9 @@ RESETCOLOR
 #DIM DYNAMIC 이벤트外
 #DIM DYNAMIC 획득枚数
 
+SIF ITEM:カード_ID >= 1 && アップデート処理 == 1
+	RETURN 0
+
 IF 依頼_見返し中 >= 1
 ;	PRINTFORMW 이 의뢰의 보수는 이미 받았습니다。
 	RETURN 0
@@ -207,6 +216,10 @@ IF 依頼_見返し中 >= 1
 ;	PRINTFORMW この依頼の報酬は受け取り済です。
 	RETURN 0
 ENDIF
+
+SIF ITEM:아이템_ID >= 1 && アップデート処理 == 1
+	RETURN 0
+
 
 PRINTL
 SETCOLOR C_YELLOW
@@ -357,3 +370,51 @@ IF 캐릭터_ID == MASTER
 PRINTFORMW >> %CALLNAME:MASTER%은/는 %GETPLACENAME(目標위치)%까지 이동했습니다.
 	RESETCOLOR
 ENDIF
+
+@EVENT_DOUKOU(캐릭터_ID,동행時間)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 동행時間
+#DIM DYNAMIC 上書き플래그
+
+IF 依頼_見返し中 >= 1
+	RETURN 0
+ENDIF
+
+SIF 동행時間 == 0
+	동행時間 = 1440
+CFLAG:캐릭터_ID:동행 = 동행時間
+TARGET = 캐릭터_ID
+
+RETURN 1
+
+@EVENT_TIMER(経過時間,上書き플래그)
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 経過時間
+#DIM DYNAMIC 上書き플래그
+
+IF 依頼_見返し中 >= 1
+	RETURN 0
+ENDIF
+
+IF 上書き플래그 == 1
+	TIME = 経過時間
+ELSE
+	TIME += 経過時間
+ENDIF
+RETURN 1
+
+
+
+@IRAI_AREA_CHECK(目標位置)
+#FUNCTION
+#DIM DYNAMIC 캐릭터_ID
+#DIM DYNAMIC 目標位置
+#DIM DYNAMIC 上書き플래그
+
+IF 依頼_見返し中 >= 1
+	RETURNF 1
+ENDIF
+
+SIF CFLAG:MASTER:현재위치 != 目標位置
+	RETURNF 0
+RETURNF 1
