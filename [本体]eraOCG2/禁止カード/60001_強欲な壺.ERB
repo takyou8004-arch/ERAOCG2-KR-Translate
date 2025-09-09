@@ -1,0 +1,82 @@
+﻿@CARDNAME_60001,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 強欲な壺
+	CASE "略称"
+		RESULTS = 強欲な壺
+	CASE "カテゴリ"
+		RESULTS:0 = 壺
+ENDSELECT
+
+
+@CARD_60001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "制限"
+		RETURN 制限
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_60001(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,魔罠起動 ,手札起動)
+PRINTL ①：自分はデッキからカードを２枚ドローする。
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+
+@CARDCAN_60001(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,60001)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_60001(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,60001)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL CARDDRAW_BASIC(決闘者,2)
+	ENDIF
+ENDIF

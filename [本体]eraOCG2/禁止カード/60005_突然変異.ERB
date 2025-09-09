@@ -1,0 +1,135 @@
+﻿@CARDNAME_60005,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = メタモルフォーゼ
+	CASE "略称"
+		RESULTS = 突然変異
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+ENDSELECT
+
+
+@CARD_60005(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "制限"
+		RETURN 制限
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_60005(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,魔罠起動 ,手札起動)
+PRINTL ①：自分フィールドのモンスター１体をリリースし、
+PRINTL リリースしたモンスターと同じレベルの融合モンスター１体をＥＸデッキから特殊召喚する。
+PRINTL 
+PRINTL 
+PRINTL 
+
+@CARDCAN_60005(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,60005)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	FOR カウンタ,1,13
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件レベル = カウンタ
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT != 1
+			CONTINUE
+		CALL FULLRESET
+		効果範囲EXデッキ = 1
+		効果条件レベル = カウンタ
+		効果条件種類 = 融合
+		効果条件特不無視 = 1
+		効果条件召喚可 = 2
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT == 1
+			条件達成 = 1
+	NEXT
+	SIF 条件達成 != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_60005(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成,13
+#DIM DYNAMIC 選択カードレベル
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,60005)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		FOR カウンタ,1,13
+			CALL FULLRESET
+			効果範囲戦場 = 1
+			効果条件レベル = カウンタ
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			SIF RESULT != 1
+				CONTINUE
+			CALL FULLRESET
+			効果範囲EXデッキ = 1
+			効果条件レベル = カウンタ
+			効果条件種類 = 融合
+			効果条件特不無視 = 1
+			効果条件召喚可 = 2
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			SIF RESULT == 1
+				条件達成:カウンタ = 1
+		NEXT
+
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果条件レベル:0 = 0
+		FOR カウンタ,1,13
+			効果条件レベル:カウンタ = カウンタ
+		NEXT
+		CALL CARD_CHOOSE_BASIC(決闘者,"戦場",ゾーン,場所)
+		IF RESULT != 9999
+			選択カードレベル = GETVAR(@"%決闘者%_MZ_星:RESULT")
+			CALL CARD_DISPOSE(決闘者,"戦場",RESULT)
+
+			CALL FULLRESET
+			効果範囲EXデッキ = 1
+			効果条件レベル = 選択カードレベル
+			効果条件種類 = 融合
+			CALL CARD_SP_SUMMON_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

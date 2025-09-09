@@ -1,0 +1,127 @@
+﻿@CARDNAME_60010,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 盗人の煙玉
+	CASE "略称"
+		RESULTS = 盗人の煙玉
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+ENDSELECT
+
+
+@CARD_60010(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 装備魔法
+	CASE "制限"
+		RETURN 制限
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_60010(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,戦破壊→墓地)
+PRINTL ①：装備されているこのカードが効果によって破壊された場合に発動できる。
+PRINTL 相手の手札を確認して１枚捨てる。
+PRINTL 
+PRINTL 
+PRINTL 
+
+@CARDCAN_60010(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 装備先
+#DIMS DYNAMIC 装備者
+
+CALL 装備判定(決闘者,場所,ゾーン)
+装備者 = %RESULTS%
+装備先 = RESULT
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,60010)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果範囲相手戦場 = 1
+	効果条件表示 = 表側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 戦破壊→墓地
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF 装備先 == 5
+		RETURN 0
+	SIF 手札数(対面者) < 1
+		RETURN 0
+	SIF 破壊種類 != "効果"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_60010(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,60010)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果範囲戦場 = 1
+		効果範囲相手戦場 = 1
+		CALLFORM CARD_EQUIP_ADV(決闘者,場所,ゾーン)
+	ENDIF
+
+ELSEIF 種類 == 戦破壊→墓地
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,60010)
+	IF RESULT == 0
+		CALL FULLRESET
+		効果範囲相手手札 = 1
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ENDIF

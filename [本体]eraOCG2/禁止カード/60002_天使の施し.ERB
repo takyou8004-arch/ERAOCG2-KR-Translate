@@ -1,0 +1,90 @@
+﻿@CARDNAME_60002,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 天使の施し
+	CASE "略称"
+		RESULTS = 天使の施し
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+ENDSELECT
+
+
+@CARD_60002(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "制限"
+		RETURN 制限
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_60002(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,魔罠起動 ,手札起動)
+PRINTL ①：自分はデッキからカードを３枚ドローし、その後手札を２枚選択して捨てる。
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+
+@CARDCAN_60002(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,60002)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_60002(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 手札数保存
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,60002)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		手札数保存 = 手札数(決闘者)
+		CALL CARDDRAW_BASIC(決闘者,3)
+		SIF 手札数保存 == 手札数(決闘者)
+			RETURN 0
+		CALL FULLRESET
+		効果範囲手札 = 1
+		効果条件複数 = 3
+		CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+	ENDIF
+ENDIF

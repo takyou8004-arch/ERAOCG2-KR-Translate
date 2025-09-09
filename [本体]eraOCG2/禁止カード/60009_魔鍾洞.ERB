@@ -1,0 +1,125 @@
+﻿@CARDNAME_60009,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 魔鍾洞
+	CASE "略称"
+		RESULTS = 魔鍾洞
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+ENDSELECT
+
+
+@CARD_60009(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN フィールド
+	CASE "制限"
+		RETURN 制限
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_60009(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 自分フィールドは「魔鍾洞」となる。
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ①：自身のフィールドのモンスターの数がそのプレイヤーから見て相手よりも多いプレイヤーは、
+PRINTL モンスターの効果を発動できず、攻撃宣言もできない。
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ②：自分・相手エンドフェイズに、お互いのフィールドのモンスターの数が同じ場合に発動する。
+PRINTL このカードを破壊する。
+
+
+@CARDCAN_60009(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,60009)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF 種類 == 魔罠起動
+		SIF GETVAR(@"%決闘者%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == ターン終了時強制
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	SIF モンスター数(決闘者) != モンスター数(対面者)
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_60009(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,60009)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+	ENDIF
+ELSEIF 種類 == ターン終了時強制
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,60009)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,破壊行き)
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL SET_FIELD_MAGIC_INFO(決闘者, "魔鍾洞")
+
+	IF モンスター数(決闘者) > モンスター数(対面者)
+		CALL SET_PLAYER_INFO(決闘者,"モン効果無効",3)
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"戦無")
+	ELSEIF モンスター数(決闘者) < モンスター数(対面者)
+		CALL SET_PLAYER_INFO(決闘者,"モン効果無効",3,1)
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(決闘者,"相手戦場",場所,"戦無")
+	ENDIF
+ENDIF

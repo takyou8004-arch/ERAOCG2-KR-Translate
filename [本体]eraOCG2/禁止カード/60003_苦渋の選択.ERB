@@ -1,0 +1,126 @@
+﻿@CARDNAME_60003,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 苦渋の選択
+	CASE "略称"
+		RESULTS = 苦渋の選択
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+ENDSELECT
+
+
+@CARD_60003(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "制限"
+		RETURN 制限
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_60003(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,魔罠起動 ,手札起動)
+PRINTL ①：自分はデッキからカードを５枚選択して相手に見せる。
+PRINTL 相手はその中から１枚を選択する。
+PRINTL そのカードを手札に加え、残りを墓地へ送る。
+PRINTL 
+PRINTL 
+
+@CARDCAN_60003(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,60003)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲デッキ = 1
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_60003(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード,5
+#DIMS DYNAMIC 選択カード名前,5
+#DIM DYNAMIC ランダム
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,60003)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		効果条件複数 = 5
+		CALL CARD_CHOOSE_BASIC(決闘者, "デッキ",ゾーン,場所)
+		IF RESULT != 9999
+			FOR カウンタ,0,5
+				選択カード:カウンタ = RESULT:カウンタ
+			NEXT
+			FOR カウンタ,0,5
+				TRYCALLFORM CARDNAME_{GETVAR(@"%決闘者%_デッキ:(選択カード:カウンタ)")},"名前"
+				選択カード名前:カウンタ = %RESULTS%
+			NEXT
+			IF 決闘者 != "自分"
+				PRINTL 【手札に加えさせるカードを選択】
+				PRINTL
+				FOR カウンタ,0,5
+					PRINTFORML [カウンタ] - %選択カード名前:カウンタ%
+				NEXT
+				BINPUT
+				ランダム = RESULT
+			ELSE
+				ランダム = RAND:5
+			ENDIF
+
+			CALL FULLRESET
+			CALL CARD_ADD(決闘者,"デッキ",選択カード:ランダム)
+
+			CALL FULLRESET
+			効果範囲デッキ = 1
+			効果条件名前:0 = ダミー
+			FOR カウンタ,0,5
+				SIF ランダム != カウンタ
+					効果条件名前:(カウンタ+1) = %選択カード名前:カウンタ%
+			NEXT
+			効果条件複数 = 4
+			効果条件固名前選択 = 1
+			CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

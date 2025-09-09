@@ -1,0 +1,91 @@
+﻿@CARDNAME_60004,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ハリケーン
+	CASE "略称"
+		RESULTS = ハリケーン
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+ENDSELECT
+
+
+@CARD_60004(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常魔法
+	CASE "制限"
+		RETURN 制限
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_60004(種類)
+#DIM DYNAMIC 種類
+
+CALLFORM CARD_ABLE(0,魔罠起動 ,手札起動)
+PRINTL ①：フィールドのすべての魔法・罠カードを持ち主の手札に戻す。
+PRINTL 
+PRINTL 
+PRINTL 
+PRINTL 
+
+@CARDCAN_60004(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,60004)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	CALL FULLRESET
+	効果範囲魔罠 = 1
+	効果範囲相手魔罠 = 1
+	効果条件除去種 = 手札
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_60004(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード,5
+#DIMS DYNAMIC 選択カード名前,5
+#DIM DYNAMIC ランダム
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,60004)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(決闘者,"魔罠全体",場所,"手札")
+	ENDIF
+ENDIF

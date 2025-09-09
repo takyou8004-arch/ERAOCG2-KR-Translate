@@ -1,0 +1,125 @@
+@CARDNAME_80001,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 第六感
+	CASE "略称"
+		RESULTS = 第六感
+	CASE "カテゴリ"
+		RESULTS:0 = なし
+ENDSELECT
+
+
+@CARD_80001(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 通常罠
+	CASE "制限"
+		RETURN 制限
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_80001(種類)
+#DIM DYNAMIC 種類
+CALLFORM CARD_ABLE(0,魔罠起動,フリー誘発)
+PRINTL ①：自分は１から６までの数字を２つ宣言する。
+PRINTL サイコロを１回振り、宣言した数字の内どちらか１つが出た場合、その枚数分自分はドローする。
+PRINTL ハズレの場合、出た目の枚数分デッキの上からカードを墓地へ送る。
+PRINTL 
+PRINTL 
+
+@CARDCAN_80001(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,80001)
+SIF RESULT == 1
+	RETURN 0
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_80001(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 宣言数字,2
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	;カード発動確認
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,80001)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+		IF 決闘者 == "自分"
+			PRINTL 【１つ目の数字を宣言してください】
+			PRINTL
+			FOR カウンタ,1,7
+				PRINT [カウンタ]　
+			NEXT
+			PRINTL
+			BINPUT
+			宣言数字:0 = RESULT
+
+			PRINTL 【２つ目の数字を宣言してください】
+			PRINTL
+			FOR カウンタ,1,7
+				IF 宣言数字:0 != カウンタ
+					PRINT [カウンタ]　
+				ELSE
+					PRINT 「{カウンタ}」
+				ENDIF
+			NEXT
+			PRINTL
+			BINPUT
+			宣言数字:1 = RESULT
+
+		ELSE
+			宣言数字:0 = 5
+			宣言数字:1 = 6
+		ENDIF
+
+		PRINTFORMW %決闘者%は{宣言数字:0}と{宣言数字:1}を宣言しました。
+		PRINTL
+		CALL DICE_ROLL(決闘者,1)
+		IF GROUPMATCH(RESULT,宣言数字:0,宣言数字:1)
+			PRINTW 大成功！
+			CALL CARDDRAW_BASIC(決闘者,RESULT)
+		ELSE
+			PRINTW 残念！　ハズレ！
+			CALL CARD_DECK_DISPOSE(決闘者,"デッキ",RESULT)
+		ENDIF
+	ENDIF
+ENDIF
