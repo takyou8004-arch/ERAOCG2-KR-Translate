@@ -1,0 +1,408 @@
+﻿@CARDNAME_42040,参照先
+;ココで指定卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ウィッチクラフト始祖 サンドリヨン
+	CASE "略称"
+		RESULTS = WC始祖
+	CASE "カテゴリ"
+		RESULTS:0 = ウィッチクラフト
+		RESULTS:1 = マギストス
+		RESULTS:2 = ゲームオリジナル
+ENDSELECT
+
+
+@CARD_42040(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+		RETURN 融合
+	CASE "属性"
+		RETURN 光属性
+	CASE "種族"
+		RETURN 魔法使い族
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 3500
+	CASE "性別"
+		RETURN 牝性
+	CASE "生産不可"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_42040(種類)
+#DIM DYNAMIC 種類
+
+PRINTL 「ウィッチクラフト・マスターヴェール」＋「ウィッチクラフト」モンスター×3  
+PRINTL このカード名の①の効果は１ターンに１度しか使用できない。  
+CALLFORM CARD_ABLE(1,戦場起動,フリー誘発)  
+PRINTL ①：自分・相手ターン、手札から魔法カード1枚を捨てて発動できる。  
+PRINTL 相手フィールドの全ての表側表示モンスターの効果は無効化される。  
+PRINTL ②：このカードがフィールドに存在する限り、墓地の魔法カードの数に応じて以下の効果を得る。  
+CALLFORM CARD_ABLE(0,永続効果)  
+PRINTL ・5枚以上の場合、自分フィールドの表側表示の魔法使い族モンスターは効果の対象にならず、効果で破壊されず、戦闘で破壊されない。  
+PRINTL ・10枚以上の場合、自分フィールドの表側表示の魔法使い族モンスターは罠カードの効果を受けない。  
+PRINTL ③：自分エンドフェイズ時に発動できる。  
+CALLFORM CARD_ABLE(0,ターン終了時強制)  
+PRINTL ウィッチクラフト通常魔法カードをランダムに2枚生成し、自分墓地に加えてシャッフルする。自分はデッキから1枚ドローする。  
+PRINTL ④：このカードが融合召喚された場合に発動できる。  
+CALLFORM CARD_ABLE(0,EX召喚時)  
+PRINTL 自分手札に「ウィッチクラフトの結界」が存在しない場合、ゲーム外から手札に「ウィッチクラフトの結界」1枚を加える。  
+PRINTL ⑤：このカードがフィールドに存在する限り、自分モンスターの攻撃力・守備力は自分墓地のカードの数×200ポイントアップする。  
+CALLFORM CARD_ABLE(0,攻守変動)  
+
+
+
+@CARDSUMMON_42040(決闘者,召喚カード,EX参照)
+#DIMS DYNAMIC 決闘者
+#DIM DYNAMIC 召喚カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 4
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件名前 = ウィッチクラフト・マスターヴェール
+ELSEIF EX参照 >= 10
+	素材条件カテゴリ = ウィッチクラフト
+ENDIF
+
+IF EX参照 == 1
+	;PRINTL サモンまでは言ってるよ
+	CALL FUSCAN(決闘者,召喚カード,42040) 
+	RETURN RESULT
+ENDIF
+
+@CARDCAN_42040(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件達成
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,42040)
+SIF RESULT == 1
+	RETURN 0
+	
+IF 種類 == 戦場起動 || 種類 == フリー誘発
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF 発動済_1(決闘者,42040)
+		RETURN 0
+	;ウィッチクラフト怪兽側でWC永続魔法の代替コスト效果を対応
+	;OR条件なのでどっちか満たしているのが確認できればよい
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果条件種類 = 魔法全般
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	IF RESULT != 1
+		CALL FULLRESET
+		効果範囲魔罠 = 1
+		効果条件種類 = 永続魔法
+		効果条件表示 = 表側表示
+		効果条件カテゴリ = ウィッチクラフト
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	CALL FULLRESET
+	効果範囲相手戦場 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン終了時強制
+	SIF ゾーン != "戦場"
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == EX召喚時
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF ゾーン != "戦場"
+		RETURN 0
+	;既に手卡にある場合は渡さない
+	CALL FULLRESET
+	効果範囲手札 = 1
+	効果条件ID = 242040
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT > 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 種類 == 攻守変動
+	SIF ゾーン != "戦場"
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_42040(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC カウント数
+#DIM DYNAMIC ドロー枚数
+#DIM DYNAMIC 複製枚数
+#DIM DYNAMIC 調教対象
+#DIM DYNAMIC 実補正
+#DIM DYNAMIC 攻撃力修正
+
+IF 種類 == 戦場起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,42040,1)
+	IF RESULT == 0
+		;先に永続魔法を代替コストにするか聞く
+		CALL FULLRESET
+		効果範囲魔罠 = 1
+		効果条件種類 = 永続魔法
+		効果条件表示 = 表側表示
+		効果条件カテゴリ = ウィッチクラフト
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		IF RESULT == 1
+			;手卡に魔法卡片があるならどちらをコストにするか尋ねる
+			CALL FULLRESET
+			効果範囲手札 = 1
+			効果条件種類 = 魔法全般
+			CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+			IF RESULT == 1
+				;手卡に魔法卡片もある
+				PRINTL 手札の魔法カードを捨てる代わりに、自分フィールドの「ウィッチクラフト」永続魔法を墓地へ送りますか？
+				CALL YN_CHOICE(決闘者)
+			ELSE
+				;この分岐に入っている時点でWC永続魔法はあるはずなので、手卡の魔法卡片がなければ強制的に永続魔法を捨てることを考える
+				RESULT = はい
+			ENDIF	
+			IF RESULT == はい
+				CALL FULLRESET
+				効果範囲魔罠 = 1
+				効果条件カテゴリ = ウィッチクラフト
+				効果条件種類 = 永続魔法
+				効果条件表示 = 表側表示
+				CALL CARD_ADD_GY_ADV(決闘者,ゾーン,場所)
+			ELSE
+				;なぜか『はい』が0なので、捨てないなら戻り値がちゃんとFalseになるよう0にしておく。
+				RESULT = 0
+			ENDIF
+		ENDIF
+		IF RESULT !=1
+			CALL FULLRESET
+			効果条件種類 = 魔法全般
+			CALL CARD_ADD_GY_BASIC(決闘者,"手札",ゾーン,場所)
+		ENDIF
+		IF RESULT == 1
+		    CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,42040)
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(決闘者,"戦場全体",場所,"無効",42040)
+		ENDIF	
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL FULLRESET
+	効果範囲墓地 = 1
+	効果条件種類 = 魔法全般
+	効果条件カテゴリ = ウィッチクラフト
+	効果条件CNT = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	IF RESULT >= 10
+		CALL FULLRESET
+	    効果条件種族 = 魔法使い族
+		CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"対耐")
+	    CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"破耐")
+	    CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"戦耐")
+		CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"罠耐")
+	ELSEIF RESULT >= 5
+		CALL FULLRESET
+	    効果条件種族 = 魔法使い族
+		CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"対耐")
+	    CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"破耐")
+	    CALL STATCHANGE_EFFECT(決闘者,"戦場",場所,"戦耐")
+	ELSE
+	    RETURN 0
+	ENDIF
+ELSEIF 種類 == EX召喚時
+    CALL CARD_GENERATE_HAND(決闘者,242040)
+	
+ELSEIF 種類 == ターン終了時強制
+    REPEAT 2
+	        SELECTCASE RAND:9
+			    CASE 0
+				    CALL CARD_GENERATE_GY(決闘者,62041)
+			    CASE 1
+				    CALL CARD_GENERATE_GY(決闘者,62040)
+			    CASE 2
+				    CALL CARD_GENERATE_GY(決闘者,62042)
+			    CASE 3
+				    CALL CARD_GENERATE_GY(決闘者,62043)
+			    CASE 4
+			        CALL CARD_GENERATE_GY(決闘者,62044)
+			    CASE 5
+				    CALL CARD_GENERATE_GY(決闘者,62045)
+			    CASE 6
+				    CALL CARD_GENERATE_GY(決闘者,62046)
+			    CASE 7
+			        CALL CARD_GENERATE_GY(決闘者,62047)
+			    CASE 8
+				    CALL CARD_GENERATE_GY(決闘者,72059)				
+		    ENDSELECT
+	REND
+	CALL CARDDRAW_BASIC(決闘者,1)
+
+ELSEIF 種類 == 攻守変動
+	攻撃力修正 = 墓地数(決闘者) * 200
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(決闘者,"戦場",場所,攻撃力修正,攻撃力修正)
+	
+ENDIF
+	
+
+;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+@CARDNAME_242040,参照先
+;ココで指定卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ウィッチクラフトの結界
+	CASE "略称"
+		RESULTS = WC結界
+	CASE "カテゴリ"
+		RESULTS:0 = マギストス
+		RESULTS:1 = ウィッチクラフト
+ENDSELECT
+
+
+@CARD_242040(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+
+		RETURN フィールド
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_242040(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名のカードは１ターンに１枚しか発動できず、③の効果は１ターンに１度しか使用できない。
+PRINTL 自分のフィールドを「ウィッチクラフトの結界」にする。
+CALLFORM CARD_ABLE(1,手札起動)
+PRINTL ①：このカードの発動時の効果処理として、
+PRINTL デッキから罠カード1枚を手札に加える
+CALLFORM CARD_ABLE(2,魔罠起動)
+PRINTL 自分メインフェイズに、自分墓地に「ウィッチクラフト」カードが30枚以上存在する場合に発動できる。
+PRINTL 相手はゲームに敗北する。
+CALLFORM CARD_ABLE(0,永続効果)
+PRINTL ②：このカードが魔法・罠ゾーンに存在する限り
+PRINTL 自分フィールドの魔法・罠カードは相手の効果の対象にならず、相手の効果では破壊されない。
+
+
+@CARDCAN_242040(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,242040)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	IF 種類 == 魔罠起動
+		SIF 発動済_2(決闘者,242040)
+			RETURN 0
+		CALL FULLRESET
+		効果範囲墓地 = 1
+		効果条件カテゴリ = ウィッチクラフト
+		効果条件CNT = 1
+		CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+		SIF RESULT < 30
+			RETURN 0
+	ELSE 
+		SIF 発動済_1(決闘者,242040)
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == 永続効果
+	SIF ゾーン != "魔罠"
+		RETURN 0
+	SIF GETVAR(@"%決闘者%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_242040(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタB
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 属性数
+
+
+IF 種類 == 手札起動
+	;卡片发动＆設置まで
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,242040,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所,魔罠行き)
+		CALL FULLRESET
+		効果条件種類 = 罠全般
+		効果条件任意 = 1
+		CALL CARD_ADD_BASIC(決闘者,"デッキ",ゾーン,場所)
+	ENDIF
+ELSEIF 種類 == 魔罠起動
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,242040,2)
+	IF RESULT == 0
+		CALL CARD_EROTICS(相手プレイヤー,決闘者)
+
+		CALL SET_PLAYER_INFO(決闘者,"決闘敗北フラグ",7,1)
+	ENDIF
+ELSEIF 種類 == 永続効果
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(決闘者,"魔罠",場所,"破耐")
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(決闘者,"魔罠",場所,"対耐")
+	CALL SET_FIELD_MAGIC_INFO(決闘者, "ウィッチクラフトの結界")
+ENDIF

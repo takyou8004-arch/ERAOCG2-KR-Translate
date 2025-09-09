@@ -1,0 +1,149 @@
+﻿@CARDNAME_62049,参照先
+;ココで指定卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = ウィッチクラフト·進化融合
+	CASE "略称"
+		RESULTS = WC·進化融合
+	CASE "カテゴリ"
+		RESULTS:0 = ウィッチクラフト
+		RESULTS:1 = 融合
+		RESULTS:2 = ゲームオリジナル
+ENDSELECT
+
+
+@CARD_62049(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "種類"
+
+		RETURN 通常魔法
+	CASE "生産不可"
+		RETURN 1
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_62049(種類)
+#DIM DYNAMIC 種類
+
+PRINTL このカード名の①②のモンスター効果はそれぞれ１ターンに１度しか使用できない。
+PRINTL このカード名のカードは１ターンに１枚しか発動できない。
+CALLFORM CARD_ABLE(1,魔罠起動,手札起動,フリー誘発)
+PRINTL ①：自分・相手のメインフェイズに発動できる。
+PRINTL 自分の手札・フィールド・墓地のモンスターを融合素材としてデッキに戻し、
+PRINTL 「ウィッチクラフト」を融合素材とする融合モンスター１体を融合召喚する。
+CALLFORM CARD_ABLE(2,ターン終了時)
+PRINTL ②：このカードが墓地に存在し、自分フィールドに「ウィッチクラフト」モンスターが存在する場合、自分エンドフェイズに発動できる。
+PRINTL このカードを手札に加える。
+
+@CARDCAN_62049(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC EX条件達成
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,62049)
+SIF RESULT == 1
+	RETURN 0
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+	SIF 発動済_1(決闘者,62049)
+		RETURN 0
+
+	CALL RESETAREA_MAT
+	素材範囲戦場 = 1
+	素材範囲手札 = 1
+	素材範囲墓地 = 1
+	CALL FULLRESET
+	効果範囲EXデッキ = 1
+	効果条件種類 = 融合
+	効果条件カテゴリ = ウィッチクラフト
+	効果条件召喚可 = 1
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 種類 == ターン終了時
+	SIF 発動済_2(決闘者,62049)
+		RETURN 0
+	SIF ゾーン != "墓地"
+		RETURN 0
+	SIF ターンプレイヤー != 決闘者
+		RETURN 0
+
+	CALL FULLRESET
+	効果範囲戦場 = 1
+	効果条件カテゴリ = ウィッチクラフト
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_62049(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 種類
+#DIM DYNAMIC 場所
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC 墓地送カード,10
+#DIM DYNAMIC 手札墓地送カード,10
+#DIM DYNAMIC 素材数
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択済カード
+#DIM DYNAMIC EX条件達成
+;融合召唤
+#DIMS DYNAMIC 対面者
+
+CALL 対面者判定(決闘者)
+対面者 = %RESULTS%
+
+IF 種類 == 魔罠起動 || 種類 == 手札起動 
+
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,62049,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
+
+		;额外卡组確認
+		CALL RESETAREA_MAT
+		素材範囲戦場 = 1
+		素材範囲手札 = 1
+		素材範囲墓地 = 1
+		CALL FULLRESET
+		効果範囲EXデッキ = 1
+		効果条件種類 = 融合
+		効果条件カテゴリ = ウィッチクラフト 
+		効果条件召喚可 = 1
+		CALL CARD_CHOOSE_BASIC(決闘者,"EXデッキ",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%決闘者%_EXデッキ:{選択カード}")}(決闘者,選択カード)
+			CALL FUSSUMMON(決闘者, 選択カード,デッキ行き)
+		ENDIF
+	ENDIF
+ELSEIF 種類 == ターン終了時
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,62049,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(決闘者,通常罠,場所,3)
+	ENDIF
+ENDIF	

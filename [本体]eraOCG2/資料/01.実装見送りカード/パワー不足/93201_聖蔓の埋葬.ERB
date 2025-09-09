@@ -1,5 +1,5 @@
 ﻿@CARDNAME_93201,参照先
-;ココで지정カードの名前、略称を返す予定
+;ココで指定カードの名前、略称を返す予定
 #DIMS DYNAMIC 参照先
 
 VARSET RESULT
@@ -13,7 +13,7 @@ SELECTCASE 参照先
 	CASE "カテゴリ"
 		RESULTS:0 = サンアバロン
 		RESULTS:1 = サンヴァイン
-		RESULTS:2 = 게임 오리지널
+		RESULTS:2 = ゲームオリジナル
 ENDSELECT
 
 
@@ -24,89 +24,89 @@ VARSET RESULT
 VARSET RESULTS
 
 SELECTCASE 参照先
-	CASE "종류"
+	CASE "種類"
 
-		RETURN 通常함정
+		RETURN 通常罠
 ENDSELECT
 
 RETURN 0
 
-@CARD_EXPLANATION_93201(종류)
-#DIM DYNAMIC 종류
-PRINTL 이 카드명의 카드는 １턴에 １장밖에 발동할 수 없다。
-PRINTL ①：자신필드에 「サンアバロン」L몬스터가 존재하는 경우、
-PRINTL その링크数の合計まで、상대의 마법＆함정존의 裏側표시を대상으로 하고 발동할 수 있다。
-PRINTL 그 카드를 제외する（이 효과로 제외されたカードは효과를 발동できない）。
+@CARD_EXPLANATION_93201(種類)
+#DIM DYNAMIC 種類
+PRINTL このカード名のカードは１ターンに１枚しか発動できない。
+PRINTL ①：自分フィールドに「サンアバロン」Lモンスターが存在する場合、
+PRINTL そのリンク数の合計まで、相手の魔法＆罠ゾーンの裏側表示を対象として発動できる。
+PRINTL そのカードを除外する（この効果で除外されたカードは効果を発動できない）。
 
 
-@CARDCAN_93201(듀얼리스트,종류,ゾーン,場所)
-#DIMS DYNAMIC 듀얼리스트
+@CARDCAN_93201(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
 #DIMS DYNAMIC ゾーン
-#DIM DYNAMIC 종류
+#DIM DYNAMIC 種類
 #DIM DYNAMIC 場所
 #DIM DYNAMIC カウンタ
-#DIM DYNAMIC 효과先
+#DIM DYNAMIC 効果先
 #DIMS DYNAMIC 対面者
 
-CALL 対面者판정(듀얼리스트)
+CALL 対面者判定(決闘者)
 対面者 = %RESULTS%
 
-CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,93201)
+CALL CARD_NEGATE(決闘者,種類,ゾーン,場所,93201)
 SIF RESULT == 1
 	RETURN 0
-IF 종류 == 마함起動 || 종류 == フリー誘発
-	SIF ゾーン != "마함"
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	SIF ゾーン != "魔罠"
 		RETURN 0
-	SIF 발동済_1(듀얼리스트,93201)
+	SIF 発動済_1(決闘者,93201)
 		RETURN 0
-	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+	SIF GETVAR(@"%決闘者%_魔_表:場所") == 3
 		RETURN 0
 	CALL FULLRESET
-	효과範囲필드 = 1
-	효과条件カテゴリ = サンアバロン
-	효과条件종류 = 링크
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	効果範囲戦場 = 1
+	効果条件カテゴリ = サンアバロン
+	効果条件種類 = リンク
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
 	CALL FULLRESET
-	효과範囲상대마함 = 1
-	효과条件표시 = 裏側표시
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	効果範囲相手魔罠 = 1
+	効果条件表示 = 裏側表示
+	CALL CARD_CHECK_ADV(決闘者,種類,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
 ENDIF
 
-@CARDEFFECT_93201(듀얼리스트,종류,ゾーン,場所)
-#DIMS DYNAMIC 듀얼리스트
+@CARDEFFECT_93201(決闘者,種類,ゾーン,場所)
+#DIMS DYNAMIC 決闘者
 #DIMS DYNAMIC ゾーン
-#DIM DYNAMIC 종류
+#DIM DYNAMIC 種類
 #DIM DYNAMIC 場所
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC 選択カード
 #DIM DYNAMIC 選択カード_ID
-#DIM DYNAMIC 選択カード_링크
+#DIM DYNAMIC 選択カード_リンク
 #DIMS DYNAMIC 対面者
 
-CALL 対面者판정(듀얼리스트)
+CALL 対面者判定(決闘者)
 対面者 = %RESULTS%
 
-IF 종류 == 마함起動 || 종류 == フリー誘発
-	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,93201,1)
+IF 種類 == 魔罠起動 || 種類 == フリー誘発
+	CALL CARD_CHOICE(決闘者,種類,ゾーン,場所,93201,1)
 	IF RESULT == 0
-		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL CARD_DISPOSE(決闘者,ゾーン,場所)
 		FOR カウンタ,0,5
-			選択カード_ID = GETVAR(@"%듀얼리스트%_필드:カウンタ")
-			TRYCALLFORM CARD_{選択カード_ID},"종류"
-			SIF !MATCH(RESULT,링크)
+			選択カード_ID = GETVAR(@"%決闘者%_戦場:カウンタ")
+			TRYCALLFORM CARD_{選択カード_ID},"種類"
+			SIF !MATCH(RESULT,リンク)
 				CONTINUE
 			TRYCALLFORM CARD_{選択カード_ID},"レベル"
-			選択カード_링크 += RESULT
+			選択カード_リンク += RESULT
 		NEXT
-		REPEAT 選択カード_링크
+		REPEAT 選択カード_リンク
 			CALL FULLRESET
-			효과条件표시 = 裏側표시
-			CALL CARD_REMOVAL_BASIC(듀얼리스트,"마함単体",場所,"完全제외")
+			効果条件表示 = 裏側表示
+			CALL CARD_REMOVAL_BASIC(決闘者,"魔罠単体",場所,"完全除外")
 			SIF RESULT != 1
 				BREAK
 		REND
