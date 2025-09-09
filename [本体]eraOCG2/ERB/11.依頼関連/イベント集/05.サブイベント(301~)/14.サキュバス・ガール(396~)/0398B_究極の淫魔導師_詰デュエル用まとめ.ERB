@@ -1,0 +1,1305 @@
+;Ｑ.何でこのＩＤなの？
+;Ａ.ブラサキュの+200005だから
+@CARDNAME_259855,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 매지컬 실크 퀸즈 베드
+	CASE "略称"
+		RESULTS = 여왕의 침실
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+		RESULTS:1 = 서큐버스 걸
+ENDSELECT
+
+
+@CARD_259855(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 12
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 無性
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_259855(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTFORM 이 카드명의 ③의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 완전내성 / 표시고정을 갖는다。
+CALLFORM CARD_ABLE(0,ターン開始時強制)
+PRINTL ②：상대의 스탠바이 페이즈 개시시에 발동한다。
+PRINTL 다음 서로의 드로우 페이즈를 스킵한다。
+PRINTL 그 후、상대의 묘지에 "현자의 보액"이 １０장 이상 존재하는 경우、
+PRINTL 상대의 ＥＸ덱에 "궁극의 음마도사"를 넣고、이 카드를 공격 표시로 변경한다。
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ③：상대 배틀 페이즈에、이 카드가 공격 표시인 경우에 발동할 수 있다。
+PRINTL 상대 필드의 몬스터 전부의 공격력을 ０으로 한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_259855(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259855)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時強制
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 発動済_1(듀얼리스트,259855)
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") != 1 
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259855(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"表固")
+ELSEIF 종류 == ターン開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259855)
+	IF RESULT == 0
+		CALL SET_PLAYER_INFO(듀얼리스트,"ドロースキップ",1)
+		CALL SET_PLAYER_INFO(対面者,"ドロースキップ",1)
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과条件名前 = 현자의 보액
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT >= 10
+			PRINTFORML 필드에 진좌하는 퀸즈 베드의 천개가 열리고있다……！
+			CALL FULLRESET
+			CALL CARD_GENERATE_DECK_EX(対面者,59854)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",1,上書きモード)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259855,1)
+	IF RESULT == 0
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"永攻DOWN",999999)
+	ENDIF
+ENDIF
+
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+@CARDNAME_259856,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 검은 음마법진
+	CASE "略称"
+		RESULTS = 검은 음마법진
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+		RESULTS:1 = 서큐버스 걸
+ENDSELECT
+
+
+@CARD_259856(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_259856(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ②의 효과는 １턴에 １번밖에 발동할 수 없다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 대상 내성을 가지며、
+PRINTL 상대 필드에 "궁극의 음마도사"가 존재하지 않는 경우、더욱이 파괴 내성을 얻는다。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ②：자신의 메인 페이즈에 발동할 수 있다。
+PRINTL 상대 필드의 카드 전부를 묘지에 보낸다。
+PRINTL 이 효과는 자신 필드에 공격 표시의 "매지컬 실크 퀸즈 베드"가 존재하고、
+PRINTL 상대 필드에 "블랙 서큐버스 걸"이 존재하지 않는 경우、상대 메인 페이즈에도 발동할 수 있다。
+CALLFORM CARD_ABLE(0,バトル開始時強制)
+PRINTL ③：자신의 배틀 페이즈 시작 시、"블랙 서큐버스 플라즈마" 토큰 １장을 특수 소환한다。
+PRINTL ---------------------------------------------------------------------
+PRINTL   블랙 서큐버스 플라즈마/어둠/별６/악마족/공２０００/수１７００/암
+PRINTL
+PRINTL   ①：이 카드는 완전내성과 전투광화를 가지며、
+PRINTL   상대 필드의 "블랙 서큐버스 걸"은 공격유도를 얻는다.
+PRINTL   상대 필드에 "블랙 서큐버스 걸"이 존재하지 않는 경우, 이 카드는 공격불가를 얻는다.
+PRINTL   ②：이 카드가 전투를 행하는 공격선언 시, 전투중의 몬스터를 전부 묘지에 보낸다.
+PRINTL   그 후, 이 효과로 묘지에 보낸 상대의 몬스터의 공격력만큼의 데미지를 상대에게 준다.
+PRINTL   ③：상대의 스탠바이 페이즈에 발동한다。
+PRINTL   필드의 이 카드를 묘지에 보낸다。
+PRINTL   그 후、상대 필드에 "블랙 서큐버스 걸"이 존재하지 않는 경우、
+PRINTL   상대에게 ２０００데미지를 준다。
+PRINTL ---------------------------------------------------------------------
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_259856(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259856)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 発動済_1(듀얼리스트,259856)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	IF ターンプレイヤー == 듀얼리스트
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ELSE
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件名前 = 매지컬 실크 퀸즈 베드
+		효과条件표시 = 攻撃표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件名前 = 블랙 서큐버스 걸
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == バトル開始時強制
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259856(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件名前 = 미스트리스 오브 서큐버스마기아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"破耐")
+	ENDIF
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"対耐")
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259856,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"全場全体",場所,"完全묘지")
+	ENDIF
+ELSEIF 종류 == バトル開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259856)
+	IF RESULT == 0
+		CALL CARD_GENERATE(듀얼리스트,259861,攻撃표시)
+	ENDIF
+ENDIF
+
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+@CARDNAME_259857,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 붉은 음마법진
+	CASE "略称"
+		RESULTS = 붉은 음마법진
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+		RESULTS:1 = 서큐버스 걸
+ENDSELECT
+
+
+@CARD_259857(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_259857(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 파괴내성 / 대상내성을 갖는다。
+CALLFORM CARD_ABLE(0,ターン開始時強制)
+PRINTL ②：자신의 스탠바이 페이즈에、「레드 서큐버스 플라즈마」토큰 1체를특수소환한다.
+PRINTL ---------------------------------------------------------------------
+PRINTL   레드 서큐버스 플라즈마/어둠/별 3/악마족/공 0/수 0/암
+PRINTL
+PRINTL   ①：이 몬스터가 특수 소환된 경우에 발동한다。
+PRINTL   "흑마술의 호무" 토큰을 자신의 마법＆함정 존에 앞면 표시로 둔다。
+PRINTL   ②：상대의 스탠바이 페이즈에 발동한다。
+PRINTL   필드의 이 카드를 묘지에 보낸다。
+PRINTL   그 후、상대 필드에 "애플 서큐버스 걸"이 존재하지 않는 경우、
+PRINTL   상대에게 ２０００데미지를 준다。
+PRINTL ---------------------------------------------------------------------
+PRINTL   흑마술의 호무/지속마법
+PRINTL
+PRINTL   ①：상대의 몬스터는 발동불가를 얻는다。
+PRINTL ---------------------------------------------------------------------
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_259857(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259857)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時強制
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259857(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"対耐")
+ELSEIF 종류 == ターン開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259857)
+	IF RESULT == 0
+		CALL CARD_GENERATE(듀얼리스트,259862,攻撃표시)
+	ENDIF
+ENDIF
+
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+@CARDNAME_259858,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 푸른 음마법진
+	CASE "略称"
+		RESULTS = 푸른 음마법진
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+		RESULTS:1 = 서큐버스 걸
+ENDSELECT
+
+
+@CARD_259858(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_259858(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ②의 효과는 １턴에 １번밖에 발동할 수 없다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 파괴내성 / 대상내성을 갖는다。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ②：자신의 메인 페이즈에 발동할 수 있다。
+PRINTL "블루 서큐버스 플라즈마" 토큰 １장을 특수 소환한다。
+PRINTL ---------------------------------------------------------------------
+PRINTL   블루 서큐버스 플라즈마/어둠/레벨４/악마족/공６００/수０/암
+PRINTL
+PRINTL   ①：이 카드는 전투내성 / 대상내성을 갖는다。
+PRINTL   ②：자신의 배틀 페이즈 개시시、이 카드의 공격력 １００마다、상대 필드의 카드 １장을 파괴한다。
+PRINTL   ③：상대의 스탠바이 페이즈에 발동한다。
+PRINTL   필드의 이 카드를 묘지로 보낸다。
+PRINTL   그 후、상대 필드에 "초코 서큐버스 걸"이 존재하지 않는 경우、
+PRINTL   상대에게 ２０００데미지를 준다。
+PRINTL ---------------------------------------------------------------------
+CALLFORM CARD_ABLE(0,バトル終了時強制)
+PRINTL ③：자신의 배틀 페이즈 종료시에 발동한다。
+PRINTL 상대 필드의 몬스터를 전부 파괴한다。
+PRINTL 그 후、이 효과로 파괴한 몬스터의 수 만큼、상대의 묘지에서 "현자의 보액"를 제외한다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_259858(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259858)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 発動済_1(듀얼리스트,259858)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == バトル終了時強制
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259858(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 破壊数
+#DIM DYNAMIC 選択カードID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"対耐")
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259858,1)
+	IF RESULT == 0
+		CALL CARD_GENERATE(듀얼리스트,259863,攻撃표시)
+	ENDIF
+ELSEIF 종류 == バトル終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259858)
+	IF RESULT == 0
+		破壊数 = モンスター数(対面者)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드全体",場所,"묘지")
+		;result:1だと一時破壊で防いでもカウントされてしまう
+		破壊数 = 破壊数 - モンスター数(対面者)
+		FOR カウンタ, 0, 破壊数
+			CALL FULLRESET
+			효과範囲상대묘지 = 1
+			효과条件名前 = 현자의 보액
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 1
+				BREAK
+			CALL FULLRESET
+			효과範囲상대묘지 = 1
+			효과条件名前 = 현자의 보액
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		NEXT
+	ENDIF
+ENDIF
+
+
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+@CARDNAME_259859,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 노란 음마법진
+	CASE "略称"
+		RESULTS = 노란 음마법진
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+		RESULTS:1 = 서큐버스 걸
+ENDSELECT
+
+
+@CARD_259859(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_259859(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 이 카드명의 ②의 효과는 １턴에 １번밖에 발동할 수 없다。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 파괴내성 / 대상내성을 갖는다。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ②：자신의 메인페이즈에 발동할 수 있다。
+PRINTL "옐로 서큐버스 플라즈마" 토큰 １장을 특수 소환한다
+PRINTL ---------------------------------------------------------------------
+PRINTL   옐로 서큐버스 플라즈마/어둠/레벨２/악마족/공０/수０/암
+PRINTL
+PRINTL   ①：이 카드는 전투내성 / 전투광화를 갖는다。
+PRINTL   ②：이 카드가 전투를 행하는 경우、그 전투에서 발생하는 자신으로의 전투 데미지는 대신 상대가 받으며、그 데미지는 배가 된다。
+PRINTL   ③：상대의 스탠바이 페이즈에 발동한다。
+PRINTL   필드의 이 카드를 묘지로 보내고、
+PRINTL   그 후、상대 필드에 "레몬 서큐버스 걸"이 존재하지 않는 경우、
+PRINTL   상대에게２０００ 데미지를 준다。
+PRINTL ---------------------------------------------------------------------
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ③：자신의 엔드페이즈에 발동한다。
+PRINTL 상대에게 ３０００ 데미지를 준다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_259859(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259859)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 発動済_1(듀얼리스트,259859)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259859(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"破耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"対耐")
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259859,1)
+	IF RESULT == 0
+		CALL CARD_GENERATE(듀얼리스트,259864,攻撃표시)
+	ENDIF
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259859)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",3000,1)
+	ENDIF
+ENDIF
+
+
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+@CARDNAME_259860,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 음마법의 호무
+	CASE "略称"
+		RESULTS = 음마법의 호무
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+		RESULTS:1 = 서큐버스 걸
+ENDSELECT
+
+
+@CARD_259860(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_259860(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：상대의 몬스터는 발동 불가를 얻는다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_259860(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259860)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259860(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"発無")
+ENDIF
+
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+@CARDNAME_259861,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 블랙 서큐버스 플라즈마
+	CASE "略称"
+		RESULTS = 흑의 음마령
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+		RESULTS:1 = 서큐버스 걸
+ENDSELECT
+
+
+@CARD_259861(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 1700
+	CASE "성별"
+		RETURN 牝性
+	CASE "トークン"
+		RETURN 1
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_259861(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 완전내성과 전투광화를 가지며、
+PRINTL 상대의 필드에 있는 "블랙 서큐버스 걸"은 공격유도를 얻는다.
+PRINTL 상대의 필드에 "블랙 서큐버스 걸"이 존재하지 않는 경우, 이 카드는 공격불가를 얻는다.
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ②：이 카드가 전투를 하는 공격 선언시、전투중인 몬스터를 전부 묘지로 보낸다。
+PRINTL 그 후、이 효과로 묘지로 보낸 상대의 몬스터의 공격력만큼 데미지를 상대에게 준다。
+CALLFORM CARD_ABLE(0,ターン開始時強制)
+PRINTL ③：상대의 스탠바이 페이즈에 발동한다。
+PRINTL 필드의 이 카드를 묘지로 보낸다。
+PRINTL 그 후、상대의 필드에 "블랙 서큐버스 걸"이 존재하지 않는 경우、
+PRINTL 상대에게 ２０００ 데미지를 준다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_259861(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259861)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259861(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 修正値
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"罠耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦狂")
+	CALL FULLRESET
+	효과条件名前 = 블랙 서큐버스 걸
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"攻誘")
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件名前 = 블랙 서큐버스 걸
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無")
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259861)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		選択カード = 戦闘場所(듀얼리스트,1)
+		修正値 = GETVAR(@"%対面者%_MZ_攻:選択カード")
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"完全묘지")
+		IF RESULT == 1
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",修正値,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ターン開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259861)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件名前 = 블랙 서큐버스 걸
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",2000,1)
+	ENDIF
+ENDIF
+
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+@CARDNAME_259862,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 레드 서큐버스 플라즈마
+	CASE "略称"
+		RESULTS = 붉은 음마령
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+		RESULTS:1 = 서큐버스 걸
+ENDSELECT
+
+
+@CARD_259862(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+	CASE "トークン"
+		RETURN 1
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_259862(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 완전내성을 갖는다。
+CALLFORM CARD_ABLE(0,특수소환時強制)
+PRINTL ②：이 몬스터가 특수 소환된 경우에 발동한다。
+PRINTL "흑마술의 호무"토큰을 자신의 마법＆함정 존에 표면 표시로 놓는다。
+CALLFORM CARD_ABLE(0,ターン開始時強制)
+PRINTL ③：상대의 스탠바이 페이즈에 발동한다。
+PRINTL 필드의 이 카드를 묘지로 보낸다。
+PRINTL 그 후、상대의 필드에 "애플 서큐버스 걸" 이 존재하지 않는 경우、
+PRINTL 상대에게 ２０００ 데미지를 준다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_259862(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259862)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 특수소환時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259862(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"モ耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"魔耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"罠耐")
+ELSEIF 종류 == 특수소환時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259862)
+	IF RESULT == 0
+		CALL CARD_GENERATE_MAGIC(듀얼리스트,259860,1)
+		PRINTFORML %듀얼리스트%의 마법＆함정 존에 "흑마술의 호무"가 표면 표시로 생성되었습니다。
+	ENDIF
+ELSEIF 종류 == ターン開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259862)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件名前 = 애플 서큐버스 걸
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",2000,1)
+	ENDIF
+ENDIF
+
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+@CARDNAME_259863,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 블루 서큐버스 플라즈마
+	CASE "略称"
+		RESULTS = 푸른 음마령
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+		RESULTS:1 = 서큐버스 걸
+ENDSELECT
+
+
+@CARD_259863(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 600
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+	CASE "トークン"
+		RETURN 1
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_259863(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 전투내성 / 대상내성을 갖는다。
+CALLFORM CARD_ABLE(0,バトル開始時強制)
+PRINTL ②：자신의 배틀 페이즈 시작 시, 이 카드의 공격력 100에 따라 상대 필드의 카드 1장을 대상으로 파괴한다。
+PRINTL ③：상대의 스탠바이 페이즈에 발동한다。
+PRINTL 필드의 이 카드를 묘지로 보낸다。
+PRINTL 그 후、상대의 필드에 "초코 서큐버스 걸"이 존재하지 않는 경우、
+PRINTL 상대에게 ２０００ 데미지를 준다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_259863(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259863)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == バトル開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259863(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 基準値
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+ELSEIF 종류 == バトル開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259863)
+	IF RESULT == 0
+		基準値 = GETVAR(@"%듀얼리스트%_MZ_攻:場所") / 100
+		IF 基準値 > 0
+			REPEAT 基準値
+				CALL FULLRESET
+				효과範囲상대필드 = 1
+				효과範囲상대마함 = 1
+				효과条件除去種 = 묘지
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				SIF RESULT != 1
+					BREAK
+				CALL FULLRESET
+				효과範囲상대필드 = 1
+				효과範囲상대마함 = 1
+				CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"묘지")
+			REND
+		ELSE
+			PRINTL 공격력이 100이 되지 않았기에、상대의 카드가 파괴되지 않았습니다。
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ターン開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259863)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件名前 = 초코 서큐버스 걸
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",2000,1)
+	ENDIF
+ENDIF
+
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+@CARDNAME_259864,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 옐로 서큐버스 플라즈마
+	CASE "略称"
+		RESULTS = 노란 음마령
+	CASE "カテゴリ"
+		RESULTS:0 = E.R.A
+		RESULTS:1 = 서큐버스 걸
+ENDSELECT
+
+
+@CARD_259864(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+	CASE "トークン"
+		RETURN 1
+	CASE "生産불가"
+		RETURN 1
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_259864(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：이 카드는 전투내성 / 전투광화를 갖는다。
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ②：이 카드가 전투를 행한 경우、그 전투에서 발생하는 자신으로의 전투 데미지는 대신에 상대가 받으며、그 데미지는 배가된다。
+CALLFORM CARD_ABLE(0,ターン開始時強制)
+PRINTL ③：상대의 스탠바이 페이즈에 발동한다。
+PRINTL 필드의 이 카드를 묘지에 보낸다。
+PRINTL 그 후、상대 필드에 "레몬 서큐버스 걸"이 존재하지 않는 경우、
+PRINTL 상대에게 ２０００ 데미지를 준다。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDCAN_259864(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,259864)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_259864(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カードID
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦狂")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦耐")
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259864)
+	IF RESULT == 0
+		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ反射",1)
+		CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ倍化", 3 ,1)
+	ENDIF
+ELSEIF 종류 == ターン開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,259864)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件名前 = 레몬 서큐버스 걸
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",2000,1)
+	ENDIF
+ENDIF

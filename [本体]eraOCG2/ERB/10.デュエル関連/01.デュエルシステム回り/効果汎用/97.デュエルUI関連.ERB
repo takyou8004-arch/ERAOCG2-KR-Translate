@@ -253,11 +253,12 @@ PRINTL
 CALL COLOR_LINE(설정カラー)
 IF 덱플래그 == 1
 	VARSET RESULTS
-	PRINTFORM [0] - 돌아간다　　　
+	PRINTFORM [0] - 돌아간다
+	PRINTFORM %"",10%
 	VARSET RESULT
 	TRYCALLFORM CARD_{選択カード_ID}, "生成カード"
 	SIF RESULT >= 1
-		PRINTFORM [1] - 생성 카드 확인
+		PRINTFORM [10] - 생성 카드 확인
 		
 
 	IF ENUMFILES("RESOURCES/DUEL", @"{選択カード_ID}_DUEL_2*")
@@ -265,7 +266,7 @@ IF 덱플래그 == 1
 	ENDIF
 	PRINTL
 	BINPUT
-	IF RESULT == 1
+	IF RESULT == 10
 		TRYCALLFORM CARD_{選択カード_ID}, "生成カード"
 		トークン보존:0 = RESULT
 		トークン보존:1 = RESULT:1
@@ -1473,6 +1474,8 @@ RETURN LRESULT
 #DIM DYNAMIC 특수カード_ID
 #DIM DYNAMIC SKIP플래그
 #DIM DYNAMIC 설정カラー
+#DIM DYNAMIC トークン보존,10
+#DIM DYNAMIC カウンタ
 
 $INPUTLOOP
 
@@ -1991,6 +1994,8 @@ IF GETVAR(@"%듀얼리스트%_MZ_服状:選択カード") > 0
 		RESULTS = 【노팬티】:{GETVAR(@"%듀얼리스트%_MZ_조교:選択カード")}％
 	SIF GETVAR(@"%듀얼리스트%_MZ_服状:選択カード") >= 2
 		RESULTS = 【　전라　】:{GETVAR(@"%듀얼리스트%_MZ_조교:選択カード")}％
+	SIF GETVAR(@"%듀얼리스트%_MZ_服状:選択カード") >= 3
+		RESULTS = 【 바니 】:{GETVAR(@"%듀얼리스트%_MZ_조교:選択カード")}％
 	PRINTBUTTON @"%RESULTS,12,LEFT%", 9070
 	RESETCOLOR
 ENDIF
@@ -2073,9 +2078,17 @@ ENDIF
 
 RESETCOLOR
 PRINTL
+PRINT [100] - 돌아간다
+PRINTFORM %"",10%
+VARSET RESULT
+TRYCALLFORM CARD_{選択カード_ID}, "生成カード"
+SIF RESULT >= 1
+	PRINTFORM [10] - 생성 카드 확인
 PRINTL
-PRINTL [100] - 돌아간다
 BINPUT
+
+
+
 
 IF RESULT >= 9000
 	IF RESULT == 9000
@@ -2246,6 +2259,28 @@ IF RESULT >= 9000
 ELSEIF RESULT == 1000
 	CALL PRINT_STATE_DUEL(選択カード_ID,2)
 	WAIT
+ELSEIF RESULT == 10
+
+	TRYCALLFORM CARD_{選択カード_ID}, "生成カード"
+	トークン보존:0 = RESULT
+	トークン보존:1 = RESULT:1
+	トークン보존:2 = RESULT:2
+	トークン보존:3 = RESULT:3
+	トークン보존:4 = RESULT:4
+	FOR カウンタ,0,5
+		IF トークン보존:カウンタ >= 1
+			$LOOP_BACK_HERE
+			TRYCALLFORM CARD_UI(トークン보존:カウンタ,2)
+			PRINTFORM [0] - 다음 카드
+			PRINTL
+			BINPUT
+			IF RESULT == 1000
+				CALL PRINT_STATE_DUEL(トークン보존:カウンタ,2)
+				WAIT
+				GOTO LOOP_BACK_HERE
+			ENDIF
+		ENDIF
+	NEXT
 ELSE
 	$SKIP_BUTTONS
 	SIF SKIP플래그 == 2
@@ -2269,6 +2304,8 @@ GOTO INPUTLOOP
 #DIM DYNAMIC カードID
 #DIM DYNAMIC 캐릭터番号
 #DIM DYNAMIC 설정カラー
+#DIM DYNAMIC トークン보존,10
+#DIM DYNAMIC カウンタ
 
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
@@ -2600,8 +2637,13 @@ ENDIF
 
 
 PRINTL
+PRINT [100] - 돌아간다
+PRINTFORM %"",10%
+VARSET RESULT
+TRYCALLFORM CARD_{選択カード_ID}, "生成カード"
+SIF RESULT >= 1
+	PRINTFORM [10] - 생성 카드 확인
 PRINTL
-PRINTL [100] - 돌아간다
 BINPUT
 
 IF RESULT >= 9000
@@ -2692,6 +2734,28 @@ IF RESULT >= 9000
 ELSEIF RESULT == 1000
 	CALL PRINT_STATE_DUEL(選択カード_ID,2)
 	WAIT
+ELSEIF RESULT == 10
+
+	TRYCALLFORM CARD_{選択カード_ID}, "生成カード"
+	トークン보존:0 = RESULT
+	トークン보존:1 = RESULT:1
+	トークン보존:2 = RESULT:2
+	トークン보존:3 = RESULT:3
+	トークン보존:4 = RESULT:4
+	FOR カウンタ,0,5
+		IF トークン보존:カウンタ >= 1
+			$LOOP_BACK_HERE
+			TRYCALLFORM CARD_UI(トークン보존:カウンタ,2)
+			PRINTFORM [0] - 다음 카드
+			PRINTL
+			BINPUT
+			IF RESULT == 1000
+				CALL PRINT_STATE_DUEL(トークン보존:カウンタ,2)
+				WAIT
+				GOTO LOOP_BACK_HERE
+			ENDIF
+		ENDIF
+	NEXT
 ELSE
 	$SKIP_BUTTONS
 	SIF SKIP플래그 == 2
@@ -2851,6 +2915,7 @@ ENDIF
 PRINTPLAIN ┌─────────────────────────────────────>E<────────────────────────────────────
 PRINTBUTTON "●",8888
 RESETCOLOR
+PRINTL
 
 CALL CARD_MAGINFO("상대")
 
@@ -2863,6 +2928,7 @@ ENDIF
 PRINTPLAIN └┬─────────────────────────────────>
 ;SETCOLOR C_L_RED
 PRINTPLAIN MAGIC / TRAPS<────────────────────────────────┬┘
+PRINTL
 RESETCOLOR
 
 CALL CARD_SUMINFO("상대")
@@ -3122,7 +3188,7 @@ PRINTPLAIN ┌┴─────────────────────
 ;SETCOLOR C_L_RED
 PRINTPLAIN <────────────────────────────────┴┐
 RESETCOLOR
-
+PRINTL
 CALL CARD_MAGINFO("자신")
 
 IF ターンプレイヤー == "자신"

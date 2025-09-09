@@ -1,0 +1,318 @@
+@IRAI_EVENT_397(参照先)
+#DIMS DYNAMIC 参照先
+#DIM DYNAMIC 대상캐릭터
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC OK플래그
+#DIM DYNAMIC カウンタ
+
+VARSET RESULT
+VARSET RESULTS
+이벤트主:0 = NO_TO_CHARANUM(1000) ;ブラック
+이벤트主:1 = NO_TO_CHARANUM(1004) ;アップル
+이벤트主:2 = NO_TO_CHARANUM(1005) ;チョコ
+이벤트主:3 = NO_TO_CHARANUM(1006) ;レモン
+
+SELECTCASE 参照先
+	CASE  "名前"
+		RESULTS = (CP-BSG2)음마술의 씨앗계승
+	CASE "이벤트種"
+		RETURN 이벤트_ＲＥ
+	CASE "依頼先"
+		RETURN 即時開始
+	CASE "詳細"
+		PRINTL 「究極の魔導士」とやらには、先の儀式だけでは足りないらしく、
+		PRINTL どうやら「赤」「青」「黄」の契印마법陣が必要なようで……？
+		PRINTL 
+		PRINTL 解放条件：「애플 매지션 걸」「초코 매지션 걸」「レモン・매지션 걸」のうち、
+		PRINTL この依頼で契約していないカードをコレクション済で、호감도１５００以上かつ「合意」を得ている
+		IF !HAS_PENIS(MASTER)
+			SETCOLOR C_YELLOW
+			PRINTL ※現在、このクエスト群は主人公にペニスが生えている前提で書かれています※
+			RESETCOLOR
+		ENDIF
+		PRINTL 
+		PRINTL 報酬：この依頼で契約した매지션 걸に対応した「서큐버스 걸」융합モンスター及び마법カード
+	CASE "条件"
+		;淫魔術の秘儀クリア
+		SIF 依頼_完了횟수:396 == 0
+			RETURN 0
+		;赤青黄マジシャンガールのサキュバス化をまだ全員完遂させてない
+		SIF 依頼_進行보존:397 >= 0b1111
+			RETURN 0
+		RETURN 1
+	CASE "追加条件"
+		FOR カウンタ, 1, 4
+			IF !GETBIT(依頼_進行보존:397,カウンタ)
+				SIF CFLAG:(이벤트主:カウンタ):소유함 == 1 && CFLAG:(이벤트主:カウンタ):호감도 >= 1500 && GETBIT(CFLAG:(이벤트主:カウンタ):기정사실,0)
+					OK플래그++
+			ENDIF
+		NEXT
+		IF OK플래그 < 1
+			RESULTS = 새로 계약 가능한 매지션 걸이 있습니다。
+			RETURN 1
+		ENDIF
+		RETURN 0
+ENDSELECT
+
+RETURN 0
+
+@IRAI_ACT_397(参照)
+#DIM DYNAMIC 参照
+#DIM DYNAMIC 이벤트主,10
+#DIM DYNAMIC OK플래그,3
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC マジシャン名 = "애플 매지션 걸","초코 매지션 걸","레몬 매지션 걸"
+#DIM DYNAMIC 選択マジシャン
+
+;いったんターゲットを非難させる（バグ回避用）
+이벤트主:0 = NO_TO_CHARANUM(1000) ;ブラック
+이벤트主:1 = NO_TO_CHARANUM(1004) ;アップル
+이벤트主:2 = NO_TO_CHARANUM(1005) ;チョコ
+이벤트主:3 = NO_TO_CHARANUM(1006) ;レモン
+
+FOR カウンタ, 0, 3
+	IF !GETBIT(依頼_進行보존:397,カウンタ+1)
+		SIF CFLAG:(이벤트主:(カウンタ+1)):소유함 == 1 && CFLAG:(이벤트主:(カウンタ+1)):호감도 >= 1500 && GETBIT(CFLAG:(이벤트主:(カウンタ+1)):기정사실,0)
+			OK플래그:カウンタ++
+	ENDIF
+NEXT
+
+	PRINTL 
+	IF GETBIT(依頼_進行보존:397,0) ;２回目以降
+		IF 依頼_進行보존:397 < 0b0010 ;誰とも契約してない
+			PRINTFORMW 「さあマスター！ 今度こそは誰かと契約してもらいますよ！」
+			PRINTL 
+			PRINTFORML やたら息巻く%CALLNAME:(이벤트主:0)%。
+			PRINTFORMW 仕方ない、今回は誰かを呼んでみるか……
+		ELSE
+			PRINTFORMW 「さあマスター！ この調子でどんどん契約していきますよ！」
+			PRINTL 
+			PRINTFORML 悪魔に魂を売り渡したとでもいうのか、というか悪魔みたいな割と無責任なことを言う%CALLNAME:(이벤트主:0)%。
+			PRINTFORMW まあ、この先のカードも少し気になるし今回も協力しよう……
+		ENDIF
+	ELSE ;はじめて
+		PRINTFORMW 「そういえばマスター」
+		PRINTL
+		PRINTFORMW 部屋でダラダラしていた%CALLNAME:(이벤트主:0)%が何かを思い出したように話しかけてきた。
+		PRINTL
+		PRINTFORMW 「この前の、その……あの部屋での、出来事で……」
+		PRINTL
+		PRINTFORMW 言い出したのは자신なのに、すごくしどろもどろになる%CALLNAME:(이벤트主:0)%。
+		PRINTFORMW まあ場の雰囲気で事に及んでそのまま暴走、というのは魔術師以前に恥ずかしいのだろう……
+		PRINTL
+		PRINTFORMW 「……まあ、ともかく。 あの時、マスターは部屋に書いてあった文字が読めたんですよね？」
+		PRINTL
+		PRINTFORMW 確かに、あの時は部屋のふざけたお題目が解読できた。
+		PRINTFORMW 扉には資格がどうたらこうたらとも……
+		PRINTFORMW 마법陣を書いた本人は依然として読めていないのはどうかと思うのだが……読めて当たり前という想定だったのだろうか？
+		PRINTL
+		PRINTFORMW 「それなら、この本も今のマスターなら読めるんじゃないですか？」
+		PRINTL
+		PRINTFORMW そう言って取り出したのはこの前の古めかしい異様な魔導書。
+		PRINTL
+		PRINTFORML [0] - 「淫魔導の呪悶書＜サキュバス・マジック・スペルマブック＞」・・・・・・
+		BINPUT
+		CLEARLINE 1
+		PRINTL
+		PRINTFORML パッと見るとタイトルは既に読めるようになっていた。
+		PRINTFORMW なんだこのタイトル。
+		PRINTFORMW 聞こえた単語に少し引き気味だった%CALLNAME:(이벤트主:0)%も、実際にこちらが読めたのだ、とわかると色めきだつ。
+		PRINTL
+		PRINTFORMW 「じゃあじゃあ！ ちょっと貸してあげますから読んでみてくださいよ！」
+		PRINTL
+		PRINTFORMW この分厚い本を……？
+		PRINTFORMW と思ったが、試しにページを開いてみると、思った以上に頭にスルスル入ってくる。
+		PRINTFORMW これも契約の효과なのだろうか？
+		PRINTL
+		PRINTFORML [0] - 『──その時、彼女の可憐な指先が、焦らすようにこちらの亀頭を円を描くように撫ぜ始める──』
+		BINPUT
+		CLEARLINE 1
+		PRINTL
+		PRINTFORMW 「へ？」
+		PRINTL
+		PRINTFORML [0] - 『──彼女と私に刻まれた印が、互いの声も香も貌も、共に言いようもなく甘美で蕩けるようなものに思わせ──』
+		BINPUT
+		CLEARLINE 1
+		PRINTL
+		PRINTFORMW 「わ、わー！ わー！？ 音読しなくていいですから！ ちょ、全然止まんないんですけど！？」
+		PRINTL
+		PRINTFORMW ………
+		PRINTFORMW ……
+		PRINTFORMW …
+		PRINTL
+		PRINTFORMW 文章がやたらと官能的だったが、有意義な情報が手に入った。
+		PRINTFORMW ……ゆでだこになってしまっている%CALLNAME:(이벤트主:0)%のクールダウンまで少し待ってあげるか……
+		PRINTFORMW ……
+		PRINTL
+		PRINTL                        ｻｷｭﾊﾞｽ
+		PRINTFORMW まず、この本は俗に言う「淫魔」──他者の精気を吸い取って糧とする悪魔に着想を得て、そのような魔力増強手段を再現しようとしたもの。
+		PRINTFORMW 特に、従来も生命の源として마법の触媒にも使われてきた性分泌液、つまるところ精液や愛液を重要な魔力源として着目して研究していたそうだ。
+		PRINTFORMW 「手軽で大量の魔力供給。魔術師の命題の一つと言っても過言ではないですね」
+		PRINTFORMW 「それに黒魔術からの派生体系だとしたら、そういう方法を取るのもまあ……納得ではあります」
+		PRINTL
+		PRINTFORMW しかし、속성も종족も多種多様な精気を魔力に変換する、というのは生来の能力として持つ淫魔たちならともかく、
+		PRINTFORMW 一から新たに마법として組みこむには少々複雑化しすぎるきらいがあったようだ。
+		PRINTFORMW 「確かに……そもそも精気の定義が違いそうな종족もいっぱいいますもんね」
+		PRINTL
+		PRINTFORMW そこで、「契約」という形で"対特定個人専用"の魔力変換回路を組み上げることで、非常に効率的な魔力の増幅が可能となったという。
+		PRINTFORMW 「えっ、あのカードの契約とかマスターの名前が書かれてるのってそういう意味なんですか！？」
+		IF TALENT:(이벤트主:0):연모
+			PRINTFORMW 「ま、マスター専用ですか……えへ、えへへ……♥」
+		ELSE
+			PRINTFORMW 「ま、まあ、マスターでよかったというか……なんというか……」
+		ENDIF
+		PRINTL
+		PRINTFORMW それに必要なのが「契りの場」と「淫魔術の秘儀」。
+		PRINTFORMW 魔力操作とその促進に特化した場の中で、実際の"供給"と実物の"触媒"を通して、専用回路を直接作っていく……ということらしい。
+		PRINTFORMW 「アレもれっきとした必要工程だったんですね……まあ環境がちょっと強引すぎる気もしますが」
+		PRINTL
+		PRINTFORMW まあ、ただでさえ悪魔の技術を模した外法であるのに加えて、「契約」と「儀式」という悪魔にとってさらに重要なプロセスを踏んでしまうことで、
+		PRINTFORMW 心身ともに急激に正真正銘淫魔のソレに近づいてしまう、という副作用はあるらしいが……
+		PRINTFORML 「……」
+		PRINTFORMW 急に反応がなくなったな。
+		PRINTL
+		PRINTFORMW ……で、件の%CALLNAME:(이벤트主:0)%が解読したというページ。
+		PRINTFORMW そこには確かに、通常の淫魔導継承ではなく、より強力な専用な契約のための마법陣とその手法が記録されていた。
+		PRINTFORMW 魔力変換の量と自由度を、ただの悪魔レベルではなく、さらに上位、果てには女王のような個体の域にまで強化する秘奥の術式。
+		PRINTFORMW 「わあっ！ やっぱり究極の魔導師になれる方法が──」
+		PRINTL
+		PRINTL                   ・
+		PRINTFORMW すなわち、「究極の淫魔導師」。
+		PRINTL
+		PRINTFORMW 「……まあ、そうでしょうね」
+		PRINTFORM 「いやこの際こだわりません！ 
+		IF TALENT:(이벤트主:0):연모
+			PRINTFORML 逆にマスターとあれやこれやできてついでに希少な魔術を極めて……！」
+			PRINTFORMW 漏れてる漏れてる。
+		ELSE
+			PRINTFORMW こんな珍しい古代の術式を極めて……！」
+		ENDIF
+		PRINTL
+		PRINTFORML ただし、その儀式には、あの時書いた마법陣だけではどうやら不足していたらしい。
+		PRINTFORMW 「へ？」
+		PRINTFORMW 不完全な儀式を経たせいで、あの時は特別暴走気味になってしまった、ということだろうか……
+		PRINTFORMW 「ほら！ あの時の私は불가抗力だったんです！ そんなだらしない子じゃないんですよ！」
+		PRINTL
+		PRINTFORML [0] - （それにしたってカードのテキストでも容赦なく搾ってくるような……）
+		BINPUT
+		CLEARLINE 1
+		PRINTL
+		PRINTFORMW 完全な儀式に必要なのは、より多様な淫魔導師の力場およびその技術と、大量の魔力源。
+		PRINTFORMW 魔導書には、「赤」「青」「黄」の마법陣が記載されていた。
+		PRINTFORMW 「赤、青、黄の魔術師……」
+		PRINTFORMW 心当たりは、なくもない。
+		PRINTL
+		PRINTFORMW 「……よし、マスター。 あの子たちとも契約しちゃいましょう」
+		PRINTL
+		PRINTFORML [0] - うわぁ。
+		BINPUT
+		CLEARLINE 1
+		PRINTL
+		PRINTFORM 「いいじゃないですか！ 
+		IF MATCH(OK플래그,1) > 2
+			PRINTFORMW マスターあの子たち全員と仲いいんですし！」
+		ELSE
+			PRINTFORML マスターと仲いい子もいるんですし！」
+			PRINTFORMW 「仲良くない子は、今からでも押し切れるぐらい仲良くなって！」
+		ENDIF
+		PRINTFORMW 「皆でやれば怖くない！ 他の子もそうならまあしょうがない！」
+		IF TALENT:(이벤트主:0):연모
+			SETCOLOR C_GRAY
+			PRINTFORMW 「マスター専用が私１人、という特権がなくなるのはちょっと惜しいですけど……」
+			RESETCOLOR
+		ENDIF
+		PRINTL
+		PRINTFORMW なりふり構ってられなくなった、という風な%CALLNAME:(이벤트主:0)%に気圧される……
+		PRINTFORMW ……まあ、確かにより色んなカードが手に入り、最後には「究極のカード」が手に入る……なら悪くない話ではある……
+		PRINTFORMW 我ながら最低だが、ダメ元で頼んでみるのもいいか……
+	ENDIF
+
+	PRINTL
+	PRINTFORMW では、誰を呼び出してみよう？
+	PRINTL
+	FOR カウンタ, 0, 3
+		IF GETBIT(依頼_進行보존:397,カウンタ+1)
+			SETCOLOR C_GRAY
+			PRINTFORML ({カウンタ}) - (「%マジシャン名:カウンタ%」は契約済みです)
+			RESETCOLOR
+		ELSEIF OK플래그:カウンタ
+			PRINTFORML [{カウンタ}] - 「%マジシャン名:カウンタ%」
+		ELSE
+			SETCOLOR C_GRAY
+			PRINTFORML ({カウンタ}) - (「%マジシャン名:カウンタ%」は条件を満たしていません)
+			RESETCOLOR
+		ENDIF
+	NEXT
+	PRINTFORML [3] - やめておく
+	BINPUT
+	選択マジシャン = RESULT
+	PRINTL
+	SELECTCASE 選択マジシャン
+		CASE IS < 3
+			PRINTFORMW %マジシャン名:選択マジシャン%を呼んで事情を説明してみた……
+			PRINTFORMW ………
+			PRINTFORMW ……
+			PRINTFORMW …
+			PRINTL
+			PRINTFORM %CALLNAME:(이벤트主:0)%の熱弁の甲斐もあったのか、意外にも協力してくれるらしい……
+			IF TALENT:(이벤트主:選択マジシャン+1):연모
+				PRINTL
+				PRINTFORMW なにやらまんざらでもなさそうにもじもじしていたが……
+			ELSE
+				PRINTFORMW
+			ENDIF
+			PRINTFORMW 早速契約の印である마법陣を床に書いてもらい、例の部屋で契約を済ませることにした……
+			PRINTL
+			CALL SUCCUGIRL_FUSION_BEDROOM("자신",59851+選択マジシャン)
+			PRINTFORMW ………
+			PRINTFORMW ……
+			PRINTFORMW …
+			PRINTL
+			PRINTFORML %CALLNAME:(이벤트主:0)%の時のような命の危機を感じることもなく、
+			IF 依頼_進行보존:397 < 0b1111
+				SETCOLOR C_GRAY
+				PRINTFORMW ……まあ部屋を出るまでべったり甘えてきたが、
+				RESETCOLOR
+			ENDIF
+			PRINTFORMW 新たなカードを手に入れることができた。
+			PRINTL
+			CALL CARD_GET_SINGLE(59851+選択マジシャン,,3);サキュバスガール
+			CALL CARD_GET_SINGLE(79902+選択マジシャン,,3);性技마법
+			PRINTL
+			SETBIT 依頼_進行보존:397, 0
+			SETBIT 依頼_進行보존:397, 選択マジシャン+1
+			IF 依頼_進行보존:397 >= 0b1111
+				PRINTFORMW ついに赤・青・黄の서큐버스 걸とその마법を手に入れることができた。
+				PRINTL
+				PRINTFORML ……すると、部屋の壁面の一つを覆っていたカーテンがひとりでにふわりと外れ、
+				PRINTFORMW 後ろに隠れていた、巨大で豪奢な扉が姿を現した。
+				PRINTFORMW 大扉には最初に%CALLNAME:(이벤트主:0)%が描いた마법陣と、それに重なる様に赤・青・黄の마법陣が大きく刻まれている。
+				PRINTFORMW ……つまり彼女たちを改めて連れてこい、ということだろう。
+				PRINTL
+				PRINTFORML と、観察していると宙を漂っていたカーテンが丸く包まっていき、最後にはカードになって手元に飛んできた。
+				PRINTFORMW ……ありがたくもらっておこう。
+				PRINTL
+				CALL CARD_GET_SINGLE(79901,,3);カーテン
+				PRINTL 
+				PRINTFORM 次はいよいよ究極の
+				SETCOLOR C_GRAY
+				PRINTFORM 淫
+				RESETCOLOR
+				PRINTFORMW 魔導師に必要な儀式……一応気を引き締めていこう。
+			ELSE
+				PRINTFORMW この調子で……というのも少し気が引けるが、また後日、他の매지션 걸にも頼んでみよう……
+			ENDIF
+			PRINTL
+			TIME += 30
+			; SIF 依頼_進行보존:397 >= 0b1111
+				RETURN 2;依頼成功
+		CASE 3
+			PRINTFORMW ……今日はやめておこう。
+			PRINTFORML 「えっ！？ そんなあっ！？ マスターのいくじなし！ おたんこなす！ 据え膳食わぬはなんとやらですよ！」
+			PRINTFORMW 据えられてないんだよ。
+			PRINTFORML %CALLNAME:(이벤트主:0)%には悪いが……いや悪いのか？
+			PRINTFORMW とりあえずまた次の機会に試してみることにした。
+			SETBIT 依頼_進行보존:397, 0
+			TIME += 30
+			RETURN 3;依頼失敗
+	ENDSELECT
