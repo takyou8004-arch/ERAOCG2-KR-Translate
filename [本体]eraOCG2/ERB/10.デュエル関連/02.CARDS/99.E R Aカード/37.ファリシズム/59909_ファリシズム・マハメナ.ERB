@@ -37,6 +37,8 @@ SELECTCASE 参照先
 		RETURN 0
 	CASE "성별"
 		RETURN 牝性
+	CASE "추가日"
+		RETURN 250908
 ENDSELECT
 RETURN 0
 
@@ -53,9 +55,9 @@ CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
 PRINTL ②：자신 / 상대 턴에、자신 필드에 "어신체" 카드가 존재하는 경우、
 PRINTL 필드의 이 카드를 묘지로 보내고 발동할 수 있다。
 PRINTL 상대는 이하의 효과에서 １를 고른다。그 후、그 효과를 적용한다。
-PRINTL ●상대의 엑스트라 덱의 카드를 무작위로 2장 제외한다。
+PRINTL 이 효과를 발동한 턴、자신은 "퍼실리즘" 몬스터밖에 특수 소환할 수 없다。
+PRINTL ●자신은 덱에서 함정 카드를 패에 넣는다。
 PRINTL ●상대와 생섹스를 한다。그 후、묘지에서 "퍼실리즘 마하메나" 이외의 "퍼실리즘" 몬스터 ２장을 특수 소환한다。
-PRINTL  이 효과의 적용 후、턴 종료시까지 자신은 "퍼실리즘" 몬스터밖에 특수 소환할 수 없다。
 CALL TEXT_DECORATION("ROGUE")
 
 @CARDSUMMON_59909(듀얼리스트,소환カード,EX参照)
@@ -125,6 +127,11 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT < 2
 		RETURN 0
+	CALL FULLRESET
+	효과条件固カテゴリ = 퍼실리즘
+	CALL CARD_CHECK_FIN_DATA(決闘者,"SS履歴")
+	SIF RESULT != 0
+		RETURN 0
 	RETURN 1
 ENDIF
 
@@ -142,7 +149,6 @@ ENDIF
 #DIM DYNAMIC 효과분기
 #DIM DYNAMIC 조교대상
 #DIM DYNAMIC 조교효과
-#DIM DYNAMIC 상대エクストラ枚数
 
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
@@ -204,28 +210,23 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 			;それぞれに違うメッセージを用意する予定があったが、今のところは結果は同じ
 			;EXモンスターをすべて제외
 			CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"마하메나",효과분기)
-			FOR カウンタ,0,2
-				CALL FULLRESET
-				상대エクストラ枚数 = 現EX山札数(対面者)
-				SIF 상대エクストラ枚数 > 0
-					CALL CARD_DISPOSE(対面者,"EX덱",RAND:상대エクストラ枚数,제외行き)
-			NEXT			
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = 함정全般
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)	
 		ELSEIF 효과분기 == 3
 			;RESULTが3なら使途が居るので両方の효과を適用させる
 			;モンスターが個別で持つボーナス효과の処理
 			;EXモンスターをすべて제외
-			FOR カウンタ,0,2
-				CALL FULLRESET
-				상대エクストラ枚数 = 現EX山札数(対面者)
-				SIF 상대エクストラ枚数 > 0
-					CALL CARD_DISPOSE(対面者,"EX덱",RAND:상대エクストラ枚数,제외行き)
-			NEXT
-
+			CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"마하메나",효과분기)
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = 함정全般
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
 			;奉仕処理
 			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
 			IF RESULT != -1
 				조교대상 = RESULT
-				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"마하메나",효과분기)
 				CALL EROTIC_MOVE("前穴凌辱",조교대상,MASTER,조교효과)
 			ENDIF
 			;카운터を置く효과
@@ -243,10 +244,10 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 		ELSE
 			;それ以外효과が選択されている。
 			;奉仕処理
+			CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"마하메나",효과분기)
 			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
 			IF RESULT != -1
 				조교대상 = RESULT
-				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"마하메나",효과분기)
 				CALL EROTIC_MOVE("前穴凌辱",조교대상,MASTER,조교효과)
 			ENDIF
 			;카운터を置く효과の処理
@@ -260,6 +261,8 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 			효과条件固名前 = 퍼실리즘 마하메나
 			효과条件カテゴリ = 퍼실리즘
 			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+
+			CALL CARD_SS_RESTRICTION(듀얼리스트,"퍼실리즘")
 			CALL CARD_EX_RESTRICTION(듀얼리스트,"퍼실리즘")
 
 			PRINTFORMW %CALLNAME:조교대상%는 제정신으로 돌아왔다！

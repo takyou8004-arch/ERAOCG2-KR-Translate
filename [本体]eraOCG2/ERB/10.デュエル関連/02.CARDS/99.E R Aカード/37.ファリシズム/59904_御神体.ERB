@@ -42,10 +42,12 @@ SELECTCASE 参照先
 		RETURN 0
 	CASE "守備力"
 		RETURN 4000
+	CASE "生成カード"
+		RETURN 159904
 	CASE "성별"
 		RETURN 雄性
 	CASE "추가日"
-		RETURN 250721
+		RETURN 250908
 ENDSELECT
 
 RETURN 0
@@ -143,38 +145,6 @@ ELSEIF 종류 == ターン終了時 && ゾーン == "마함"
 	;セクハラ효과があるので카운터が無くても발동可能な仕様
 	;空打ちできるようになっちゃうけどまあいいでしょう
 	RETURN 1
-ELSEIF 종류 == ターン終了時 && ゾーン == "필드"
-	;モンスター面④の효과
-	SIF ゾーン != "필드"
-		RETURN 0
-	RETURN 1
-ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
-	;モンスター面③の효과
-	SIF ゾーン != "필드"
-		RETURN 0
-	SIF 발동済_3(듀얼리스트,159904)
-		RETURN 0
-	CALL FULLRESET
-	효과範囲상대필드 = 1
-	효과範囲상대묘지 = 1
-	효과条件종류 = モン全般
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	SIF RESULT != 1
-		RETURN 0
-	SIF 마함数(듀얼리스트) >= 5
-		RETURN 0
-	RETURN 1
-ELSEIF 종류 == 身代효과
-	;龍回避
-	SIF ゾーン != "필드"
-		RETURN 0
-	SIF 破壊대상ゾーン != "필드"
-		RETURN 0
-	SIF 破壊대상場所 != 場所
-		RETURN 0
-	SIF GROUPMATCH(破壊종류,"마함")
-		RETURN 0
-	RETURN 1
 ENDIF
 
 @CARDEFFECT_59904(듀얼리스트,종류,ゾーン,場所)
@@ -193,15 +163,13 @@ ENDIF
 
 
 IF 종류 == 지속효과
-	IF ゾーン == "마함"
-		;포트리스状態での지속효과
-		CALL CARD_EX_RESTRICTION(듀얼리스트,"퍼실리즘")
-		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直無")
-		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
-	ELSEIF ゾーン == "필드"
-		;モンスター状態での지속효과
-		CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
-	ENDIF
+	;포트리스状態での지속효과
+
+	CALL SET_TMP_EX_RST_CAT(듀얼리스트,"ファリシズム")
+;	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直無")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"直無")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+
 ELSEIF 종류 == 마함起動 || 종류 == フリー誘発
 	;마법面の磔효과
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59904,2)
@@ -230,8 +198,9 @@ ELSEIF 종류 == 마함起動 || 종류 == フリー誘発
 			CALL FULLRESET
 			CALL CARD_EROTICS_FIELD(듀얼리스트,"마함",カード추가先)
 			조교대상 = RESULT
+			PRINTFORML 조교대상:{조교대상}/RESULT:{RESULT}
 			IF RESULT != -1
-				CALL KOJO_SYMMETRIA_59904(듀얼리스트,元カード名,TALENT:조교대상:성별,조교대상,1)
+				CALL KOJO_SYMMETRIA_59904(듀얼리스트,元カード名,조교대상,1)
 			ELSE
 				PRINTFORMW %CALLNAME:MASTER%는 압도적인 "수컷력"으로 상대를 굴복시킨다！
 			ENDIF
@@ -243,7 +212,7 @@ ELSEIF 종류 == 발동強制誘発
 	;자신に카운터を乗せる
 	PRINTFORMW "어신체"에 카운터가 놓였다。
 	CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",1)
-ELSEIF 종류 == ターン終了時 && ゾーン == "마함"
+ELSEIF 종류 == ターン終了時
 	;마법面のEP효과
 	;セクハラを行う
 	CALL CARD_HOSTAGE_FORT_59904(듀얼리스트,종류,ゾーン,場所)
@@ -272,61 +241,13 @@ ELSEIF 종류 == ターン終了時 && ゾーン == "마함"
 				RESETCOLOR
 				PRINTFORML 
 				PRINTFORML %CALLNAME:MASTER%의 늠름한 "어신체"는、다음 봉납을 요구하는 듯이、「움찔❤움찔❤」하며 맥동하고있다。
-				CALL RESETCONDITION
+				CALL CARD_RECONSTRUCT(듀얼리스트,ゾーン,場所,159904)
+		
+				CALL FULLRESET
 				CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
 			ENDIF
 		ENDIF
 	ENDIF
-ELSEIF 종류 == ターン終了時 && ゾーン == "필드"
-	;モンスター面のEP효과
-	;セクハラを行う
-	CALL CARD_HOSTAGE_MONSTER_59904(듀얼리스트,종류,ゾーン,場所)
-	ダメージ量 = 2000
-	CALL CARD_DAMAGE_59904(듀얼리스트,종류,ゾーン,場所,ダメージ量)
-ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
-	;モンスター面の磔효과
-	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,159904,3)
-		IF RESULT == 0
-			;텍스트
-			PRINTFORMW 남자답게 우뚝 솟은"어신체"가、필드를 완전히 지배하고있다。
-			;カードを置く位置の情報を취득
-			カード추가先 = 現마함(듀얼리스트)
-			;상대のカードを置く
-			CALL FULLRESET
-			효과範囲상대필드 = 1
-			효과範囲상대묘지 = 1
-			효과条件표시 = 10
-			효과条件종류 = モン全般
-			효과条件除去種 = 強奪
-			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
-			;名前を「Pha슬레이브」に변경（処理上はこの表記）ついでに元々の名前も취득
-			選択カード_ID = GETVAR(@"%듀얼리스트%_마함:カード추가先")
-			TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
-			元カード名 = %RESULTS%
-			CALL FULLRESET
-			CALL CARD_SET_RENAME(듀얼리스트,"마함",カード추가先,"Pha슬레이브")
-			;텍스트
-			CALL FULLRESET
-			CALL CARD_EROTICS_FIELD(듀얼리스트,"마함",カード추가先)
-			조교대상 = RESULT
-			IF RESULT != -1
-				CALL KOJO_SYMMETRIA_59904(듀얼리스트,元カード名,TALENT:조교대상:성별,조교대상,1)
-			ELSE
-				PRINTFORMW %CALLNAME:MASTER%는 압도적인 "수컷력"으로 상대를 굴복시켰다！
-			ENDIF
-		ENDIF
-ELSEIF 종류 == 身代효과
-	;モンスター面の龍回避
-	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,559904)
-	IF RESULT == 0
-		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
-		RETURN 1
-	ENDIF
-	RETURN 0
-ELSEIF 종류 == 지속효과
-	;필드に出た時の書き換え処理？
-	SIF ゾーン == "필드"
-		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",159904,上書きモード)
 ENDIF
 
 
@@ -400,3 +321,128 @@ CALL CARD_ABLE(10,ターン終了時)
 PRINTL ④：엔드 페이즈에 발동할 수 있다。자신의 마법＆함정존에 존재하는 몬스터에게 축복을 부여한다。
 PRINTL 그 후、２０００ 데미지를 준다。
 CALL TEXT_DECORATION("D_HEART_2")
+
+
+
+@CARDCAN_159904(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,159904)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	;魔法面①の효과（EXデッキからの召喚制限・直接攻撃制限）
+	;モンスター面①の효과（대상耐性）
+	SIF !GROUPMATCH(ゾーン,"필드")
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時
+	;モンスター面④の효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	;モンスター面③の효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,1159904)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대묘지 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	;龍回避
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	SIF GROUPMATCH(破壊종류,"마함")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_159904(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 設定場所
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC カード추가先
+#DIM DYNAMIC 조교대상
+#DIMS DYNAMIC 元カード名
+
+
+IF 종류 == 지속효과
+	;モンスター状態での지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"対耐")
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",59904,上書きモード)
+ELSEIF 종류 == ターン終了時
+	;モンスター面のEP효과
+	;セクハラを行う
+	CALL CARD_HOSTAGE_MONSTER_59904(듀얼리스트,종류,ゾーン,場所)
+	ダメージ量 = 2000
+	CALL CARD_DAMAGE_59904(듀얼리스트,종류,ゾーン,場所,ダメージ量)
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	;モンスター面の磔효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,159904,3)
+		IF RESULT == 0
+			;テキスト
+			PRINTFORMW 늠늠하게 서있는"어신체"가、필드를 완전히 지배하고있다。
+			;カードを置く位置の情報を取得
+			カード추가先 = 現마함(듀얼리스트)
+			;상대のカードを置く
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과範囲상대묘지 = 1
+			효과条件표시 = 10
+			효과条件종류 = モン全般
+			효과条件除去種 = 強奪
+			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+			;名前を「Phaスレイヴ」に変更（処理上はこの表記）ついでに元々の名前も取得
+			選択カード_ID = GETVAR(@"%듀얼리스트%_마함:カード추가先")
+			TRYCALLFORM CARDNAME_{選択カード_ID},"名前"
+			元カード名 = %RESULTS%
+			CALL FULLRESET
+			CALL CARD_SET_RENAME(듀얼리스트,"마함",カード추가先,"Pha슬레이브")
+			;テキスト표시の분기
+			CALL FULLRESET
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"마함",カード추가先)
+			조교대상 = RESULT
+			IF RESULT != -1
+				CALL KOJO_SYMMETRIA_59904(듀얼리스트,元カード名,조교대상,1)
+			ELSE
+				PRINTFORMW %CALLNAME:MASTER%는 압도적인 "수컷력"으로 상대를 굴복시켰다！
+			ENDIF
+		ENDIF
+ELSEIF 종류 == 身代효과
+	;モンスター面の龍回避
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,159904)
+	IF RESULT == 0
+		CALL CARD_RECONSTRUCT(듀얼리스트,ゾーン,場所,59904)
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+

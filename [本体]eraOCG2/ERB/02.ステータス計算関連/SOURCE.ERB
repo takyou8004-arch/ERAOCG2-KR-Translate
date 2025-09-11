@@ -10,62 +10,64 @@
 SELECTCOM = TFLAG:SELECTCOM보존
 ;조교SELECTCOMの시간경과
 CALL TRACHECK_TIME
-
 ;-------------------------------------------------
 ;身体접촉の계속、解除
 ;-------------------------------------------------
 CALL TOUCH_SUCCESSION(TARGET)
 
-;카운터
-FOR カウンタ,1,CHARANUM
-	SIF TARGET:カウンタ <= 0
-		CONTINUE
-	캐릭터_ID = TARGET:カウンタ
-	CALL EVENT_COUNTER(캐릭터_ID,カウンタ)
-	IF TCVAR:캐릭터_ID:CT행동 == 61 && TALENT:캐릭터_ID:처녀 == 1
-		PRINTFORML %CALLNAME:캐릭터_ID%는 흥분해서, 처녀를 바치려고 하고 있다……。
-		CALL YN_CHOICE_STR("멈춘다","멈추지 않는다")
-		IF RESULT == 0
-			IF BASE:TARGET:만족 < 0
-				PRINTFORMW 필사적으로 타이르기는 했지만、 %CALLNAME:캐릭터_ID%는 단번에 자리에 앉았고、
-				PRINTFORMW 채워지는 쾌감에 흠뻑 빠져들다……。
-			ELSE
-				PRINTFORMW %CALLNAME:캐릭터_ID%는 일단 냉정함을 되찾고, 어떻게든 침착하게 대처했다……。
-				CFLAG:캐릭터_ID:현재냉정 = 1
-				CALL EVENT_COUNTER(캐릭터_ID,カウンタ)
+IF CALL_COMスキップ != 2
+	;카운터
+	FOR カウンタ,1,CHARANUM
+		SIF TARGET:カウンタ <= 0
+			CONTINUE
+		캐릭터_ID = TARGET:カウンタ
+		CALL EVENT_COUNTER(캐릭터_ID,カウンタ)
+		IF TCVAR:캐릭터_ID:CT행동 == 61 && TALENT:캐릭터_ID:처녀 == 1
+			PRINTFORML %CALLNAME:캐릭터_ID%는 흥분해서, 처녀를 바치려고 하고 있다……。
+			CALL YN_CHOICE_STR("멈춘다","멈추지 않는다")
+			IF RESULT == 0
+				IF BASE:TARGET:만족 < 0
+					PRINTFORMW 필사적으로 타이르기는 했지만、 %CALLNAME:캐릭터_ID%는 단번에 자리에 앉았고、
+					PRINTFORMW 채워지는 쾌감에 흠뻑 빠져들다……。
+				ELSE
+					PRINTFORMW %CALLNAME:캐릭터_ID%는 일단 냉정함을 되찾고, 어떻게든 침착하게 대처했다……。
+					CFLAG:캐릭터_ID:현재냉정 = 1
+					CALL EVENT_COUNTER(캐릭터_ID,カウンタ)
+				ENDIF
 			ENDIF
 		ENDIF
-	ENDIF
-	CALL EVENT_COUNTER_POSE(캐릭터_ID,カウンタ)
-	CALL EVENT_COUNTER_SOURCE(캐릭터_ID)
-NEXT
-CALL EVENT_COUNTER_COMBINATION
+		CALL EVENT_COUNTER_POSE(캐릭터_ID,カウンタ)
+		CALL EVENT_COUNTER_SOURCE(캐릭터_ID)
+	NEXT
+	CALL EVENT_COUNTER_COMBINATION
+	FOR 캐릭터_ID,0,CHARANUM
+		;성교플래그の설정
+		IF TEQUIP:캐릭터_ID:질 == 1
+			TEQUIP:캐릭터_ID:Ｖ섹스 = MASTER
+		ELSE
+			TEQUIP:캐릭터_ID:Ｖ섹스 = -1
+		ENDIF
+		IF TEQUIP:캐릭터_ID:애널 == 1
+			TEQUIP:캐릭터_ID:Ａ섹스 = MASTER
+		ELSE
+			TEQUIP:캐릭터_ID:Ａ섹스 = -1
+		ENDIF
+		
+		;역 레이프
+		SIF TEQUIP:캐릭터_ID:페니스 == 6
+			TEQUIP:MASTER:Ｖ섹스 = 캐릭터_ID
+		;逆애널
+		SIF TEQUIP:캐릭터_ID:페니스 == 7
+			TEQUIP:MASTER:Ａ섹스 = 캐릭터_ID
+		;체위リセット
+		SIF TEQUIP:캐릭터_ID:Ｖ섹스 < 0 && TEQUIP:캐릭터_ID:51 < 0
+			TEQUIP:캐릭터_ID:체위 = 0
+		;ついでに발기도の보존
+		CFLAG:캐릭터_ID:발기도 = BASE:캐릭터_ID:발기
+	NEXT
+ENDIF
 
-FOR 캐릭터_ID,0,CHARANUM
-	;성교플래그の설정
-	IF TEQUIP:캐릭터_ID:질 == 1
-		TEQUIP:캐릭터_ID:Ｖ섹스 = MASTER
-	ELSE
-		TEQUIP:캐릭터_ID:Ｖ섹스 = -1
-	ENDIF
-	IF TEQUIP:캐릭터_ID:애널 == 1
-		TEQUIP:캐릭터_ID:Ａ섹스 = MASTER
-	ELSE
-		TEQUIP:캐릭터_ID:Ａ섹스 = -1
-	ENDIF
-	
-	;역 레이프
-	SIF TEQUIP:캐릭터_ID:페니스 == 6
-		TEQUIP:MASTER:Ｖ섹스 = 캐릭터_ID
-	;逆애널
-	SIF TEQUIP:캐릭터_ID:페니스 == 7
-		TEQUIP:MASTER:Ａ섹스 = 캐릭터_ID
-	;체위リセット
-	SIF TEQUIP:캐릭터_ID:Ｖ섹스 < 0 && TEQUIP:캐릭터_ID:51 < 0
-		TEQUIP:캐릭터_ID:체위 = 0
-	;ついでに발기도の보존
-	CFLAG:캐릭터_ID:발기도 = BASE:캐릭터_ID:발기
-NEXT
+
 ;-------------------------------------------------
 ;@COMの呼び出し
 ;-------------------------------------------------
@@ -73,12 +75,10 @@ VARSET RESULT
 IF CALL_COMスキップ == 0 
 	CALL CALL_COM(TARGET)
 	SIF !RESULT
-		GOTO SKIP
+		GOTO INPUT_SKIP
 ENDIF
 
 FOR 캐릭터_ID,0,CHARANUM
-
-
 	;装着系は後で考える
 	;-------------------------------------------------
 	;중독充足のチェック
@@ -109,7 +109,6 @@ IF !TALENT:TARGET:동정 && HAS_PENIS(TARGET)
 			CFLAG:TARGET:동정버린상대 = MASTER
 	ENDSELECT
 ENDIF
-
 FOR 캐릭터_ID,0,CHARANUM
 	TCVAR:캐릭터_ID:150 = 0
 	;装着系は後で考える
@@ -134,13 +133,13 @@ FOR 캐릭터_ID,0,CHARANUM
 	CALL EXP_GOT_CHECK(캐릭터_ID)
 NEXT
 
+
 ;사정周りの플래그설정
 CALL SAMEN_SHOOT_FLAGSETTING
 
-
 SIF CALL_COMスキップ == 2
 	GOTO FULLSKIP
-$SKIP
+$INPUT_SKIP
 ;-------------------------------------------------
 ;조교구상
 ;-------------------------------------------------
@@ -153,15 +152,7 @@ IF TARGET
 			CONTINUE
 	NEXT
 ENDIF
-
-;1216 = 2300
-;832 = 1500
-;15:23
-;1024 = 2000
-;500  764
-
 CALL IMAGE_PRODUCTION(TARGET)
-
 
 $FULLSKIP
 ;-------------------------------------------------
@@ -188,6 +179,7 @@ FOR 캐릭터_ID,0,CHARANUM
 NEXT
 SIF UP確認
 	WAIT
+
 ;-------------------------------------------------
 ;ABLUP
 ;-------------------------------------------------
@@ -251,7 +243,7 @@ CALL JUJUN_UP_CHECK(TARGET)
 ;-------------------------------------------------
 CALL SHOW_SOURCE(TARGET)
 
-;PRINTFORML PALAMCNG_C：Cデス
+
 
 ;-------------------------------------------------
 ;数値変動の표시
@@ -315,6 +307,7 @@ NEXT
 FOR ソース値, 0, 100
 	CVARSET TCVAR, 500 + ソース値, 0
 NEXT
+
 ;-------------------------------------------------
 ;조교ソースの표시（DOWNもここで）
 ;-------------------------------------------------

@@ -37,6 +37,8 @@ SELECTCASE 参照先
 		RETURN 0
 	CASE "성별"
 		RETURN 牝性
+	CASE "추가日"
+		RETURN 250908
 ENDSELECT
 RETURN 0
 
@@ -56,7 +58,7 @@ CALLFORM CARD_ABLE(3,필드起動,フリー誘発)
 PRINTL ③：자신 / 상대턴에、자신 필드에 "어신체" 카드가 존재하는 경우、
 PRINTL 필드의 이 카드를 묘지로 보내고 발동할 수 있다。
 PRINTL 상대는 이하의 효과에서 １를 고른다。그 후、그 효과를 적용한다。
-PRINTL ●자신은 덱에서 함정 카드를 패에 넣는다。
+PRINTL ●상대의 엑스트라 덱의 카드를 무작위로 2장 제외한다。
 PRINTL ●상대와 딥 키스를 한다。그 후１００ 데미지를 주고、"어신체" 카드에 신앙 카운터를 １개 놓는다。
 CALL TEXT_DECORATION("ROGUE")
 
@@ -148,6 +150,7 @@ ENDIF
 #DIM DYNAMIC 효과분기
 #DIM DYNAMIC 조교대상
 #DIM DYNAMIC 조교효과
+#DIM DYNAMIC 상대エクストラ枚数
 
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
@@ -206,25 +209,29 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 			;RESULTが1なら確率によってボーナス효과が選択された
 			;RESULTが2ならダメージ的にボーナス효과を選択するしかなかった상황
 			;それぞれに違うメッセージを用意する予定があったが、今のところは結果は同じ
-			;함정カードを손패に加える
+			;EXモンスターを제외
 			CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"이스크",효과분기)
-			CALL FULLRESET
-			효과範囲덱 = 1
-			효과条件종류 = 함정全般
-			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)			
+			FOR カウンタ,0,2
+				CALL FULLRESET
+				상대エクストラ枚数 = 現EX山札数(対面者)
+				SIF 상대エクストラ枚数 > 0
+					CALL CARD_DISPOSE(対面者,"EXデッキ",RAND:상대エクストラ枚数,제외行き)	
+			NEXT		
 		ELSEIF 효과분기 == 3
 			;RESULTが3なら使途が居るので両方の효과を適用させる
 			;モンスターが個別で持つボーナス효과の処理
-			;함정カードを손패に加える
-			CALL FULLRESET
-			효과範囲덱 = 1
-			효과条件종류 = 함정全般
-			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)	
+			;EXモンスターを제외
+			CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"이스크",효과분기)
+			FOR カウンタ,0,2
+				CALL FULLRESET
+				상대エクストラ枚数 = 現EX山札数(対面者)
+				SIF 상대エクストラ枚数 > 0
+					CALL CARD_DISPOSE(対面者,"EXデッキ",RAND:상대エクストラ枚数,제외行き)	
+			NEXT
 			;奉仕処理
 			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
 			IF RESULT != -1
 				조교대상 = RESULT
-				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"이스크",효과분기)
 				CALL EROTIC_MOVE("딥키스",조교대상,MASTER,조교효과)
 			ENDIF
 			;ダメージを与え카운터を置く효과
@@ -233,10 +240,10 @@ ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
 		ELSE
 			;それ以外ならダメージを与える효과が選択されている。
 			;奉仕処理
+			CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"이스크",효과분기)
 			CALL CARD_EROTICS(상대プレイヤー,듀얼리스트)
 			IF RESULT != -1
 				조교대상 = RESULT
-				CALL KOJO_SYMMETRIA_MONSTER(듀얼리스트,ゾーン,"이스크",효과분기)
 				CALL EROTIC_MOVE("딥키스",조교대상,MASTER,조교효과)
 			ENDIF
 			;ダメージを与え카운터を置く효과の処理
