@@ -1,0 +1,150 @@
+﻿@CARDNAME_71069,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 싱크로 펠로우즈
+	CASE "略称"
+		RESULTS = Syn 펠로우즈
+	CASE "カテゴリ"
+		RESULTS:0 = 싱크로
+		RESULTS:1 = 파워 오브 펠로우즈
+		;「정크 워리어」のカード名が記されたモンスター
+ENDSELECT
+
+
+@CARD_71069(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "レア度"
+		RETURN ULR
+	CASE "추가日"
+		RETURN 250906
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71069(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：덱から以下のモンスターを１体ずつ손패に加える。その後、자신の손패を１枚選んで捨てる。
+PRINTL ●「정크 싱크론」
+PRINTL ●「파워 오브 펠로우즈」モンスター、または「스타더스트」モンスター
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：묘지のこのカードを제외して발동できる。
+PRINTL 자신フィールドのSモンスター１体のレベルを１つ下げる。
+PRINTL さらにこのターン、자신は通常소환に加えて１度だけ、자신メインフェイズに「싱크론」モンスター１体を소환できる。
+
+
+@CARDCAN_71069(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71069)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,71069)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件名前 = 정크 싱크론
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ:0 = 파워 오브 펠로우즈
+	효과条件カテゴリ:1 = 스타더스트
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,71069)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = 싱크로
+	CALLFORM 효과条件レベル_ADV(2,"以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 短紋章起動
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_71069(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71069,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件名前 = 정크 싱크론
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과条件カテゴリ:0 = 파워 오브 펠로우즈
+			효과条件カテゴリ:1 = 스타더스트
+			효과条件종류 = モン全般
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_ADD_GY_BASIC(듀얼리스트,"손패",ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71069,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 싱크로
+		CALLFORM 효과条件レベル_ADV(2,"以上")
+		CALL CARD_GRANT_ADV(듀얼리스트,ゾーン,場所,"永星",-1,1)
+		CALL CARD_RESERV(듀얼리스트,71069,短紋章予約)
+	ENDIF
+ELSEIF 종류 == 短紋章起動
+	CALL FULLRESET
+	효과条件カテゴリ = 싱크론
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"召可")
+ENDIF
+

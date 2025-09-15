@@ -1,0 +1,121 @@
+﻿@CARDNAME_23040,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 풀스피드 워리어
+	CASE "略称"
+		RESULTS = 스피드War
+	CASE "カテゴリ"
+		RESULTS:0 = 워리어
+		RESULTS:1 = 파워 오브 펠로우즈
+		;「정크 워리어」のカード名が記されたモンスター
+ENDSELECT
+
+
+@CARD_23040(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 900
+	CASE "守備力"
+		RETURN 400
+	CASE "추가日"
+		RETURN 250906
+	CASE "レア度"
+		RETURN ULR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_23040(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：このカードが소환・특수소환した場合に발동できる。
+PRINTL 「정크 싱크론」１体または「파워 오브 펠로우즈」마법・함정カード１枚を덱から손패に加える。
+CALL CARD_ABLE(0,攻守変動)
+PRINTL ②：このカードがモンスターゾーンに存在する限り、
+PRINTL 자신フィールドの以下のモンスターの攻撃力は、자신バトルフェイズの間だけ９００アップする。
+PRINTL ●「파워 오브 펠로우즈」モンスター
+PRINTL ●元々のカード名に「워리어」を含むSモンスター
+
+
+@CARDCAN_23040(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23040)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,23040)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件スーパー名前 = 정크 싱크론
+	효과条件カテゴリ = 파워 오브 펠로우즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_23040(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択レベル
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23040,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件スーパー名前 = 정크 싱크론
+		효과条件カテゴリ = 파워 오브 펠로우즈
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件スーパーカテゴリ = 파워 오브 펠로우즈
+	효과条件종류 = 싱크로
+	효과条件カテゴリ = 워리어
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,900)
+ENDIF
+
+

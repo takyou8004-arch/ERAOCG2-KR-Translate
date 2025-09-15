@@ -54,6 +54,10 @@ ENDIF
 
 VARSET 現在最大攻撃力, -1
 VARSET 選択カード, -1
+VARSET 魔選択カード, -1
+VARSET 対選択カード, -1
+VARSET 対魔選択カード, -1
+
 VARSET 他参照選択カード, -1
 VARSET 他参照選択カードID,-1
 
@@ -91,7 +95,7 @@ SELECTCASE 효과範囲
 			NEXT
 		ENDIF
 		IF 효과範囲마함 == 1
-			VARSET 魔選択カード, -1
+
 			FOR カウンタ,0,5
 				CALL CARD_REMOVAL_ABLE(듀얼리스트,듀얼리스트,"全体",カウンタ,除去種,カードID,1)
 				SIF RESULT != 1
@@ -122,12 +126,14 @@ SELECTCASE 효과範囲
 		FOR カウンタ,0,5
 			SIF (選択カード:カウンタ) == -1
 				CONTINUE
+;			PRINTFORML ココ通過しました（　）：{選択カード:カウンタ}
 			CALL CARD_REMOVAL_AFTERMATH(듀얼리스트,듀얼리스트,選択カード:カウンタ,除去種,カードID,修正値)
 			除去成功数 ++
 		NEXT
 		FOR カウンタ,0,5
 			SIF (魔選択カード:カウンタ) == -1
 				CONTINUE
+;			PRINTFORML ココ通過しました（決魔）：{魔選択カード:カウンタ}
 			CALL CARD_REMOVAL_AFTERMATH(듀얼리스트,듀얼리스트,魔選択カード:カウンタ,除去種,カードID,修正値,1)
 			除去成功数 ++
 		NEXT
@@ -135,12 +141,14 @@ SELECTCASE 효과範囲
 		FOR カウンタ,0,5
 			SIF (対選択カード:カウンタ) == -1
 				CONTINUE
+;			PRINTFORML ココ通過しました（対）：{対選択カード:カウンタ}
 			CALL CARD_REMOVAL_AFTERMATH(対面者,듀얼리스트,対選択カード:カウンタ,除去種,カードID,修正値)
 			除去成功数 ++
 		NEXT
 		FOR カウンタ,0,5
 			SIF (対魔選択カード:カウンタ) == -1
 				CONTINUE
+;			PRINTFORML ココ通過しました（対魔）：{対魔選択カード:カウンタ}
 			CALL CARD_REMOVAL_AFTERMATH(対面者,듀얼리스트,対魔選択カード:カウンタ,除去種,カードID,修正値,1)
 			除去成功数 ++
 		NEXT
@@ -156,6 +164,121 @@ SELECTCASE 효과範囲
 			NEXT
 		ENDIF
 		
+
+
+		IF 효과範囲마함 == 1
+			FOR カウンタ,0,5
+				IF 효과条件他所 > 0
+					SIF カウンタ == 場所
+						CONTINUE
+				ENDIF
+				IF 효과条件複数 > 0
+					SIF MATCH(효과条件選択済, カウンタ + 10)
+						CONTINUE
+				ENDIF
+				CALL CARD_REMOVAL_ABLE(듀얼리스트,듀얼리스트,"単体",カウンタ,除去種,カードID,1)
+				IF RESULT == 0 
+					CONTINUE
+				ELSEIF RESULT == 2 && 듀얼리스트 == "상대"
+					CONTINUE
+				ELSEIF RESULT == 1
+					条件달성 = 1
+				ENDIF
+				IF 듀얼리스트 == "자신"
+					VARSET 대상カードID
+					대상カードID = GETVAR(@"%듀얼리스트%_마함:カウンタ")
+					CALL CARD_SETCOLOR(듀얼리스트,"마함",カウンタ)
+					CALLFORM CARD_KANPRINT("마함",カウンタ + 10,대상カードID)
+				ELSEIF 듀얼리스트 == "상대"
+					選択カード = カウンタ + 10
+				ENDIF
+			NEXT
+		ENDIF
+		IF 효과範囲상대마함 == 1
+			FOR カウンタ,0,5
+				IF 효과条件複数 > 0
+					SIF MATCH(효과条件選択済, カウンタ + 2010)
+						CONTINUE
+				ENDIF
+				CALL CARD_REMOVAL_ABLE(対面者,듀얼리스트,"単体",カウンタ,除去種,カードID,1)
+				IF RESULT == 0 
+					CONTINUE
+				ELSEIF RESULT == 2 && 듀얼리스트 == "상대"
+					CONTINUE
+				ELSEIF RESULT == 1
+					条件달성 = 1
+				ENDIF
+				IF 듀얼리스트 == "자신"
+					VARSET 대상カードID
+					VARSET 裏側플래그
+					SIF GETVAR(@"%対面者%_魔_表:カウンタ") != 1
+						裏側플래그 = 3
+					대상カードID = GETVAR(@"%対面者%_마함:カウンタ")
+					IF 対面者 != 듀얼리스트
+						SETCOLOR C_GRAY
+						IF GETVAR(@"%対面者%_魔_破耐:カウンタ") >= 1 && 除去種 == "묘지"
+							CALLFORM CARD_KANPRINT("상대마함",カウンタ + 2010,대상カードID,1,裏側플래그)
+						ELSEIF GETVAR(@"%対面者%_魔_対耐:カウンタ") >= 1
+							CALLFORM CARD_KANPRINT("상대마함",カウンタ + 2010,대상カードID,2,裏側플래그)
+						ELSE
+							RESETCOLOR
+							CALL CARD_SETCOLOR(対面者,"마함",カウンタ,裏側플래그)
+							CALLFORM CARD_KANPRINT("상대마함",カウンタ + 2010,대상カードID,0,裏側플래그)
+						ENDIF
+					ELSE
+						CALL CARD_SETCOLOR(対面者,"마함",カウンタ)
+						CALLFORM CARD_KANPRINT("마함",カウンタ + 2010,대상カードID)
+					ENDIF
+					RESETCOLOR
+				ELSEIF 듀얼리스트 == "상대"
+					TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_마함:カウンタ")}, "名前"
+					選択カード = カウンタ + 2010
+				ENDIF
+			NEXT
+		ENDIF
+				IF 효과範囲묘지 == 1
+			FOR カウンタ,0,紙束最大値
+				CALL CARD_REMOVAL_ABLE(듀얼리스트,듀얼리스트,"単体",カウンタ,除去種,カードID,2)
+				IF RESULT == 0 
+					CONTINUE
+				ELSEIF RESULT == 1
+					条件달성 = 1
+				ENDIF
+				IF 듀얼리스트 == "자신"
+					VARSET 대상カードID
+					대상カードID = GETVAR(@"%듀얼리스트%_묘지:カウンタ")
+					CALL CARD_SETCOLOR(듀얼리스트,"묘지",カウンタ)
+					CALLFORM CARD_KANPRINT("묘지",カウンタ + 200,대상カードID)
+				ELSEIF 듀얼리스트 == "상대"
+					IF 選択カード == 9999
+						選択カード = カウンタ + 200
+					ENDIF
+				ENDIF
+			NEXT
+		ENDIF
+		IF 효과範囲상대묘지 == 1
+			FOR カウンタ,0,紙束最大値
+				CALL CARD_REMOVAL_ABLE(対面者,듀얼리스트,"単体",カウンタ,除去種,カードID,2)
+				IF RESULT == 0 
+					CONTINUE
+				ELSEIF RESULT == 1
+					条件달성 = 1
+				ENDIF
+				IF 듀얼리스트 == "자신"
+					VARSET 대상カードID
+					대상カードID = GETVAR(@"%対面者%_묘지:カウンタ")
+					CALL CARD_SETCOLOR(対面者,"묘지",カウンタ)
+					CALLFORM CARD_KANPRINT("상대묘지",カウンタ + 2200,대상カードID)
+				ELSEIF 듀얼리스트 == "상대"
+					IF 選択カード == 9999
+						選択カード = カウンタ + 2200
+					ENDIF
+				ENDIF
+			NEXT
+		ENDIF
+
+
+
 		IF 효과範囲필드 == 1
 			FOR カウンタ,0,5
 				IF 효과条件他所 > 0
@@ -242,124 +365,6 @@ SELECTCASE 효과範囲
 				ENDIF
 			NEXT
 		ENDIF
-
-		IF 효과範囲마함 == 1
-			FOR カウンタ,0,5
-				IF 효과条件他所 > 0
-					SIF カウンタ == 場所
-						CONTINUE
-				ENDIF
-				IF 효과条件複数 > 0
-					SIF MATCH(효과条件選択済, カウンタ + 10)
-						CONTINUE
-				ENDIF
-				CALL CARD_REMOVAL_ABLE(듀얼리스트,듀얼리스트,"単体",カウンタ,除去種,カードID,1)
-				IF RESULT == 0 
-					CONTINUE
-				ELSEIF RESULT == 2 && 듀얼리스트 == "상대"
-					CONTINUE
-				ELSEIF RESULT == 1
-					条件달성 = 1
-				ENDIF
-				IF 듀얼리스트 == "자신"
-					VARSET 대상カードID
-					대상カードID = GETVAR(@"%듀얼리스트%_마함:カウンタ")
-					CALL CARD_SETCOLOR(듀얼리스트,"마함",カウンタ)
-					CALLFORM CARD_KANPRINT("마함",カウンタ + 10,대상カードID)
-				ELSEIF 듀얼리스트 == "상대"
-					IF 選択カード == 9999
-						選択カード = カウンタ + 10
-					ENDIF
-				ENDIF
-			NEXT
-		ENDIF
-
-		IF 효과範囲상대마함 == 1
-			FOR カウンタ,0,5
-				IF 효과条件複数 > 0
-					SIF MATCH(효과条件選択済, カウンタ + 2010)
-						CONTINUE
-				ENDIF
-
-				CALL CARD_REMOVAL_ABLE(対面者,듀얼리스트,"単体",カウンタ,除去種,カードID,1)
-				IF RESULT == 0 
-					CONTINUE
-				ELSEIF RESULT == 2 && 듀얼리스트 == "상대"
-					CONTINUE
-				ELSEIF RESULT == 1
-					条件달성 = 1
-				ENDIF
-				IF 듀얼리스트 == "자신"
-					VARSET 대상カードID
-					VARSET 裏側플래그
-					SIF GETVAR(@"%対面者%_魔_表:カウンタ") != 1
-						裏側플래그 = 3
-					대상カードID = GETVAR(@"%対面者%_마함:カウンタ")
-					IF 対面者 != 듀얼리스트
-						SETCOLOR C_GRAY
-						IF GETVAR(@"%対面者%_魔_破耐:カウンタ") >= 1 && 除去種 == "묘지"
-							CALLFORM CARD_KANPRINT("상대마함",カウンタ + 2010,대상カードID,1,裏側플래그)
-						ELSEIF GETVAR(@"%対面者%_魔_対耐:カウンタ") >= 1
-							CALLFORM CARD_KANPRINT("상대마함",カウンタ + 2010,대상カードID,2,裏側플래그)
-						ELSE
-							RESETCOLOR
-							CALL CARD_SETCOLOR(対面者,"마함",カウンタ,裏側플래그)
-							CALLFORM CARD_KANPRINT("상대마함",カウンタ + 2010,대상カードID,0,裏側플래그)
-						ENDIF
-					ELSE
-						CALL CARD_SETCOLOR(対面者,"마함",カウンタ)
-						CALLFORM CARD_KANPRINT("마함",カウンタ + 2010,대상カードID)
-					ENDIF
-					RESETCOLOR
-				ELSEIF 듀얼리스트 == "상대"
-					IF 選択カード == 9999
-						TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_마함:カウンタ")}, "名前"
-						選択カード = カウンタ + 2010
-					ENDIF
-				ENDIF
-			NEXT
-		ENDIF
-				IF 효과範囲묘지 == 1
-			FOR カウンタ,0,紙束最大値
-				CALL CARD_REMOVAL_ABLE(듀얼리스트,듀얼리스트,"単体",カウンタ,除去種,カードID,2)
-				IF RESULT == 0 
-					CONTINUE
-				ELSEIF RESULT == 1
-					条件달성 = 1
-				ENDIF
-				IF 듀얼리스트 == "자신"
-					VARSET 대상カードID
-					대상カードID = GETVAR(@"%듀얼리스트%_묘지:カウンタ")
-					CALL CARD_SETCOLOR(듀얼리스트,"묘지",カウンタ)
-					CALLFORM CARD_KANPRINT("묘지",カウンタ + 200,대상カードID)
-				ELSEIF 듀얼리스트 == "상대"
-					IF 選択カード == 9999
-						選択カード = カウンタ + 200
-					ENDIF
-				ENDIF
-			NEXT
-		ENDIF
-		IF 효과範囲상대묘지 == 1
-			FOR カウンタ,0,紙束最大値
-				CALL CARD_REMOVAL_ABLE(対面者,듀얼리스트,"単体",カウンタ,除去種,カードID,2)
-				IF RESULT == 0 
-					CONTINUE
-				ELSEIF RESULT == 1
-					条件달성 = 1
-				ENDIF
-				IF 듀얼리스트 == "자신"
-					VARSET 대상カードID
-					대상カードID = GETVAR(@"%対面者%_묘지:カウンタ")
-					CALL CARD_SETCOLOR(対面者,"묘지",カウンタ)
-					CALLFORM CARD_KANPRINT("상대묘지",カウンタ + 2200,대상カードID)
-				ELSEIF 듀얼리스트 == "상대"
-					IF 選択カード == 9999
-						選択カード = カウンタ + 2200
-					ENDIF
-				ENDIF
-			NEXT
-		ENDIF
-
 
 		RESETCOLOR
 		IF 듀얼리스트 == "자신"

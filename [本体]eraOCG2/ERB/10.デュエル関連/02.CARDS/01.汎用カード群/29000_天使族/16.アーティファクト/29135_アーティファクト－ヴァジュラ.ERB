@@ -1,0 +1,170 @@
+﻿@CARDNAME_29135,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 아티팩트－바쥬라
+	CASE "略称"
+		RESULTS = ＡＦ바쥬라
+	CASE "カテゴリ"
+		RESULTS:0 = 아티팩트
+ENDSELECT
+
+
+@CARD_29135(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1900
+	CASE "추가日"
+		RETURN 250912
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29135(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①：자신メインフェイズに발동できる。
+PRINTL 손패のこのカードを자신の마법＆함정ゾーンにセットする。
+PRINTL その後、자신フィールドに裏側표시カードが２枚以上存在する場合、
+PRINTL 덱から「아티팩트」마법カード１枚を손패に加えることができる。
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②：마법＆함정ゾーンにセットされたこのカードが상대ターンに破壊され묘지へ送られた場合に발동できる。
+PRINTL このカードを특수소환する。
+CALLFORM CARD_ABLE(0,특수소환時)
+PRINTL ③：このカードが상대ターンに특수소환した場合に발동できる。
+PRINTL 자신の마법＆함정ゾーンのカードを全て破壊する。
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ④：상대モンスターの攻撃宣言時に발동できる。
+PRINTL このカードを손패から특수소환する。
+
+
+@CARDSUMMON_AA_29135
+
+
+@CARDCAN_29135(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29135)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦破壊→묘지
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") <= 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,29135,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	SIF 묘지送り종류 != "破壊"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) < 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,29135,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29135(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29135)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き,1)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件표시 = 裏側표시
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT >= 2
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 아티팩트
+			효과条件종류 = 마법全般
+			효과条件任意 = 1
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29135)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前 = 아티팩트－바쥬라
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29135)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		CALL CARD_REMOVAL_ADV(듀얼리스트,"全体除去",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29135)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+
+

@@ -1,0 +1,164 @@
+@CARDNAME_61911,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 창조의 성각인
+	CASE "略称"
+		RESULTS = 창조의 성각인
+	CASE "カテゴリ"
+		RESULTS:0 = 성각
+ENDSELECT
+
+
+@CARD_61911(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250914
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_61911(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과は１ターンに１度、いずれか１つしか使用できない。
+CALLFORM CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①：자신フィールドの드래곤족Ｘモンスター１体を대상として발동できる。
+PRINTL その자신のモンスターとは元々のカード名が異なる「성각」Ｘモンスター１体を、
+PRINTL 대상のモンスターの上に重ねてＸ소환扱いとしてＥＸ덱から특수소환する。
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ②：묘지のこのカードを제외し、자신の묘지の「성각」モンスター１体を대상として발동できる。
+PRINTL そのモンスターを守備표시で특수소환する。
+
+@CARDCAN_61911(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,61911)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,61911)
+		RETURN 0
+
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	CALL CARD_EX_CHECK(듀얼리스트,0)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 드래곤족
+	효과条件종류 = 엑시즈
+	효과条件重ねてＸ = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 성각
+	효과条件종류 = 엑시즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,61911)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 성각
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_61911(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 설정レベル
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 選択カードB
+#DIMS DYNAMIC 対面者
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61911,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종족 = 드래곤족
+		효과条件종류 = 엑시즈
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF 選択カード != 9999
+			選択カード = RESULT
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:選択カード")},"名前"
+			選択カード名前 = %RESULTS%
+	
+			CALL FULLRESET
+			효과条件カテゴリ = 성각
+			효과条件종류 = 엑시즈
+			효과条件固名前 = %選択カード名前%
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			選択カードB = RESULT
+			;戻る
+			IF 選択カードB != 9999
+				TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カードB}")}(듀얼리스트,選択カードB)
+				CALL RESETCONDITION_MAT(1)
+				代替素材数 = 1
+				重ねてＸ = 1
+				素材条件固定 = 選択カード
+				TRYCALLFORM XYZSUMMON(듀얼리스트,選択カードB)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,61911,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 성각
+		효과条件종류 = モン全般
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+	ENDIF
+ENDIF
+

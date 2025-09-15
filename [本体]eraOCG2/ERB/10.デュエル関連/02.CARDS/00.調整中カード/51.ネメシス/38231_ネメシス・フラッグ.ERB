@@ -1,0 +1,151 @@
+@CARDNAME_38231,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 네메시스 플래그
+	CASE "略称"
+		RESULTS = Nm플래그
+	CASE "カテゴリ"
+		RESULTS:0 = 네메시스
+ENDSELECT
+
+@CARD_38231(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1100
+	CASE "守備力"
+		RETURN 200
+	CASE "성별"
+		RETURN 無性
+	CASE "추가日"
+		RETURN 250814
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_38231(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：「네메시스 플래그」以外の제외されている자신のモンスター１体を대상として발동できる。
+PRINTL このカードを손패から특수소환し、대상のモンスターを덱に戻す。
+CALL CARD_ABLE(2,필드起動)
+PRINTL ②：자신メインフェイズに발동できる。
+PRINTL 덱から「네메시스 플래그」以外の「네메시스」モンスター１体を손패に加える。
+
+@CARDCAN_38231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38231)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,38231)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲제외 = 1
+	효과条件固名前 = 네메시스 플래그
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,38231,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_2(듀얼리스트,38231)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 네메시스
+	효과条件固名前 = 네메시스 플래그
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_38231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 選択カード数
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+#DIM DYNAMIC 選択효과
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38231,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲제외 = 1
+		효과条件固名前 = 네메시스 플래그
+		효과条件종류 = モン全般
+		효과条件行先플래그 = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38231,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件固名前 = 네메시스 플래그
+		효과条件カテゴリ = 네메시스
+		효과条件종류 = モン全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF

@@ -1,0 +1,220 @@
+﻿@CARDNAME_54515,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 아티팩트－듀란달
+	CASE "略称"
+		RESULTS = ＡＦ듀란달
+	CASE "カテゴリ"
+		RESULTS:0 = 아티팩트
+ENDSELECT
+
+
+@CARD_54515(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 2100
+	CASE "추가日"
+		RETURN 250912
+ENDSELECT
+
+RETURN 0
+@CARDSUMMON_54515(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件レベル = 5
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,54515) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_54515(종류)
+#DIM DYNAMIC 종류
+
+PRINTL レベル５モンスター×２
+PRINTL このカード名の②の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,효과後誘発)
+PRINTL ①：상대ターンに、자신フィールドに「아티팩트」モンスターが특수소환された場合に발동できる。
+PRINTL 자신フィールドのモンスターを素材としてＥＸ덱のこのカードをＸ소환する。
+CALLFORM CARD_ABLE(2,EX소환時)
+PRINTL ②：このカードのＸ소환時に발동できる。
+PRINTL 덱から「아티팩트」カード１枚を자신の마법＆ゾーンにセットする。
+PRINTL ③：자신・상대ターンに１度、以下の효과から１つを選択して발동できる。
+CALLFORM CARD_ABLE(10,발동誘発)
+PRINTL ●상대の손패・フィールドのカードの효과が발동した時、このカードのＸ素材を１つ取り除いて발동できる。
+PRINTL 　その효과は「상대フィールドの마법・함정カード１枚を選んで破壊する」となる。
+CALLFORM CARD_ABLE(10,필드起動 ,フリー誘発)
+PRINTL ●このカードのＸ素材を１つ取り除いて발동できる。
+PRINTL 　お互いは손패を全て덱に戻してシャッフルする。
+PRINTL 　その後、お互いはそれぞれ自身が덱に戻した数だけ덱からドローする。
+
+@CARDCAN_54515(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54515)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF ゾーン != "EX덱"
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL CARD_EX_CHECK(듀얼리스트,5451)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 아티팩트
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == EX소환時
+	SIF 발동済_2(듀얼리스트,54515)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 아티팩트
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF 듀얼리스트 != "자신"
+		RETURN
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_Ｘ:場所") <= -1
+		RETURN 0
+	SIF 마함数(듀얼리스트) < 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54515(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC ドロー枚数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54515)
+	IF RESULT == 0
+		TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:場所")}(듀얼리스트,場所)
+		CALL XYZSUMMON(듀얼리스트, 場所)
+	ENDIF
+
+ELSEIF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54515,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 아티팩트
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54515,10,X消費1)
+	IF RESULT == 0
+		CALL URARA_CHANCE(듀얼리스트,処理中_효과ID,"雑多")
+		IF RESULT == 0
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") == -1
+					CONTINUE
+				CALL CARD_DISPOSE(듀얼리스트,"손패",カウンタ,덱行き)
+				ドロー枚数 ++
+			NEXT
+			CALL CARDDRAW_BASIC(듀얼리스트,ドロー枚数,2)
+
+			VARSET ドロー枚数
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"%対面者%_손패:カウンタ") == -1
+					CONTINUE
+				CALL CARD_DISPOSE(対面者,"손패",カウンタ)
+				ドロー枚数 ++
+			NEXT
+			CALL CARDDRAW_BASIC(対面者,ドロー枚数,2)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54515,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대마함 = 1
+		CALL CARD_REMOVAL_ADV(対面者,"単体除去",場所,"묘지")
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

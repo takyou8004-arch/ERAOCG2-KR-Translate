@@ -1,0 +1,118 @@
+@CARDNAME_73875,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 네메시스 아드라스테아
+	CASE "略称"
+		RESULTS = 성의의 집행자
+	CASE "カテゴリ"
+		RESULTS:0 = 네메시스
+ENDSELECT
+
+@CARD_73875(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 速攻마법
+	CASE "추가日"
+		RETURN 250814
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_73875(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_73875(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名のカードは１ターンに１枚しか발동できない。
+CALL CARD_ABLE(1,마함起動,손패起動,フリー誘発)
+PRINTL ①：자신の묘지のモンスター及び제외されている자신のモンスターの中から、
+PRINTL 「네메시스」モンスター１体を대상として발동できる。
+PRINTL そのモンスターを특수소환する。
+PRINTL この효과で특수소환した元々のレベルが１１以上のモンスターは、このターン효과を발동できない。
+
+@CARDCAN_73875(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73875)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	IF ゾーン == "손패"
+		SIF ターンプレイヤー != 듀얼리스트
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	SIF 발동済_1(듀얼리스트,73875)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件カテゴリ = 네메시스
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_73875(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 캐릭터ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73875,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件カテゴリ = 네메시스
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			TRYCALLFORM CARD_{RESULT:1}("レベル")
+			IF RESULT >= 11
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"発無",1)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

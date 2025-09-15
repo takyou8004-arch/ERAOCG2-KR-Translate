@@ -1,0 +1,159 @@
+﻿@CARDNAME_29130,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 아티팩트－모랄타
+	CASE "略称"
+		RESULTS = ＡＦ모랄타
+	CASE "カテゴリ"
+		RESULTS:0 = 아티팩트
+ENDSELECT
+
+
+@CARD_29130(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 2100
+	CASE "守備力"
+		RETURN 1400
+	CASE "추가日"
+		RETURN 250912
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29130(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①：자신メインフェイズに발동できる。
+PRINTL 손패のこのカードを자신の마법＆함정ゾーンにセットする。
+PRINTL その後、자신フィールドに裏側표시カードが２枚以上存在する場合、
+PRINTL 덱からこのカード名以外の「아티팩트」モンスター１体を손패に加えることができる。
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②：마법＆함정ゾーンにセットされたこのカードが상대ターンに破壊され묘지へ送られた場合に발동できる。
+PRINTL このカードを특수소환する。
+CALLFORM CARD_ABLE(0,특수소환時)
+PRINTL ③：このカードが상대ターンに특수소환した場合に발동できる。
+PRINTL 상대フィールドの表側표시カード１枚を破壊する。
+
+
+@CARDSUMMON_AA_29130
+
+
+@CARDCAN_29130(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29130)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦破壊→묘지
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") <= 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,29130,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 묘지送り종류 != "破壊"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件표시 = 表側표시
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29130(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29130)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き,1)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件표시 = 裏側표시
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT >= 2
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 아티팩트
+			효과条件종류 = モン全般
+			효과条件固名前 = 아티팩트－모랄타
+			효과条件任意 = 1
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29130)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前 = 아티팩트－모랄타
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29130)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"묘지")
+	ENDIF
+ENDIF
+
+
+

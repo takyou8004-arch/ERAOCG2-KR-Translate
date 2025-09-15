@@ -7,9 +7,9 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-		RESULTS = 용소왕 Q.E.D.
+		RESULTS = 용파동 공모 에비데고라스
 	CASE "略称"
-		RESULTS = 용소왕 Q.E.D.
+		RESULTS = 에비데고라스
 
 	CASE "要塞名"
 		RESULTS = 용파동 공모 에비데고라스
@@ -95,16 +95,8 @@ SIF RESULT == 1
 IF 종류 == ターン開始時
 	SIF !GROUPMATCH(ゾーン, "마함","필드")
 		RETURN 0
-	IF ゾーン == "마함"
-		CALL CARD_DRAW_CHECK
-	ELSEIF ゾーン == "필드"
-		CALL FULLRESET
-		효과範囲덱 = 1
-		효과条件CNT = 1
-		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-		SIF RESULT < 5
-			RETURN 0
-	ENDIF
+	CALL CARD_DRAW_CHECK
+
 	RETURN 1
 ELSEIF 종류 == 지속효과
 	SIF !GROUPMATCH(ゾーン, "마함","필드")
@@ -123,32 +115,7 @@ ELSEIF 종류 == 효과後誘発
 	SIF RESULT == 1
 		RETURN 0
 	RETURN 1
-ELSEIF 종류 == 필드起動
-	SIF メインフェイズ != 1
-		RETURN 0
-	SIF ターンプレイヤー != 듀얼리스트
-		RETURN 0
-	SIF 효과발동済(듀얼리스트,場所,ゾーン)
-		RETURN 0
 
-	CALL FULLRESET
-	효과範囲손패 = 1
-	효과条件속성 = 물속성
-	효과条件소환可 = 1
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	SIF RESULT != 1
-		RETURN 0
-	RETURN 1
-ELSEIF 종류 == 身代효과
-	SIF ゾーン != "필드"
-		RETURN 0
-	SIF 破壊대상ゾーン != "필드"
-		RETURN 0
-	SIF 破壊대상場所 != 場所
-		RETURN 0
-	SIF GROUPMATCH(破壊종류,"마함")
-		RETURN 0
-	RETURN 1
 ENDIF
 
 @CARDEFFECT_4051(듀얼리스트,종류,ゾーン,場所)
@@ -164,50 +131,21 @@ ENDIF
 IF 종류 == ターン開始時
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4051)
 	IF RESULT == 0
-		IF ゾーン == "마함"
-			CALL CARDDRAW_BASIC(듀얼리스트,1)
-		ELSEIF ゾーン == "필드"
-			CALL FULLRESET
-			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,5)
-		ENDIF
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
 	ENDIF
 
 ELSEIF 종류 == 지속효과
-	IF ゾーン == "마함"
 		CALL STATCHANGE_EFFECT(듀얼리스트,"魔自身",場所,"対耐")
-	ELSEIF ゾーン == "필드"
-		CALL FULLRESET
-		효과条件속성 = 물속성
-		효과条件종족 = 드래곤족
-		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
-		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"直攻")
-	ENDIF
 ELSEIF 종류 == 효과後誘発
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4051)
 	IF RESULT == 0
-		PRINTFORMW 드래그하트포트리스が변형をはじめた！！
-		PRINTFORML 『最終龍理 Q.E.D.起動！！』
+		PRINTFORMW 드래그하트포트리스가 변형을 시작했다！！
+		PRINTFORML 『최종용리 Q.E.D.기동！！』
+		CALL CARD_RECONSTRUCT(듀얼리스트,ゾーン,場所,104051)
+
 		CALL RESETCONDITION
 		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
 	ENDIF
-ELSEIF 종류 == 필드起動
-	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4051,10)
-	IF RESULT == 0
-		CALL FULLRESET
-		효과範囲손패 = 1
-		효과条件속성 = 물속성
-		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
-	ENDIF
-ELSEIF 종류 == 身代효과
-	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4051)
-	IF RESULT == 0
-		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
-		RETURN 1
-	ENDIF
-	RETURN 0
-ELSEIF 종류 == 지속효과
-	SIF ゾーン == "필드"
-		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",104051,上書きモード)
 ENDIF
 
 
@@ -283,3 +221,103 @@ PRINTL ③：자신 필드에 존재하는 물 속성의 드래곤족 몬스터�
 CALLFORM CARD_ABLE(0,身代효과)
 PRINTL ④：이 카드가 필드를 벗어날 경우, 대신에 마법&함정 존에 놓는다.
 CALL TEXT_DECORATION("D_HEART_2")
+
+
+@CARDCAN_104051(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,104051)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン開始時
+	SIF !GROUPMATCH(ゾーン,"필드")
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF !GROUPMATCH(ゾーン,"필드")
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件속성 = 물속성
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상ゾーン != "필드"
+		RETURN 0
+	SIF 破壊대상場所 != 場所
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_104051(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+
+IF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,104051)
+	IF RESULT == 0
+		IF ゾーン == "마함"
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ELSEIF ゾーン == "필드"
+			CALL FULLRESET
+			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,5)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件속성 = 물속성
+	효과条件종족 = 드래곤족
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"直攻")
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"変化元ID",4051,上書きモード)
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,104051,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件속성 = 물속성
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,104051)
+	IF RESULT == 0
+		CALL CARD_RECONSTRUCT(듀얼리스트,ゾーン,場所,4051)
+
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF

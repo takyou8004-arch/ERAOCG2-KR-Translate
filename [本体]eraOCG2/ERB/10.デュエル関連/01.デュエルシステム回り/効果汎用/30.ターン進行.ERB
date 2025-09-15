@@ -19,7 +19,7 @@ VARSET リザルト：LIN소환
 VARSET リザルト：함정발동
 VARSET リザルト：마법발동
 
-
+VARSET 運命済み
 VARSET 자신_승리数
 VARSET 상대_승리数
 
@@ -496,7 +496,17 @@ IF ターン数 != 1
 		PRINTL ＜＜＜
 		RESETCOLOR
 		PRINTL 　　↑CLICK & DRAW↑
+		
+		CALL CHECK_DESTINY
+		IF ITEM:천년디스크（오리지널） >= 1 && オプション_運命引き == 0 && 運命済み == 0 && RESULT == 1
+			SETCOLOR C_GOLD
+			PRINTFORM %"",5%
+			PRINTBUTTON @"【運命開放】",2
+			RESETCOLOR
 		PRINTL
+		ELSE
+			PRINTL
+		ENDIF
 		PRINTL
 		BINPUT
 		IF RESULT == 1
@@ -507,6 +517,35 @@ IF ターン数 != 1
 			ELSE 
 				CALL CARDDRAW_BASIC( "자신",1,1)
 			ENDIF
+		ELSEIF RESULT == 2
+			SETCOLOR C_GOLD
+			PRINTL 　　　 ↓DRAW YOUR DESTINY↓
+			PRINT ＶＶＶ
+			PRINTBUTTON @"【데스티니 드로우！】",1
+			PRINTL ＶＶＶ
+			PRINTL 　　　 ↑GRAB YOUR VICTORY↑
+			RESETCOLOR
+			BINPUT
+			CUSTOMDRAWLINE ―
+			PRINTFORML %NAME:MASTER%는 카드를 떠올렸다……。
+			CUSTOMDRAWLINE ―
+			WAIT
+			CALL FULLRESET
+			효과条件任意 = 1
+			CALL CARD_CHOOSE_BASIC("자신","덱")
+			IF RESULT != 9999
+				CALL CARD_ADD_DECK_SPC("자신","덱",RESULT,,1)
+				IF GETVAR(@"%ターンプレイヤー%_ドロー倍化") >= 1
+					CALL CARDDRAW_BASIC( "자신",2,1)
+					SIF GETVAR(@"%ターンプレイヤー%_ドロー倍化") == 1
+						SETVAR @"%ターンプレイヤー%_ドロー倍化", 0
+				ELSE 
+					CALL CARDDRAW_BASIC( "자신",1,1)
+				ENDIF
+			ELSE
+				PRINTFORMW 운명은 자신이 붙잡는것으로 했다。
+			ENDIF
+			運命済み = 1
 		ENDIF
 
 	ELSEIF ターンプレイヤー == "상대"
@@ -646,20 +685,71 @@ FOR カウンタ,0,5
 		CALL CARD_DISPOSE("상대","필드",カウンタ,EX덱行き)
 	ELSEIF 상대_MZ_終処:カウンタ == 제외行き
 		CALL CARD_DISPOSE("상대","필드",カウンタ,제외行き)
-	ELSEIF 상대_MZ_終処:カウンタ == 返却行き
+	ENDIF
+	SIF 상대_MZ_終処:カウンタ >= 1
+		상대_MZ_終処:カウンタ = 0
+NEXT
+
+;終了処理
+FOR カウンタ,0,5	
+	IF 자신_魔_終処:カウンタ == 0
+		CONTINUE
+	ELSEIF 자신_魔_終処:カウンタ == 破壊行き
+		CALL CARD_DISPOSE("자신","필드",カウンタ,破壊行き)
+	ELSEIF 자신_魔_終処:カウンタ == 遅破壊行き && ターンプレイヤー == "상대"
+		CALL CARD_DISPOSE("자신","필드",カウンタ,破壊行き)
+
+	ELSEIF 자신_魔_終処:カウンタ == 손패行き
+		CALL CARD_DISPOSE("자신","필드",カウンタ,손패行き)
+	ELSEIF 자신_魔_終処:カウンタ == 遅손패行き && ターンプレイヤー == "상대"
+		CALL CARD_DISPOSE("자신","필드",カウンタ,손패行き)
+
+	ELSEIF 자신_魔_終処:カウンタ == 덱行き
+		CALL CARD_DISPOSE("자신","필드",カウンタ,덱行き)
+	ELSEIF 자신_魔_終処:カウンタ == EX덱行き
+		CALL CARD_DISPOSE("자신","필드",カウンタ,EX덱行き)
+	ELSEIF 자신_魔_終処:カウンタ == 제외行き
+		CALL CARD_DISPOSE("자신","필드",カウンタ,제외行き)
+	ENDIF
+	SIF 자신_魔_終処:カウンタ >= 1
+		자신_魔_終処:カウンタ = 0
+NEXT
+
+
+FOR カウンタ,0,5	
+	IF 상대_魔_終処:カウンタ == 0
+		CONTINUE
+	ELSEIF 상대_魔_終処:カウンタ == 破壊行き
+		CALL CARD_DISPOSE("상대","필드",カウンタ,破壊行き)
+	ELSEIF 자신_魔_終処:カウンタ == 遅破壊行き && ターンプレイヤー == "자신"
+		CALL CARD_DISPOSE("상대","필드",カウンタ,破壊行き)
+	ELSEIF 상대_魔_終処:カウンタ == 손패行き
+		CALL CARD_DISPOSE("상대","필드",カウンタ,손패行き)
+	ELSEIF 상대_魔_終処:カウンタ == 遅손패行き && ターンプレイヤー == "자신"
+		CALL CARD_DISPOSE("상대","필드",カウンタ,손패行き)
+
+	ELSEIF 상대_魔_終処:カウンタ == 덱行き
+		CALL CARD_DISPOSE("상대","필드",カウンタ,덱行き)
+	ELSEIF 상대_魔_終処:カウンタ == EX덱行き
+		CALL CARD_DISPOSE("상대","필드",カウンタ,EX덱行き)
+	ELSEIF 상대_魔_終処:カウンタ == 제외行き
+		CALL CARD_DISPOSE("상대","필드",カウンタ,제외行き)
+	ELSEIF 상대_魔_終処:カウンタ == 返却行き
 		IF モンスター数("자신") != 5
 			CALL FULLRESET
 			CALL CARD_GET_CONTROL("상대",カウンタ,0,1)
 		ENDIF
-	ELSEIF 상대_MZ_終処:カウンタ == 遅返却行き && ターンプレイヤー == "상대"
+	ELSEIF 상대_魔_終処:カウンタ == 遅返却行き && ターンプレイヤー == "상대"
 		IF モンスター数("자신") != 5
 			CALL FULLRESET
 			CALL CARD_GET_CONTROL("상대",カウンタ,0,1)
 		ENDIF
 	ENDIF
-	SIF 상대_MZ_終処:カウンタ >= 1
-		상대_MZ_終処:カウンタ = 0
+	SIF 상대_魔_終処:カウンタ >= 1
+		상대_魔_終処:カウンタ = 0
 NEXT
+
+
 
 
 ;Anonym추가 뱅가드초차원用
@@ -917,6 +1007,47 @@ IF 両者플래그 == 1 && 설정数値 != 4
 	ENDIF
 ENDIF
 
+
+@CHECK_DESTINY
+#DIM DYNAMIC カード数
+#DIM DYNAMIC 상대カード数
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 合致攻撃力数
+SIF ターン数 < 3
+	RETURN 0
+SIF ライフ_자신 > 4000
+	RETURN 0
+
+CALL FULLRESET
+효과範囲필드 = 1
+효과範囲마함 = 1
+효과条件CNT = 1
+CALL CARD_CHECK_ADV("자신")
+カード数 = RESULT
+
+CALL FULLRESET
+효과範囲필드 = 1
+효과範囲마함 = 1
+효과条件CNT = 1
+CALL CARD_CHECK_ADV("상대")
+상대カード数 = RESULT
+
+IF 상대カード数 >= カード数
+	条件달성 ++
+ENDIF
+CALL FULLRESET
+효과範囲필드 = 1
+효과条件CNT = 1
+CALL CARD_CHECK_ADV("상대")
+合致攻撃力数 = RESULT:3
+
+IF 合致攻撃力数 >= ライフ_자신
+	条件달성 ++
+ENDIF
+IF 条件달성 >= 1
+	RETURN 1
+ENDIF
+RETURN 0
 ;―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 @START_RESET
 

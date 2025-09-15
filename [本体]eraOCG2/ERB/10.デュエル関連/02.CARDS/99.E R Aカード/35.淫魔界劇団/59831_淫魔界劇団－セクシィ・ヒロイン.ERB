@@ -7,13 +7,13 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 음마계극단－섹시 히로인
+		RESULTS = 음마계극단－섹시 히로인
 	CASE "略称"
-RESULTS = 음마 히로인
+		RESULTS = 음마 히로인
 	CASE "カテゴリ"
-RESULTS:0 = 마계극단
-RESULTS:1 = 음마계극단
-RESULTS:2 = E.R.A
+		RESULTS:0 = 마계극단
+		RESULTS:1 = 음마계극단
+		RESULTS:2 = E.R.A
 ENDSELECT
 
 
@@ -77,7 +77,7 @@ CALL TEXT_DECORATION("P_MAGIC")
 PRINTL 이 카드명의 ②의 P효과는 1턴에 1번만 사용할 수 있다.
 CALLFORM CARD_ABLE(0,ライフ変強制誘発)
 PRINTL ①: 자신 또는 상대가 데미지를 받았을 때 발동한다.
-PRINTL 상대 필드의 몬스터의 공격력은, 그 데미지 수치만큼 다운한다.
+PRINTL 상대 필드의 몬스터의 공격력은, 그 데미지 수치만큼 내린다.
 CALLFORM CARD_ABLE(1,마함起動,フリー誘発)
 PRINTL ②: 서로의 배틀 페이즈에 발동할 수 있다.
 PRINTL 자신 묘지의 "음마계대본" 마법 / 함정 카드 1장을 덱으로 되돌리고,
@@ -89,8 +89,10 @@ CALLFORM CARD_ABLE(0,지속효과)
 PRINTL ①: 필드의 몬스터는 공격 표시가 되고, 전투로는 파괴되지 않는다.
 CALLFORM CARD_ABLE(0,ライフ変強制誘発)
 PRINTL ②: 자신 또는 상대가 데미지를 받았을 때 발동한다.
-PRINTL ②: 자신의 마법 & 함정 존의 몬스터 카드 1장을 대상으로 발동할 수 있다.
+PRINTL 상대 필드의 몬스터의 공격력은, 그 데미지 수치만큼 내리고
+PRINTL 이 카드의 공격력을 그 데미지의 수치만큼 올린다.
 CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ③: 자신의 마법 & 함정 존의 몬스터 카드 1장을 대상으로 발동할 수 있다.
 PRINTL 그 몬스터를 특수 소환하고, 이 카드를 자신의 마법 & 함정 존에 놓는다.
 CALL TEXT_DECORATION("ROGUE")
 
@@ -116,14 +118,15 @@ IF 종류 == ライフ変強制誘発
 		RETURN 0
 	SIF ダメージ増減 != "減少"
 		RETURN 0
+	IF ゾーン == "마함"
 	CALL FULLRESET
-	효과範囲상대필드 = 1
-	효과条件표시 = 表側표시
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	SIF RESULT != 1
-		RETURN 0
+		효과範囲상대필드 = 1
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
 	RETURN 1
-	RETURN 0
 ELSEIF 종류 == 마함起動 || 종류 == フリー誘発
 	SIF 발동済_1(듀얼리스트,59831)
 		RETURN 0
@@ -156,7 +159,7 @@ ELSEIF 종류 == 필드起動
 	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
-ELSEIF 종류 == 지속효과
+ELSEIF 종류 == 지속효과 || 종류 == 常在無効
 	SIF ゾーン != "필드"
 		RETURN 0
 	RETURN 1
@@ -171,6 +174,10 @@ ENDIF
 #DIM DYNAMIC カウンタ
 #DIMS DYNAMIC 選択カード名前
 #DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
 
 IF 종류 == ライフ変強制誘発
 	CALL FULLRESET
@@ -180,6 +187,11 @@ IF 종류 == ライフ変強制誘発
 		PRINTFORML 섹시 히로인의 효과에 의해 상대 몬스터의 공격력이{ダメージ受値}내렸다！
 	ELSE
 		PRINTFORML 섹시 히로인의 효과에 의해 자신 몬스터의 공격력이{ダメージ受値}내렸다！
+	ENDIF
+	IF ゾーン == "필드"
+		CALL FULLRESET
+		CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"永攻",ダメージ受値)
+			PRINTFORML 섹시 히로인의 공격력이 {ダメージ受値} 올랐다！
 	ENDIF
 ELSEIF 종류 == 마함起動 || 종류 == フリー誘発
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59831,1)
@@ -208,9 +220,23 @@ ELSEIF 종류 == 필드起動
 	ENDIF
 ELSEIF 종류 == 지속효과
 	CALL FULLRESET
-	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"表",1)
-	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"表",1,59831)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐",,59831)
 	CALL FULLRESET
-	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"表",1)
-	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦耐")
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"表",1,59831)
+	CALL STATCHANGE_EFFECT(듀얼리スト,"필드",場所,"戦耐",,59831)
+ELSEIF 종류 == 常在無効
+	CALL FULLRESET
+	효과条件표시 = 守備표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"表",1,59831)
+	CALL FULLRESET
+	효과条件표시 = 守備표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"表",1,59831)
+	CALL FULLRESET
+	효과条件표시 = 攻撃표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"表固",3,59831)
+	CALL FULLRESET
+	효과条件표시 = 攻撃표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"表固",3,59831)
+	
 ENDIF

@@ -1,0 +1,132 @@
+﻿@CARDNAME_1772,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 우사미미 도사
+	CASE "略称"
+		RESULTS = 우사미미 도사
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_1772(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 200
+	CASE "守備力"
+		RETURN 100
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250909
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_1772(종류)
+#DIM DYNAMIC 종류
+
+CALL CARD_ABLE(0,발동誘発)
+PRINTL ①：「우사미미 도사」以外のフィールドのモンスターの효과が발동した時に발동できる。
+PRINTL そのモンスターに悪性카운터を１つ置く。
+PRINTL そのモンスターは戦闘では破壊されない。
+CALL CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ②：お互いのターンに１度、悪性카운터が置かれているモンスター１体を대상として발동できる。
+PRINTL そのモンスターとこのカードをエンドフェイズまで제외する。
+
+@CARDCAN_1772(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1772)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件固名前 = 우사미미 도사
+ 	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,2)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	IF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+	ENDIF
+	효과範囲상대필드 = 1
+	효과条件悪Ｃ所持 = 999
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_1772(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 대상者
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1772)
+	IF RESULT == 0
+		選択カード = 効後_設場所:(処理中番号 - 1) 
+		대상者 = %効後_実行者:(処理中番号 - 1)%
+
+		CALL FULLRESET
+		효과추가종류 = 10
+		CALL CARD_REMOVAL_BASIC(대상者,"自動処理",選択カード,"悪Ｃ")
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1772,10)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲상대필드 = 1
+		효과추가종류 = 1
+		효과条件悪Ｃ所持 = 999
+		CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"제외")
+	ENDIF
+ENDIF

@@ -6,6 +6,7 @@
 #DIM DYNAMIC カウンタB
 #DIM DYNAMIC カウンタC
 #DIM DYNAMIC カウンタD
+#DIM DYNAMIC カウンタE
 #DIMS DYNAMIC カード名
 #DIMS DYNAMIC 検索ワード,5
 #DIM DYNAMIC 選択덱
@@ -35,6 +36,11 @@
 #DIM DYNAMIC 全周ID
 #DIM DYNAMIC 制限違反数
 #DIM DYNAMIC 実装カード数
+
+#DIM DYNAMIC 同名カード枚数
+#DIM DYNAMIC 現在カードID
+#DIM DYNAMIC 購入カード,999
+
 
 CALL HENSHU_RELOAD
 $SELECTDECK_LOOP
@@ -507,7 +513,9 @@ FOR カウンタ,0,30
 
 	ELSEIF カウンタ == 18
 		PRINTBUTTON @"%"【 일괄분해 】"%", 92600
-		PRINTFORM %"",26,LEFT%
+		PRINTFORM %"",2,LEFT%
+		PRINTBUTTON @"%"【 일괄생성 】"%", 92601
+		PRINTFORM %"",10,LEFT%
 	ELSEIF カウンタ == 20
 		PRINTFORM %"■ 검색이력",40,LEFT%
 	ELSEIF カウンタ == 21
@@ -1626,7 +1634,119 @@ ELSEIF RESULT == 92600
 		PRINTL 돌아갑니다。
 	ENDIF
 
+;一生生成――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+ELSEIF RESULT == 92601
+	VARSET 同名カード枚数
+	VARSET 購入ポイント
+	VARSET カウンタE
+	FOR カウンタ,0,60
+		SIF 編集_덱:カウンタ <= 0
+			CONTINUE
 
+		SIF カウンタ == 0
+			現在カードID = 編集_덱:カウンタ
+
+		IF 現在カードID != 編集_덱:カウンタ
+			現在カードID = 編集_덱:カウンタ
+			同名カード枚数 = 1
+		ELSE
+			同名カード枚数 ++
+		ENDIF
+;		PRINTFORML 現在カードID:{現在カードID}/ アイテム数:{ITEM:現在カードID}/ 同名カード枚数:{同名カード枚数 + 1}
+		IF ITEM:現在カードID < 同名カード枚数
+			購入カード:カウンタE = 現在カードID
+			カウンタE ++
+			CALL CARDPRICE(現在カードID ,"購入")
+			購入ポイント += RESULT
+		ENDIF
+	NEXT
+
+	FOR カウンタ,0,60
+		SIF 編集_EX덱:カウンタ <= 0
+			CONTINUE
+		SIF カウンタ == 0
+			現在カードID = 編集_EX덱:カウンタ
+
+		IF 現在カードID != 編集_EX덱:カウンタ
+			現在カードID = 編集_EX덱:カウンタ
+			同名カード枚数 = 1
+		ELSE
+			同名カード枚数 ++
+		ENDIF
+;		PRINTFORML 現在カードID:{現在カードID}/ アイテム数:{ITEM:現在カードID}/ 同名カード枚数:{同名カード枚数 + 1}
+		IF ITEM:現在カードID < 同名カード枚数
+			購入カード:カウンタE = 現在カードID
+			カウンタE ++
+			CALL CARDPRICE(現在カードID ,"購入")
+			購入ポイント += RESULT
+		ENDIF
+	NEXT
+
+	CUSTOMDRAWLINE —
+	PRINTFORML 　■ 구입카드
+	CUSTOMDRAWLINE —
+	FOR カウンタ,0,カウンタE
+		現在カードID = 購入カード:カウンタ
+		TRYCALLFORM CARDNAME_{現在カードID}, "名前"
+		RESULTS = 《%RESULTS%》
+		PRINTFORM %RESULTS,50,LEFT%
+		CALL CARDPRICE(現在カードID,"レア度")
+		IF RESULT == 1
+			CALL CARDPRICE(現在カードID,"購入")
+			PRINTFORM %"【CMN】",10,RIGHT% DP:{RESULT}
+		ELSEIF RESULT == 2
+			SETCOLOR C_SILVER
+			CALL CARDPRICE(現在カードID,"購入")
+			PRINTFORM %"【 R 】",10,RIGHT% DP:{RESULT}
+		ELSEIF RESULT == 3
+			SETCOLOR C_GOLD
+			CALL CARDPRICE(現在カードID,"購入")
+			PRINTFORM %"【SPR】",10,RIGHT% DP:{RESULT}
+		ELSEIF RESULT == 4
+			SETCOLOR C_ROYAL_BLUE
+			CALL CARDPRICE(現在カードID,"購入")
+			PRINTFORM %"【ULR】",10,RIGHT% DP:{RESULT}
+		ELSEIF RESULT == 5
+			SETCOLOR C_P_PURPLE
+			CALL CARDPRICE(現在カードID,"購入")
+			PRINTFORM %"【ERA】",10,RIGHT% DP:{RESULT}
+		ELSE
+			CALL CARDPRICE(現在カードID,"購入")
+			PRINTFORM %"【   】",10,RIGHT% DP:{RESULT}
+		ENDIF
+		RESETCOLOR
+
+		PRINTL
+	NEXT
+
+	CUSTOMDRAWLINE —
+	IF FLAG:デュエルポイント < 購入ポイント
+		SETCOLOR C_RED
+		PRINTFORML 필요한 생성 DP:{購入ポイント}
+		PRINTL 
+		PRINTL 만드시겠습니까？
+		SETCOLOR C_GRAY
+		PRINTL <0> - 예（포인트가 부족합니다）
+		RESETCOLOR
+	ELSE
+		SETCOLOR C_GOLD
+		PRINTFORML 필요한 생성 DP:{購入ポイント}
+		RESETCOLOR
+		PRINTL 
+		PRINTL 만드시겠습니까？
+		PRINTL [0] - 예
+	ENDIF
+	PRINTL [1] - 아니오
+	BINPUT
+	IF RESULT == 0
+		FLAG:デュエルポイント -= 購入ポイント
+		FOR カウンタ,0,カウンタE
+			現在カードID = 購入カード:カウンタ
+			ITEM:現在カードID ++
+		NEXT
+	ELSEIF RESULT == 1
+		PRINTL 돌아갑니다。
+	ENDIF
 ;덱消去カード非표시――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 ELSEIF RESULT == 92400
 	PRINTL 　　　＊WARNING＊ 

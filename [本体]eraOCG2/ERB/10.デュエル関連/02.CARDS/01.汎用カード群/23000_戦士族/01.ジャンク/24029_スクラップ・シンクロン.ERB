@@ -1,0 +1,220 @@
+﻿@CARDNAME_24029,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 스크랩 싱크론
+	CASE "略称"
+		RESULTS = 스크랩Sync
+	CASE "カテゴリ"
+		RESULTS:0 = 스크랩
+		RESULTS:1 = 싱크론
+		RESULTS:2 = 파워 오브 펠로우즈
+		;「정크 워리어」のカード名が記されたモンスター
+ENDSELECT
+
+
+@CARD_24029(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 700
+	CASE "守備力"
+		RETURN 100
+	CASE "튜너"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250906
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24029(종류)
+#DIM DYNAMIC 종류
+
+;PRINTL このカードは「싱크론」튜너の代わりとしてS素材にできる。
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：このカードが손패に存在する場合に발동できる。
+PRINTL 손패のこのカードと자신フィールドのモンスター１体をS素材として묘지へ送り、
+PRINTL EX덱から「워리어」Ｓモンスター１体をＳ소환する。
+PRINTL この효과は、このカードの효과が無効になっているか발동できない状態でも발동でき、
+PRINTL 상대はこの효과に対してカードの효과を발동できない。
+CALLFORM CARD_ABLE(2,身代효과)
+PRINTL ②：자신フィールドの以下のモンスターが戦闘・효과で破壊される場合、
+PRINTL 代わりにフィールド・묘지のこのカードを제외できる。
+PRINTL ●「정크 워리어」のカード名が記されたモンスター
+PRINTL ●元々のカード名に「워리어」を含むSモンスター
+
+@CARDCAN_24029(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,24029)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL SCRAP_CHECK(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24029)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 身代효과
+	SIF 발동済_2(듀얼리스트,24029)
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"필드","묘지")
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	TRYCALLFORM CARDNAME_{破壊대상ID}("カテゴリ")
+	SIF !MATCH(RESULTS,"パラディオン")	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24029(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択レベル,20
+#DIM DYNAMIC 素材レベル
+#DIM DYNAMIC 条件달성,20
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24029,1)
+	IF RESULT == 0
+		CALL SCRAP_CHECK(듀얼리스트,종류,ゾーン,場所,1)
+		;パスされた条件달성をRESULT経由で
+		FOR カウンタ,0,12
+			条件달성:カウンタ = RESULT:カウンタ
+			;PRINTFORML 条件달성:{カウンタ} = {条件달성:カウンタ}
+		NEXT
+
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件튜너 = -1
+		FOR カウンタ,0,12
+			IF 条件달성:カウンタ == 1
+				효과条件レベル:選択レベル = カウンタ
+				;PRINTFORML 효과条件レベル:{選択レベル} = {효과条件レベル:選択レベル}
+				選択レベル ++
+			ENDIF
+		NEXT
+		효과条件複数 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			素材レベル = RESULT:200
+			;PRINTFORML 素材レベル = {素材レベル} RESULT:200 = {RESULT:200}
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+			CALL FULLRESET
+			효과範囲EX덱 = 1
+			효과条件종류 = 싱크로
+			효과条件カテゴリ = 워리어
+			효과条件レベル = 素材レベル + 1
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			IF RESULT != 9999
+				選択カード = RESULT
+				CALL FULLRESET
+				CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",選択カード)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24029,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+
+
+@SCRAP_CHECK(듀얼리스트,종류,ゾーン,場所,モード選択)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성,20
+#DIM DYNAMIC モード選択
+VARSET RESULT
+
+FOR カウンタ,1,12
+	;レベル３～１２までのモンスターを確認
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = 싱크로
+	효과条件カテゴリ = 워리어
+	효과条件レベル = カウンタ + 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	;いないならこの処理は捨てる
+	SIF RESULT != 1
+		CONTINUE
+	;上記の条件から、자신の묘지に相方となる튜너以外のモンスターを検索
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件튜너 = -1
+	효과条件レベル = カウンタ
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		CONTINUE
+	;CARD_CANモードなら1つでも条件に当てはまるなら起動可能を返す
+	IF モード選択 == 0
+		RETURN 1
+	;효과処理（CARD_EFFECT）モードなら、条件달성:○○に1の플래그を立たす。この後EFFECT側の条件달성にパスする。
+	ELSEIF モード選択 == 1
+		条件달성:カウンタ = 1
+	ENDIF
+NEXT
+
+IF モード選択 == 1
+	VARSET RESULT
+	;RESULTに보존！EFFECT側の条件달성にパスする。
+	FOR カウンタ,1,12
+		RESULT:カウンタ = 条件달성:カウンタ
+	NEXT
+	RETURN 1
+ENDIF
+RETURN 0
+

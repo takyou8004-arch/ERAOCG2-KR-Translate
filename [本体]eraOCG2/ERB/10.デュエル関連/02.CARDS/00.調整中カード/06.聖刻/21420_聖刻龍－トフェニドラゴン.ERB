@@ -1,0 +1,140 @@
+﻿@CARDNAME_21420,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 성각룡－토페니 드래곤
+	CASE "略称"
+		RESULTS = 성각－토페니
+	CASE "カテゴリ"
+		RESULTS:0 = 성각
+ENDSELECT
+
+
+@CARD_21420(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2100
+	CASE "守備力"
+		RETURN 1400
+	CASE "추가日"
+		RETURN 250914
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_21420(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①：상대フィールド上にモンスターが存在し、자신フィールド上にモンスターが存在しない場合、
+PRINTL このカードは손패から특수소환できる。この方法で특수소환したターン、このカードは攻撃できない。
+CALL CARD_ABLE(0,필드→묘지,X素材時효과)
+PRINTL ③：このカードがリリースされた場合、またはX素材に使用された場合に발동できる。
+PRINTL 자신の손패・덱・묘지から드래곤족の通常モンスター１体を選び、攻撃力・守備力を０にして특수소환する。
+PRINTL そのカードのレベルを６にしても良い。
+
+@CARDCAN_21420(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21420)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF ゾーン != "손패"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,21420,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드→묘지 || 종류 == X素材時효과
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件종족 = 드래곤족
+	효과条件종류 = 通常モン
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21420(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21420)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 効追攻不
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드→묘지 || 종류 == X素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21420)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		PRINTL レベルを６にしますか？
+		CALL YN_CHOICE(듀얼리스트)
+		IF RESULT == 0
+			효과추가종류:1 = 140 + 6
+		ENDIF
+		효과条件종족 = 드래곤족
+		효과条件종류 = 通常モン
+		효과추가종류 = 効追攻守０
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)	
+	ENDIF
+ENDIF

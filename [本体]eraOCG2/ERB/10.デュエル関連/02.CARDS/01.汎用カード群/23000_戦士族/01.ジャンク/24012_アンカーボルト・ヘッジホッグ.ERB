@@ -1,0 +1,110 @@
+﻿@CARDNAME_24012,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 앵커볼트 고슴도치
+	CASE "略称"
+		RESULTS = 앵커볼트
+	CASE "カテゴリ"
+		RESULTS:0 = 파워 오브 펠로우즈
+		;「정크 워리어」のカード名が記されたモンスター
+ENDSELECT
+
+
+@CARD_24012(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 800
+	CASE "추가日"
+		RETURN 250906
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24012(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①：자신・상대ターンに、このカードが묘지に存在し、「앵커볼트 고슴도치」を除く、
+PRINTL 「정크 워리어」または「파워 오브 펠로우즈」モンスターが자신フィールドに存在する場合に발동できる。
+PRINTL このカードを守備표시で특수소환する。
+PRINTL この효과の발동後、ターン終了時まで자신はSモンスターしかEX덱から특수소환できない。
+
+
+@CARDCAN_24012(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24012)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,24012)
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_SS_CHECK(듀얼리스트,24012,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件スーパー名前 = 정크 워리어
+	효과条件カテゴリ = 파워 오브 펠로우즈
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24012(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択レベル
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24012,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			EX소환可能종류 = 싱크로
+			CALL CARD_EX_RESTRICTION(듀얼리스트)
+		ENDIF
+	ENDIF
+ENDIF
+
+

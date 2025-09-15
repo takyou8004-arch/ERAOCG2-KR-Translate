@@ -1,0 +1,160 @@
+﻿@CARDNAME_29134,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 아티팩트－롱기누스
+	CASE "略称"
+		RESULTS = ＡＦ롱기누스
+	CASE "カテゴリ"
+		RESULTS:0 = 아티팩트
+ENDSELECT
+
+
+@CARD_29134(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1700
+	CASE "守備力"
+		RETURN 2300
+	CASE "추가日"
+		RETURN 250912
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29134(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の③の효과は１ターンに１どしか使用できない。
+CALLFORM CARD_ABLE(0,손패起動)
+PRINTL ①：자신メインフェイズに발동できる。
+PRINTL 손패のこのカードを자신の마법＆함정ゾーンにセットする。
+PRINTL その後、자신フィールドに裏側표시カードが２枚以上存在する場合、
+PRINTL 덱からこのカード名以外の「아티팩트」モンスター１体を손패に加えることができる。
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②：마법＆함정ゾーンにセットされたこのカードが상대ターンに破壊され묘지へ送られた場合に발동できる。
+PRINTL このカードを특수소환する。
+CALLFORM CARD_ABLE(3,필드起動,손패起動,フリー誘発)
+PRINTL ③：상대ターンに、손패・フィールドのこのカードをリリースして발동できる。
+PRINTL このターン、お互いにカードを제외できない。
+
+
+@CARDSUMMON_AA_29134
+
+
+@CARDCAN_29134(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29134)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦破壊→묘지
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") <= 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,29134,"묘지")
+	SIF RESULT == 1
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	SIF 묘지送り종류 != "破壊"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	;既に제외できなかったら使えないように
+	SIF 자신_제외NG置換 >= 1 && 상대_제외NG置換 >= 1
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"손패","필드")
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29134(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29134)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き,1)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과条件표시 = 裏側표시
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT >= 2
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 아티팩트
+			효과条件종류 = モン全般
+			효과条件固名前 = 아티팩트－롱기누스
+			효과条件任意 = 1
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29134)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前 = 아티팩트－롱기누스
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == 손패起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29134,3)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL SET_PLAYER_INFO(듀얼리스트,"제외NG置換",1,1)
+		CALL SET_PLAYER_INFO(対面者,"제외NG置換",1,1)
+	ENDIF
+ENDIF
+
+
+

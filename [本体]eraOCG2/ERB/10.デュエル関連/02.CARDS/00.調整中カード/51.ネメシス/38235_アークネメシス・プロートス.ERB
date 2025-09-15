@@ -1,0 +1,312 @@
+@CARDNAME_38235,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 아크네메시스 프로토스
+	CASE "略称"
+		RESULTS = AcNm프로토스
+	CASE "カテゴリ"
+		RESULTS:0 = 네메시스
+ENDSELECT
+
+@CARD_38235(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 11
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 無性
+	CASE "소환불가"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250814
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_38235(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカードは通常소환できない。
+PRINTL このカード名の③の효과は１ターンに１度しか使用できない。
+CALL CARD_ABLE(0,손패起動)
+PRINTL ①：자신のフィールド（表側표시）・묘지から속성が異なるモンスター３体を제외して발동できる。
+PRINTL 손패のこのカードを특수소환する。
+PRINTL （複数の속성を持つカードは１つ目の속성のみで判断する）
+CALL CARD_ABLE(0,지속효과)
+PRINTL ②：フィールドのこのカードは효과では破壊されない。
+CALL CARD_ABLE(1,필드起動)
+PRINTL ③：フィールドのモンスターの속성を１つ宣言して발동できる。
+PRINTL フィールドの宣言した속성のモンスターを全て破壊する。
+PRINTL 次のターンの終了時まで、このモンスターがフィールドに表側표시で存在する限り、お互いに宣言した속성のモンスターを특수소환できない。
+
+@CARDCAN_38235(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタＢ
+
+#DIM DYNAMIC 条件속성
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38235)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,38235,"손패",1)
+	SIF RESULT == 1
+		RETURN 0
+	FOR カウンタ, 0, 5
+		条件달성 = 0
+		SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") < 0
+			CONTINUE
+		SIF GETVAR(@"%듀얼리스트%_MZ_表:カウンタ") == 3
+			CONTINUE
+		;속성上書きを優先
+		IF GETVAR(@"%듀얼리스트%_MZ_属:カウンタ") > 0
+			SETBIT 条件속성, GETVAR(@"%듀얼리스트%_MZ_属:カウンタ")
+		ELSE
+			TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:場所")}("속성")		
+			IF RESULT > 0
+				SETBIT 条件속성, RESULT
+			ENDIF
+		ENDIF
+		FOR カウンタＢ, 1, 8
+			SIF GETBIT(条件속성, カウンタＢ)
+				条件달성++
+			SIF 条件달성 >= 3
+				RETURN 1
+		NEXT
+	NEXT
+	FOR カウンタ, 0, 紙束最大値
+		条件달성 = 0
+		SIF GETVAR(@"%듀얼리스트%_묘지:カウンタ") < 0
+			CONTINUE
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_묘지:カウンタ")}("속성")
+		IF RESULT > 0
+			SETBIT 条件속성, RESULT
+			FOR カウンタＢ, 1, 8
+				SIF GETBIT(条件속성, カウンタＢ)
+					条件달성++
+				SIF 条件달성 >= 3
+					RETURN 1
+			NEXT
+		ENDIF
+	NEXT
+	RETURN 0
+ELSEIF 종류 == ターン開始時強制 ;覚醒状態解除用
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,38235)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_38235(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC カウンタＢ
+#DIM DYNAMIC 選択カード,3
+#DIMS DYNAMIC 選択ゾーン,3
+
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 選択カード数
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+#DIM DYNAMIC 選択효과
+#DIM DYNAMIC 条件속성
+#DIM DYNAMIC 選択속성
+#DIMS CONST  속성名 = "","光","闇","地","水","炎","風","神"
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38235)
+	IF RESULT == 0
+		;필드の書き換え속성を加味するため先に３体選んでから제외
+		REPEAT 3
+			CALL FULLRESET
+			효과範囲필드 = 1
+			;필드パンパンなら필드からしか選べない(既選択ゾーンに필드があるなら話は別)
+			SIF モンスター数(듀얼리스트) < 5 || MATCH(選択ゾーン,"필드")
+				효과範囲묘지 = 1
+			효과条件속성 = 9999
+			FOR カウンタ,1,7
+				IF GETBIT(条件속성,カウンタ)
+					효과条件속성:カウンタ = -1
+				ELSE
+					효과条件속성:カウンタ = カウンタ
+				ENDIF
+			NEXT
+			효과条件표시 = 表側표시
+			효과条件종류 = モン全般
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT != 9999
+				選択カードID = RESULT:99
+				CALL CARD_SELECT(듀얼리스트, RESULT)
+				選択カード:カウンタＢ = 選択カード（CS）
+				選択ゾーン:カウンタＢ = %参照先（CS）%
+				IF 参照先（CS） == "필드"
+					;필드は書き換えられた속성を優先
+					IF GETVAR(@"%듀얼리스트%_MZ_属:{選択カード:カウンタＢ}") > 0
+						SETBIT 条件속성, GETVAR(@"%듀얼리스트%_MZ_属:{選択カード:カウンタＢ}")
+						カウンタＢ++
+						CONTINUE
+					ENDIF
+				ENDIF
+				TRYCALLFORM CARD_{選択カードID}("속성")
+				SIF RESULT > 0
+					SETBIT 条件속성, RESULT
+				カウンタＢ++
+			ELSE ;選択を中止したなら処理終了
+				RETURN 0
+			ENDIF
+		REND
+		FOR カウンタ, 0, 3
+			CALL CARD_DISPOSE(듀얼리스트,選択ゾーン:カウンタ,選択カード:カウンタ,제외行き)
+		NEXT
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == ターン開始時強制
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",0,上書きモード)
+	CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",0,上書きモード)
+ELSEIF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"破耐")
+	IF GETVAR(@"%듀얼리스트%_MZ_条達:場所") > 0 && GETVAR(@"%듀얼리스트%_MZ_汎数:場所") > 0
+		CALL SET_TMP_SS_RST(듀얼리스트,"逆속성",GETVAR(@"%듀얼리스트%_MZ_汎数:場所"))
+		CALL SET_TMP_SS_RST(対面者,"逆속성",GETVAR(@"%듀얼리스트%_MZ_汎数:場所"))
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38235,1)
+	IF RESULT == 0
+		;宣言可能속성を計上
+		FOR カウンタ, 0, 5
+			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") < 0
+				CONTINUE
+			SIF GETVAR(@"%듀얼리스트%_MZ_表:カウンタ") == 3
+				CONTINUE
+			;속성上書きを優先
+			IF GETVAR(@"%듀얼리스트%_MZ_属:カウンタ") > 0
+				SETBIT 条件속성, GETVAR(@"%듀얼리스트%_MZ_属:カウンタ")
+			ELSE
+				TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_필드:場所")}("속성")		
+				IF RESULT > 0
+					FOR カウンタＢ, 0, 7
+						SIF RESULT:カウンタＢ > 0
+							SETBIT 条件속성,RESULT:カウンタＢ
+					NEXT
+				ENDIF
+			ENDIF
+		NEXT
+		;宣言可能속성を計上(상대)
+		FOR カウンタ, 0, 5
+			SIF GETVAR(@"%対面者%_필드:カウンタ") < 0
+				CONTINUE
+			SIF GETVAR(@"%対面者%_MZ_表:カウンタ") == 3
+				CONTINUE
+			;속성上書きを優先
+			IF GETVAR(@"%対面者%_MZ_属:カウンタ") > 0
+				SETBIT 条件속성, GETVAR(@"%対面者%_MZ_属:カウンタ")
+			ELSE
+				TRYCALLFORM CARD_{GETVAR(@"%対面者%_필드:場所")}("속성")		
+				IF RESULT > 0
+					FOR カウンタＢ, 0, 7
+						SIF RESULT:カウンタＢ > 0
+							SETBIT 条件속성,RESULT:カウンタＢ
+					NEXT
+				ENDIF
+			ENDIF
+		NEXT
+		IF 条件속성 < 1
+			PRINTL 宣言できる속성がありません。
+			RETURN 0
+		ELSE
+$INPUT_LOOP
+			PRINTL 宣言する속성を選択してください。
+			FOR カウンタ, 1, 8
+				SIF GETBIT(条件속성,カウンタ)
+					PRINTFORML [{カウンタ}] - %속성名:カウンタ%속성
+			NEXT
+			BINPUT
+			;手動での本来宣言できない속성の宣言を検知するため一回チェック
+			IF GETBIT(条件속성,RESULT)
+				選択속성 = RESULT
+			ELSE
+				GOTO INPUT_LOOP
+			ENDIF
+			IF 選択속성 > 0
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"汎数",選択속성,上書きモード)
+				;ここは지속。자신メインでの발동しか考慮しないので次の자신のスタンに解除すればよし
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",2,上書きモード)
+				CALL FULLRESET
+				효과条件속성 = 選択속성
+				CALL CARD_REMOVAL_BASIC(듀얼리스트,"両필드全体",場所,"묘지")
+				;ここまでやって次ターン用のスタン予約のSS_RESTRICTIONで結局汎数の為に프로토스探さなきゃいけないなら覚醒条件の咎姫式지속효과でよくね？ってなった
+				; FOR カウンタ, 1, 8
+				; 	IF カウンタ == 選択속성
+				; 		CONTINUE
+				; 	ELSE
+				; 		EX소환可能속성:カウンタ = カウンタ
+				; 	ENDIF
+				; NEXT
+				; CALL CARD_EX_RESTRICTION(듀얼리스트)
+				; CALL CARD_EX_RESTRICTION(対面者)
+				; CALL CARD_RESERV(듀얼리스트,38235,"")
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

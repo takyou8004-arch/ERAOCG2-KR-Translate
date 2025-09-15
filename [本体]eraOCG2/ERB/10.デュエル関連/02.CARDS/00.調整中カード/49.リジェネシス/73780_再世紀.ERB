@@ -1,0 +1,168 @@
+﻿@CARDNAME_73780,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 리제네시스
+	CASE "略称"
+		RESULTS = 리제네시스
+	CASE "カテゴリ"
+		RESULTS:0 = 리제네시스
+ENDSELECT
+
+
+@CARD_73780(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250913
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_73780(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과は１ターンに１度、いずれか１つしか使用できない。
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：덱から「리제네시스」モンスター１体を選び、손패に加えるか묘지へ送る。 
+PRINTL 자신フィールドに「리제네시스」モンスターが存在する場合、
+PRINTL 代わりに攻撃力と守備力が２５００のモンスター１体を덱から손패に加える事もできる。
+CALLFORM CARD_ABLE(1,묘지起動)
+PRINTL ②：자신の묘지の「리제네시스」モンスター１体を대상として발동できる。
+PRINTL そのモンスターを특수소환する。
+
+
+@CARDCAN_73780(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73780)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,73780)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 리제네시스
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+    SIF 발동済_1(듀얼리스트,73780)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 리제네시스
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+
+ENDIF
+
+@CARDEFFECT_73780(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73780,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件カテゴリ = 리제네시스
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT == 1
+		    SIF 듀얼리스트 == "자신"
+		        PRINTL 손패に加えますか？
+		    CALL YN_CHOICE(듀얼리스트)
+		    IF RESULT == 0
+			    CALL FULLRESET
+			    효과範囲덱 = 1
+				효과条件固攻撃力 = 2500
+				효과条件固守備力 = 2500
+			    효과条件종류 = モン全般
+			    CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		    ELSEIF RESULT == 1
+			    CALL FULLRESET
+			    효과範囲덱 = 1
+				효과条件固攻撃力 = 2500
+				효과条件固守備力 = 2500
+			    효과条件종류 = モン全般
+			    CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ELSE
+		    SIF 듀얼리스트 == "자신"
+		        PRINTL 손패に加えますか？
+		    CALL YN_CHOICE(듀얼리스트)
+		    IF RESULT == 0
+			    CALL FULLRESET
+			    효과範囲덱 = 1
+			    효과条件カテゴリ = 리제네시스
+			    효과条件종류 = モン全般
+			    CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		    ELSEIF RESULT == 1
+			    CALL FULLRESET
+			    효과範囲덱 = 1
+			    효과条件カテゴリ = 리제네시스
+			    효과条件종류 = モン全般
+			    CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 묘지起動
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73780,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲묘지 = 1
+	    효과条件カテゴリ = 리제네시스
+	    효과条件종류 = モン全般
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+		
+
+ENDIF
+
