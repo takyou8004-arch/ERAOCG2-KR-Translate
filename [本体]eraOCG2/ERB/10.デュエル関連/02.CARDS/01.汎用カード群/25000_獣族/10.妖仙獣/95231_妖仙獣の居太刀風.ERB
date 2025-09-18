@@ -1,0 +1,140 @@
+﻿@CARDNAME_95231,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 요선수 거태도풍
+	CASE "略称"
+		RESULTS = 요선수 거태도풍
+	CASE "カテゴリ"
+		RESULTS:0 = 요선수
+ENDSELECT
+
+
+@CARD_95231(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_95231(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,마함起動 ,フリー誘発)
+PRINTL ①：자신フィールドにモンスターが存在しない場合、
+PRINTL 손패からカード名が異なる「요선수」モンスターを任意の数だけ상대に見せ、
+PRINTL 見せた数だけ상대フィールドのカードを대상として발동できる。
+PRINTL そのカードを持ち主の손패に戻す。
+
+
+@CARDCAN_95231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과先
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,95231)
+SIF RESULT == 1
+	RETURN 0
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+		RETURN 0
+	SIF モンスター数(듀얼리스트) > 0
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ= 요선수
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_95231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択数
+#DIM DYNAMIC 最大選択数
+#DIM DYNAMIC 추가효과
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,95231)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ= 요선수
+		효과条件종류 = モン全般
+		효과条件CNT = 1
+		효과条件固名前起動 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		最大選択数 = RESULT
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT < 最大選択数
+			最大選択数 = RESULT
+
+		CALL FULLRESET
+		효과条件カテゴリ= 요선수
+		효과条件종류 = モン全般
+		효과条件複数 = 100 - 最大選択数
+		효과条件固名前選択 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF 選択カード != 9999
+			選択数 = RESULT:100
+			;대인화시のモン효과②
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件名前 = 마요선수 대인화시
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				추가효과 = 1
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			효과条件複数 = 選択数
+			IF 추가효과 == 0
+				CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"손패")
+			ELSEIF 추가효과 == 1
+				PRINTL 대인화시の효과で덱に戻ります。
+				CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"덱")
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

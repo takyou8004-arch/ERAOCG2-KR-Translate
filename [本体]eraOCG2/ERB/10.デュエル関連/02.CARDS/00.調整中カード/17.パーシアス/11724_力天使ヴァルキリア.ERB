@@ -1,0 +1,168 @@
+﻿@CARDNAME_11724,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 역천사 발키리어
+	CASE "略称"
+		RESULTS = 역천사 발키리어
+	CASE "カテゴリ"
+		RESULTS:0 = 파샤스
+ENDSELECT
+
+
+@CARD_11724(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1050
+	CASE "성별"
+		RETURN 牝性
+	CASE "連動ID"
+		RETURN 1724
+	CASE "추가日"
+		RETURN 250915
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_11724(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①③の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：このカードが소환・특수소환した場合に발동できる。
+PRINTL 덱から「파샤스」마법・함정カード１枚を손패に加える。
+CALLFORM CARD_ABLE(0,攻守変動)
+PRINTL ②：자신フィールドの천사족・빛속성モンスターの攻撃力・守備力は、
+PRINTL 자신フィールドの천사족モンスターの数×２００アップする。
+CALLFORM CARD_ABLE(3,효과後誘発)
+PRINTL ③：자신フィールドが「천공의 성역」の状態で、자신が通常함정カードの효과を발동した場合に발동できる。
+PRINTL 자신の덱からレベル４以上の천사족・빛속성モンスター１体を손패に加える。
+
+;카운터함정による無効妨害を得意とする천사족・빛속성モンスターを中心にした【エンジェル・パーミッション】。
+;現代遊戯王ではパーデク・アルデクを中心にした「宣告者（デクレアラー）」系のエンジェルパーミッションが主流だが、かつては
+;「파샤스」をメインにしていた덱타입があり、역천사 발키리어は豊穣のアルテミス等と共にそっちで使われていたモンスター。
+;元々はこのモンスターがフィールドに存在する状態で、카운터함정で발동無効にした場合の誘発효과でアドバンテージを稼ぐ動きをしていたが、
+;現代遊戯王の水準のパワーに引き上げるため、出たときにも파샤스마법함정をサーチできるようにして、テーマの展開に繋がる役割を担わせている。
+;従来の효과後誘発の他に攻守変動효과も추가しており、盤面に維持するメリットを増やしている。上昇量は大きくないが天使を並べたら結構いい打点になる。
+;パンプアップ효과のぶん、元々の攻撃力を少し下げている。下げたおかげでシャインエンジェルでもリクルート可能だが、実際に使う事があるかは不明。
+
+
+@CARDSUMMON_AA_11724
+
+
+@CARDCAN_11724(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,11724)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,11724)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 파샤스
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_3(듀얼리스트,11724)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVARS(@"%듀얼리스트%_フィールド名") != "천공의 성역"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 通常함정
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = モン全般
+	효과条件종족 = 천사족
+	효과条件속성 = 빛속성
+	CALL 효과条件レベル_ADV(4, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_11724(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 손패選択
+#DIM 選択カード
+#DIM DYNAMIC 攻守修正値
+
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,11724,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 파샤스
+		효과条件종류 = 마함全般
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,11724,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件종족 = 천사족
+		효과条件속성 = 빛속성
+		CALL 효과条件レベル_ADV(4, "以上")
+		CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	
+	;カード枚数をカウント
+	CALL FULLRESET
+	효과範囲필드 = 1
+	;효과範囲마함 = 1
+	효과条件종류 = モン全般
+	효과条件종족 = 천사족
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	攻守修正値 =  RESULT * 200
+
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	효과条件종족 = 천사족
+	효과条件속성 = 빛속성
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,攻守修正値,攻守修正値)
+
+ENDIF

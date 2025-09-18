@@ -1,0 +1,133 @@
+﻿@CARDNAME_28225,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 피안의 악귀 하클스파
+	CASE "略称"
+		RESULTS = 하클스파
+	CASE "カテゴリ"
+		RESULTS:0 = 피안
+ENDSELECT
+
+
+@CARD_28225(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 0
+	CASE "추가日"
+		RETURN 250915
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_28225(종류)
+#DIM DYNAMIC 종류
+PRINTL このカード名の①③の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：자신フィールドに마법・함정カードが存在しない場合に발동できる。
+PRINTL このカードを손패から특수소환する。
+CALLFORM CARD_ABLE(0,상황確認)
+PRINTL ②：자신フィールドに「피안」モンスター以外の表側표시モンスターが存在する場合にこのカードは破壊される。
+CALLFORM CARD_ABLE(3,필드→묘지 ,손패→묘지 ,덱→묘지 ,破壊→묘지 ,戦闘→묘지,X素材時효과)
+PRINTL ③：このカードが묘지へ送られた場合、フィールドの마법・함정カード１枚を대상として발동できる。
+PRINTL そのカードを持ち主の손패に戻す。
+
+@CARDCAN_28225(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,28225)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,28225)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,28225,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 상황確認
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_破耐:場所") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件固カテゴリ = 피안
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+;GROUPMMATCH(確認したい変数,　←と == な値)
+ELSEIF GROUPMATCH(종류,필드→묘지,손패→묘지 ,덱→묘지 ,破壊→묘지 ,戦闘→묘지,X素材時효과)
+	SIF 발동済_3(듀얼리스트,28225)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 손패
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_28225(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28225,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 상황確認
+	CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+
+ELSEIF GROUPMATCH(종류,필드→묘지,손패→묘지 ,덱→묘지 ,破壊→묘지 ,戦闘→묘지,X素材時효과)
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,28225,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"손패")
+	ENDIF
+ENDIF

@@ -239,7 +239,7 @@ FOR カウンタ,0,サーチ範囲
 		ENDIF
 	ENDIF
 	IF 듀얼리스트 != "編集"
-		IF GETVAR(@"%듀얼리스트%_アザミナ呪") >= 1 && ゾーン != "특수"
+		IF GETVAR(@"%듀얼리스트%_アザミナ呪") >= 1 && ゾーン != "어드밴스"
 			IF 元参照先 == "묘지" || 元参照先 == "제외" || 元参照先 == "필드"
 				CONTINUE
 			ENDIF
@@ -257,6 +257,10 @@ FOR カウンタ,0,サーチ範囲
 	SIF 条件달성 != 1
 		CONTINUE
 
+	IF ゾーン == "어드밴스"
+		SIF GETVAR(@"%実行者%_MZ_不材:カウンタ") >= 1
+			CONTINUE
+	ENDIF
 	IF 효과条件固名前起動 == 1
 		TRYCALLFORM CARDNAME_{GETVAR(@"%実行者%_%参照先%:カウンタ")}, "名前"
 		효과条件固名前:カウンタD = %RESULTS%
@@ -271,31 +275,32 @@ FOR カウンタ,0,サーチ範囲
 				裏側플래그 = GETVAR(@"%実行者%_MZ_表:カウンタ")
 				CALL CARD_SETCOLOR(実行者,参照先,カウンタ,裏側플래그)
 				;上級値を使い、裏側플래그まで確認している。
-				CALLFORM CARD_KANPRINT("상대필드",(カウンタ + 上級値),대상カードID,0,裏側플래그)
+				TRYCALLFORM CARD_KANPRINT("상대필드",(カウンタ + 上級値),대상カードID,0,裏側플래그)
 			ELSEIF 参照先 == "마함"		
 				SIF GETVAR(@"%実行者%_魔_表:カウンタ") >= 2
 					裏側플래그 = 3
 				CALL CARD_SETCOLOR(実行者,参照先,カウンタ,裏側플래그)
 				;上級値を使い、裏側플래그まで確認している。
-				CALLFORM CARD_KANPRINT("상대마함",(カウンタ + 上級値),대상カードID,0,裏側플래그)
+				TRYCALLFORM CARD_KANPRINT("상대마함",(カウンタ + 上級値),대상カードID,0,裏側플래그)
 			ENDIF
 			RESETCOLOR
 		ELSE
 			CALL CARD_SETCOLOR(実行者,参照先,カウンタ)
-			CALLFORM CARD_KANPRINT(元参照先,(カウンタ + 上級値),대상カードID)
+			TRYCALLFORM CARD_KANPRINT(元参照先,(カウンタ + 上級値),대상カードID)
 			RESETCOLOR
 		ENDIF
 
 	ELSEIF 듀얼리스트 == "상대"
 		;ゾーン특수：上級소환の릴리스、モンスター묘지送りのためのやつ
-		IF ゾーン == "특수"
+		IF ゾーン == "어드밴스"
 			IF 参照先 == "필드"
 				IF GETVAR(@"%実行者%_MZ_攻:カウンタ") < 現在最小攻撃力
 					現在最小攻撃力 = RESULT
 					選択カード = カウンタ + 上級値
 				ENDIF
 			ELSE
-				CALLFORM CARD_{GETVAR(@"%実行者%_%参照先%:カウンタ")}, "攻撃力"
+				VARSET RESULT
+				TRYCALLFORM CARD_{GETVAR(@"%実行者%_%参照先%:カウンタ")}, "攻撃力"
 				IF RESULT < 現在最小攻撃力
 					現在最小攻撃力 = RESULT
 					選択カード = カウンタ + 上級値
@@ -310,7 +315,8 @@ FOR カウンタ,0,サーチ範囲
 						選択カード = カウンタ + 上級値
 					ENDIF
 				ELSE
-					CALLFORM CARD_{GETVAR(@"%実行者%_%参照先%:カウンタ")}, "攻撃力"
+					VARSET RESULT
+					TRYCALLFORM CARD_{GETVAR(@"%実行者%_%参照先%:カウンタ")}, "攻撃力"
 					IF  RESULT + 99999 > 現在最大攻撃力
 						;Anonym修正
 						現在最大攻撃力 = RESULT + 99999
@@ -323,7 +329,8 @@ FOR カウンタ,0,サーチ範囲
 						選択カード = カウンタ + 上級値
 					ENDIF
 				ELSE
-					CALLFORM CARD_{GETVAR(@"%実行者%_%参照先%:カウンタ")}, "攻撃力"
+					VARSET RESULT
+					TRYCALLFORM CARD_{GETVAR(@"%実行者%_%参照先%:カウンタ")}, "攻撃力"
 					IF  RESULT > 現在最大攻撃力
 						現在最大攻撃力 = RESULT
 						選択カード = カウンタ + 上級値

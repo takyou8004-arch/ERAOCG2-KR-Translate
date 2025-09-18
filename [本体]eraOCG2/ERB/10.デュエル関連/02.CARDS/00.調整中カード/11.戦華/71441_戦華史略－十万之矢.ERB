@@ -1,0 +1,169 @@
+﻿@CARDNAME_71441,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 전황사략－십만지시
+	CASE "略称"
+		RESULTS = 십만지시
+	CASE "カテゴリ"
+		RESULTS:0 = 전황
+ENDSELECT
+
+
+@CARD_71441(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "レア度"
+		RETURN CMN
+	CASE "추가日"
+		RETURN 250913
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71441(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①：상대フィールドの表側표시モンスター１体と자신フィールドの「전황」モンスター１体を대상として발동できる。
+PRINTL ターン終了時まで、その상대モンスターの攻撃力を半分にし、その数値分その자신のモンスターの攻撃力をアップする。
+CALLFORM CARD_ABLE(2,필드→묘지 ,손패→묘지 ,덱→묘지 ,破壊→묘지 )
+PRINTL ②：このカードが묘지へ送られた場合に발동できる。
+PRINTL 손패・덱・묘지から「전황사략－십만지시」以外の「전황」지속마법・지속함정カード１枚を자신フィールドに表側표시で置く。
+PRINTL その後、자신フィールドの「전황」モンスターの속성が２종류以上の場合、덱からカードを１枚ドローする。
+
+@CARDCAN_71441(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71441)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,71441)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 전황
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+		CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지
+	SIF 발동済_2(듀얼리스트,71441)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
+	효과範囲덱 = 1
+	효과条件종류:0 = 지속마법
+	효과条件종류:1 = 지속함정
+	효과条件固名前 = 전황사략－십만지시
+	효과条件カテゴリ = 전황
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_71441(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択フォース
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71441,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"選択")
+		選択カード = RESULT:1
+		IF 選択カード != 9999
+			攻撃力修正 = (GETVAR(@"%対面者%_MZ_攻:選択カード") / 2)
+			CALL FULLRESET
+			효과추가종류 = 2
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",選択カード,"一攻DOWN")
+
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件カテゴリ = 전황
+			효과条件표시 = 表側표시
+			CALL CARD_GRANT_ADV(듀얼리스트,ゾーン,場所,"一攻",攻撃力修正)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71441)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71441,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과範囲묘지 = 1
+		효과範囲덱 = 1
+		효과条件종류:0 = 지속마법
+		효과条件종류:1 = 지속함정
+		효과条件固名前 = 전황사략－십만지시
+		효과条件カテゴリ = 전황
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+		;추가효과
+		CALL FIELD_INFO_COUNT(듀얼리스트,"属")
+		IF RESULT >= 2
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+
+ENDIF

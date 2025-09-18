@@ -1,0 +1,233 @@
+@CARDNAME_25238,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마요선수 독안군주
+	CASE "略称"
+		RESULTS = 독안군주
+	CASE "カテゴリ"
+		RESULTS:0 = 요선수
+ENDSELECT
+
+@CARD_25238(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 3000
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "추가日"
+		RETURN 260000
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_25238(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名の①のＰ효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,마함起動)
+PRINTL ①：자신の마법＆함정ゾーンに他のＰモンスターが存在する場合に발동できる。
+PRINTL 손패から야수족モンスターを任意の数だけ특수소환する。
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ①：자신エンドフェイズに발동する。
+PRINTL このカードを持ち主の손패に戻す。
+CALL TEXT_DECORATION("P_MAGIC_2")
+CALLFORM CARD_ABLE(0,소환時,특수소환時)
+PRINTL ①：このカードが소환・특수소환に成功した場合、상대フィールドのカード１枚を대상として발동できる。
+PRINTL そのカードを持ち主の손패に戻す。
+CALLFORM CARD_ABLE(0,효과後強制誘発)
+PRINTL ②：このカードがモンスターゾーンに存在し、このカード以外のフィールドのカードが손패・덱に戻る度に발동する。
+PRINTL 자신フィールドの全ての「요선수」モンスターの攻撃力は５００アップする。
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ③：このカードを특수소환したターンのエンドフェイズに발동する。
+PRINTL このカードを持ち主の손패に戻す。
+
+@CARDCAN_25238(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25238)
+SIF RESULT == 1
+	RETURN 0
+
+;P
+;설치
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	;상대使用時
+	;ひたすらPゾーンに置きまくるのが気になったので
+	IF 듀얼리스트 == "상대"
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件名前 = 마요선수 독안군주
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0	
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,25238)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종족 = 야수족
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+;M
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	RETURN 1
+ELSEIF 종류 == 효과後強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"손패덱")
+	IF RESULT != 1
+		CALL FULLRESET
+		CALL CARD_CHECK_FIN_DATA(対面者,"손패덱")
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	IF ゾーン != "마함"
+		SIF ゾーン != "필드"
+			RETURN 0
+		SIF ゾーン == "필드" && GETVAR(@"%듀얼리스트%_MZ_T1召種:場所") == 召種通常
+			RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_25238(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 最大소환数
+#DIM DYNAMIC 추가효과
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;P
+;설치
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25238)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25238,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종족 = 야수족
+		효과条件소환可 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		最大소환数 = RESULT 
+		CALL FULLRESET
+		SIF 最大소환数 > 5 - モンスター数(듀얼리스트)
+			最大소환数 = 5 - モンスター数(듀얼리스트)
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件종족 = 야수족
+		효과条件複数 = 100 - 最大소환数
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+;M
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25238,0)
+	IF RESULT == 0
+		;대인화시のモン효과②
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件名前 = 마요선수 대인화시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			추가효과 = 1
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		IF 추가효과 == 0
+			CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"손패")
+		ELSEIF 추가효과 == 1
+			PRINTL 대인화시の효과で덱に戻ります。
+			CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"덱")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後強制誘発
+	SETCOLOR C_YELLOW
+	PRINTFORML 독안군주の효과발동！
+	PRINTFORML 요선수モンスターの攻撃力が５００アップ！
+	RESETCOLOR
+	CALL FULLRESET
+	효과条件カテゴリ = 요선수
+	효과条件종류 = モン全般
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"永攻",500)
+ELSEIF 종류 == ターン終了時強制
+	IF ゾーン == "필드"
+		CALL CARD_DISPOSE(듀얼리스트,"필드",場所,3)
+	ELSEIF ゾーン == "마함"
+		CALL CARD_DISPOSE(듀얼리스트,"마함",場所,3)
+	ENDIF
+ENDIF

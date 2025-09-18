@@ -1,0 +1,166 @@
+﻿@CARDNAME_71181,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 파샤스의 신역
+	CASE "略称"
+		RESULTS = 파샤스의 신역
+	CASE "カテゴリ"
+		RESULTS:0 = 천공의 성역
+		RESULTS:1 = 파샤스
+ENDSELECT
+
+
+@CARD_71181(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+	CASE "レア度"
+		RETURN SPR
+	CASE "추가日"
+		RETURN 250915
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71181(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の③の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：자신フィールドは「천공의 성역」になる。
+PRINTL ②：このカードがフィールドゾーンに存在する限り、フィールドの천사족モンスターの攻撃力・守備力は３００アップし、
+PRINTL フィールドの악마족モンスターの攻撃力・守備力は３００ダウンして효과が無効化される。	
+CALLFORM CARD_ABLE(3,ターン終了時)
+PRINTL ③：자신・상대ターン終了時に발동できる。
+PRINTL 자신の묘지・제외状態の천사족モンスター１体または通常함정カード１枚を選んで자신の덱の一番上に置く。
+
+;「천공의 성역」として扱う마법カード。フィールド名を설정する処理を扱う都合上、지속마법からフィールド마법に변경。
+;カードの효과処理ではフィールド名やカテゴリ・종류を参照するため、마함や묘지でのカード名の名称변경までは行わない。
+
+;파샤스カードはフィールドに천공의 성역を要求する효과발동条件が多いので、展開ルートで貼ればより盤石な盤面になる。
+;元々のカード同様、初動となる효과は持たないが、【エンジェル・パーミッション】としてはより扱いやすいリソース回収효과に변경している。
+;セット状態の마함を保護する효과をオミットした代わりに、악마족専用スキドレという強烈なメタ효과を추가。덱の相性関係をより鮮明にする狙い。
+;昔ながらのフィールド마법の趣を出すため、強化・弱体효과はどちらも両プレイヤーに효과が及ぶ。자신の악마족モンスターも弱体化する点は注意。
+
+
+@CARDCAN_71181(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 条件달성カード名,10
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71181)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時
+	SIF 발동済_3(듀얼리스트,71181)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件종류 = モン全般
+	효과条件종족 = 천사족
+	효과条件スーパー종류 = 通常함정
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動 || 종류 == 지속효과 || 종류 == 常在無効
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71181(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 条件달성カード名,10
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 条件달성数 = 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71181)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == ターン終了時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71181,3)
+	IF RESULT == 0
+		;묘지・제외の천사족モンスター１体または通常함정１枚を덱トップに置く。
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件종류 = モン全般
+		효과条件종족 = 천사족
+		효과条件スーパー종류 = 通常함정
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_SELECT(듀얼리스트,RESULT)
+			CALL CARD_ADD_DECK_SPC(대상者（CS）,参照先（CS）,選択カード（CS）)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL FULLRESET
+	효과条件종족 = 천사족
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,300,300)
+	CALL FULLRESET
+	효과条件종족 = 천사족
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,300,300)
+	CALL FULLRESET
+	효과条件종족 = 악마족
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,-300,-300)
+	CALL FULLRESET
+	효과条件종족 = 악마족
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,-300,-300)
+ELSEIF 종류 == 常在無効
+	CALL FULLRESET
+	효과条件종족 = 악마족
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"無効")
+	CALL FULLRESET
+	효과条件종족 = 악마족
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "천공의 성역")
+ENDIF
+

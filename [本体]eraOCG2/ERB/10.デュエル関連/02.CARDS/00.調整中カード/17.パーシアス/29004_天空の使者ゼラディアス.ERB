@@ -1,0 +1,130 @@
+﻿@CARDNAME_29004,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 천공의 사자 제라디아스
+	CASE "略称"
+		RESULTS = 제라디아스
+	CASE "カテゴリ"
+		RESULTS:0 = 제라
+		RESULTS:1 = 파샤스
+		RESULTS:2 = 천공의 성역
+ENDSELECT
+
+
+@CARD_29004(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2100
+	CASE "守備力"
+		RETURN 800
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250915
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_29004(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,손패起動,묘지起動)
+PRINTL ①：손패・묘지のこのカードを제외して발동できる。
+PRINTL 자신の덱・묘지から「천공의 성역」フィールド마법カード１枚を손패に加える。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：자신フィールドが「천공의 성역」でない場合、このカードは攻撃できない。
+;CALLFORM CARD_ABLE(3,身代효과)
+;PRINTL ③：자신フィールドの「천공의 성역」フィールド마법カードが破壊される場合、代わりにフィールド・묘지のこのカードを제외できる。
+
+
+;천사족の様々なテーマで参照される、「천공의 성역」フィールド마법にアクセスできる천사족モンスター。
+;作成段階では「파샤스의 신역」しかサーチ先がないのは気がかりだが、本家の「천공의 성역」はあえて作成しない。
+;本家「천공의 성역」は、대행자や히페리온等の別の천사족テーマを作りたくなった人に효과調整なども含めて委ねる事とする。
+;※他テーマで作るときも「천공의 성역」扱いのフィールドにして、本家はeraOCG2には存在しないままにしておくのもエモいかもしれないけど。
+
+;제라の女戦士を作る予定に合わせて、제라디아스も女の子にしている。
+
+
+@CARDSUMMON_AA_29004
+
+
+@CARDCAN_29004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC フィールド名
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,29004)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,29004)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 천공의 성역
+	효과条件종류 = フィールド
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVARS(@"%듀얼리스트%_フィールド名") == "천공의 성역"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_29004(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM 손패選択
+#DIM 選択カード
+#DIM DYNAMIC 攻撃修正値
+#DIMS DYNAMIC フィールド名
+
+
+IF 종류 == 손패起動 || 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,29004,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 천공의 성역
+		효과条件종류 = フィールド
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"戦無",3)
+ENDIF

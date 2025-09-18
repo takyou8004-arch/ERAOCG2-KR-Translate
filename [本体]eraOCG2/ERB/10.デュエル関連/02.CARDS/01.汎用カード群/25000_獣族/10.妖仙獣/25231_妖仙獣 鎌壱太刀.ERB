@@ -1,0 +1,182 @@
+@CARDNAME_25231,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 요선수 겸일태도
+	CASE "略称"
+		RESULTS = 겸일태도
+	CASE "カテゴリ"
+		RESULTS:0 = 요선수
+ENDSELECT
+
+@CARD_25231(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 500
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 260000
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_25231(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,소환時)
+PRINTL ①：このカードが소환した場合に발동できる。
+PRINTL 덱から「요선수 겸일태도」以外のレベル４の「요선수」モンスター１体を손패に加え、
+PRINTL 손패から「요선수 겸일태도」以外の「요선수」モンスター１体を소환する。
+CALLFORM CARD_ABLE(11,필드起動)
+PRINTL ②：このカードがフィールドに表側표시で存在する限り１度だけ、
+PRINTL 자신フィールドに他の「요선수」モンスターが存在する場合に
+PRINTL 상대フィールドのカード１枚を대상として발동できる。
+PRINTL そのカードを持ち主の손패に戻す。
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ③：このカードを소환したターンのエンドフェイズに발동する。
+PRINTL このカードを持ち主の손패に戻す。
+
+
+@CARDCAN_25231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25231)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 요선수
+	효과条件固名前 = 요선수 겸일태도
+	효과条件종류 = モン全般
+	효과条件レベル = 4
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 요선수
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_T1召種:場所") != 召種通常
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_25231(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 추가효과
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25231,0)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 요선수
+		효과条件固名前 = 요선수 겸일태도
+		효과条件종류 = モン全般
+		효과条件レベル = 4
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과条件カテゴリ = 요선수
+			효과条件固名前 = 요선수 겸일태도
+			효과条件종류 = モン全般
+			;参考：アルカナリーディング
+			IF モンスター数(듀얼리스트) >= 5
+				CALLFORM 효과条件レベル_ADV(5,"以上")
+			ELSEIF モンスター数(듀얼리스트) < 1
+				CALLFORM 효과条件レベル_ADV(4,"以下")
+			ELSEIF モンスター数(듀얼리스트) < 2
+				CALLFORM 효과条件レベル_ADV(6,"以下")
+			ENDIF
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			選択カード = RESULT
+			選択カードID = RESULT:99
+			IF 選択カードID != 9999
+				CALL CARD_SELECT(듀얼리스트,選択カード)
+				選択カード = RESULT
+				CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",3)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25231,11)
+	IF RESULT == 0
+		;대인화시のモンスター효과②
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件名前 = 마요선수 대인화시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			추가효과 = 1
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		IF 추가효과 == 0
+			CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"손패")
+		ELSEIF 추가효과 == 1
+			PRINTL 대인화시の효과で덱に戻ります。
+			CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"덱")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_DISPOSE(듀얼리스트,"필드",場所,3)
+ENDIF

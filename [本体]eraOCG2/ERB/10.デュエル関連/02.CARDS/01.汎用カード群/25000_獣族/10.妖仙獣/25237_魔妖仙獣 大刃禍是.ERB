@@ -1,0 +1,195 @@
+@CARDNAME_25237,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 마요선수 대인화시
+	CASE "略称"
+		RESULTS = 대인화시
+	CASE "カテゴリ"
+		RESULTS:0 = 요선수
+ENDSELECT
+
+@CARD_25237(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 300
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "추가日"
+		RETURN 260000
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_25237(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+CALLFORM CARD_ABLE(0,攻撃時強制誘発)
+PRINTL ①：자신の「요선수」モンスターが攻撃宣言する度に、
+PRINTL 자신フィールドの「요선수」モンスターの攻撃力はターン終了時まで３００アップする。
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ①：자신フィールドの「요선수」カードが戦闘・효과で破壊される場合、
+PRINTL 代わりにこのカードを손패に戻す事ができる。
+CALL TEXT_DECORATION("P_MAGIC_2")
+CALLFORM CARD_ABLE(0,소환時,특수소환時)
+PRINTL ①：このカードが소환・특수소환に成功した場合、상대フィールドのカードを２枚まで대상として발동できる。
+PRINTL そのカードを持ち主の덱に戻す。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ③：このカードがモンスターゾーンに存在する限り、자신の「요선수」カードの효과で상대フィールドのカードが持ち主の손패に戻る場合、
+PRINTL 代わりに持ち主の덱に戻る。
+CALLFORM CARD_ABLE(0,ターン終了時強制)
+PRINTL ③：このカードを특수소환したターンのエンドフェイズに발동する。
+PRINTL このカードを持ち主の손패に戻す。
+
+;モンスター효과②は各カード側で処理しています。
+
+@CARDCAN_25237(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25237)
+SIF RESULT == 1
+	RETURN 0
+
+;P
+;설치
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	;상대使用時
+	;ひたすらPゾーンに置きまくるのが気になったので
+	IF 듀얼리스트 == "상대"
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件名前 = 마요선수 대인화시
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			RETURN 0	
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	IF !MATCH(RESULTS,"요선수")
+		RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	TRYCALLFORM CARDNAME_{破壊대상ID}("カテゴリ")
+	SIF !MATCH(RESULTS,"요선수")
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	RETURN 1
+;M
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_T1召種:場所") == 召種通常
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_25237(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+#DIM DYNAMIC 選択カードID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+;P
+;설치
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25237)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	SETCOLOR C_YELLOW
+	PRINTFORML 대인화시の펜듈럼효과발동！
+	PRINTFORML 요선수モンスターの攻撃力が３００アップ！
+	RESETCOLOR
+	효과条件カテゴリ = 요선수
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"一攻",300)
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25237)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,손패行き)
+		RETURN 1
+	ENDIF
+;M
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25237,0)
+	IF RESULT == 0
+		CALL FULLRESET
+		IF 듀얼리스트 != "상대"
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+		ENDIF
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件표시 = 表側표시
+		효과条件複数 = 98
+		CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"덱")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 요선수
+	효과条件종류 = モン全般
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐")
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_DISPOSE(듀얼리스트,"필드",場所,3)
+ENDIF

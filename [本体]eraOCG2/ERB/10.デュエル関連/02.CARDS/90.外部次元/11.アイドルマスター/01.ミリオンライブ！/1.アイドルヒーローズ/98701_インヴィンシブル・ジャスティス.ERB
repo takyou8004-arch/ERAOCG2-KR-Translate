@@ -14,7 +14,6 @@ SELECTCASE 参照先
 		RESULTS:0 = I•HERO
 		RESULTS:1 = HERO
 		RESULTS:2 = 밀리언 라이브!
-		RESULTS:4 = MILLION LIVE!
 ENDSELECT
 
 @CARD_98701(参照先)
@@ -24,8 +23,12 @@ VARSET RESULT
 VARSET RESULTS
 
 SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
 	CASE "종류"
 		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250601
 ENDSELECT
 RETURN 0
 
@@ -44,8 +47,11 @@ RETURN 0
 PRINTL 이 카드명의 ①② 효과는 각각 1턴에 1번밖에 사용할 수 없다.
 CALLFORM CARD_ABLE(1,발동誘発)
 PRINTL ①: 상대의 마법 / 함정 / 몬스터의 효과가 발동했을 경우에 발동할 수 있다.
-PRINTL 제외 상태의 "I•HERO" 몬스터 1장을 덱으로 되돌리고,
 PRINTL 턴 종료 시까지, 자신 필드의 "I•HERO" 몬스터 전부는 발동한 카드의 종류(마법 / 함정 / 몬스터)에 대한 내성을 얻는다.
+CALLFORM CARD_ABLE(2,효과後誘発)
+PRINTL ②：자신 필드에 "I•HERO" 융합 몬스터가 융합 소환 된 경우에 발동할 수 있다。
+PRINTL 묘지의 이 카드를 세트한다。
+PRINTL 이 효과로 세트한 이 카드는, 세트한 턴에서도 발동할 수 있으며, 필드에서 벗어날 경우 제외된다。
 
 @CARDCAN_98701(듀얼리스트,종류,ゾーン,場所)
 #DIMS DYNAMIC 듀얼리스트
@@ -72,19 +78,24 @@ IF 종류 == 발동誘発
 	CALL FULLRESET
 	효과範囲제외 = 1
 	효과条件カテゴリ = I•HERO
-	효과条件종류 = モン全般
-	효과条件CNT = 1
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	SIF RESULT < 1
-		RETURN 0
-	CALL FULLRESET
-	효과範囲필드 = 1
-	효과条件カテゴリ = I•HERO
+	효과条件종류 = 융합
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
 	CALL FULLRESET
 	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_2(듀얼리스트,98701)
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = I•HERO
+	효과条件종류 = 융합
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
 	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
@@ -113,26 +124,28 @@ IF 종류 == 발동誘発
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,98701,1)
 	IF RESULT == 0
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
-		CALL FULLRESET
-		효과範囲제외 = 1
-		효과条件カテゴリ = I•HERO
-		효과条件종류 = モン全般
-		효과条件行先플래그 = 덱行き
-		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
-		IF RESULT == 1
-			발동カードID = 効後_設場所:(処理中番号 - 1)
-			TRYCALLFORM CARD_{발동カードID},"종류"
-			IF RESULT < 10
-				획득耐性 = モ耐
-			ELSEIF INRANGE(RESULT,20,26)
-				획득耐性 = 魔耐
-			ELSEIF INRANGE(RESULT,30,33)
-				획득耐性 = 함정耐
-			ENDIF
-			CALL FULLRESET
-			효과条件カテゴリ = I•HERO
-			CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,획득耐性,1)
+		발동カードID = 効後_設場所:(処理中番号 - 1)
+		TRYCALLFORM CARD_{발동カードID},"종류"
+		IF RESULT < 10
+			획득耐性 = モ耐
+		ELSEIF INRANGE(RESULT,20,26)
+			획득耐性 = 魔耐
+		ELSEIF INRANGE(RESULT,30,33)
+			획득耐性 = 함정耐
 		ENDIF
+		CALL FULLRESET
+		효과条件カテゴリ = I•HERO
+		효과条件종류 = 융합
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,획득耐性,1)
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,98701,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前 = 인빈시블 저스티스
+		효과추가종류 = 500
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"使化裏側표시")
 	ENDIF
 ENDIF
 

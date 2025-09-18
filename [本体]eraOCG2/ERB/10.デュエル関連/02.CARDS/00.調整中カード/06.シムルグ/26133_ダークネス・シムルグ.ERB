@@ -1,0 +1,137 @@
+﻿@CARDNAME_26133,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 다크니스 시무르그
+	CASE "略称"
+		RESULTS = 암흑 다무르그
+	CASE "カテゴリ"
+		RESULTS:0 = 시무르그
+ENDSELECT
+
+
+@CARD_26133(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RESULT:1 = 바람속성
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 2900
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250917
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26133(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカードは바람속성としても扱う。
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①：자신がレベル５以上の闇・바람속성モンスターを소환した場合に발동できる。
+PRINTL 손패・묘지のこのカードを특수소환する。
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ②：상대の마법・함정カードの효과が발동した時、자신フィールドの비행야수족モンスター１体をリリースして발동できる。
+PRINTL その발동を無効にし、破壊する。
+
+
+@CARDCAN_26133(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26133)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,26133)
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"손패","묘지")
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,26133,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件속성:0 = 어둠속성
+	효과条件속성:1 = 바람속성
+	CALLFORM 효과条件レベル_ADV(5,"以上")
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"通常소환")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF 발동済_2(듀얼리스트,26133)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 비행야수족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_26133(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26133,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		IF ゾーン == "손패"
+			효과範囲손패 = 1
+		ELSEIF ゾーン == "묘지"
+			효과範囲묘지 = 1
+		ENDIF
+		효과条件名前 = 다크니스 시무르그
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	
+ENDIF

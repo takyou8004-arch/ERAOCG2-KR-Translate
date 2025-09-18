@@ -1,0 +1,191 @@
+﻿@CARDNAME_73222,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 안개의 왕성
+	CASE "略称"
+		RESULTS = 안개의 왕성
+	CASE "カテゴリ"
+		RESULTS:0 = 운마물
+ENDSELECT
+
+
+@CARD_73222(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+	CASE "추가日"
+		RETURN 250917
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_73222(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 자신フィールドは「안개의 왕성」となる。
+PRINTL このカード名のカードは１ターンに１度しか발동できず、
+PRINTL このカード名の③の효과は１デュエル中１度しか使用できない。
+CALLFORM CARD_ABLE(1,손패起動,마함起動)
+PRINTL ①：このカードの발동処理として、덱からレベル２以下の通常モンスター１体を묘지に送り、
+PRINTL 자신の묘지の通常モンスターの数だけフォッグ카운터を置く（最大５個）。
+PRINTL こうして카운터が５つ置かれた場合、덱からレベル７以上の물속성モンスター１体を손패に加える。
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ②：フィールドのこのカード、または자신フィールドの물속성モンスターが戦闘・효과で破壊される場合、
+PRINTL 代わりのこのカードからフォッグ카운터を１つ取り除く。
+CALLFORM CARD_ABLE(20,마함起動)
+PRINTL ③：メインフェイズ１に、フォッグ카운터のないこのカードと손패を全て묘지へ送る事で발동できる。
+PRINTL 묘지のモンスターカードを４枚選択して손패に加える。
+PRINTL このターン자신はバトルフェイズを行う事はできない。
+
+
+@CARDCAN_73222(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과使用불가,3
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,73222)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_D1(듀얼리스트,73222)
+		RETURN 0
+	SIF メインフェイズ２ == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 4
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,73222)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_個Ｃ:場所") < 1
+		RETURN 0
+	IF 破壊대상ゾーン == "필드"
+		TRYCALLFORM CARD_{破壊대상ID}("속성")
+		SIF RESULT != 물속성
+			RETURN 0
+		SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+			RETURN 0
+	ELSEIF 破壊대상ゾーン == "마함"
+		SIF 破壊대상場所 != 場所
+			RETURN 0
+		SIF 破壊대상場所 != 場所
+			RETURN 0
+		SIF !GROUPMATCH(破壊종류,"효과")
+			RETURN 0
+	ELSE
+		RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2	
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_73222(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC セット先
+
+
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73222,20)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		FOR カウンタ,0,紙束最大値
+			SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") == -1
+				CONTINUE
+			CALL CARD_DISPOSE(듀얼리스트,"손패",カウンタ)
+		NEXT
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = モン全般
+		효과条件複数 = 4
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)		
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73222,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		セット先 = カード설치先
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종류 = 通常モン
+		CALL 효과条件レベル_ADV(2, "以下")
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件종류 = 通常モン	
+			효과条件CNT = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT >= 5
+				RESULT = 5
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",セット先,"魔Ｃ",RESULT)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,73222)
+	IF RESULT == 0
+		CALL SET_FIELD_INFO(듀얼리스트,"마함",場所,"個Ｃ",-1)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 지속효과
+	CALL SET_FIELD_MAGIC_INFO(듀얼리스트, "안개의 왕성")
+ENDIF

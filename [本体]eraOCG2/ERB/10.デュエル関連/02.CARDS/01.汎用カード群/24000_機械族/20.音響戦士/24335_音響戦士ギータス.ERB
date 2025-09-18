@@ -1,0 +1,238 @@
+﻿@CARDNAME_24335,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 사운드 워리어 기타스
+	CASE "略称"
+		RESULTS = 기타스
+	CASE "カテゴリ"
+		RESULTS:0 = 사운드 워리어
+ENDSELECT
+
+
+@CARD_24335(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 100
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "추가日"
+		RETURN 250914
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24335(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名の①②のＰ효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①：자신の마법＆함정ゾーンにこのカード名以外のＰモンスターカードが存在する場合に발동できる。
+PRINTL 손패・ＥＸ덱からレベル６以下で、ＥＸモンスター以外のモンスター１体を특수소환する。
+CALLFORM CARD_ABLE(2,마함起動)
+PRINTL ②：손패を１枚捨てて발동できる。
+PRINTL 덱から「사운드 워리어 기타스」以外の「사운드 워리어」モンスター１体を특수소환する。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL このカード名の①のモンスター효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(3,소환時)
+PRINTL ①：このカードが소환に成功した場合に발동できる。
+PRINTL 자신の묘지の「사운드 워리어」モンスター１体を특수소환する。
+
+@CARDCAN_24335(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 발동불가,4
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24335)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+
+	SIF 발동済_1(듀얼리스트,24335)
+		발동불가:0 = 1
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件표시 = 表側표시
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:0 = 1
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件종류 = EX以外全般
+	CALLFORM 효과条件レベル_ADV(6,"以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:0 = 1
+	
+	SIF 발동済_2(듀얼리스트,24335)
+		발동불가:1 = 1
+	SIF 손패数(듀얼리스트) < 1
+		발동불가:1 = 1
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 사운드 워리어
+	효과条件固名前 = 사운드 워리어 기타스
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:1 = 1
+	
+	SIF 발동불가:0 == 1 && 발동불가:1 == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 사운드 워리어 기타스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1 && 듀얼리스트 != "자신"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환時
+	SIF 발동済_3(듀얼리스트,24335)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 사운드 워리어
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24335(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 발동불가,4
+
+IF 종류 == 마함起動
+	SIF 발동済_1(듀얼리스트,24335)
+		발동불가:0 = 1
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件分割 = 펜듈럼
+	효과条件표시 = 表側표시
+	효과条件他所 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:0 = 1
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과範囲EX덱 = 1
+	효과条件종류 = EX以外全般
+	CALLFORM 효과条件レベル_ADV(6,"以下")
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:0 = 1
+	
+	SIF 발동済_2(듀얼리스트,24335)
+		발동불가:1 = 1
+	SIF 손패数(듀얼리스트) < 1
+		발동불가:1 = 1
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 사운드 워리어
+	효과条件固名前 = 사운드 워리어 기타스
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		발동불가:1 = 1
+	
+	IF 발동불가:0 != 1 && 발동불가:1 != 1
+		CALL YN_CHOICE(듀얼리스트,"①：손패・ＥＸ덱からレベル６以下を특수소환する。","②：손패を捨てて덱から「사운드 워리어」を특수소환する。")
+	ELSEIF 발동불가:0 != 1
+		RESULT = 0
+	ELSEIF 발동불가:1 != 1
+		RESULT = 1
+	ENDIF
+
+	IF RESULT == 0
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24335,1)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲EX덱 = 1
+			효과条件종류 = EX以外全般
+			CALLFORM 효과条件レベル_ADV(6,"以下")
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	
+	ELSEIF RESULT == 1
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24335,2)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲손패 = 1
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과条件カテゴリ = 사운드 워리어
+				효과条件固名前 = 사운드 워리어 기타스
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24335)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24335,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 사운드 워리어
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+

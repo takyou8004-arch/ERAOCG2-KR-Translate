@@ -1,0 +1,187 @@
+﻿@CARDNAME_25705,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 전황의 미－주공
+	CASE "略称"
+		RESULTS = 주공
+	CASE "カテゴリ"
+		RESULTS:0 = 전황
+ENDSELECT
+
+
+@CARD_25705(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1600
+	CASE "守備力"
+		RETURN 1600
+	CASE "성별"
+		RETURN 雄性
+	CASE "レア度"
+		RETURN CMN
+	CASE "추가日"
+		RETURN 250913
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_25705(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②③の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：자신フィールドに「전황」지속마법・지속함정カードが存在する場合に발동できる。このカードを손패から특수소환する。
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：자신フィールドの지속마법・지속함정カード１枚を대상として발동できる。
+PRINTL そのカードを묘지へ送り、덱から「전황」마법・함정カード１枚を손패に加え、１枚を묘지に送る。
+CALLFORM CARD_ABLE(3,효과後誘発)
+PRINTL ③：「전황의 미－주공」以外の자신の「전황」モンスターの효과が발동した場合、상대フィールドの효과モンスター１体を대상として발동できる。
+PRINTL そのモンスターの효과をターン終了時まで無効にする。
+
+
+
+@CARDCAN_25705(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25705)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,25705)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,25705,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件종류:0 = 지속마법
+	효과条件종류:1 = 지속함정
+	효과条件カテゴリ = 전황
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,25705)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件종류:0 = 지속마법
+	효과条件종류:1 = 지속함정
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종류 = 마함全般
+	효과条件カテゴリ = 전황
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT <= 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_3(듀얼리스트,25705)
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 전황
+	효과条件固名前 = 전황의 미－주공
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_25705(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25705,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25705,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件종류:0 = 지속마법
+		효과条件종류:1 = 지속함정
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			PRINTL 손패に加えるカードを選択してください。
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종류 = 마함全般
+			효과条件カテゴリ = 전황
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				PRINTL 묘지に送るカードを選択してください。
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과条件종류 = 마함全般
+				효과条件カテゴリ = 전황
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25705,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"無効")
+	ENDIF
+
+ENDIF

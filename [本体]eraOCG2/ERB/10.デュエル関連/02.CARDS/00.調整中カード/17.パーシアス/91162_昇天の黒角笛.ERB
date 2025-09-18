@@ -1,0 +1,205 @@
+﻿@CARDNAME_91162,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 승천의 블랙 혼
+	CASE "略称"
+		RESULTS = 승천의 블랙 혼
+	CASE "カテゴリ"
+		RESULTS:0 = 천공의 성역
+		RESULTS:1 = 파샤스
+ENDSELECT
+
+
+@CARD_91162(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250915
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_91162(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカードの발동に対して상대は효과を발동できない。
+PRINTL このカード名の①②の효과は１ターンに１度、いずれか１つしか使用できない。
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①：상대が효과モンスターを특수소환した場合に발동できる。
+PRINTL その특수소환したモンスターを破壊する。자신フィールドが「천공의 성역」である場合、破壊せず덱に戻す。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신フィールドに通常소환可能なレベル５以上の천사족・빛속성モンスターが存在する場合、
+PRINTL 자신メインフェイズに묘지のこのカードを제외して상대フィールドのカード１枚を대상にして발동できる。そのカードを破壊する。
+;メイン덱の「효과モンスター」で판정する条件설정だが、OCG텍스트での表現が難しい。簡潔さと誤解しにくさのバランスで上記の条件記述に。
+;メインに上級モンスターを積む動機づけにするために융합・싱크로・의식を대상外にしている。メイン덱の특수소환モンスターは含んでてもよい想定。
+
+
+;【エンジェル・パーミッション】の核心となる、카운터함정（相当のチェーン불가の함정カード）の３枚目。
+;こちらも名称ターン１をつけて同一ターン中にサーチしてきて妨害추가には出来ないよう調整。
+;元々のカードとしては結構汎用的に使える효과になっていて、このカードは他の파샤스함정と比べると汎用性がある。
+;そのため、천공의 성역があると효과が強化されたり、②の묘지효과で천사족덱ではより強く使えるような調整にしている。
+;①は本来は효과による특수소환は止められないが소환そのものを無効にして破壊するのだが、발동タイミングとか実装の難易度を考えると、
+;효과後誘発での除去효과にして、소환そのものを無効にはできず出たとき효과の발동は許すが、その代わりに융합소환にも撃てるようにしている。
+;②は파샤스の動かし方を工夫すると展開ルートの中で묘지に送る事も可能なので捲りの手段にも利用ができるデザイン。
+;チェーン불가の処理をより細かく지정できるようになっているので、OCGの카운터함정カードのルール処理と同様に묘지효과はチェーン可能に설정。
+
+
+@CARDCAN_91162(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC 추가条件플래그 = 0
+#DIM DYNAMIC 대상カード_ID
+#DIM DYNAMIC 대상カード_종류
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,91162)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,91162)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,91162)
+		RETURN 0
+	;손패발동条件を満たしているかチェック（ＰゾーンにＳアリアドネが居るかチェック）　RESULT == 1で판정
+	;除去種無効でチェックしたら、カードが無効状態かどうかを판정できる気がするので試験的に１行추가。
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 천공 사랑천사 아리아드네
+	효과条件除去種 = 無効
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		추가条件플래그 |= 1
+	
+	IF ゾーン != "마함"
+		SIF ゾーン != "손패" || 추가条件플래그 != 1
+			RETURN 0
+	ELSE
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3
+			RETURN 0
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	
+	;상대が특수소환した場合に발동可能。
+	CALL FULLRESET
+	효과条件종류 = 효과全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"특수소환",1)
+	SIF RESULT != 1
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_1(듀얼리스트,91162)
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,91162)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF ゾーン != "묘지"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	;효과全般でなく효과モンに限定。싱크로体で条件満たすのは本意ではないため
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 천사족
+	효과条件속성 = 빛속성
+	효과条件종류 = 효과モン
+	CALLFORM 효과条件レベル_ADV(5, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	RETURN 1
+ELSEIF 종류 == チェーン可否
+	SIF !GROUPMATCH(チェーン可否종류, 효과後誘発)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_91162(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC 설정レベル
+#DIM DYNAMIC 대상カード_ID
+#DIM DYNAMIC 대상カード_종류
+#DIM DYNAMIC 選択結果
+
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードB
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 효과後誘発
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91162,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		
+		효과先 = FINAL_SUMMON_TARGET(듀얼리스트,1)
+		;대상カード_ID = GETVAR(@"%対面者%_필드:효과先")
+		;TRYCALLFORM CARD_{대상カード_ID},"종류"
+		;대상カード_종류 = RESULT
+		
+		IF GETVARS(@"%듀얼리스트%_フィールド名") == "천공의 성역"
+			;フィールドが천공의 성역の場合は덱戻し。
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",효과先,"덱")
+		ELSE
+			;천공의 성역でない場合は破壊して묘지送り。
+			CALL FULLRESET
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",효과先,"묘지")
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,91162,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き)
+		
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"묘지")
+	ENDIF
+ENDIF
+
+

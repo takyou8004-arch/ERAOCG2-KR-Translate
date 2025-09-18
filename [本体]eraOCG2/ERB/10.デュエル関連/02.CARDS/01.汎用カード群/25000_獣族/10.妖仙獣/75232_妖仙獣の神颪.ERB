@@ -1,0 +1,249 @@
+﻿@CARDNAME_75232,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 요선수의 신풍
+	CASE "略称"
+		RESULTS = 요선수의 신풍
+	CASE "カテゴリ"
+		RESULTS:0 = 요선수
+ENDSELECT
+
+
+@CARD_75232(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_75232(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,마함起動 ,손패起動)
+PRINTL ①：以下の효과から１つを選択して발동できる（자신フィールドにモンスターが存在しない場合、両方を選択できる）。
+PRINTL ●덱から「요선수」モンスター１体を손패に加える。
+PRINTL その後、レベル４以下の「요선수」モンスター１体の소환を行う事ができる。
+PRINTL ●덱からカード名が異なる「요선수」Ｐモンスター２体を選び、자신の마법＆함정ゾーンに表側표시で置く。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：묘지のこのカードを제외し、자신フィールドの表側표시の「요선수」마법・함정カード１枚を대상として발동できる。
+PRINTL そのカードを持ち主の손패に戻す。
+
+@CARDCAN_75232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,75232)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,75232)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 요선수
+	효과条件分割 = 펜듈럼
+	효과条件CNT = 1
+	효과条件固名前起動 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT < 2 || 마함数(듀얼리스트) > 4
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 요선수
+		효과条件종류 = モン全般
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT != 1
+			RETURN 0
+	ENDIF
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,75232)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件カテゴリ = 요선수
+	효과条件표시 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_75232(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 발동불가,2
+#DIM DYNAMIC 選択효과
+#DIMS DYNAMIC 選択カード名前
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,75232,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		;『발동불가:0』は①の下の효과、『발동불가:1』は上下両方の효과を適用できるか판정する変数です
+		;덱に「요선수」Ｐモンスターが２종류いなければ下の효과は使えない
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 요선수
+		효과条件分割 = 펜듈럼
+		효과条件CNT = 1
+		효과条件固名前起動 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT < 2
+			발동불가:0 = 1
+		;마법＆함정ゾーンに空きが無ければ下の효과は使えない
+		SIF 마함数(듀얼리스트) > 3
+			발동불가:0 = 1
+		;以上の条件を満たした上で、마법＆함정ゾーンに置く用とサーチする用で３枚の요선수モンスターが덱になければ両方の효과を適用できない
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 요선수
+		효과条件종류 = モン全般
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT < 3 || 발동불가:0 == 1 || モンスター数(듀얼리스트) != 0
+			발동불가:1 = 1
+		IF 듀얼리스트 == "자신"
+			PRINTFORML 使用する효과を選択してください。
+			PRINTL [0] ●덱から「요선수」モンスター１体を손패に加える。
+			PRINTL [0]  その後、レベル４以下の「요선수」モンスター１体の소환を行う事ができる。
+			SIF 발동불가:0 == 0
+				PRINTL [1] ●덱からカード名が異なる「요선수」Ｐモンスター２体を選び、자신の마법＆함정ゾーンに表側표시で置く。
+			SIF 발동불가:1 == 0
+				PRINTL [2] ●両方の효과
+			BINPUT
+			選択효과 = RESULT
+		;상대使用時
+		;손패or場に2종류のPモンが揃っていなければ置く효과を使う
+		ELSEIF 듀얼리스트 == "상대" && (발동불가:0 == 0 || 발동불가:1 == 0)
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲마함 = 1
+			효과条件カテゴリ = 요선수
+			효과条件分割 = 펜듈럼
+			효과条件CNT = 1
+			효과条件固名前起動 = 1
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT < 2 && 발동불가:1 == 0
+				選択효과 = 2
+			ELSEIF RESULT < 2 && 발동불가:0 == 0
+				選択효과 = 1
+			ENDIF
+		ENDIF
+
+		IF 選択효과 == 0
+			CALL CARDEFFECT_75232_1(듀얼리스트,종류,ゾーン,場所)
+		ELSEIF 選択효과 == 1
+			CALL CARDEFFECT_75232_2(듀얼리스트,ゾーン,場所)
+		ELSEIF 選択효과 == 2
+			PRINTL 마법＆함정ゾーンに置くカードを選んでください。
+			CALL CARDEFFECT_75232_2(듀얼리스트,ゾーン,場所)
+			PRINTL 손패に加えるカードを選んでください。
+			CALL CARDEFFECT_75232_1(듀얼리스트,종류,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,75232,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件カテゴリ = 요선수
+		효과条件표시 = 1
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
+
+@CARDEFFECT_75232_1(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 종류
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+
+CALL FULLRESET
+효과範囲덱 = 1
+효과条件カテゴリ = 요선수
+효과条件종류 = モン全般
+CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+IF RESULT == 1
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 요선수
+	CALL 효과条件レベル_ADV(4,"以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		IF 듀얼리스트 == "자신"
+			PRINTL モンスターの소환を行いますか？
+			PRINTL [0] はい
+			PRINTL [1] いいえ
+			BINPUT
+		ENDIF
+		IF RESULT == 0 || (듀얼리스트 == "상대" && モンスター数(듀얼리스트) < 5)
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과条件カテゴリ = 요선수
+			효과条件종류 = モン全般
+			CALL 효과条件レベル_ADV(4,"以下")
+			CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+			選択カード = RESULT
+			選択カードID = RESULT:99
+			IF 選択カードID != 9999
+				CALL CARD_SELECT(듀얼리스트,選択カード)
+				選択カード = RESULT
+				CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",3)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+@CARDEFFECT_75232_2(듀얼리스트,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カード名前
+
+CALL FULLRESET
+효과範囲덱 = 1
+효과条件カテゴリ = 요선수
+효과条件分割 = 펜듈럼
+CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+選択カードID = RESULT:1
+TRYCALLFORM CARDNAME_{選択カードID},"名前"
+選択カード名前= %RESULTS%
+CALL FULLRESET
+효과範囲덱 = 1
+효과条件カテゴリ = 요선수
+효과条件分割 = 펜듈럼
+효과条件固名前 = %選択カード名前%
+CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")

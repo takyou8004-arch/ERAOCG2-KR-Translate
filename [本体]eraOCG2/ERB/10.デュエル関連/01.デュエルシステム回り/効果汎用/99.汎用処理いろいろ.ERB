@@ -311,7 +311,7 @@ PRINTFORML %듀얼리스트%의 덱을 셔플합니다。
 SELECTCASE 듀얼리스트
 	CASE "자신"
 		FOR LCOUNT, 現山札数("자신"), 0, -1
-			;0以上LCOUNT未満の数에서ランダムでシャッフル대상을 選ぶ
+			;0以上LCOUNT未満の数에서ランダムで셔플대상을 選ぶ
 			CHANGE = RAND:LCOUNT
 			SWAP 자신_덱:(LCOUNT-1), 자신_덱:CHANGE
 		NEXT
@@ -1675,12 +1675,20 @@ IF 소환権 >= 1 || (追소환権 >= 1 && GETVAR(@"%듀얼리스트%_手_召可
 	CASE 5 TO 6
 		SIF GETVAR(@"%듀얼리스트%_ADV불가") >= 1
 			RETURN 0
-		SIF モンスター数(듀얼리스트) >= 1
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트, ,"어드밴스")
+		SIF RESULT >= 1
 			条件달성 += 1
 	CASE 7 TO 99
 		SIF GETVAR(@"%듀얼리스트%_ADV불가") >= 1
 			RETURN 0
-		SIF モンスター数(듀얼리스트) >= 2
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트, ,"어드밴스")
+		SIF RESULT >= 2
 			条件달성 += 1
 	CASEELSE
 		RETURN 0
@@ -2472,7 +2480,7 @@ IF カードレベル <= 4 || 효과소환플래그 == 1 || 효과소환플래�
 ELSEIF INRANGE(カードレベル,5,6) 
 	CALL FULLRESET
 	효과条件任意 = 1
-	CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드","특수")
+	CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드","어드밴스")
 	IF RESULT == 1
 		TRYCALLFORM CARDSUMMON_AA_{소환カード_ID}
 		IF 표시形式 == "攻撃표시"
@@ -2495,7 +2503,7 @@ ELSEIF INRANGE(カードレベル,7,12)
 	CALL FULLRESET
 	효과条件任意 = 1
 	효과条件複数 = 2
-	CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드","특수")
+	CALL CARD_ADD_GY_BASIC(듀얼리스트,"필드","어드밴스")
 	IF RESULT == 1
 		TRYCALLFORM CARDSUMMON_AA_{소환カード_ID}
 		IF 표시形式 == "攻撃표시"
@@ -3071,7 +3079,7 @@ PRINTL
 PRINTFORML %"획득DP",30,LEFT%: +{획득DP}
 CUSTOMDRAWLINE —
 FLAG:듀얼포인트 += 획득DP
-SIF TARGET >= 1
+SIF OPPOSER >= 1
 	TFLAG:97 += 획득DP / 30
 PRINTFORML 합계DP:{FLAG:듀얼포인트}
 
@@ -3079,7 +3087,7 @@ PRINTFORML 합계DP:{FLAG:듀얼포인트}
 ;Anonym추가
 IF 상대_듀얼패배플래그 >= 1
 	レート増減 = (획득DP / 100)
-	IF TARGET == -1 ;オンラインレート戦
+	IF OPPOSER == -1 ;オンラインレート戦
 	IF オンラインレート < 100
 		レート増減 *= 5
 	ELSEIF INRANGE(オンラインレート,100,199)
@@ -3099,7 +3107,7 @@ IF 상대_듀얼패배플래그 >= 1
 		ENDIF
 	ENDIF
 ELSEIF 자신_듀얼패배플래그 >= 1
-	IF TARGET == -1 ;オンラインレート戦
+	IF OPPOSER == -1 ;オンラインレート戦
 		レート増減 = 8 + (オンラインレート / 1000 * 3)
 	ELSE ;오프라인레이트戦
 		レート増減 = 20 + (CFLAG:MASTER:오프라인레이트 / 100)
@@ -3111,16 +3119,16 @@ CUSTOMDRAWLINE —
 
 EXP:MASTER:듀얼경험 ++
 ;Anonym추가。듀얼승리、패배경험
-SIF TARGET >= 1
-	EXP:TARGET:듀얼경험 ++
+SIF OPPOSER >= 1
+	EXP:OPPOSER:듀얼경험 ++
 IF 자신_듀얼패배플래그 >= 1
 	EXP:MASTER:듀얼패배경험 ++
-	SIF TARGET >= 1
-		EXP:TARGET:듀얼승리경험 ++
+	SIF OPPOSER >= 1
+		EXP:OPPOSER:듀얼승리경험 ++
 ELSE
 	EXP:MASTER:듀얼승리경험 ++
-	SIF TARGET >= 1
-		EXP:TARGET:듀얼패배경험 ++
+	SIF OPPOSER >= 1
+		EXP:OPPOSER:듀얼패배경험 ++
 ENDIF
 RETURN 획득DP
 
@@ -3580,19 +3588,7 @@ ENDIF
 
 @PRESET_JOKYO
 
-상대_덱:現山札数("상대") = 상대_손패:0
-상대_덱:現山札数("상대") = 상대_손패:1
-상대_덱:現山札数("상대") = 상대_손패:2
-상대_덱:現山札数("상대") = 상대_손패:3
-상대_덱:現山札数("상대") = 상대_손패:4
-VARSET 상대_손패, -1
-
-자신_덱:現山札数("자신") = 자신_손패:0
-자신_덱:現山札数("자신") = 자신_손패:1
-자신_덱:現山札数("자신") = 자신_손패:2
-자신_덱:現山札数("자신") = 자신_손패:3
-자신_덱:現山札数("자신") = 자신_손패:4
-VARSET 자신_손패,-1
+VARSET 상대_손패,-1
 
 
 

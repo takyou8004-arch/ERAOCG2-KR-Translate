@@ -1,0 +1,253 @@
+﻿@CARDNAME_54526,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 천공 죽음천사 하베스트
+	CASE "略称"
+		RESULTS = 천공 하베스트
+	CASE "カテゴリ"
+		RESULTS:0 = 파샤스
+		RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_54526(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 엑시즈
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 2000
+	CASE "守備力"
+		RETURN 800
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "성별"
+		RETURN 牝性
+	CASE "レア度"
+		RETURN SPR
+	CASE "추가日"
+		RETURN 250915
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_54526(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+素材条件종족 = 천사족
+素材条件속성 = 어둠속성
+素材条件レベル = 4
+
+IF EX参照 == 1
+	CALL XYZCAN(듀얼리스트,소환カード,54526) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_54526(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：このカードが마법＆함정ゾーンに存在する限り、자신は천사족モンスターをリリースなしで소환できる。
+CALLFORM CARD_ABLE(2,마함起動)
+PRINTL ②：자신メインフェイズに발동できる。자신の덱・묘지から「승천의 블랙 혼」１枚を손패に加える。
+PRINTL その後、자신フィールドが「천공의 성역」でない場合、자신の손패を１枚選んで捨てる。
+CALLFORM CARD_ABLE(3,효과後誘発)
+PRINTL ③：자신が「파샤스」通常함정カードの효과を발동した場合に以下の효과から１つを選んで발동できる。
+PRINTL ●상대フィールドのカード１枚を破壊する。
+PRINTL ●자신は１枚ドローする。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 천사족・어둠속성レベル４モンスター×２
+PRINTL このカード名の①のモンスター효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,戦破壊→묘지)
+PRINTL ①：このカードがフィールドを離れた場合に발동できる。
+PRINTL ＥＸ덱の「천공 죽음천사 하베스트」１体を자신のＰゾーンに置く。
+
+;ラッパ持ってるし元々は智天使だしで、ネタの大本は大天使ガブリエルなのだろうということで牝性モンスターとする。（言い訳にもならない）
+;死天使ハーヴェストは元々の효과でも「승천의 블랙 혼」をサーチするＰ起動효과を持っていて、これをパーミッションに組み込んで活用できるようにデザイン
+;ほぼテーマ専用の挙動になっており、そもそもＥＸから특수소환する事を想定していないカードになっているのでＰ효과部分にパワーを集約している。
+;そのお陰で、ほぼ지속カードのような使い方になっていて、なんとＰ소환を行う효과すら持っていない。仮にスケールあっても「３」とか「５」とかだと思う。
+;なお、엑시즈条件を闇天使にしているのは、CPUがせっかく並んでるヴァルキリアたちを変に素材にしてこいつを出したりしないようにそうなってる。
+;一応윤회의 파샤스でモンスターゾーンに直接出したりも出来るが、自爆特攻して無理矢理Ｐスケールに置くとかぐらいしか出番はないだろう。
+
+
+@CARDCAN_54526(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIM DYNAMIC 条件달성 = 0
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54526)
+SIF RESULT == 1
+	RETURN 0
+	
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_2(듀얼리스트,54526)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件名前 = 승천의 블랙 혼
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 효과後誘発
+	SIF 발동済_3(듀얼리스트,54526)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = 通常함정
+	효과条件カテゴリ = 파샤스
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과발동")
+	SIF RESULT != 1
+		RETURN 0
+	IF GETVAR(@"%듀얼리스트%_ドロー불가") >= 1 || 現山札数(듀얼리스트) == 0
+		条件달성 |= 1
+	ELSE
+		;うららチェックをONに（ドローする효과が使用可能であるため）
+		CALL CARD_DRAW_CHECK(1)
+	ENDIF
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		条件달성 |= 2
+	;ドローできない(1)かつ상대フィールドに破壊可能なカードがない(2)場合は발동できない
+	SIF 条件달성 & 1 && 条件달성 & 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF 발동済_1(듀얼리스트,54526)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_54526(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 효과使用플래그= 0
+#DIM DYNAMIC 選択結果
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+	
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54526,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
+		효과条件名前 = 승천의 블랙 혼
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			;손패に加える処理に成功し、フィールドが「천공의 성역」でない場合、손패１枚を捨てる。
+			IF GETVARS(@"%듀얼리스트%_フィールド名") != "천공의 성역"
+				CALL FULLRESET
+				효과範囲손패 = 1
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54526,3)
+	IF RESULT == 0
+		;추가효과の발동が可能かの판정
+		SIF GETVAR(@"%듀얼리스트%_ドロー불가") == 0 && 現山札数(듀얼리스트) >= 1
+			효과使用플래그 |= 1
+		;추가효과の발동可能かの판정2
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件除去種 = 묘지
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			효과使用플래그 |= 2
+		
+		IF 효과使用플래그 & 2 && 효과使用플래그 & 1
+			;両方使える場合、どちらを適用するか選択する。CPUは除去を優先する。
+			IF 듀얼리스트 == "상대"
+				選択結果 = はい
+			ELSE
+				PRINTL どちらの효과を適用しますか？
+				CALL YN_CHOICE(듀얼리스트,"●상대フィールドのカード１枚を破壊する。","●자신は１枚ドローする。")
+				選択結果 = RESULT
+			ENDIF
+		ELSEIF 효과使用플래그 & 2
+			選択結果 = はい
+		ELSEIF 효과使用플래그 & 1
+			選択結果 = いいえ
+		ELSE
+			;どちらの효과の条件も満たしていない場合、ここでこの효과の処理は終了とする
+			RETURN 0
+		ENDIF
+		
+		IF 選択結果 == はい
+			;상대フィールドのカード１枚を破壊する。
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"묘지")
+		ELSE
+			;덱から１枚ドローする。
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54526,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件名前 = 천공 죽음천사 하베스트
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+	ENDIF
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件종족 = 천사족
+	CALL STATCHANGE_HAND(듀얼리스트,"全体",場所,"一星",99)
+ENDIF
+

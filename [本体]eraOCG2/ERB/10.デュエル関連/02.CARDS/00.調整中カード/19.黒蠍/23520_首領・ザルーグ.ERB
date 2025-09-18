@@ -1,0 +1,155 @@
+﻿@CARDNAME_23520,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 돈 잘우그
+	CASE "略称"
+		RESULTS = 돈 잘우그
+	CASE "カテゴリ"
+		RESULTS:0 = 전갈
+ENDSELECT
+
+
+@CARD_23520(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	;효과モン/通常モン/의식/융합/싱크로/엑시즈/링크/초차원
+	CASE "종류"
+		RETURN 효과モン
+	;어둠속성/빛속성/땅속성/물속성/화염속성/바람속성
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1400
+	CASE "守備力"
+		RETURN 1500
+	;牝性/雄性があるよ
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250917
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_23520(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①③の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：このカードが소환・특수소환に成功した場合に발동できる。
+PRINTL 상대の손패をランダムに１枚捨て、상대の덱の上からカードを２枚묘지に送る。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：このカードがモンスターゾーンに存在する限り、자신の「전갈」モンスターは直接攻撃できる。
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ③：자신メインフェイズに발동できる。
+PRINTL 손패・덱から「전갈」지속마법・지속함정カード１枚を자신の마법＆함정ゾーンに表側표시で置く。
+
+
+@CARDCAN_23520(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,23520)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+    SIF 발동済_1(듀얼리스트,23520)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲손패 = 1
+	효과条件カテゴリ = 전갈
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,23520)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 전갈
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+
+
+ELSEIF 종류 == 지속효과
+	SIF !GROUPMATCH(ゾーン,"필드")
+		RETURN 0
+	RETURN 1	
+
+ENDIF	
+
+
+@CARDEFFECT_23520(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23520,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"손패破壊",場所,"묘지")
+
+		CALL FULLRESET
+	    CALL CARD_DECK_DISPOSE(対面者,"덱",2)
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23520,2)
+	IF RESULT == 0
+	    CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲손패 = 1
+		효과条件종류 = 마함全般
+		효과条件カテゴリ = 전갈
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+	ENDIF    
+	
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 전갈
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"直攻")
+
+ENDIF

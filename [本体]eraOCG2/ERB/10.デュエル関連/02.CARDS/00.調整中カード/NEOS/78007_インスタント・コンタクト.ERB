@@ -1,0 +1,116 @@
+﻿@CARDNAME_78007,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 인스턴트 콘택트
+	CASE "略称"
+		RESULTS = 간이 콘택트
+	CASE "カテゴリ"
+		RESULTS:0 = 네오스
+		RESULTS:1 = E•HERO
+ENDSELECT
+
+
+@CARD_78007(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "レア度"
+		RETURN SPR
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_78007(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名のカードは１ターンに１枚しか발동できない。
+CALL CARD_ABLE(0,마함起動 ,손패起動)
+PRINTL ①：１０００LPを払って발동できる。
+PRINTL レベル７以下の「E•HERO」モンスターまたは「N」モンスター１体を소환条件を無視してEX덱から특수소환する。
+PRINTL 자신のフィールド及び묘지に「엘리멘틀 히어로 네오스」が存在しない場合、
+PRINTL この효과で특수소환したモンスターは攻撃できず、효과は無効化され、エンドフェイズに持ち主のEX덱に戻る。
+PRINTL 
+
+
+@CARDCAN_78007(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,78007)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,78007)
+		RETURN 0
+	SIF GETVAR(@"ライフ_%듀얼리스트%") <= 1000
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	CALL 효과条件レベル_ADV(7, "以下")
+	효과条件カテゴリ:0 = E•HERO
+	효과条件カテゴリ:1 = 네오 스페이시언
+	효과条件特不無視 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_78007(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,78007)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",1000)
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		CALL 효과条件レベル_ADV(7, "以下")
+		효과条件カテゴリ:0 = E•HERO
+		효과条件カテゴリ:1 = 네오 스페이시언
+		효과条件特不無視 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과範囲묘지 = 1
+			효과条件名前 = 엘리멘틀 히어로 네오스
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT != 1
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"戦無",2)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"無効",2)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",カード소환先,"終処",덱行き)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

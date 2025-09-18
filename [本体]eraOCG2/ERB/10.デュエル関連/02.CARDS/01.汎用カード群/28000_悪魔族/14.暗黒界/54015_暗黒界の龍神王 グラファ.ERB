@@ -1,0 +1,162 @@
+@CARDNAME_54015,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 암흑계의 용신왕 그라파
+	CASE "略称"
+		RESULTS = 용신왕 그라파
+	CASE "カテゴリ"
+		RESULTS:0 = 암흑계
+ENDSELECT
+
+
+@CARD_54015(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 융합
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 악마족
+	CASE "レベル"
+		RETURN 8
+	CASE "攻撃力"
+		RETURN 3200
+	CASE "守備力"
+		RETURN 2300
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_54015(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要素材数 = 2
+
+IF EX参照 == 0 || EX参照 == 1
+	素材条件名前 = 암흑계의 용신 그라파
+ELSEIF EX参照 >= 10
+	素材条件속성 = 어둠속성
+ENDIF
+
+
+IF EX参照 == 1
+	CALL FUSCAN(듀얼리스트,소환カード,54015)
+	;RETURN RESULT
+	RETURN 0
+ENDIF
+
+@CARD_EXPLANATION_54015(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「암흑계의 용신 그라파」＋어둠속성モンスター
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,발동誘発)
+PRINTL ①：상대がモンスターの효과・通常마법・通常함정カードを발동した時に발동できる。
+PRINTL その효과を無効にし、자신の손패を１枚選んで捨てる。
+CALLFORM CARD_ABLE(2,戦破壊→묘지)
+PRINTL ②：このカードがフィールドから離れた場合に발동できる。
+PRINTL 자신の묘지・제외状態の「암흑계의 용신 그라파」１体を특수소환する。
+PRINTL その後、손패があるプレイヤーは自身の손패を１枚選んで捨てる。
+
+
+@CARDCAN_54015(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,54015)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 발동誘発
+	SIF 발동済_1(듀얼리스트,54015)
+		RETURN 0
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류:0 = モン全般
+	효과条件종류:1 = 通常마법
+	효과条件종류:2 = 通常함정
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 손패数(듀얼리스트) == 0
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 戦破壊→묘지
+	SIF 발동済_2(듀얼리스트,54015)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과範囲제외 = 1
+	효과条件名前 = 암흑계의 용신 그라파
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_54015(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC ダメージ量
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54015,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,54015,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과範囲제외 = 1
+		효과条件名前 = 암흑계의 용신 그라파
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF 손패数(듀얼리스트) >= 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+		IF 손패数(対面者) >= 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			CALL CARD_ADD_GY_ADV(対面者,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF
+
+

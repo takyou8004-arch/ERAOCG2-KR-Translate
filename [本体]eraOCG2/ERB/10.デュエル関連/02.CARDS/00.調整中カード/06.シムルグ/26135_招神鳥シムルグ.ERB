@@ -1,0 +1,130 @@
+﻿@CARDNAME_26135,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 초신조 시무르그
+	CASE "略称"
+		RESULTS = 초신조 시무르그
+	CASE "カテゴリ"
+		RESULTS:0 = 시무르그
+ENDSELECT
+
+
+@CARD_26135(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 비행야수족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250917
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_26135(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：このカードが소환・특수소환した場合に발동できる。
+PRINTL 덱から「초신조 시무르그」以外の「시무르그」カード１枚を손패に加える。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：상대の마법＆함정ゾーンにカードが存在しない場合に발동できる。
+PRINTL 묘지のこのカードを守備표시で특수소환する。
+PRINTL この효과で특수소환したこのカードは、フィールドから離れた場合に제외される。
+PRINTL この효과の발동後、ターン終了時まで자신は비행야수족モンスターしか특수소환できない。
+
+
+@CARDCAN_26135(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,26135)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,26135)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 시무르그
+	효과条件固名前 = 초신조 시무르그
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,26135)
+		RETURN 0
+	SIF 마함数(対面者) >= 1
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,26135,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_26135(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26135,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 시무르그
+		효과条件固名前 = 초신조 시무르그
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,26135,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前 = 추신조 시무르그
+		효과추가종류 = 効追除処
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,"守備표시")
+		SS소환可能종족 = 비행야수족
+		CALL CARD_SS_RESTRICTION(듀얼리스트)
+	ENDIF
+ENDIF

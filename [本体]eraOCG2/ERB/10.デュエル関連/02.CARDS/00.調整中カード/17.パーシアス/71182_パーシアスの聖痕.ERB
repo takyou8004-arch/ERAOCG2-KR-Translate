@@ -1,0 +1,298 @@
+﻿@CARDNAME_71182,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 파샤스의 성흔
+	CASE "略称"
+		RESULTS = 파샤스의 성흔
+	CASE "カテゴリ"
+		RESULTS:0 = 파샤스
+		RESULTS:1 = 게임 오리지널
+ENDSELECT
+
+
+@CARD_71182(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "レア度"
+		RETURN SPR
+	CASE "추가日"
+		RETURN 250915
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71182(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できず、
+PRINTL このカードの효과を발동するターン、자신は천사족モンスターしかＥＸ덱から특수소환できない。
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：자신の손패を１枚捨てて、以下の효과から１つを選択して발동できる。
+PRINTL ●자신の덱からレベル４以下の천사족モンスター１体を손패に加える。
+PRINTL ●자신の마법＆함정ゾーンにＰモンスターが存在しない場合、
+PRINTL 　자신の덱・ＥＸ덱から천사족Ｐモンスターを２体まで選んで자신のＰゾーンに置く。（同名カードは１枚まで）
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신フィールドが「천공의 성역」である場合、자신メインフェイズに묘지のこのカードを제외して발동できる。
+PRINTL 손패の천사족・빛속성モンスター１体を소환する。
+
+;「파샤스」の強さを現代水準に引き上げるための鍵となる마법カード。손패コスト１枚でレベル４以下の천사족をサーチできる汎用的な효과の他に、
+;덱・ＥＸ덱から천사족ＰモンスターをＰゾーン直接置けるという효과があり、こちらが파샤스の強さをワンランク引き上げる。
+;この효과でＥＸモンスターカードにした파샤스Ｐモンスター２種を置いて、Ｐ효과でアド損ぶんを取り返すデザインになっている。
+;一応、今後の拡張性や他のテーマでの利用も配慮して、メイン덱からも選べるように설정（幻奏なら活用できる可能性あり）
+;汎用札の評価としては、손패コスト１枚でローちゃんやディヴァイナー、ピュアリィ等の初動サーチもできるが、손패コスト＋するターンＥＸ縛りは若干重め。
+
+
+@CARDCAN_71182(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성 = 0
+#DIMS DYNAMIC 条件달성カード名,10
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71182)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,71182)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	
+	;천사족以外をEX소환していたら효과使用불가能
+	CALL FULLRESET
+	CALLFORM 효과条件종족_ADV(천사족,"以外")
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX履歴")
+	SIF RESULT != 0
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 천사족
+	CALLFORM 효과条件レベル_ADV(4, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		条件달성 |= 1
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲EX덱 = 1
+	효과条件종족 = 천사족
+	효과条件分割 = 펜듈럼
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		;자신の마함にPカードが無いことを確認
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件종류 = モン全般
+		효과条件分割 = 펜듈럼
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성 |= 2
+	ENDIF
+	SIF 条件달성 & 1 && 条件달성 & 2
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,71182)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF GETVARS(@"%듀얼리스트%_フィールド名") != "천공의 성역"
+		RETURN 0
+	
+	;천사족以外をEX소환していたら효과使用불가能
+	CALL FULLRESET
+	CALLFORM 효과条件종족_ADV(천사족,"以外")
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"EX履歴")
+	SIF RESULT != 0
+		RETURN 0
+	
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件속성 = 빛속성
+	효과条件종족 = 천사족
+	효과条件종류 = モン全般
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT != 1
+		RETURN 0
+	ELSE
+		;レベル４以下がいない場合の발동판정（上級しか居ない場合、リリースするモンスターが자신フィールドに必要）
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件속성 = 빛속성
+		효과条件종족 = 천사족
+		효과条件종류 = モン全般
+		CALLFORM 효과条件レベル_ADV(4, "以下")
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT != 1
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과条件종류 = モン全般
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT != 1
+				RETURN 0
+		ENDIF
+	ENDIF
+	
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_71182(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성 = 0
+#DIM DYNAMIC 選択結果
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71182,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		
+		;손패1枚を捨てる処理
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			;まず효과のどちらが使用できるか確認
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件종족 = 천사족
+			CALLFORM 효과条件レベル_ADV(4, "以下")
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			SIF RESULT == 1
+				条件달성 |= 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과範囲EX덱 = 1
+			효과条件종족 = 천사족
+			효과条件分割 = 펜듈럼
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				;자신の마함にPカードが無いことを確認
+				CALL FULLRESET
+				효과範囲마함 = 1
+				효과条件종류 = モン全般
+				효과条件分割 = 펜듈럼
+				효과条件표시 = 表側표시
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				SIF RESULT != 1
+					条件달성 |= 2
+			ENDIF
+			
+			IF 条件달성 & 1 && 条件달성 & 2
+				;효과を選べる場合のチェック
+				IF 듀얼리스트 == "상대"
+					;상대プレイヤーの場合、両方の条件を満たしているなら常にPカードを置く효과を優先
+					選択結果 = いいえ
+				ELSE
+					PRINTL どちらの효과を使用しますか？
+					CALL YN_CHOICE(듀얼리스트,"●자신の덱からレベル４以下の천사족モンスター１体を손패に加える。","●자신の덱・ＥＸ덱から名称の異なる천사족Ｐモンスターを２体まで選んで자신のＰゾーンに置く。")
+					選択結果 = RESULT
+				ENDIF
+			ELSEIF 条件달성 & 1
+				選択結果 = はい
+			ELSE
+				選択結果 = いいえ
+			ENDIF
+			
+			IF 選択結果 == はい
+				;덱からレベル４以下の천사족モンスター１体を손패に加える
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과条件종족 = 천사족
+				CALLFORM 효과条件レベル_ADV(4, "以下")
+				CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			ELSE
+				;덱・ＥＸ덱から名称の異なる천사족Ｐモンスターを２体まで選んで자신のＰゾーンに置く
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과範囲EX덱 = 1
+				효과条件종족 = 천사족
+				효과条件分割 = 펜듈럼
+				CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+				IF RESULT != 0
+					選択カード_ID = RESULT:1
+					;置いたカードのカードID以外で条件を満たすカードがあれば、もう一枚置ける処理(任意選択)
+					CALL FULLRESET
+					효과範囲덱 = 1
+					효과範囲EX덱 = 1
+					효과条件종족 = 천사족
+					효과条件分割 = 펜듈럼
+					효과条件固ID = 選択カード_ID
+					효과条件任意 = 1
+					CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+	;EX덱縛り（천사족縛り）
+	CALL FULLRESET
+	EX소환可能종족 = 천사족
+	CALL CARD_EX_RESTRICTION(듀얼리스트)
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71182,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		
+		;손패から천사족・빛속성モンスター１体を소환する処理
+		;参考：冥帝エレボス
+		CALL FULLRESET
+		효과条件속성 = 빛속성
+		효과条件종족 = 천사족
+		효과条件종류 = モン全般
+		효과条件소환可 = 1
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"손패",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			選択カード_ID = RESULT:99
+			TRYCALLFORM CARD_{選択カード_ID},"レベル"
+			IF RESULT >= 5
+				;レベル５以上の소환の場合、자신フィールドのモンスター１体を묘지へ送る。
+				CALL FULLRESET
+				효과範囲필드 = 1
+				CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+				SIF	RESULT != 1
+					RETURN 0
+			ENDIF
+			CALL CARD_SUMMON_SHORI(듀얼리스트,選択カード,"攻撃표시",1)
+		ENDIF
+	ENDIF
+	;EX덱縛り（천사족縛り）
+	CALL FULLRESET
+	EX소환可能종족 = 천사족
+	CALL CARD_EX_RESTRICTION(듀얼리스트)
+ENDIF
+

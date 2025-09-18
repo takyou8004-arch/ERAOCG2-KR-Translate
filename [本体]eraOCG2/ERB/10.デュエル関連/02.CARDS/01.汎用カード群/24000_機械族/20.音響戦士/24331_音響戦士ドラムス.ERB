@@ -1,0 +1,192 @@
+﻿@CARDNAME_24331,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 사운드 워리어 드럼스
+	CASE "略称"
+		RESULTS = 드럼스
+	CASE "カテゴリ"
+		RESULTS:0 = 사운드 워리어
+ENDSELECT
+
+
+@CARD_24331(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 2
+	CASE "攻撃力"
+		RETURN 700
+	CASE "守備力"
+		RETURN 700
+	CASE "튜너"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250914
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24331(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：このカードが소환・특수소환した場合に발동できる。
+PRINTL 덱から「사운드 워리어」モンスター１体を묘지へ送り、
+PRINTL 덱から「사운드 워리어」Ｐモンスター１体をＥＸ덱に送る。
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②：１ターンに１度、속성を１つ宣言し、자신フィールドの「사운드 워리어」モンスター１体を대상として발동できる。
+PRINTL ターン終了時まで、そのモンスターの속성は宣言した속성になる。
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ③：속성を１つ宣言し、묘지のこのカードを제외して、자신フィールドの「사운드 워리어」モンスター１体を대상として발동できる。
+PRINTL ターン終了時まで、そのモンスターの속성は宣言した속성になる。
+
+
+@CARDCAN_24331(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24331)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,24331)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 사운드 워리어
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 사운드 워리어
+	효과条件分割 = 펜듈럼
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 사운드 워리어
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24331(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード속성
+#DIM DYNAMIC 選択속성
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24331,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 사운드 워리어
+		효과条件종류 = モン全般
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 사운드 워리어
+			효과条件分割 = 펜듈럼
+			효과条件行先플래그 = EX덱行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == 묘지起動
+	IF 종류 == 필드起動
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24331,10)
+	ELSEIF 종류 == 묘지起動
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24331)
+	ENDIF
+	IF RESULT == 0
+		SIF 종류 == 묘지起動
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 사운드 워리어
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			選択カード속성 = GETVAR(@"%듀얼리스트%_MZ_属:場所")
+
+			PRINTL
+			IF 듀얼리스트 == "자신"
+				PRINTL 속성を選択してください
+				PRINTL
+				SIF 選択カード속성 != 빛속성
+					PRINT [01] - 빛속성　
+				SIF 選択カード속성 != 어둠속성
+					PRINT [02] - 어둠속성　
+				SIF 選択カード속성 != 땅속성
+					PRINTL [03] - 땅속성
+				SIF 選択カード속성 != 물속성
+					PRINT [04] - 물속성　　　
+				SIF 選択カード속성 != 화염속성
+					PRINT [05] - 화염속성　　　
+				SIF 選択カード속성 != 바람속성
+					PRINTL [06] - 바람속성
+				SIF 選択カード속성 != 신속성
+					PRINTL [07] - 신속성　　　
+				BINPUT
+			ELSE
+				$INPUT_LOOP
+				RESULT = RAND:7 + 1
+				SIF RESULT == 選択カード속성
+					GOTO INPUT_LOOP
+			ENDIF
+			選択속성 = RESULT
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"一属",選択속성)
+		ENDIF
+	ENDIF
+ENDIF
+

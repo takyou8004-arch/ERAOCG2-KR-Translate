@@ -23,7 +23,7 @@ SELECTCASE 종류
 	CASE "COMMAND"
 		캐릭터_ID = TARGET
 		VARSET LOCAL
-	;	PRINTFORMW FLAG:구상텍스트설정:{FLAG:구상텍스트설정}
+		;PRINTFORMW FLAG:구상텍스트설정:{FLAG:구상텍스트설정}
 		IF FLAG:구상텍스트설정 <= 0
 			IF FLAG:배경텍스트설정 > 0
 				CALL TRAIN_MESSAGE
@@ -38,7 +38,7 @@ SELECTCASE 종류
 
 
 		TRYCALLFORM M_KOJO_K{구상_ID}
-	;	PRINTFORMW RESULT:{RESULT}/CFLAG:캐릭터_ID:개인구상무효:{CFLAG:캐릭터_ID:개인구상무효}/FLAG:배경텍스트설정:{FLAG:배경텍스트설정}
+		;PRINTFORMW RESULT:{RESULT}/CFLAG:캐릭터_ID:개인구상무효:{CFLAG:캐릭터_ID:개인구상무효}/FLAG:배경텍스트설정:{FLAG:배경텍스트설정}
 		IF (!RESULT || CFLAG:캐릭터_ID:개인구상무효== 1) && FLAG:배경텍스트설정 > 0
 			IF TALENT:캐릭터_ID:구상성격 == 0
 				CALL TRAIN_MESSAGE
@@ -272,10 +272,8 @@ SELECTCASE 종류
 			CUSTOMDRAWLINE ―
 			PRINTFORM >>―MESSAGE：
 			CALLFORM CARDNAME_{カード_ID}, "名前"
-			PRINTFORML 「%RESULTS%」
-;			CALL FILL_DRAWLINE	
+			PRINTFORML 「%RESULTS%」	
 			CUSTOMDRAWLINE ―
-;			PRINTL
 			TRYCALLFORM M_KOJO_CARD_K{カード_ID}_{이벤트_ID}(変数A,変数B)
 			CUSTOMDRAWLINE ―
 			RESETCOLOR
@@ -339,9 +337,32 @@ SELECTCASE 종류
 
 		TARGET = LOCAL
 		RETURN 0
+;------------------------------------------------------------
+;BEFORE TRAIN
+;------------------------------------------------------------
+	CASE "B4TRAIN"
+		LOCAL = TARGET
+		TARGET = 캐릭터_ID
+		VARSET RESULT
+		VARSET RESULTS
+		;구상설정
+		구상_ID = NO:캐릭터_ID
+		;구상설정が1以上なら＋10000されて別の구상が読み込まれる
+		SIF CFLAG:TARGET:구상설정 == 1
+			구상_ID += 10000
+		TRYCALLFORM M_KOJO_K{구상_ID}
+		IF (!RESULT || CFLAG:캐릭터_ID:개인구상무효== 1) 
 
-
-
+		ELSE
+			;구상あるならダメ
+			구상在り = 1
+		ENDIF
+		;구상あるならダメ
+		IF 구상在り
+			TRYCALLFORM K{구상_ID}_BEFORETRAIN
+			RESETCOLOR
+		ENDIF
+		TARGET = LOCAL
 ENDSELECT
 
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

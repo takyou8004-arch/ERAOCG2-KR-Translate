@@ -1,0 +1,161 @@
+﻿@CARDNAME_38028,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = N 글로모스
+	CASE "略称"
+		RESULTS = N 모스
+	CASE "カテゴリ"
+		RESULTS:0 = 네오 스페이시언
+		RESULTS:1 = 네오스
+ENDSELECT
+
+
+@CARD_38028(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족 ;Nは全部戦士に
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 300
+	CASE "守備力"
+		RETURN 900
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_38028(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：자신のメインフェイズに손패から발동できる。
+PRINTL 자신フィールドの表側표시モンスター１体を選び、このカードは손패から특수소환する。
+PRINTL 選んだモンスターの攻撃力は、このカードの元々の攻撃力分アップする。
+CALL CARD_ABLE(2,攻撃時誘発)
+PRINTL ②：このカードが戦闘を行う攻撃宣言時に발동できる。
+PRINTL 자신はカードを１枚ドローする。
+PRINTL この효과でドローしたカードをお互いに確認し、そのカードの종류により以下の효과を適用する。
+PRINTL ●モンスターカード：このターンのバトルフェイズを終了させる。
+PRINTL ●마법カード：このカードの攻撃を상대プレイヤーへの直接攻撃にする。
+PRINTL ●함정カード：このカードは守備표시になり、このターン、戦闘では破壊されない。
+
+
+@CARDSUMMON_AA_38028
+
+
+@CARDCAN_38028(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,38028)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,38028)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,38028,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件표시 = 10
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_38028(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC カード추가先
+#DIMS DYNAMIC 対面者
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38028,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件표시 = 10
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				TRYCALLFORM CARD_38028("攻撃力")
+				攻撃力修正 = RESULT
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"永攻",攻撃力修正)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,38028,2)
+	IF RESULT == 0
+		カード추가先 = 現손패(듀얼리스트)
+		CALL CARDDRAW_BASIC(듀얼리스트,1)
+		TRYCALLFORM CARD_UI(GETVAR(@"%듀얼리스트%_손패:カード추가先"))
+		PRINTW
+		TRYCALLFORM CARD_{GETVAR(@"%듀얼리스트%_손패:カード추가先")}("종류")
+		IF RESULT <= 10
+			CALL EVADE_ATTACK(듀얼리스트)
+			バトル強制終了 = 1
+		ELSEIF RESULT >= 20 && RESULT < 30
+			攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_攻:場所")
+			CALL LIFE_CHANGE(듀얼리스트,"減少","戦闘",攻撃力修正,1)
+			バトル強制終了 = 1
+		ELSE
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"表",2,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦耐",1,1)
+		ENDIF
+	ENDIF
+ENDIF
+

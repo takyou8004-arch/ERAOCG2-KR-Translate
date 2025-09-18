@@ -7,13 +7,13 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 음마계대본 "강제 오디션"
+		RESULTS = 음마계대본 "강제 오디션"
 	CASE "略称"
-RESULTS = "강제심사회"
+		RESULTS = "강제심사회"
 	CASE "カテゴリ"
-RESULTS:0 = 마계대본
-RESULTS:1 = 음마계대본
-RESULTS:2 = E.R.A
+		RESULTS:0 = 마계대본
+		RESULTS:1 = 음마계대본
+		RESULTS:2 = E.R.A
 ENDSELECT
 
 
@@ -121,6 +121,7 @@ ENDIF
 #DIM DYNAMIC 場所
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
 #DIM DYNAMIC 조교대상
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
@@ -132,7 +133,7 @@ IF 종류 == 마함起動 || 종류 == 손패起動 || 종류 == フリー誘発
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
 		CALL FULLRESET
 		효과条件성별 = 牝性
-		효과추가종류 = 5
+		효과추가종류 = 返却行き
 		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
 		IF RESULT == 1
 			選択カード = GETVAR(@"%듀얼리스트%_필드:コントロール先")
@@ -158,22 +159,29 @@ ELSEIF 종류 == 破壊→묘지
 		효과範囲상대덱 = 1
 		효과範囲상대EX덱 = 1
 		효과条件성별 = 牝性
-		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
-		IF RESULT == 1
-			選択カード = RESULT:1
-			CALL CARD_EROTICS(選択カード)
-			IF RESULT != -1 && 듀얼리스트 == "자신"
-				조교대상 = RESULT
-				SETCOLOR C_YELLOW
-				PRINTFORMW %CALLNAME:조교대상%는 음마계극단의 오디션에 참가당했다！
-				PRINTFORMW 그대로 데뷔 작품을 촬영당했다…
-				PRINTL
-				RESETCOLOR
-				CALL EROTIC_MOVE("晒しもの",조교대상,-1,150)
-				CALL EROTIC_MOVE("前穴凌辱",조교대상,MASTER,500)
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			選択カード_ID = RESULT:99
+			CALL FULLRESET
+			CALL CARD_SELECT(듀얼리스트, 選択カード)
+			CALL CARD_SP_SUMMON(듀얼리스트, 本参照先（CS）, 選択カード（CS）)
+			IF RESULT == 1
+				選択カード = RESULT:1
+				CALL CARD_EROTICS(選択カード_ID)
+				IF RESULT != -1 && 듀얼리스트 == "자신"
+					조교대상 = RESULT
+					SETCOLOR C_YELLOW
+					PRINTFORMW %CALLNAME:조교대상%는 음마계극단의 오디션에 참가당했다！
+					PRINTFORMW 그대로 데뷔 작품을 촬영당했다…
+					PRINTL
+					RESETCOLOR
+					CALL EROTIC_MOVE("晒しもの",조교대상,-1,150)
+					CALL EROTIC_MOVE("前穴凌辱",조교대상,MASTER,500)
+				ENDIF
+				SIF GETVARS(@"%듀얼리스트%_フィールド名") == "음마계 스튜디오"
+				CALL INMAKAIFILM_GENERATE(듀얼리스트,79806,2,選択カード_ID)
 			ENDIF
-			SIF GETVARS(@"%듀얼리스트%_フィールド名") == "음마계 스튜디오"
-				CALL INMAKAIFILM_GENERATE(듀얼리스트,79806,2,選択カード)
 		ENDIF
 	ENDIF
 ENDIF

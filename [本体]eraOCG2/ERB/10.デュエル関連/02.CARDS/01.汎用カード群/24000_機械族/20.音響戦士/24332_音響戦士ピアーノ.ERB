@@ -1,0 +1,219 @@
+﻿@CARDNAME_24332,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 사운드 워리어 피아노
+	CASE "略称"
+		RESULTS = 피아노
+	CASE "カテゴリ"
+		RESULTS:0 = 사운드 워리어
+ENDSELECT
+
+
+@CARD_24332(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 900
+	CASE "守備力"
+		RETURN 1300
+	CASE "튜너"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250914
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24332(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：このカードが소환・특수소환した場合に、손패を１枚捨てて발동できる。
+PRINTL 덱から「사운드 워리어」モンスター１体と사운드 카운터の名前が記された마법・함정カード１枚を손패に加える。
+CALLFORM CARD_ABLE(10,필드起動)
+PRINTL ②：１ターンに１度、종족を１つ宣言し、자신フィールドの「사운드 워리어」モンスター１体を대상として발동できる。
+PRINTL ターン終了時まで、そのモンスターの종족は宣言した종족になる。
+CALLFORM CARD_ABLE(0,묘지起動)
+PRINTL ③：종족を１つ宣言し、묘지のこのカードを제외して、자신フィールドの「사운드 워리어」モンスター１体を대상として발동できる。
+PRINTL ターン終了時まで、そのモンスターの종족は宣言した종족になる。
+
+
+@CARDCAN_24332(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24332)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,24332)
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 사운드 워리어
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 사운드 카운터
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 묘지起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 사운드 워리어
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24332(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード종족
+#DIM DYNAMIC 選択종족
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24332,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			효과条件カテゴリ = 사운드 워리어
+			효과条件종류 = モン全般
+			CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲덱 = 1
+				효과条件カテゴリ = 사운드 카운터
+				효과条件종류 = 마함全般
+				CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == 묘지起動
+	IF 종류 == 필드起動
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24332,10)
+	ELSEIF 종류 == 묘지起動
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24332)
+	ENDIF
+	IF RESULT == 0
+		SIF 종류 == 묘지起動
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件カテゴリ = 사운드 워리어
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			選択カード종족 = GETVAR(@"%듀얼리스트%_MZ_種:場所")
+
+			PRINTL
+			IF 듀얼리스트 == "자신"
+				PRINTL 종족を選択してください
+				PRINTL
+				SIF 選択カード종족 != 마법사족
+					PRINT [01] - 마법사족　
+				SIF 選択カード종족 != 드래곤족
+					PRINT [02] - 드래곤족　
+				SIF 選択カード종족 != 언데드족
+					PRINTL [03] - 언데드족
+				SIF 選択カード종족 != 전사족
+					PRINT [04] - 전사족　　　
+				SIF 選択カード종족 != 기계족
+					PRINT [05] - 기계족　　　
+				SIF 選択カード종족 != 야수족
+					PRINTL [06] - 야수족
+				SIF 選択カード종족 != 비행야수족
+					PRINT [07] - 비행야수족　　　
+				SIF 選択カード종족 != 비늘야수족
+					PRINT [08] - 비늘야수족　　　
+				SIF 選択カード종족 != 악마족
+					PRINTL [09] - 악마족
+				SIF 選択カード종족 != 천사족
+					PRINT [10] - 천사족　　　
+				SIF 選択カード종족 != 곤충족
+					PRINT [11] - 곤충족　　　
+				SIF 選択カード종족 != 원소정령족
+					PRINTL [12] - 원소정령족
+				SIF 選択カード종족 != 식물족
+					PRINT [13] - 식물족　　　
+				SIF 選択カード종족 != 사이킥족
+					PRINT [14] - 사이킥족
+				SIF 選択カード종족 != 사이버스족
+					PRINTL [15] - 사이버스족
+				SIF 選択カード종족 != 바다생물족
+					PRINT [16] - 바다생물족　　　
+				SIF 選択カード종족 != 미확인족
+					PRINT [17] - 미확인족　　
+				SIF 選択カード종족 != 환신야수족
+					PRINTL [20] - 환신야수족
+				BINPUT
+			ELSE
+				$INPUT_LOOP
+				RESULT = RAND:17 + 1
+				SIF RESULT == 選択カード종족
+					GOTO INPUT_LOOP
+			ENDIF
+			選択종족 = RESULT
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",選択カード,"一種",選択종족)
+		ENDIF
+	ENDIF
+ENDIF
+

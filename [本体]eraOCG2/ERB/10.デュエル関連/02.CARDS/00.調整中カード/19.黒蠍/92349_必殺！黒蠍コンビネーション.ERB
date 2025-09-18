@@ -1,0 +1,147 @@
+﻿@CARDNAME_92349,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 필살！전갈 콤비네이션
+	CASE "略称"
+		RESULTS = 전갈Combination
+	CASE "カテゴリ"
+		RESULTS:0 = 전갈
+ENDSELECT
+
+
+@CARD_92349(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속함정
+	CASE "추가日"
+		RETURN 250917
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_92349(종류)
+#DIM DYNAMIC 종류
+
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ①：자신の「전갈」モンスターはそれぞれ１ターンに１度だけ、戦闘・효과では破壊されない。
+CALLFORM CARD_ABLE(0,攻撃時誘発)
+PRINTL ②：자신の「전갈」モンスターの攻撃宣言時に발동できる。
+PRINTL そのモンスターの소환時효과を발동し、상대の덱の上からカードを２枚묘지に送る。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ③：자신フィールドに「전갈」モンスターが５体存在する場合、마법＆함정ゾーンのこのカードを묘지に送って발동できる。
+PRINTL 상대フィールドのカードを全て破壊する。
+
+@CARDCAN_92349(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,92349)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,92349)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 전갈
+	효과条件CNT = 1	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+	    RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)}("カテゴリ")
+	SIF RESULTS != "전갈"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_92349(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 戦闘カード
+#DIM DYNAMIC 選択カード_ID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+    CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92349,1)
+	IF RESULT == 0
+	    CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_REMOVAL_ADV(듀얼리스트,"全体除去",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92349)
+	IF RESULT == 0
+	    CALL FULLRESET
+		戦闘カード = 戦闘場所(듀얼리스트)
+        CALLFORM CARDEFFECT_{GETVAR(@"%듀얼리스트%_필드:戦闘カード")}(듀얼리스트,소환時,"효과処理")
+		
+	    CALL FULLRESET
+	    CALL CARD_DECK_DISPOSE(対面者,"덱",2)
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,92349)
+	IF RESULT == 0
+	ENDIF
+
+ELSEIF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = 전갈
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"一破")
+
+ENDIF

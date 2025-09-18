@@ -40,6 +40,8 @@ SELECTCASE 参照先
 		RETURN 1000
 	CASE "성별"
 		RETURN 牝性
+	CASE "추가日"
+		RETURN 250601
 ENDSELECT
 RETURN 0
 
@@ -53,6 +55,10 @@ PRINTL 패의 이 카드명 이외의 "I•HERO" 몬스터 1장을 상대에게 
 CALL CARD_ABLE(2,효과後誘発)
 PRINTL ②：자신 필드에 "I•HERO" 몬스터가 소환 / 특수 소환되었을 경우에 발동할 수 있다.
 PRINTL 패의 이 카드를 버리고, 덱에서 이 카드명 이외의 "HERO" 몬스터 1장을 패에 추가한다.
+CALL CARD_ABLE(3,필드→묘지,손패→묘지,덱→묘지,破壊→묘지,戦闘→묘지)
+PRINTL ③：자신의 턴에 이 카드가 묘지에 보내진 경우에 발동할 수 있다。
+PRINTL 묘지에서 이 카드를 특수 소환한다。
+PRINTL 이 효과로 특수 소환한 이 카드는、필드에서 벗어난 경우에 제외된다。
 
 @CARDCAN_4641(듀얼리스트,종류,ゾーン,場所)
 #DIMS DYNAMIC 듀얼리스트
@@ -98,6 +104,12 @@ ELSEIF 종류 == 효과後誘発
 	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
 	SIF RESULT != 1
 		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_3(듀얼리스트,4641)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
 	CALL FULLRESET
 	효과範囲덱 = 1
 	효과条件カテゴリ = I•HERO
@@ -105,6 +117,8 @@ ELSEIF 종류 == 효과後誘発
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻紋章起動
 	RETURN 1
 ENDIF
 
@@ -141,11 +155,18 @@ ELSEIF 종류 == 효과後誘発
 	IF RESULT == 0
 		CALL FULLRESET
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL CARD_RESERV(듀얼리스트,4641,攻紋章予約)
+	ENDIF
+ELSEIF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,4641,3)
+	IF RESULT == 0
 		CALL FULLRESET
 		효과範囲덱 = 1
-		효과条件カテゴリ = I•HERO
 		효과条件固名前 = 아이돌 히어로 마이티 세일러 우미
 		효과条件종류 = モン全般
-		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
 	ENDIF
+ELSEIF 종류 == 攻紋章起動
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,300,300)
 ENDIF

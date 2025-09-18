@@ -1,0 +1,258 @@
+﻿@CARDNAME_52177,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 사운드 워리어 록스
+	CASE "略称"
+		RESULTS = 록스
+	CASE "カテゴリ"
+		RESULTS:0 = 사운드 워리어
+		RESULTS:1 = 워리어
+ENDSELECT
+
+
+@CARD_52177(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 1500
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "추가日"
+		RETURN 250914
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52177(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 7
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52177) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52177(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL このカード名の①②のＰ효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,ターン開始時)
+PRINTL ①：자신・상대のスタンバイフェイズに발동できる。
+PRINTL 자신のＥＸ덱からＰモンスター１体を손패に加える。
+CALLFORM CARD_ABLE(2,攻撃時誘発)
+PRINTL ②：상대モンスターの攻撃宣言時に발동できる。
+PRINTL そのモンスターとこのカードを破壊する。
+PRINTL その後、자신の마법＆함정ゾーンに「사운드 워리어」Ｐモンスターカードが２枚以上存在する場合、
+PRINTL ＥＸ덱のこのカードを특수소환できる。
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 튜너＋튜너以外のモンスター１体以上
+PRINTL このカード名の①②のモンスター효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(3,EX소환時,특수소환時)
+PRINTL ①：このカードが특수소환にした場合に발동できる。
+PRINTL 자신のＥＸ덱からＰモンスター１体を손패に加える。
+CALLFORM CARD_ABLE(4,필드起動)
+PRINTL ②：자신のフィールドに「앰플리파이어」が存在する場合に발동できる。
+PRINTL フィールドのカード１枚を選んで破壊する。
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ③：モンスターゾーンのこのカードが戦闘・효과で破壊された場合に발동できる。
+PRINTL このカードを자신の마법＆함정ゾーンに置く。
+
+
+@CARDCAN_52177(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 발동불가,2
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52177)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン開始時
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,52177)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = EX以外全般
+	효과条件分割 = 펜듈럼
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,52177)
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	SIF 발동済_3(듀얼리스트,52177)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종류 = EX以外全般
+	효과条件分割 = 펜듈럼
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動
+	SIF 발동済_4(듀얼리스트,52177)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 앰플리파이어
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	
+	CALL FULLRESET
+	IF 듀얼리스트 == "자신"
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+	ENDIF
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦破壊→묘지
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	SIF !GROUPMATCH(묘지送り종류,"戦闘破壊","破壊")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52177(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC 발동불가,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ターン開始時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52177,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종류 = EX以外全般
+		효과条件分割 = 펜듈럼
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52177,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,破壊行き)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",戦闘場所(듀얼리스트,1),"묘지")
+
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件カテゴリ = 사운드 워리어
+		효과条件分割 = 펜듈럼
+		효과条件표시 = 表側표시
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT < 2
+			RETURN 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件名前 = 사운드 워리어 록스
+		효과条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == EX소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52177,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件종류 = EX以外全般
+		효과条件分割 = 펜듈럼
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52177,4)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과範囲마함 = 1
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"묘지")
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52177)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件名前 = 사운드 워리어 록스
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"表側표시")
+	ENDIF
+ENDIF
