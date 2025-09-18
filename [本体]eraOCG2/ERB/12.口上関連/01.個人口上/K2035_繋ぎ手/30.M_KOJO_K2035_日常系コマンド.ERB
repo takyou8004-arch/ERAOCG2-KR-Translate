@@ -1273,11 +1273,9 @@ IF LOCAL
 	ENDIF
 ENDIF
 RETURN 1
-[SKIPSTART]
 ;==================================================
 ;404,覗く
 ;==================================================
-;eraOCG2_V0.40_BT_240518時点では流れないため注意
 @M_KOJO_MESSAGE_COM_K2035_404
 CALL TRAIN_MESSAGE
 CALL M_KOJO_MESSAGE_COM_K2035_404_1
@@ -1286,20 +1284,29 @@ RETURN RESULT
 @M_KOJO_MESSAGE_COM_K2035_404_1
 ;-------------------------------------------------
 ;記入チェック（=0, 非표시、1, 표시）
-LOCAL = 0
+LOCAL = 1
 ;-------------------------------------------------
 IF LOCAL
-	SELECTCASE RAND:3
-		CASE 0
-			PRINTFORMW 
-		CASE 1
-			PRINTFORMW 
-		CASE 2
-			PRINTFORMW 
+	SELECTCASE CFLAG:TARGET:現在位置
+		;風呂覗き
+		CASE 場所_浴室
+			IF TALENT:TARGET:연모
+				PRINTFORML 「……%CALLNAME:MASTER%さん、覗いてるのはわかってますよ」
+				PRINTFORMW %CALLNAME:TARGET%はシャワーを浴びながら、こちらに視線を向け呟いた
+				PRINTFORMW 「……はいってこないんですか？」
+			ELSE
+				PRINTFORMW 「はぁ～……いつでもあったかいお風呂に入れるの、贅沢ですぅ～……」
+				PRINTFORMW %CALLNAME:TARGET%はリラックスした様子でお風呂に浸かっている。こちらに気づいていないようだ
+			ENDIF
+		;それ以外
+		CASEELSE
+			PRINTFORMW 「～～～♪」
+			PRINTFORMW %CALLNAME:TARGET%は最近流行りの歌をキレイな声で歌っている……
 	ENDSELECT
 ENDIF
 RETURN 1
 
+[SKIPSTART]
 ;外出/デートは460へ
 ;==================================================
 ;405,出掛ける(동행時デート
@@ -1517,10 +1524,10 @@ RETURN RESULT
 @M_KOJO_MESSAGE_COM_K2035_414_1
 ;-------------------------------------------------
 ;記入チェック（=0, 非표시、1, 표시）
-LOCAL = 0
+LOCAL = 1
 ;-------------------------------------------------
 IF LOCAL
-	PRINTFORMW 
+	PRINTFORMW 「わぁぁ……っ！　こ、こんなにいいもの、いただいてもほんとにいいんですかっ」
 ENDIF
 RETURN 1
 ;==================================================
@@ -1985,6 +1992,151 @@ LOCAL = 0
 ;-------------------------------------------------
 IF LOCAL
 	PRINTFORMW 
+ENDIF
+RETURN 1
+;==================================================
+;480,デュエル
+;勝敗はプレイヤーから見てのもの
+;TFLAG:SELECTCOM분기(1=通常勝利 -1=通常敗北 -2=引き分け
+;10=通常決闘前 11=パック賭け決闘前 12=デート賭け決闘前 13=パンツ賭け決闘前 14=お持ち帰り決闘前 15=お前モンスターじゃないか？ 16=スケベ要求決闘前 20=闇のゲーム
+;31=パック賭け勝利 32=デート賭け勝利 33=パンツ賭け勝利 34=お持ち帰り成功 35=カード化勝利（牝以外） 36=スケベ要求事後 40=罰ゲーム！
+;135=カード化見逃す 235=穏便カード化 335=凌辱後カード化 435=凌辱後見逃す
+;50=賭け決闘敗北怒られた 51=パック賭け敗北 52=デート敗北デート 55=カード化敗北 56=スケベ要求敗北 156=スケベ要求弱味削除 256=スケベ要求敗北負け癖付きおねだり)
+;==================================================
+@M_KOJO_MESSAGE_COM_K2035_480
+;デュエルにTRAIN_MESSAGEはない
+CALL M_KOJO_MESSAGE_COM_K2035_480_1
+RETURN RESULT
+
+@M_KOJO_MESSAGE_COM_K2035_480_1
+;-------------------------------------------------
+;記入チェック（=0, 非表示、1, 表示）
+LOCAL = 0
+;-------------------------------------------------
+IF LOCAL
+	;これが０の時はデュエルしない時なのでおわり
+	SIF TFLAG:SELECTCOM분기 == 0
+		RETURN 1
+
+	;デュエル前
+	IF INRANGE(TFLAG:SELECTCOM분기,10,21)
+		SELECTCASE TFLAG:SELECTCOM분기
+			;通常決闘
+			CASE 10
+				PRINTFORMW 「はいっ！　胸を借りるつもりでいきます！」
+			
+			;ここから賭け決闘
+			;パック賭け
+			CASE 11
+				PRINTFORMW 「もしかしたらデッキを強化できるチャンス……！？　がんばりますっ」
+			;デート賭け
+			CASE 12
+				PRINTFORMW 「……賭けるって、それ、ですか？　ま、まぁわかりました」
+			;パンツ賭け
+			CASE 13
+				PRINTFORMW 「はい！？　まってください何ですかその賭け！？　不埒ですヘンタイです！？」
+			;お持ち帰り
+			CASE 14
+				IF TALENT:TARGET:연모 || TALENT:TARGET:굴복됨 || TALENT:TARGET:음란
+					PRINTFORMW 「……手は抜きません。けどもし勝ったらどうしましょうか……わ、わたしが%CALLNAME:MASTER%さんを好き勝手……！？」
+				ELSE
+					PRINTFORMW 「……手加減しませんよ。不埒な行いは『かみさま』の怒りをかいます」
+				ENDIF
+			;モンスターか問い詰める（人間は不可）
+			CASE 15
+				PRINTFORMW 「へぁ！？　モ、モンスターじゃアリマセンヨー……。……デュエルです！！」
+			;スケベ強要
+			CASE 16
+				PRINTFORMW 「……ごくり。これだけあれば里ももっと豊かに……！？」
+			;闇のゲーム
+			CASE 20
+				PRINTFORMW 「太陽すら遮る夜の気配……。あなたは、何者ですか……？」
+		ENDSELECT
+
+	;デュエル後
+	ELSE
+		SELECTCASE TFLAG:SELECTCOM분기
+			;通常勝利
+			CASE 1
+				PRINTFORMW 「さすが%CALLNAME:MASTER%さんです！　わたしも見習わないとっ」
+			;通常敗北
+			CASE -1
+				PRINTFORMW 「やったぁ……！　勝てました！　ありがとう、『かみさま』！！」
+			;通常引き分け
+			CASE -2
+				PRINTFORMW 「あれ、あれぇ……！？　ひ、引き分けってあったんですね！？」
+
+			;ここから賭け勝利
+			;パック賭け
+			CASE 31
+				PRINTFORMW 「はい、約束のパックですっ。……いいカード、出ました？」
+			;デート賭け
+			CASE 32
+				PRINTFORMW 「ま、負けました。……けどお出かけなら嬉しいですっ」
+			;パンツ賭け
+			CASE 33
+				IF TALENT:TARGET:연모 || TALENT:TARGET:굴복됨 || TALENT:TARGET:음란
+					PRINTFORMW 「約束は約束です。……はい、どうぞ」
+					PRINTFORMW 「……%CALLNAME:MASTER%さんが真正面から言ってくださればパンツぐらい差し上げますのに……」
+				ELSE
+					PRINTFORMW 「……うぅ、ヘンタイの%CALLNAME:MASTER%さんに負けるなんて……。あとで返してくれますよね……。」
+					PRINTFORMW 「あ、あれ、%CALLNAME:MASTER%さん！？　返してもらえるんですよね！？」
+				ENDIF
+			;お持ち帰り
+			CASE 34
+				IF TALENT:TARGET:연모 || TALENT:TARGET:굴복됨 || TALENT:TARGET:음란
+					PRINTFORMW 「……負けました。約束通り、わたしをどうぞ」
+					PRINTFORMW 「ええっと、どうか、おいしく、めしあがれ？　な、なーんちゃって」
+				ELSE
+					PRINTFORMW 「……おつよいんですね。わかってます、どうぞ、持ち帰ってください……」
+				ENDIF
+			;下二桁３５は"モンスターか問い詰める"の분기
+			;カード化（牝以外、選択肢無し）
+			CASE 35
+				PRINTFORMW 
+			;カード化を見逃す（元気でな！）
+			CASE 135
+				PRINTFORMW 「あ、ありがとうございます……！　%CALLNAME:MASTER%さんっていい人なんですねっ」
+			;穏便に話してカード化（怖くないよ～痛くないよ～）
+			CASE 235
+				PRINTFORMW 「たしかに、精霊だとバレたら混乱を招きますよね……わ、わかりましたっ。ひとおもいにヤッちゃってくださいっ……！」
+			;身体を対価に見逃す（見逃すとは言ってない）
+			CASE 335
+				PRINTFORMW 
+			;身体を対価に見逃す（見逃す）（負け癖付いたり弱み握られたりする）
+			CASE 435
+				PRINTFORMW 
+			;身体要求事後
+			CASE 36
+				PRINTFORMW 
+			;闇のゲーム
+			CASE 40
+				PRINTFORMW 
+
+			;ここから賭け敗北
+			;怒られた
+			CASE 50
+				PRINTFORMW 
+			;パック賭け（パックを手渡す）
+			CASE 51
+				PRINTFORMW 
+			;デート賭け（デートはしてくれる）
+			CASE 52
+				PRINTFORMW 
+			;カード化敗北（逃げられた）
+			CASE 55
+				PRINTFORMW 
+			;身体要求敗北（金払う）
+			CASE 56
+				PRINTFORMW 
+			;身体要求敗北（弱味削除）
+			CASE 156
+				PRINTFORMW 
+			;身体要求敗北（負け癖付いてる時限定凌辱おねだり）（ラブホ直行）
+			CASE 256
+				PRINTFORMW 
+		ENDSELECT
+	ENDIF
 ENDIF
 RETURN 1
 
