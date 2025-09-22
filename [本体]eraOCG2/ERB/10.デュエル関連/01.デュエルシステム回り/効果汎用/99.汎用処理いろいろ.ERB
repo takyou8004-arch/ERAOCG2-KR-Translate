@@ -185,7 +185,11 @@ VARSET 強制必要素材名前２
 VARSET 強制素材場所,-1
 VARSET 強制素材場所２,-1
 VARSET 強制素材禁止場所,-1
+
 VARSET 효과条件손패취득
+VARSET 효과条件優先名前
+VARSET 효과条件劣後名前
+
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
 @RESETAREA
@@ -1723,6 +1727,10 @@ RETURN 条件달성
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 
+
+SIF カードID <= 0
+	RETURN 1
+
 SIF GETVAR(@"%듀얼리스트%_SS阻害状態") >= 1
 	RETURN 1
 IF 反転플래그 == 1
@@ -1792,10 +1800,10 @@ IF GETVAR(@"%듀얼리스트%_아르토메기아制限") >= 1
 	;ゾーンがEX덱なら条件パス
 	IF ゾーン != "EX덱"
 		VARSET 条件달성
-		CALLFORM CARDNAME_{カードID}, "名前"
-		SIF RESULTS != "무구한 자 메디우스"
+		TRYCALLFORM CARDNAME_{カードID}, "名前"
+		SIF RESULTS == "무구한 자 메디우스"
 			条件달성 ++
-		CALLFORM CARDNAME_{カードID}, "カテゴリ"
+		TRYCALLFORM CARDNAME_{カードID}, "カテゴリ"
 		FOR カウンタB,0,5
 			IF RESULTS:カウンタB != ""
 				SIF RESULTS:カウンタB == "아르토메기아"
@@ -2225,12 +2233,12 @@ IF 자신_듀얼패배플래그 >= 1 || 상대_듀얼패배플래그 >= 1
 		RETURN 2
 	ELSEIF 상대_듀얼패배플래그 == 11
 		CALL CHARA_CUTIN("", "【W I N N E R】")
+		PRINTFORML 엑조디오스의 효과로 승리했습니다。
+		実績_進行保存:69 = 1
+		RETURN 1
 		
-
-	ELSEIF 자신_듀얼패배플래그 == 11
-		CALL CHARA_CUTIN("", "【L O S E】")
-		PRINTFORML 엑조디오스의 효과로 패배했습니다.
-		RETURN 2
+	ELSEIF 자신_듀얼패배플래그 == 999
+		CALL CHARA_CUTIN("", "【W I N N E R】")
 		IF 詰め플래그 == 1
 			PRINTFORML 퍼즐을 달성했습니다。
 		ELSE
@@ -3608,9 +3616,11 @@ ENDIF
 @PRESET_JOKYO
 
 
-자신_MZ_不材:2 = 1
+VARSET 상대_손패,-1
 
-
+상대_손패:0 = 70011
+상대_손패:1 = 70037
+상대_손패:2 = 23030
 
 @CARD_KANPRINT(元参照先,場所,カードID,설정플래그,裏側플래그)
 #DIMS DYNAMIC 参照先
