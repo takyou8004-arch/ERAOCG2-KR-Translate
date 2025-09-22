@@ -185,7 +185,7 @@ VARSET 強制必要素材名前２
 VARSET 強制素材場所,-1
 VARSET 強制素材場所２,-1
 VARSET 強制素材禁止場所,-1
-
+VARSET 효과条件손패취득
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
 @RESETAREA
@@ -250,6 +250,7 @@ VARSET 濾過条件固名前
 VARSET 濾過条件カテゴリ
 VARSET 反濾過条件カテゴリ
 
+VARSET 濾過条件ID, -1
 VARSET 濾過条件종류, -1
 VARSET 濾過条件속성, -1
 VARSET 濾過条件종족, -1
@@ -1675,19 +1676,19 @@ IF 소환権 >= 1 || (追소환権 >= 1 && GETVAR(@"%듀얼리스트%_手_召可
 	CASE 5 TO 6
 		SIF GETVAR(@"%듀얼리스트%_ADV불가") >= 1
 			RETURN 0
-		CALL FULLRESET
+		CALL FULLRESET_EXT
 		효과範囲필드 = 1
 		효과条件CNT = 1
-		CALL CARD_CHECK_ADV(듀얼리스트, ,"어드밴스")
+		CALL CARD_CHECK_EXT(듀얼리스트, ,"어드밴스",0,4)
 		SIF RESULT >= 1
 			条件달성 += 1
 	CASE 7 TO 99
 		SIF GETVAR(@"%듀얼리스트%_ADV불가") >= 1
 			RETURN 0
-		CALL FULLRESET
+		CALL FULLRESET_EXT
 		효과範囲필드 = 1
 		효과条件CNT = 1
-		CALL CARD_CHECK_ADV(듀얼리스트, ,"어드밴스")
+		CALL CARD_CHECK_EXT(듀얼리스트, ,"어드밴스",0,4)
 		SIF RESULT >= 2
 			条件달성 += 1
 	CASEELSE
@@ -2177,6 +2178,7 @@ IF 자신_듀얼패배플래그 >= 1 || 상대_듀얼패배플래그 >= 1
 	ELSEIF 상대_듀얼패배플래그 == 5
 		CALL CHARA_CUTIN("", "【W I N N E R】")
 		PRINTFORML 자신의 패에 엑조디아가 모였습니다。
+		実績_進行보존:40 = 1
 		RETURN 1
 	ELSEIF 자신_듀얼패배플래그 == 6
 		CALL CHARA_CUTIN("", "【L O S E】")
@@ -2215,8 +2217,20 @@ IF 자신_듀얼패배플래그 >= 1 || 상대_듀얼패배플래그 >= 1
 		PRINTFORML 상대는 웜에게 모든 걸 삼켜져버렸습니다。
 		RETURN 1
 
-	ELSEIF 상대_듀얼패배플래그 == 999
+
+
+	ELSEIF 자신_듀얼패배플래그 == 11
+		CALL CHARA_CUTIN("", "【L O S E】")
+		PRINTFORML 엑조디오스의 효과로 패배했습니다.
+		RETURN 2
+	ELSEIF 상대_듀얼패배플래그 == 11
 		CALL CHARA_CUTIN("", "【W I N N E R】")
+		
+
+	ELSEIF 자신_듀얼패배플래그 == 11
+		CALL CHARA_CUTIN("", "【L O S E】")
+		PRINTFORML 엑조디오스의 효과로 패배했습니다.
+		RETURN 2
 		IF 詰め플래그 == 1
 			PRINTFORML 퍼즐을 달성했습니다。
 		ELSE
@@ -2231,7 +2245,6 @@ IF 자신_듀얼패배플래그 >= 1 || 상대_듀얼패배플래그 >= 1
 		CALL CHARA_CUTIN("", "【W I N N E R】")
 		PRINTFORML 상대는 패배 조건을 만족했습니다。
 		RETURN 1
-
 
 	ENDIF
 ENDIF
@@ -2797,8 +2810,14 @@ ELSEIF 설정타입 == 1
 		SETVAR @"%듀얼리스트%_%효과種%", GETVAR(@"%듀얼리스트%_%효과種%") + 효과修正
 		SETVAR @"%対面者%_%효과種%", GETVAR(@"%対面者%_%효과種%") + 효과修正
 	ENDIF
-	SIF システム플래그 == 0
-		PRINTFORMW %대상名%의 『%효과種%』가 １개 늘었습니다。
+	IF システム플래그 == 0
+		IF 효과修正 <= -1
+		ABS 효과修正
+			PRINTFORMW %대상名%의 『%효과種%』가 %효과修正% 감소했습니다。
+		ELSE
+			PRINTFORMW %대상名%의 『%효과種%』가 %효과修正% 증가했습니다。
+		ENDIF
+	ENDIF
 ENDIF
 
 @GET_PLAYER_INFO(듀얼리스트,효과種,反転플래그)
@@ -3588,7 +3607,8 @@ ENDIF
 
 @PRESET_JOKYO
 
-VARSET 상대_손패,-1
+
+자신_MZ_不材:2 = 1
 
 
 

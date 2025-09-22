@@ -1,0 +1,268 @@
+﻿@CARDNAME_39835,参照先
+;ココで지정卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 도레미아이돌 엔제리아
+	CASE "略称"
+		RESULTS = ♫ 엔제리아
+	CASE "カテゴリ"
+		RESULTS:0 = 도레미코드
+		RESULTS:1 = 도레미아이돌
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_39835(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 1800
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+	CASE "分割"
+		RETURN 펜듈럼
+	CASE "連動ID"
+		RETURN 2091
+	CASE "生成カード"
+		RETURN 179860
+	CASE "추가日"
+		RETURN 250910
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_39835(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("P_MAGIC")
+PRINTL 이 카드명의 ①의 P효과는 1턴에 1번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(4,마함起動)
+PRINTL ①：자신의 메인 페이즈에 발동할 수 있다。
+PRINTL 이 카드를 앞면 표시로 EX덱에 넣고、그 후、덱에서 레벨3 이하의 "도레미코드" P몬스터 1장을 패에 넣을 수 있다。
+	SETCOLOR C_GRAY ;（隠し효과）
+PRINTL 상대 필드에 "엔제리아최애" 몬스터가 2장 이상 존재하는 경우。
+PRINTL 그 몬스터들을 내성을 무시하고 전부 파괴한다。
+PRINTL 그 후、파괴한 몬스터의 수×700 데미지를 자신이 받는다。
+	RESETCOLOR
+;------------------------------펜듈럼------------------------------
+CALL TEXT_DECORATION("P_MAGIC_2")
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,특수소환時)
+PRINTL ①：이 카드가 특수 소환에 성공한 경우에 발동할 수 있다.
+PRINTL 상대 필드의 몬스터 1체를 선택하여 "엔제리아최애"로 할 수 있다。
+
+CALLFORM CARD_ABLE(2,발동誘発)
+PRINTL ②：상대가 필드의 몬스터 효과를 발동한 경우에 발동할 수 있다。
+PRINTL 이 카드는 패・EX덱(앞면 표시)에서 특수 소환할 수 있으며、손패에서 특수 소환한 경우、추가로 상대가 발동한 효과를 무효로 할 수 있다。
+PRINTL 이 효과로 특수 소환한 몬스터는、턴 종료 시에 자신의 마법 / 함정 존에 앞면 표시로 놓인다。
+
+
+@CARDSUMMON_AA_39835
+
+
+@CARDCAN_39835(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,39835)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 도레미아이돌 엔제리아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,39835)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "손패" && ゾーン != "EX덱"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,39835)
+		RETURN 0
+	SIF モンスター数(듀얼리스트) >= 5
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39835,"손패")
+	SIF RESULT == 1 && ゾーン == "손패"
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,39835,"EX덱")
+	SIF RESULT == 1 && ゾーン == "EX덱"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動
+	SIF 발동済_4(듀얼리스트,39835)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 도레미아이돌
+	효과条件종류 = モン全般
+	효과条件分割 = 펜듈럼
+	CALL 효과条件レベル_ADV(3, "以下")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == ターン終了時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF モンスター数(듀얼리스트) != 1
+		RETURN 0
+	SIF モンスター数(対面者) != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件カテゴリ:0 = 엔제리아최애
+	효과条件カテゴリ:1 = 도레미 하코오시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+	
+ELSEIF 종류 == ターン終了時予約
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	RETURN 1
+ENDIF
+;---------------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------------
+@CARDEFFECT_39835(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択場所
+#DIM DYNAMIC レベル
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 実行役대상
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39835)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+	
+ELSEIF 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39835,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+		選択場所 = RESULT
+		조교대상 = NO_TO_CHARANUM(2091)
+		CALL Doremi_fans(듀얼리스트,選択場所,조교대상,"登場")
+	ENDIF
+	
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39835,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン, 場所)
+
+		SIF ゾーン == "손패"
+			CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"選択")
+
+		CALL CARD_RESERV(듀얼리스트,39835)
+		LOCAL = カード소환先
+	ENDIF
+
+ELSEIF 종류 == 마함起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39835,4)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,EX덱行き)
+		
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 도레미코드
+		효과条件종류 = モン全般
+		효과条件分割 = 펜듈럼
+		CALL 효과条件レベル_ADV(3, "以下")
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		CALL Doremi_business(対面者,2091)
+	ENDIF
+	
+ELSEIF 종류 == ターン終了時予約
+	場所 = LOCAL	
+	TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_필드:場所")}, "名前"
+	IF RESULTS == "도레미아이돌 엔제리아"
+		CALL FULLRESET
+		CALL CARD_DISPOSE(듀얼리스트,"필드",場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == ターン終了時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,39835)
+	IF RESULT == 0
+		조교대상 = NO_TO_CHARANUM(2091)
+
+		CALL Doremi_FansAttack(듀얼리스트,조교대상,場所)
+	ENDIF
+ENDIF
+RETURN

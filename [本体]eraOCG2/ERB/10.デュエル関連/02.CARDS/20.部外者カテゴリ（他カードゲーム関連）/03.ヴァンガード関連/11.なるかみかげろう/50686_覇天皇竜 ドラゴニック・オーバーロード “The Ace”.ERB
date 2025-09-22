@@ -1,0 +1,269 @@
+﻿@CARDNAME_50686,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 패천황룡 드래고닉 오버로드 “The Ace”
+	CASE "略称"
+		RESULTS = 오버로Ace
+	CASE "カテゴリ"
+		RESULTS:0 = 카게로우
+		RESULTS:1 = 오버로드
+		RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_50686(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 초차원
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+	CASE "특수불가"
+		RETURN 1
+	CASE "レア度"
+		RETURN ULR
+
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50686(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要素材数 = 1
+素材条件カテゴリ = 오버로드
+
+IF EX参照 == 1
+	CALL STRIDECAN(듀얼리스트,소환カード,50686) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_50686(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 『초월』 "오버로드" 몬스터
+SETCOLOR C_GRAY
+PRINTL (자신의 패에서 몬스터 1장을 제외하고 발동할 수 있다.
+PRINTL 　EX덱의 이 카드를, 자신 필드의 지정된 몬스터 1장 위에 겹쳐 『초월』한다.
+PRINTL  『초월』한 이 카드의 이름은 겹친 몬스터와 같은 이름으로 취급하고,
+PRINTL 　겹친 몬스터의 공격력, 수비력만큼, 이 카드의 공격력, 수비력을 올린다.
+PRINTL  『초월』은 1턴에 1번밖에 할 수 없으며, 선공 1턴째에는 사용할 수 없다)
+RESETCOLOR
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ①：자신メインフェイズ１にEX덱から「패천황룡 드래고닉 오버로드 “The Ace”」１体を제외して발동できる。
+PRINTL このカードは「覚醒」する。
+PRINTL その後、상대フィールドのカード１枚を破壊できる。
+CALLFORM CARD_ABLE(2,攻撃後誘発)
+PRINTL ②：覚醒状態のこのカードが攻撃を行ったダメージステップ終了時に、
+PRINTL 손패から「오버로드」カード１枚以上を含むカード２枚を捨てて발동できる。
+PRINTL このカードはもう１度攻撃できる。
+PRINTL その後、자신は２枚ドローし、このカードの攻撃力はターン終了時まで５００アップする。
+
+
+
+@CARDCAN_50686(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50686)
+SIF RESULT == 1
+	RETURN 0
+
+;IF 종류 == EX덱起動
+;	SIF 발동済_3(듀얼리스트,50686)
+ ;		RETURN 0
+;	SIF ゾーン != "EX덱"
+;		 RETURN 0
+;	SIF メインフェイズ != 1
+;		RETURN 0
+ ;	SIF ターンプレイヤー != 듀얼리스트
+ ;		RETURN 0
+;	CALL FULLRESET
+;	효과範囲필드 = 1
+;	효과条件カテゴリ = 오버로드
+;	CALL CARD_CHECK_ADV(듀얼리스트)
+;	SIF RESULT != 1
+;		RETURN 0
+;	SIF GETVAR(@"%듀얼리스트%_超越済") != 0
+;		RETURN 0
+;	SIF 발동済_2(듀얼리스트,21086) == 0
+;		RETURN 0
+ ;	RETURN 1
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+ 		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,50686)
+		 RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+ 	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ２ == 1
+ 		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件名前 = 패천황룡 드래고닉 오버로드 “The Ace”
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,50686)
+		RETURN 0
+ 	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	SIF バトルフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 오버로드
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50686(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC モンスター数
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 選択カードID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+;IF 종류 == EX덱起動
+; 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50686,3)
+; 	IF RESULT == 0
+;		CALL FULLRESET
+;		효과範囲필드 = 1
+;		효과条件カテゴリ = 오버로드
+;		효과条件行先플래그 = 소멸行き
+;		효과条件任意 = 1
+;		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+;		IF RESULT == 1
+;			選択カードID = RESULT:1
+;			CALL CARD_LOADUP
+;			SETCOLOR C_RED
+;			PRINTFORML
+;			PRINTFORML
+;			PRINTFORML 超越《ストライド》、THE・ジェネレーション！
+;			RESETCOLOR
+;			CALL PRINT_STATE_DUEL(カードID)
+;			CALL FULLRESET
+;			CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",場所,"攻撃표시")
+;			SETVAR @"%듀얼리스트%_MZ_変化元ID:カード소환先", 選択カードID
+;			CALL SET_PLAYER_INFO(듀얼리스트,"超越済",1)
+;		ELSE
+;			RETURN 0
+;		ENDIF
+;	ENDIF
+IF 종류 == 지속효과
+	CALL STATCHANGE_EFFECT(듀얼리스트,"自身",場所,"不材")
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50686,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件名前 = 패천황룡 드래고닉 오버로드 “The Ace”
+		효과条件종류 = 초차원
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"条達",1,1)
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			효과条件除去種 = 묘지
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲상대필드 = 1
+				효과範囲상대마함 = 1
+				효과条件任意 = 1
+				CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"묘지")
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50686,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 오버로드
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲손패 = 1
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",1)
+				CALL CARDDRAW_BASIC(듀얼리스트,2)
+				CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",500)
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

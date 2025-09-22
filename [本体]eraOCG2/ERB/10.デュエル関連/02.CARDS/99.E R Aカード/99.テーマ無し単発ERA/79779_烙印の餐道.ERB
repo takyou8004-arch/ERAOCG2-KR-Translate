@@ -1,0 +1,233 @@
+﻿@CARDNAME_79779,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 낙인의 찬도
+	CASE "略称"
+		RESULTS = 낙인의 찬도
+	CASE "カテゴリ"
+		RESULTS:0 = 낙인
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_79779(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "추가日"
+		RETURN 250920
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79779(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL このカード名の①の효과はそれぞれ１ターンに１度しか使用できない。
+CALL CARD_ABLE(1,손패起動)
+PRINTL ①：このカードの발동時の효과処理として、덱から「비스테드의 모체」１体を손패に加える。
+PRINTL 자신フィールドに「데스피아의 도화 알베르」または「더 비스테드 알베르」が存在する場合、
+PRINTL さらに名前の違う「비스테드의 모체」１体を덱から묘지へ送る。
+CALL CARD_ABLE(10,마함起動)
+PRINTL ②：１ターンに１度、자신メインフェイズに발동できる。
+PRINTL 자신の마법・함정ゾーンに存在する「種袋」すべてに種카운터を１つ置く。
+CALL CARD_ABLE(0,攻守変動)
+PRINTL ③：このカードが마법＆함정ゾーンに存在する限り、자신フィールドの드래곤족モンスターの攻撃力は、
+PRINTL 자신の마법・함정ゾーンに存在する「種袋」の種카운터１つにつき２００アップする。
+CALL TEXT_DECORATION("ROGUE")
+
+
+
+@CARDCAN_79779(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79779)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件성별 = 牝性
+	효과条件カテゴリ = 種袋
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79779)
+		RETURN 0
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ELSEIF 종류 == 손패起動
+		SIF 마함数(듀얼리스트) >= 5
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件성별 = 牝性
+	효과条件カテゴリ = 비스테드
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻守変動
+	SIF ゾーン != "마함"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件성별 = 牝性
+	효과条件カテゴリ = 種袋
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종족 = 드래곤족
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_79779(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79779,10)
+	IF RESULT == 0
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%듀얼리스트%_마함:カウンタ") == -1
+				CONTINUE
+			SIF GETVARS(@"%듀얼리스트%_魔_追カテ:カウンタ") != "種袋"
+				CONTINUE
+			CALL FULLRESET
+			효과条件성별 = 牝性
+			효과条件カテゴリ = 種袋
+			CALL CARD_FILTER_SET(듀얼리스트,"마함",カウンタ,듀얼리스트,5)
+			조교대상 = RESULT
+			IF RESULT != -1
+				조교대상 = RESULT
+				SETCOLOR C_PINK
+				PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+				PRINTFORML
+				PRINTFORML 낙인의 권유에 따라、%CALLNAME:조교대상%는 필드의 수컷에게서 씨앗을 집어넣었다。
+				PRINTFORML
+				RESETCOLOR
+				CALL EROTIC_MOVE("前穴凌辱",조교대상,-1,100)
+			ENDIF
+			CALL SET_FIELD_INFO(듀얼리스트,"마함",カウンタ,"個Ｃ",1)
+		NEXT
+		FOR カウンタ,0,5
+			SIF GETVAR(@"%対面者%_마함:カウンタ") == -1
+				CONTINUE
+			SIF GETVARS(@"%対面者%_魔_追カテ:カウンタ") != "種袋"
+				CONTINUE
+			CALL FULLRESET
+			효과条件성별 = 牝性
+			효과条件カテゴリ = 種袋
+			CALL CARD_FILTER_SET(対面者,"마함",カウンタ,듀얼리스트,5)
+			조교대상 = RESULT
+			IF RESULT != -1
+				조교대상 = RESULT
+				SETCOLOR C_PINK
+				PRINTFORML >>——MESSAGE:——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————>>>
+				PRINTFORML
+				PRINTFORML 낙인의 권유에 따라、%CALLNAME:조교대상%는 필드의 수컷에게서 씨앗을 집어넣었다
+				PRINTFORML
+				RESETCOLOR
+				CALL EROTIC_MOVE("前穴凌辱",조교대상,-1,100)
+			ENDIF
+			CALL SET_FIELD_INFO(対面者,"마함",カウンタ,"個Ｃ",1)
+		NEXT
+	ENDIF
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79779,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件名前:0 = 데스피아의 도화 알베르
+		효과条件名前:1 = 더 비스테드 알베르
+		효과条件소환可 = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			カウンタ = 1
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 비스테드
+		효과条件성별 = 牝性
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1 && カウンタ != 0
+			選択カード_ID = RESULT:1
+			CALL FULLRESET
+			효과範囲덱 = 1
+			TRYCALLFORM CARDNAME_{選択カード_ID}("名前")
+			효과条件固名前 = %RESULTS%
+			효과条件カテゴリ = 비스테드
+			효과条件성별 = 牝性
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 攻守変動
+	;カード枚数をカウント
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과範囲상대마함 = 1
+	효과条件성별 = 牝性
+	효과条件カテゴリ = 種袋
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	カウンタ =  RESULT:9 * 200
+
+	CALL FULLRESET
+	효과条件종족 = 드래곤족
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,カウンタ)
+ENDIF

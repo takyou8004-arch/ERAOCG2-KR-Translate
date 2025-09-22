@@ -1,0 +1,182 @@
+@CARDNAME_71637,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 재앙, 아직 끝나지않고
+	CASE "略称"
+		RESULTS = 재앙아직안끝나
+	CASE "カテゴリ"
+		RESULTS:0 = 그렌디오스
+		RESULTS:1 = 스타베이더
+		RESULTS:2 = 링크 조커
+		RESULTS:4 = 뱅가드
+ENDSELECT
+
+@CARD_71637(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250709
+ENDSELECT
+RETURN 0
+
+@CARDSUMMON_71637(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+RETURN 0
+
+@CARD_EXPLANATION_71637(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：자신 필드에 "그렌디오스"몬스터가 존재하는 경우에、이하의 효과에서 １개를 선택해서 발동할 수 있다。
+PRINTL ●상대 필드의 앞면 표시의 몬스터 １장을 주박한다。
+PRINTL ●상대는 덱에서 몬스터 １장을 주박상태로 특수 소환한다。
+SETCOLOR C_L_GRAY
+PRINTL （주박상태인 몬스터는 뒷면 수비 표시가 되며、공격 회피를 얻는다。
+PRINTL 　다만、상대 필드에 주박상태인 몬스터 밖에 존재하지 않는 경우、자신 필드의 몬스터가 상대 플레이어에게 주는 전투 데미지는 절반이 된다）
+RESETCOLOR
+CALL CARD_ABLE(2,묘지起動)
+PRINTL ②：자신 메인 페이즈에、자신 필드에 "그렌디오스"몬스터가 존재하는 경우에 발동할 수 있다。
+PRINTL ＬＰ를 절반 지불하고、묘지의 이 카드를 세트한다。
+PRINTL 이 효과로 세트된 이 카드는 필드에서 벗어나는 경우에 제외된다。
+RESETCOLOR
+
+@CARDCAN_71637(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ数
+
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71637)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,71637)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 그렌디오스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		条件달성++
+	SIF モンスター数(対面者) < 5
+		条件달성++
+	SIF 条件달성 < 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,71637)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 그렌디오스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+    RETURN 1
+ENDIF
+
+@CARDEFFECT_71637(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIMS DYNAMIC 選択カード名前
+#DIM DYNAMIC 条件Ａ
+#DIM DYNAMIC 条件Ｂ
+#DIM DYNAMIC 選択효과
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71637,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과条件표시 = 表側표시
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件Ａ++
+		SIF モンスター数(対面者) < 5
+			条件Ｂ++
+		IF 条件Ａ == 1 && 条件Ｂ == 1
+			CALL YN_CHOICE(듀얼리스트,"●상대 필드의 앞면 표시의 몬스터 １장을 주박한다。","●상대는 덱에서 몬스터 １장을 주박상태로 특수 소환한다。")
+			選択효과 = RESULT
+		ELSEIF 条件Ａ == 1 && 条件Ｂ == 0
+			選択효과 = はい
+		ELSEIF 条件Ａ == 0 && 条件Ｂ == 1
+			選択효과 = いいえ
+		ENDIF
+		IF 選択효과 == はい
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과条件표시 = 表側표시
+			CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"표시변경")
+		ELSEIF 選択효과 == いいえ
+			CALL FULLRESET
+			효과範囲덱 = 1
+			CALL CARD_SP_SUMMON_ADV(対面者,ゾーン,場所,"裏側守備표시")			
+		ELSE
+			RETURN
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71637,2)
+	IF RESULT == 0
+		CALL LIFE_CHANGE(듀얼리스트,"減少","コスト",(GETVAR(@"ライフ_%듀얼리스트%")  / 2))
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件名前 = 재앙, 아직 끝나지않고
+		효과추가종류 = 500
+		CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+	ENDIF
+ENDIF

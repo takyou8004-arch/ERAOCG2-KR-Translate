@@ -1,0 +1,169 @@
+﻿@CARDNAME_51542,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 스타더스트 워리어
+	CASE "略称"
+		RESULTS = SD 워리어
+	CASE "カテゴリ"
+		RESULTS:0 = 스타더스트
+		RESULTS:1 = 워리어
+		RESULTS:4 = 액셀 싱크로
+ENDSELECT
+
+
+@CARD_51542(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 3000
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 雄性
+	CASE "추가日"
+		RETURN 250919
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_51542(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件종류 = 싱크로
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件종류 = 싱크로
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,51542) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_51542(종류)
+#DIM DYNAMIC 종류
+
+PRINTL Ｓモンスターの튜너＋튜너以外のＳモンスター１体以上
+CALLFORM CARD_ABLE(0,소환誘発)
+PRINTL ①：상대がモンスターを특수소환する際に발동できる。
+PRINTL このカードを消失させ、その특수소환を無効にし、破壊する。
+CALLFORM CARD_ABLE(0,戦破壊→묘지)
+PRINTL ②：戦闘または상대の효과で表側표시のこのカードがフィールドから離れた場合に발동できる。
+PRINTL ＥＸ덱からレベル８以下の「워리어」Ｓモンスター１体をＳ소환扱いで특수소환する。
+
+
+@CARDCAN_51542(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51542)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	SIF 最終소환決者 == 듀얼리스트
+		RETURN 0
+	SIF !GROUPMATCH(最終소환타입,"특수","EX특수")
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦破壊→묘지
+	SIF 발동済_2(듀얼리스트,51542)
+		RETURN 0
+	SIF 処理中_듀얼리스트 == 듀얼리스트
+		RETURN 0
+	IF ゾーン == "필드"
+		SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+			RETURN 0
+	ENDIF
+
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 워리어
+	효과条件종류 = 싱크로
+	CALLFORM 효과条件レベル_ADV(8,"以下")
+	효과条件特不無視 = 1
+	효과条件소환可 = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51542(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51542)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",最終소환場所,"完全묘지")
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51542)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 워리어
+		효과条件종류 = 싱크로
+		CALLFORM 효과条件レベル_ADV(8,"以下")
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		IF RESULT != 9999
+			選択カード = RESULT
+			CALL FULLRESET
+			CALL CARD_EX_SUMMON(듀얼리스트,"EX덱",選択カード)
+		ENDIF
+	ENDIF
+ENDIF

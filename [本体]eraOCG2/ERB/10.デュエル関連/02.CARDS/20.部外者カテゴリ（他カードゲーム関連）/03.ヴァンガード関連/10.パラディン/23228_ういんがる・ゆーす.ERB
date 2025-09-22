@@ -12,10 +12,6 @@ SELECTCASE 参照先
 		RESULTS = 윙갈
 	CASE "カテゴリ"
 		RESULTS:0 = 로열 팔라딘
-		RESULTS:1 = 성기사
-		RESULTS:4 = 골드 팔라딘
-		RESULTS:5 = 해방자
-		RESULTS:6 = 탐색자
 		RESULTS:7 = 뱅가드
 ENDSELECT
 
@@ -51,17 +47,14 @@ RETURN 0
 @CARD_EXPLANATION_23228(종류)
 #DIM DYNAMIC 종류
 
-PRINTL 이 카드명의 ①②의 효과는 각각 1턴에 1번만 사용할 수 없다.
-CALLFORM CARD_ABLE(1,손패起動)
-PRINTL ①: 이 카드가 패에 존재할 경우, EX덱의 "블래스터 블레이드" 몬스터 1장을 상대에게 보여주고 발동할 수 있다.
-PRINTL 이 카드를 패에서 특수 소환한다.
-PRINTL 이 효과의 발동 후, 턴 종료시까지 자신은 전사족 / 마법사족 / 드래곤족 / 야수족 / 천사족 몬스터밖에 특수 소환할 수 없다.
-CALLFORM CARD_ABLE(2,소환時,특수소환時)
-PRINTL ②: 이 카드가 소환 / 특수 소환했을 경우에 발동할 수 있다. 이하의 효과에서 1개를 골라 적용한다.
-PRINTL ●자신의 덱 위에서 카드를 7장 넘긴다.
-PRINTL 그 중에서 "윙갈 유스" 이외의 "로열 팔라딘" 또는 "성기사" 몬스터 1장을 골라 패에 넣을 수 있다.
-PRINTL 남은 카드는 덱으로 되돌린다.
-PRINTL ●덱에서 "성검" 카드 1장을 패에 넣는다.
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,소환時 ,특수소환時)
+PRINTL ①：このカードが소환・특수소환した場合に발동できる。
+PRINTL 자신の덱・묘지から「블래스터 블레이드」カード１枚か「블래스터 다크」１体を손패に加える。
+CALLFORM CARD_ABLE(2,필드起動)
+PRINTL ②：자신メインフェイズに발동できる（このカードをリリースして발동する事もできる）。
+PRINTL 손패・묘지から「블래스터 블레이드」１体を특수소환する。
+PRINTL このカードをリリースして발동した場合、さらに손패・묘지から「블래스터 다크」１体を특수소환できる。
 
 
 @CARDCAN_23228(듀얼리스트,종류,ゾーン,場所)
@@ -75,26 +68,29 @@ SIF RESULT == 1
 	RETURN 0
 
 IF 종류 == 소환時 || 종류 == 특수소환時
-	SIF 발동済_2(듀얼리스트,23228)
+	SIF 발동済_1(듀얼리스트,23228)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과範囲묘지 = 1
+	효과条件カテゴリ = 블래스터 블레이드
+	효과条件スーパー名前 = 블래스터 다크
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
-
 ELSEIF 종류 == 손패起動
-	SIF 발동済_1(듀얼리스트,23228)
+	SIF 발동済_2(듀얼리스트,23228)
 		RETURN 0
 	SIF メインフェイズ != 1
 		RETURN 0
 	SIF ターンプレイヤー != 듀얼리스트
 		RETURN 0
-	CALL CARD_SS_CHECK(듀얼리스트,23228,"손패")
-	SIF RESULT == 1
-		RETURN 0
-	SIF モンスター数(듀얼리스트) >= 5
-		RETURN 0
 	CALL FULLRESET
-	효과範囲EX덱 = 1
+	효과範囲손패 = 1
+	효과範囲묘지 = 1
 	효과条件カテゴリ = 블래스터 블레이드
-	효과条件종류 = モン全般
+	효과条件소환可 = 2
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
 	SIF RESULT != 1
 		RETURN 0
@@ -114,41 +110,54 @@ ENDIF
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 
-
 IF 종류 == 소환時 || 종류 == 특수소환時
-	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23228,2)
-	IF RESULT == 0
-PRINTL 효과를 선택해 주세요
-		CALL YN_CHOICE(듀얼리스트,"●７장めくる。","●「성검」카드를 加える。")
-		IF RESULT == 0
-			CALL FULLRESET
-			효과条件カテゴリ:0 = 로열 팔라딘
-			효과条件カテゴリ:1 = 성기사
-			효과条件종류 = モン全般
-			효과条件固名前 = 윙갈 유스
-			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所,7)
-		ELSEIF RESULT == 1
-			CALL FULLRESET
-			효과条件カテゴリ = 성검
-			CALL CARD_ADD_BASIC(듀얼리스트,"덱",ゾーン,場所)
-		ENDIF
-	ENDIF
-ELSEIF 종류 == 손패起動
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23228,1)
 	IF RESULT == 0
 		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲묘지 = 1
 		효과条件カテゴリ = 블래스터 블레이드
-		CALL CARD_CHOOSE_BASIC(듀얼리스트, "EX덱",ゾーン,場所)	
-		IF RESULT != 9999
+		효과条件スーパー名前 = 블래스터 다크
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,23228,2)
+	IF RESULT == 0
+			IF モンスター数(듀얼리스트) >= 5
+			RESULT = はい
+		ELSE
+			CALL YN_CHOICE(듀얼리스트,"이 카드를 릴리스한다","이 카드를 릴리스하지 않는다")
+		ENDIF
+		IF RESULT == はい
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
 			CALL FULLRESET
-			CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
-			SS소환可能종족:0 = 전사족
-			SS소환可能종족:1 = 마법사족
-			SS소환可能종족:2 = 드래곤족
-			SS소환可能종족:3 = 야수족
-			SS소환可能종족:4 = 천사족
-			CALL CARD_SS_RESTRICTION(듀얼리스트)
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件名前 = 블래스터 블레이드
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				SIF モンスター数(듀얼리스트) >= 5
+					RETURN 0
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과範囲묘지 = 1
+				효과条件名前 = 블래스터 다크
+				효과条件소환可 = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF RESULT == 1
+					CALL FULLRESET
+					효과範囲손패 = 1
+					효과範囲묘지 = 1
+					효과条件名前 = 블래스터 다크
+					CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+				ENDIF
+			ENDIF
+		ELSE
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과範囲묘지 = 1
+			효과条件名前 = 블래스터 블레이드
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
 		ENDIF
 	ENDIF
 ENDIF
-

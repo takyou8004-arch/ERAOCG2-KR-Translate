@@ -1,0 +1,149 @@
+﻿@CARDNAME_71444,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 전황사략－교조지반
+	CASE "略称"
+		RESULTS = 교조지반
+	CASE "カテゴリ"
+		RESULTS:0 = 전황
+ENDSELECT
+
+
+@CARD_71444(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 지속마법
+	CASE "レア度"
+		RETURN SPR
+	CASE "추가日"
+		RETURN 250913
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_71444(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,마함起動)
+PRINTL ①：자신 메인 페이즈에 발동할 수 있다。
+PRINTL 패에서 "전황" 몬스터 １장을 특수 소환하고、자신은 그 몬스터의 레벨 ×１００의 데미지를 받는다。
+CALLFORM CARD_ABLE(2,필드→묘지 ,破壊→묘지)
+PRINTL ②：이 카드가 마법＆함정 존에서 묘지로 보내진 경우에 발동할 수 있다。
+PRINTL 상대 필드의 몬스터 １장의 컨트롤을 엔드 페이즈까지 얻는다。
+PRINTL 그 후、속성을 １개 선언한다。이렇게 해서 컨트롤을 얻은 몬스터는 턴 종료시까지 선언한 속성이 된다。
+
+@CARDCAN_71444(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,71444)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	SIF 발동済_1(듀얼리스트,71444)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 전황
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	IF 종류 == 마함起動
+		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+			RETURN 0
+	ENDIF
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 破壊→묘지
+	SIF 발동済_2(듀얼리스트,71444)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 전황
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ENDIF
+
+@CARDEFFECT_71444(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 選択名前
+#DIM DYNAMIC 설정場所
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71444,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 전황
+		효과条件소환可 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,"손패",場所)
+		TRYCALLFORM CARD_{RESULT:1}, "レベル"
+		CALL LIFE_CHANGE(듀얼리스트,"減少","효과",RESULT*100)
+	ENDIF
+
+ELSEIF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동＆설치まで
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71444)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+	ENDIF
+
+ELSEIF 종류 == 필드→묘지 || 종류 == 破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,71444,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 返却行き
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"필드単体",場所,"強奪")
+		IF RESULT == 1
+			설정場所 = カード소환先
+			IF 듀얼리스트 == "자신"
+				PRINT [01] - 빛속성　
+				PRINT [02] - 어둠속성　
+				PRINTL [03] - 땅속성
+				PRINT [04] - 물속성　
+				PRINT [05] - 화염속성　
+				PRINTL [06] - 바람속성
+				PRINTL [07] - 신속성　　　
+				BINPUT
+			ELSE
+				RESULT = 2		
+			ENDIF
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",설정場所,"一属",RESULT,1)
+		ENDIF
+	ENDIF
+ENDIF

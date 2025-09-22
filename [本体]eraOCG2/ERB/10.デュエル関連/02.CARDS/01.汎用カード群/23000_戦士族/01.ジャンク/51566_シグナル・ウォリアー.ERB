@@ -1,0 +1,197 @@
+﻿@CARDNAME_51566,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 시그널 워리어
+	CASE "略称"
+		RESULTS = Sig 워리어
+	CASE "カテゴリ"
+		RESULTS:0 = 워리어
+ENDSELECT
+
+
+@CARD_51566(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1000
+	CASE "추가日"
+		RETURN 250919
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_51566(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 7
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,51566) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_51566(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너＋튜너以外のモンスター１体以上
+CALLFORM CARD_ABLE(0,ターン開始時)
+PRINTL ①：お互いのスタンバイフェイズに발동する。
+PRINTL フィールドのフィールド마법カードの数＋１つ、このカードにシグナル카운터を置く。
+CALLFORM CARD_ABLE(0,지속효과)
+PRINTL ②：シグナル카운터が置かれているこのカードは戦闘及び상대の효과では破壊されない。
+CALLFORM CARD_ABLE(10,필드起動,フリー誘発)
+PRINTL ③：お互いのメインフェイズに１度、このカードのシグナル카운터を以下の数だけ取り除き、その효과を발동できる。
+PRINTL この효과で특수소환したこのカードは、フィールドから離れた場合に제외される。
+PRINTL ●４：상대に８００ダメージを与える。
+PRINTL ●７：자신は덱から１枚ドローする。
+PRINTL ●１０：フィールドのカード１枚を選んで破壊する。
+
+
+@CARDCAN_51566(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51566)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == ターン開始時強制
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:場所") < 4
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:場所") < 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51566(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC ランダム数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == ターン開始時強制
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51566)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과範囲상대마함 = 1
+		효과条件종류 = フィールド
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"個Ｃ",(RESULT:9)+1)
+	ENDIF
+
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51566,10)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲상대필드 = 1
+		효과範囲상대마함 = 1
+		효과条件除去種 = 묘지
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		SIF RESULT == 1
+			条件달성 = 1
+
+		IF 듀얼리스트 == "자신"
+			PRINTL 【取り除くシグナル카운터の数を選択】
+			PRINTL
+			SIF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:場所") >= 4
+				PRINTL [4] - 상대の８００ダメージを与える
+			SIF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:場所") >= 7
+				PRINTL [7] - １枚ドロー
+			SIF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:場所") >= 10
+				PRINTL [10] - フィールドのカードを１枚破壊
+			PRINTL
+			SIF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:場所") < 4
+				PRINTL [9999] - 戻る
+			BINPUT
+		ELSE
+			RESULT = 9999
+			SIF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:場所") >= 4
+				RESULT = 4
+			SIF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:場所") >= 7
+				RESULT = 7
+			SIF GETVAR(@"%듀얼리스트%_MZ_個Ｃ:場所") >= 10 && 条件달성 == 1
+				RESULT = 10
+		ENDIF
+
+		SIF RESULT == 9999
+			RETURN 0
+
+		CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"個Ｃ",-RESULT)
+		IF RESULT == 4
+			CALL LIFE_CHANGE(듀얼리스트,"減少","효과",800,1)
+		ELSEIF RESULT == 7
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+		ELSEIF RESULT == 10
+			CALL FULLRESET
+			효과範囲필드 = 1
+			효과範囲마함 = 1
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"묘지")
+		ENDIF
+	ENDIF
+ENDIF

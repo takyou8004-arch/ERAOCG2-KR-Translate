@@ -7,11 +7,11 @@ VARSET RESULTS
 
 SELECTCASE 参照先
 	CASE "名前"
-RESULTS = 슈팅 스타 드래곤
+		RESULTS = 슈팅 스타 드래곤
 	CASE "略称"
-RESULTS = 슈스타 D
+		RESULTS = 슈스타 D
 	CASE "カテゴリ"
-RESULTS:0 = 스타더스트
+		RESULTS:0 = 스타더스트
 ENDSELECT
 
 
@@ -71,9 +71,10 @@ PRINTL 자신 덱 위에서 5장을 넘겨 덱으로 되돌린다.
 PRINTL 이 턴, 이 카드는 넘긴 카드 중의 튜너의 수까지 공격할 수 있다.
 CALLFORM CARD_ABLE(0,지속효과)
 PRINTL ②: 자신 필드의 카드는 파괴 내성을 얻는다.
-CALLFORM CARD_ABLE(0,攻撃時誘発)
-PRINTL ③: 상대 몬스터의 공격 선언 시에 발동할 수 있다.
-PRINTL 이 카드를 소멸시키고, 그 공격을 무효로 한다.
+CALLFORM CARD_ABLE(0,攻撃時誘発,발동誘発)
+PRINTL ③: 상대가 효과를 발동했을 때, 또는 상대 몬스터의 공격 선언시에 발동할 수 있다.
+PRINTL 이 카드를 소실시키고, 자신 필드의 카드는 엔드 페이즈까지 대상 내성을 얻는다.
+PRINTL 상대 몬스터의 공격 선언시일 경우, 그 공격을 무효로 한다.
 PRINTL (소멸한 몬스터는 제외되고, 필드에 빈 공간이 있을 경우 엔드 페이즈 시에 특수 소환된다)
 
 
@@ -106,6 +107,16 @@ IF 종류 == 필드起動
 	RETURN 1
 ELSEIF 종류 == 지속효과
 	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
 ELSEIF 종류 == 攻撃時誘発
@@ -141,7 +152,7 @@ IF 종류 == 필드起動
 			PRINTW
 			CALLFORM CARD_{GETVAR(@"%対面者%_덱:カウンタ")}, "튜너"
 			IF RESULT != 0
-				PRINTFORML 튜너モンスター！
+				PRINTFORML 튜너 몬스터！
 				攻撃횟수 ++
 			ENDIF
 		NEXT
@@ -153,10 +164,29 @@ ELSEIF 종류 == 지속효과
 	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐")
 	CALL FULLRESET
 	CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐")
+
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50556,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+		CALL FULLRESET
+		효과条件표시 = 0
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐",1)
+		CALL FULLRESET
+		효과条件표시 = 0
+		CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"対耐",1)
+	ENDIF
 ELSEIF 종류 == 攻撃時誘発
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50556)
 	IF RESULT == 0
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き,1)
+		CALL FULLRESET
+		효과条件표시 = 0
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"対耐",1)
+		CALL FULLRESET
+		효과条件표시 = 0
+		CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"対耐",1)
+		
 		CALL EVADE_ATTACK(듀얼리스트)
 	ENDIF
 ENDIF

@@ -1,0 +1,164 @@
+﻿@CARDNAME_59920,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 브레인 포드
+	CASE "略称"
+		RESULTS = 브레인 포드
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+		RESULTS:1 = E.R.A
+ENDSELECT
+
+
+@CARD_59920(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 링크
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 100
+	CASE "守備力"
+		RETURN 1200
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250921
+ENDSELECT
+
+
+RETURN 0
+
+
+@CARD_EXPLANATION_59920(종류)
+#DIM DYNAMIC 종류
+
+CALL TEXT_DECORATION("ROGUE")
+PRINTL 元々の持ち主が상대となるモンスター１体
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない
+CALL CARD_ABLE(1,EX소환時)
+PRINTL ①：このカードが링크소환した場合に발동できる。
+PRINTL 「세뇌개변」１枚を손패に加える。
+PRINTL その後、상대の묘지のモンスターを１体を選び、효과を無効にして상대フィールドに특수소환する。
+CALL CARD_ABLE(2,身代효과)
+PRINTL ②：자신フィールドの「E.R.A」지속마법・지속함정カードが破壊される場合、
+PRINTL 代わりに자신フィールド、묘지のこのカードを제외してもいい。
+CALL TEXT_DECORATION("ROGUE")
+
+@CARDSUMMON_59920(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要링크数 = 1
+素材条件종류 = 9999
+素材条件スーパー상대モン = 1
+
+IF EX参照 == 1
+	CALL LINCAN(듀얼리스트,소환カード,59920) 
+	RETURN RESULT
+ENDIF
+
+
+
+@CARDCAN_59920(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件달성
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,59920)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,59920)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件名前 = 세뇌개변
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF !GROUPMATCH(ゾーン,"필드","묘지")
+		RETURN 0
+	SIF 破壊대상ゾーン != "마함"
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과")
+		RETURN 0
+	TRYCALLFORM CARDNAME_{破壊대상ID}("カテゴリ")
+	SIF !MATCH(RESULTS,"E.R.A")
+		RETURN 0
+	TRYCALLFORM CARD_{破壊대상ID}("종류")
+	SIF !GROUPMATCH(RESULT,지속마법,지속함정)
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_59920(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 条件달성
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 필드単体
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59920,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件名前 = 세뇌개변
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲상대묘지 = 1
+		효과추가종류 = 効追無効
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所,,,1)
+
+	ENDIF
+ELSEIF 종류 == 발동誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,59920,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+

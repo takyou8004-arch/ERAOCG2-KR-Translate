@@ -1,0 +1,153 @@
+﻿@CARDNAME_70461,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 타임 스트림
+	CASE "略称"
+		RESULTS = 타임 스트림
+	CASE "カテゴリ"
+		RESULTS:0 = 화석 융합
+ENDSELECT
+
+
+@CARD_70461(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常마법
+	CASE "추가日"
+		RETURN 250919
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_70461(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の②の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,마함起動,손패起動)
+PRINTL ①：자신フィールドの「화석」융합モンスター１体を대상として발동できる。
+PRINTL そのモンスターをリリースし、そのモンスターより元々のレベルが２つ高い「화석」융합モンスター１体を、
+PRINTL 「화석 융합－파슬 퓨전」による융합소환扱いとしてＥＸ덱から특수소환する。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신の묘지からこのカードと「화석」융합モンスター１体を제외し、
+PRINTL 자신の묘지の「화석」융합モンスター１体を대상として발동できる。
+PRINTL そのモンスターを특수소환する。
+
+@CARDCAN_70461(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,70461)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	; ↓ これなんの処理…？
+	CALL CARD_EX_CHECK(듀얼리스트,0)
+	효과範囲필드 = 1
+	효과条件종류 = 융합
+	효과条件カテゴリ = 화석
+	효과条件レベル:0 = 4
+	효과条件レベル:1 = 6
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 묘지起動 
+	SIF 발동済_2(듀얼리스트,70461)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 융합
+	효과条件カテゴリ = 화석
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 2
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_70461(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 설정レベル
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	;カード발동確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70461,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲필드 = 1
+		효과条件종류 = 융합
+		효과条件カテゴリ = 화석
+		효과条件レベル:0 = 4
+		효과条件レベル:1 = 6
+		;CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		;選択カード = RESULT
+		;IF 選択カード != 9999
+			;CALL CARD_DISPOSE(듀얼리스트,ゾーン,選択カード)
+			;설정レベル = GETVAR(@"%듀얼리스트%_MZ_星:選択カード") + 2
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+	        TRYCALLFORM CARD_{RESULT:1}, "レベル"
+			설정レベル = RESULT + 2
+
+			CALL FULLRESET
+			효과条件レベル = 설정レベル
+			효과条件종류 = 융합
+			효과条件カテゴリ = 화석
+			CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+			IF RESULT != 9999
+				효과条件特不無視 = 1
+				CALL CARD_EX_SUMMON(듀얼리스트, "EX덱", RESULT)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,70461,2)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과条件종류 = 융합
+		효과条件カテゴリ = 화석
+		PRINTL 제외する「화석」융합モンスター１体を選んでください。
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+		IF RESULT != 9999
+			CALL CARD_DISPOSE(듀얼리스트,ゾーン,RESULT,제외行き)
+			PRINTL 특수소환する「화석」융합モンスター１体を選んでください。
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件종류 = 융합
+			효과条件カテゴリ = 화석
+			CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
+	ENDIF
+ENDIF

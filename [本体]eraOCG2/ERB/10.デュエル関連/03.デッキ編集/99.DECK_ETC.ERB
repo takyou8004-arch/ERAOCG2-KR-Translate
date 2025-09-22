@@ -399,6 +399,16 @@ SIF 필터条件화상 == 1
 PRINTBUTTON "【화상：유】",326
 RESETCOLOR
 
+IF 필터条件外部 == 1
+	SETCOLOR C_YELLOW
+	PRINTBUTTON "【외부자만】",327
+ELSEIF 필터条件外部 == 2
+	SETCOLOR C_YELLOW
+	PRINTBUTTON "【외부자 없이】",327
+ELSE
+	PRINTBUTTON "【외부자 필터】",327
+ENDIF
+RESETCOLOR
 
 PRINTL
 
@@ -511,10 +521,16 @@ ELSEIF INRANGE(RESULT, 321,325)
 	ELSE
 		필터条件성별 = 0
 	ENDIF
-ELSEIF INRANGE(RESULT, 326,329)
+ELSEIF RESULT == 326
 	필터条件화상 ^= 1
-
-
+ELSEIF RESULT == 327
+	IF 필터条件外部 == 0
+		필터条件外部 = 1
+	ELSEIF 필터条件外部 == 1
+		필터条件外部 = 2
+	ELSEIF 필터条件外部 == 2
+		필터条件外部 = 0
+	ENDIF
 ELSEIF INRANGE(RESULT, 331,339)
 	RESULT -= 330
 	IF 필터条件レア度:RESULT == RESULT
@@ -1697,6 +1713,19 @@ IF 필터条件화상 > 0
 		RETURN 0
 ENDIF
 
+IF 필터条件外部 > 0
+	IF 필터条件外部 == 1
+		TRYCALLFORM CARD_{カードID}, "외부자"
+		SIF RESULT != 1
+			RETURN 0
+	ELSEIF 필터条件外部 == 2
+		TRYCALLFORM CARD_{カードID}, "외부자"
+		SIF RESULT != 0
+			RETURN 0
+	ENDIF
+ENDIF
+
+
 IF 필터条件レア度:0 > 0
 	CALL CARDPRICE(カードID,"レア度")
 	SIF !MATCH(필터条件レア度, RESULT)
@@ -1738,6 +1767,7 @@ VARSET 필터条件튜너
 VARSET 필터条件固定
 VARSET 필터条件성별
 VARSET 필터条件화상
+VARSET 필터条件外部
 VARSET 필터条件分割
 VARSET 필터条件所持
 VARSET 필터条件レア度
@@ -1764,6 +1794,8 @@ SIF 필터条件튜너 != 0
 SIF 필터条件성별 != 0
 	RETURN 1
 SIF 필터条件화상 != 0
+	RETURN 1
+SIF 필터条件外部 != 0
 	RETURN 1
 RETURN 0
 

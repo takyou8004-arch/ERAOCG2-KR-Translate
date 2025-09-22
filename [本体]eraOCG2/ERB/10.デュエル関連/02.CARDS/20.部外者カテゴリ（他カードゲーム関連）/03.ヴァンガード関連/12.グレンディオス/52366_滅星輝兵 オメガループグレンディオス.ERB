@@ -1,0 +1,230 @@
+﻿@CARDNAME_52366,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 데스 스타베이더 “∞” 그렌디오스
+	CASE "略称"
+		RESULTS = ∞그렌디오스
+	CASE "カテゴリ"
+		RESULTS:0 = 그렌디오스
+		RESULTS:1 = 스타베이더
+		RESULTS:2 = 링크 조커
+		RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_52366(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+		RETURN 초차원
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 기계족 
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 1500
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 無性
+	CASE "특수불가"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250709
+ENDSELECT
+
+RETURN 0
+
+
+@CARDSUMMON_52366(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+
+CALL RESETCONDITION_MAT
+必要素材数 = 1
+素材条件カテゴリ = 그렌디오스
+
+IF EX参照 == 1
+	CALL STRIDECAN(듀얼리스트,소환カード,52366) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52366(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 『초월』"그렌디오스"몬스터
+SETCOLOR C_L_GRAY
+PRINTL （자신의 패에서 몬스터 １장을 제외하고 발동할 수 있다。
+PRINTL 　EX덱의 이 카드를、자신 필드의 지정된 몬스터 １장 위에 겹쳐서『초월』한다。
+PRINTL  『초월』한 이 카드의 이름은 겹친 몬스터와 같은 이름으로 취급하며、
+PRINTL 　겹친 몬스터의 공격력 / 수비력 만큼、이 카드의 공격력 / 수비력을 올린다。
+PRINTL  『초월』은 １턴에 １번밖에 할 수 없으며、선공 １턴째에는 사용할 수 없다）
+RESETCOLOR
+PRINTL 이 카드명의 ②의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALL CARD_ABLE(0,지속효과)
+PRINTL ①：자신 필드의 "Я"몬스터는 효과 무효 / 공격 불가를 얻는다。
+CALLFORM CARD_ABLE(1,필드起動)
+PRINTL ②：자신 메인 페이즈 １에 발동할 수 있다。
+PRINTL EX덱의 「데스 스타베이더 “∞” 그렌디오스」１장과 묘지의 카드 ２장을 제외하고、
+PRINTL 자신 필드의 "Я"몬스터의 수 까지、가능한 한 이하의 효과를 적용한다。
+PRINTL ●상대는 덱에서 몬스터를 주박상태로 특수 소환한다。
+SETCOLOR C_L_GRAY
+PRINTL （주박상태인 몬스터는 뒷면 수비 표시가 되며、공격 회피를 얻는다。
+PRINTL 　다만、상대 필드에 주박상태인 몬스터 밖에 존재하지 않는 경우、자신 필드의 몬스터가 상대 플레이어에게 주는 전투 데미지는 절반이 된다）
+RESETCOLOR
+
+
+@CARDCAN_52366(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52366)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 지속효과
+	SIF ゾーン != "필드"
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 攻撃時強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 裏側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 필드起動
+	SIF 발동済_1(듀얼리스트,52366)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF メインフェイズ２ == 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件名前 = 데스 스타베이더 “∞” 그렌디오스
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	SIF 묘지数(듀얼리스트) < 2
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件固カテゴリ = StaⱤ-vadeꓤ
+	효과条件성별 = 牝性
+	효과条件カテゴリ = Я
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1 
+ENDIF
+
+@CARDEFFECT_52366(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カードID
+#DIM DYNAMIC 条件カード数
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 지속효과
+	CALL FULLRESET
+	효과条件カテゴリ = Я
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"戦無",3)
+	CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"無効",3)
+
+	CALL FULLRESET
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"不材")
+	CALL FULLRESET
+	효과条件표시 = 裏側표시
+	CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"攻避",3)
+
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件표시 = 表側표시
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"直攻")
+	ENDIF
+ELSEIF 종류 == 攻撃時強制誘発
+	CALL SET_PLAYER_INFO(듀얼리스트,"ダメージ半化",3,1)
+ELSEIF 종류 == 필드起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52366,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲EX덱 = 1
+		효과条件名前 = 데스 스타베이더 “∞” 그렌디오스
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件複数 = 2
+			효과条件行先플래그 = 제외行き
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과条件カテゴリ = Я
+				효과条件CNT = 1
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				条件カード数 = RESULT
+				REPEAT 条件カード数
+					SIF モンスター数(対面者) >= 5
+						BREAK
+					CALL FULLRESET
+					효과範囲덱 = 1
+					CALL CARD_SP_SUMMON_ADV(対面者,ゾーン,場所,"裏側守備표시")
+				REND
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

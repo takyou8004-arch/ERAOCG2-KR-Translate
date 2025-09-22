@@ -1,0 +1,189 @@
+﻿@CARDNAME_25703,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 전황의 지－제갈공
+	CASE "略称"
+		RESULTS = 제갈공
+	CASE "カテゴリ"
+		RESULTS:0 = 전황
+ENDSELECT
+
+
+@CARD_25703(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 바람속성
+	CASE "종족"
+		RETURN 야수족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 2000
+	CASE "성별"
+		RETURN 雄性
+	CASE "レア度"
+		RETURN RARE
+	CASE "추가日"
+		RETURN 250913
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_25703(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①：이 카드가 드로우 이외의 방법으로 패에 넣어진 경우에 발동할 수 있다。
+PRINTL 이 카드를 특수 소환한다。
+CALLFORM CARD_ABLE(2,발동誘発)
+CALLFORM CARD_ABLE(3,발동誘発)
+PRINTL ①：상대가 효과를 발동했을 때에 발동할 수 있다。
+PRINTL 자신 필드의 앞면 표시인 "전황" 지속 마법 / 지속 함정 카드 1장을 묘지로 보내고 그 발동을 무효로 한다。
+PRINTL 자신 필드에 "전황의덕－유현"이 존재하는 경우, 추가로 그 카드를 파괴한다。
+PRINTL （이 카드명의 이 효과는 몬스터의 효과、마법 / 함정 카드의 효과에 대해서 각각 １턴에 １번밖에 발동할 수 없다）
+
+
+
+@CARDCAN_25703(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,25703)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 효과後誘発
+	SIF ゾーン != "손패"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,25703)
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,25703,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件名前 = 전황의 지－제갈공
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"손패취득")
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 발동誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件종류:0 = 지속마법
+	효과条件종류:1 = 지속함정
+	효과条件カテゴリ = 전황
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	IF RESULT == 1
+		SIF 발동済_2(듀얼리스트,25703)
+			RETURN 0
+		RETURN 1
+	ENDIF
+
+	CALL FULLRESET
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1)
+	IF RESULT == 1
+		SIF 발동済_3(듀얼리스트,25703)
+			RETURN 0
+		RETURN 1
+	ENDIF
+
+ENDIF
+
+@CARDEFFECT_25703(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+IF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25703,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트, "손패", 場所)
+	ENDIF
+
+ELSEIF 종류 == 발동誘発
+	CALL FULLRESET
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1,2)
+	IF RESULT == 1
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25703,2)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件종류:0 = 지속마법
+			효과条件종류:1 = 지속함정
+			효과条件カテゴリ = 전황
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과条件カテゴリ = 전황의덕－유현
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF RESULT == 0
+					CALL FULLRESET
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+				ELSE
+					CALL FULLRESET
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+	CALL FULLRESET
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_START_DATA(듀얼리스트,1,2)
+	IF RESULT == 1
+		CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,25703,3)
+		IF RESULT == 0
+			CALL FULLRESET
+			효과範囲마함 = 1
+			효과条件종류:0 = 지속마법
+			효과条件종류:1 = 지속함정
+			효과条件カテゴリ = 전황
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+			IF RESULT == 1
+				CALL FULLRESET
+				효과範囲필드 = 1
+				효과条件カテゴリ = 전황의덕－유현
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				IF RESULT == 0
+					CALL FULLRESET
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"無効")
+				ELSE
+					CALL FULLRESET
+					CALL CARD_REMOVAL_BASIC(듀얼리스트,"발동無効",場所,"묘지")
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

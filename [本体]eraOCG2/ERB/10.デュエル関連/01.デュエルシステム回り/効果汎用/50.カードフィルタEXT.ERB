@@ -1,4 +1,4 @@
-﻿@CARD_FILTER_EXT(듀얼리스트,参照先,종류,場所,めくり数,チェック플래그,カードID)
+﻿@CARD_FILTER_EXT(듀얼리스트,参照先,종류,場所,めくり数,チェック플래그)
 #DIMS DYNAMIC 듀얼리스트
 #DIMS DYNAMIC 対面者
 #DIMS DYNAMIC 実行者
@@ -15,7 +15,6 @@
 #DIM DYNAMIC カウンタ
 #DIM DYNAMIC カウンタB
 #DIM DYNAMIC チェック플래그
-#DIM DYNAMIC カードID
 #DIM DYNAMIC サーチ範囲
 #DIM DYNAMIC 選択カード
 #DIM DYNAMIC 条件달성
@@ -196,14 +195,16 @@ FOR カウンタ,0,サーチ範囲
 		SIF カウンタ == 場所
 			CONTINUE
 	ENDIF
-;	IF 종류 == 필드起動 && 参照先 == "필드"
-;		SIF カウンタ == 場所
-;			CONTINUE
 	IF 종류 == 손패起動 && 参照先 == "손패"
 		SIF カウンタ == 場所
 			CONTINUE
 	ENDIF
 	;PRINTFORML カウンタ2:カウンタ
+	IF 濾過条件ID > -1
+		SIF !MATCH(濾過条件ID, RESULT)
+			CONTINUE
+	ENDIF
+
 	IF 濾過条件名前 != ""
 		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "名前"
 		SIF !MATCH(濾過条件名前, RESULTS)
@@ -289,6 +290,11 @@ FOR カウンタ,0,サーチ範囲
 			CONTINUE
 	ENDIF
 	IF 参照先 == "필드" || 参照先 == "마함"
+		IF チェック플래그 == 4
+			SIF GETVAR(@"%듀얼리스트%_MZ_不材:カウンタ") >= 1
+				CONTINUE
+		ENDIF
+		
 		IF 濾過条件표시 > 0
 			;濾過불가裏側표시
 			SIF 濾過条件표시 == 30 && GETVAR(@"%듀얼리스트%_%MZ魔판정%_表:カウンタ") != 3
@@ -420,11 +426,6 @@ FOR カウンタ,0,サーチ範囲
 	IF 実行者 == "자신"
 		SIF チェック플래그 == 1
 			SKIPDISP チェック플래그
-		CALL CARD_SETCOLOR(듀얼리스트,参照先,カウンタ)
-		TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%参照先%:カウンタ")}, "名前"
-		PRINTFORML %参照先%[{カウンタ + 上級値,4}] == %RESULTS%
-		RESETCOLOR
-
 	ELSEIF 実行者 == "상대"
 		IF 参照先 == "필드"
 			IF GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ") > 現在最大攻撃力

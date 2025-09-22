@@ -1,0 +1,420 @@
+﻿@CARDNAME_79860,参照先
+;ココで지정卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 도레미아이돌 교향무대
+	CASE "略称"
+		RESULTS = ♫ 교향무대
+	CASE "カテゴリ"
+		RESULTS:0 = 도레미코드
+		RESULTS:1 = 도레미아이돌
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_79860(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN フィールド
+	CASE "추가日"
+		RETURN 250919
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_79860(종류)
+#DIM DYNAMIC 종류
+
+
+PRINTL このカード名のカードは１ターンに１枚しか발동できない。
+CALL CARD_ABLE(1,마함起動,손패起動)
+PRINTL ②：このカードの발동時の효과処理として。
+PRINTL 상대フィールドにモンスターが存在しない場合、
+PRINTL 상대フィールドに「도레미아이돌 최초의 청중－ガラテア－」１体を守備표시で특수소환する。
+CALL CARD_ABLE(2,攻撃時誘発)
+PRINTL ②：자신の「도레미아이돌」モンスターと상대モンスターが戦闘を行う場合に발동できる。
+PRINTL 상대モンスターが「◯◯推し」ではない場合、자신の「도레미아이돌」モンスターを자신の마법・함정ゾーンに表側표시で置く。
+PRINTL その戦闘を無効にし、상대モンスターを자신の「도레미아이돌」モンスターの「◯◯推し」にする。
+CALL CARD_ABLE(3,효과後誘発)
+PRINTL ③：상대ターンに、자신が「도레미아이돌」EXモンスターの특수소환に成功した場合に발동できる。
+PRINTL 상대フィールドの表側표시モンスターは全て、その특수소환した「도레미아이돌」モンスターの「◯◯推し」になる。
+
+
+
+@CARDCAN_79860(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 対面場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,79860)
+SIF RESULT == 1
+	RETURN 0
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,79860)
+		RETURN 0
+	SIF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻撃時誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) == 5
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트,1) == 5
+		RETURN 0
+	TRYCALLFORM CARDNAME_{戦闘カードID(듀얼리스트)},"カテゴリ"
+	SIF !MATCH(RESULTS,"도레미아이돌")
+		RETURN 0
+
+	対面場所 = 戦闘場所(듀얼리스트,1)
+	IF GROUPMATCH(GETVARS(@"%対面者%_MZ_追カテ:対面場所"),"큐티아최애","드리미아최애","엘리티아최애","팬시아최애","그레이시아최애","엔제리아최애","뷰티아최애","쿨리아최애","뮤제시아최애","도레미 하코오시")
+		カウンタ = 0
+	ELSEIF GROUPMATCH(GETVARS(@"%対面者%_MZ_追カテ2:対面場所"),"큐티아최애","드리미아최애","엘리티아최애","팬시아최애","그레이시아최애","엔제리아최애","뷰티아최애","쿨리아최애","뮤제시아최애","도레미 하코오시")
+		カウンタ = 0
+	ELSE
+		カウンタ = 1
+	ENDIF
+	SIF カウンタ == 0 && 마함数(듀얼리스트) >= 5
+		RETURN 0
+	
+	IF 듀얼리스트 == "상대"
+		;CPU 輔助
+		SIF 자신_MZ_戦耐:戦闘場所(듀얼리스트) || 자신_ダメージ反射 || 자신_ダメージ無効 || ターンプレイヤー == 듀얼리스트
+			RETURN 1
+		IF GROUPMATCH(GETVARS(@"%対面者%_MZ_追カテ:対面場所"),"큐티아최애","드리미아최애","엘리티아최애","팬시아최애","그레이시아최애","엔제리아최애","뷰티아최애","쿨리아최애","뮤제시아최애","도레미 하코오시")
+			RETURN 1
+		ELSEIF GROUPMATCH(GETVARS(@"%対面者%_MZ_追カテ2:対面場所"),"큐티아최애","드리미아최애","엘리티아최애","팬시아최애","그레이시아최애","엔제리아최애","뷰티아최애","쿨리아최애","뮤제시아최애","도레미 하코오시")
+			RETURN 1
+		ELSEIF 자신_MZ_表:戦闘場所(듀얼리스트) == 1 && 상대_MZ_表:戦闘場所(듀얼리스트,1) == 1 && 자신_MZ_攻:戦闘場所(듀얼리스트) > 상대_MZ_攻:戦闘場所(듀얼리스트,1)
+			RETURN 1
+		ELSEIF 자신_MZ_表:戦闘場所(듀얼리스트) == 1 && 상대_MZ_表:戦闘場所(듀얼리스트,1) == 2 && 자신_MZ_攻:戦闘場所(듀얼리스트) > 상대_MZ_守:戦闘場所(듀얼리스트,1)
+			RETURN 1
+		ELSEIF 자신_MZ_表:戦闘場所(듀얼리스트) == 2 && 상대_MZ_表:戦闘場所(듀얼리스트,1) == 1 && 자신_MZ_守:戦闘場所(듀얼리스트) > 상대_MZ_攻:戦闘場所(듀얼리스트,1)
+			RETURN 1
+		ELSEIF 자신_MZ_表:戦闘場所(듀얼리스트) == 2 && 상대_MZ_表:戦闘場所(듀얼리스트,1) == 2 && 자신_MZ_守:戦闘場所(듀얼리스트) > 상대_MZ_守:戦闘場所(듀얼리스트,1)
+			RETURN 1
+		ELSEIF !GROUPMATCH(戦闘カードID(듀얼리스트),59884,59885,59886) && RAND:3 != 0
+			RETURN 1
+		ENDIF
+		RETURN 0
+	ENDIF
+	RETURN 1
+
+ELSEIF 종류 == 효과後誘発
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		RETURN 0
+	SIF ターンプレイヤー == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과条件종류 = EXモン全般
+	효과条件カテゴリ = 도레미코드
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"소환全般")
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件종류 = モン全般
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 0
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 永紋章起動
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_79860(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 対面場所
+#DIM DYNAMIC 자신場所
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+
+IF 종류 == 마함起動 || 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79860,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+
+		CALL FULLRESET
+		SIF モンスター数(対面者) == 0
+			CALL CARD_GENERATE(対面者,179860,"守備표시")
+	ENDIF
+		
+ELSEIF 종류 == 攻撃時誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79860)
+	IF RESULT == 0
+		CALL FULLRESET
+		対面場所 = 戦闘場所(듀얼리스트,1)
+		자신場所 = 戦闘場所(듀얼리스트)
+		
+		IF GROUPMATCH(GETVARS(@"%対面者%_MZ_追カテ:対面場所"),"큐티아최애","드리미아최애","엘리티아최애","팬시아최애","그레이시아최애","엔제리아최애","뷰티아최애","쿨리아최애","뮤제시아최애","도레미 하코오시")
+			カウンタ = 0
+		ELSEIF GROUPMATCH(GETVARS(@"%対面者%_MZ_追カテ2:対面場所"),"큐티아최애","드리미아최애","엘리티아최애","팬시아최애","그레이시아최애","엔제리아최애","뷰티아최애","쿨리아최애","뮤제시아최애","도레미 하코오시")
+			カウンタ = 0
+		ELSE
+			カウンタ = 1
+		ENDIF
+
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",자신場所)
+		IF RESULT != -1
+			조교대상 = RESULT
+			CALL Doremi_fans(듀얼리스트,対面場所,조교대상,"攻撃")
+			CALL EVADE_ATTACK(듀얼리스트)
+
+			SIF カウンタ == 1
+				CALL CARD_DISPOSE(듀얼리스트,"필드",자신場所,마함行き)
+		ENDIF	
+	ENDIF
+
+ELSEIF 종류 == 효과後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,79860,3)
+	IF RESULT == 0
+
+		PRINTFORML アイドルが상대ターンにサプライズライブを決めた！
+		PRINTFORMW 巧みな登場方法に驚嘆し、상대フィールドのモンスターが全員ファンになってしまった！
+		
+		자신場所 = FINAL_SUMMON_TARGET(듀얼리스트)
+		CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",자신場所)
+		IF RESULT != -1
+			조교대상 = RESULT
+			FOR カウンタ,0,5
+				SIF GETVAR(@"%対面者%_필드:カウンタ") == -1
+					CONTINUE
+				SIF GETVAR(@"%対面者%_MZ_表:カウンタ") == 3
+					CONTINUE
+				CALL Doremi_fans(듀얼리스트,カウンタ,조교대상)
+			NEXT
+		ENDIF
+	ENDIF
+	
+ELSEIF 종류 == 永紋章起動
+
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 신참 도레미아이돌 큐티아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件カテゴリ = 큐티아최애
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 신참 도레미아이돌 드리미아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件カテゴリ = 드리미아최애
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 신참 도레미아이돌 엘리티아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件カテゴリ = 엘리티아최애
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 도레미아이돌 팬시아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件カテゴリ = 팬시아최애
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 도레미아이돌 그레이시아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件カテゴリ = 그레이시아최애
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 도레미아이돌 엔제리아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件カテゴリ = 엔제리아최애
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 경세 도레미아이돌 뷰티아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件カテゴリ = 뷰티아최애
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 경세 도레미아이돌 쿨리아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件カテゴリ = 쿨리아최애
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件名前 = 경세 도레미아이돌 뮤제시아
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件カテゴリ = 뮤제시아최애
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+	ENDIF
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 도레미아이돌
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	IF RESULT == 1
+		CALL FULLRESET
+		효과条件カテゴリ = 도레미 하코오시
+		효과条件표시 = 表側표시
+		CALL STATCHANGE_EFFECT(듀얼리스트,"상대필드",場所,"無効")
+	ENDIF
+ENDIF
+RETURN
+
+
+;---------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------
+;179860_「도레미아이돌推し」
+;---------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------
+@CARDNAME_179860,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 도레미아이돌 최초의 청중
+	CASE "略称"
+		RESULTS = ♫ 최초의 청중
+	CASE "カテゴリ"
+		RESULTS:0 = 도레미코드
+		RESULTS:1 = 도레미아이돌
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_179860(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常モン
+	CASE "トークン"
+		RETURN 1
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 1
+	CASE "攻撃力"
+		RETURN 0
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+
+@CARD_EXPLANATION_179860(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 「◯◯推し」モンスターには以下の효과が得られます：
+PRINTL ①：상대のフィールド・마법＆함정ゾーンに「◯◯도레미아이돌・◯◯」モンスターが存在する場合、
+PRINTL 自身フィールド上の「◯◯推し」モンスターの효과は無効化さ。
+PRINTL ②：既に「◯◯推し」であるモンスターが再度「◯◯推し」になった場合、以下の효과からランダムに1つ適用する。
+PRINTL ●ランダムに손패1枚を묘지へ送る。
+PRINTL ●700LPを失う。
+PRINTL その後、상대は700LP회복する。
+PRINTL 
+	SETCOLOR C_RED ;（隠し효과）
+PRINTL 警告：「도레미아이돌」と「도레미아이돌推し」を単独接触させないでください！
+	RESETCOLOR
+
+RETURN
+
+@CARDCAN_179860(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+RETURN 0

@@ -38,10 +38,12 @@ RETURN 0
 PRINTL 이 카드명의 카드는 1턴에 1장만 발동할 수 있으며, 그 ②의 효과는 1턴에 1번만 사용할 수 있다.
 CALLFORM CARD_ABLE(1,손패起動,마함起動)
 PRINTL ①: 이 카드의 발동 시의 효과 처리로서,
-PRINTL 덱에서 "사신"지속마법 카드 1장을 묘지로 보낼 수 있다.
+PRINTL 자신은 덱에서 2장 드로우하고, 그 후 패의 악마족 몬스터 1체를 묘지로 보낸다.
+PRINTL 패에 악마족 몬스터가 없는 경우, 패를 전부 묘지로 보낸다.
 CALLFORM CARD_ABLE(2,지속효과)
-PRINTL ②: 자신 상대 턴에 자신 필드에 "사신"지속마법 카드가 5종류 이상 존재할 경우에 발동할 수 있다.
-PRINTL 필드의 마법 / 함정 카드를 모두 파괴하고, EX덱에서 "악마 세계 왈드바롬" 1장을 특수 소환한다.
+PRINTL ②: 상대 필드에 몬스터가 존재하는 경우에 발동할 수 있다.
+PRINTL 자신의 패 / 필드 / 묘지의 몬스터를 융합 소재로서 제외하고, 악마족의 융합 몬스터 1체를 융합 소환한다.
+PRINTL 이 효과의 발동 후, 턴 종료 시까지 자신은 악마족 몬스터밖에 특수 소환할 수 없다.
 
 @CARDCAN_72870(듀얼리스트,종류,ゾーン,場所)
 #DIMS DYNAMIC 듀얼리스트
@@ -57,26 +59,29 @@ CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,72870)
 SIF RESULT == 1
 	RETURN 0
 
-IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || 종류 == 필드起動
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
 	SIF 발동済_2(듀얼리스트,72870)
 		RETURN 0
-	CALL CARD_SS_CHECK(듀얼리스트,54466,"EX덱")
-	SIF RESULT == 1
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
 		RETURN 0
 	CALL FULLRESET
-	효과範囲필드 = 1
-	효과範囲마함 = 1
-효과条件カテゴリ = 사신
-	효과条件종류 = 지속마법
-	효과条件固名前起動 = 1
-	효과条件CNT = 1
+	효과範囲상대필드 = 1
 	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-	SIF RESULT < 5
+	SIF RESULT != 1
+		RETURN 0
+	CALL RESETAREA_MAT
+	素材範囲묘지 = 1	
+	素材範囲필드 = 1
+	素材範囲손패 = 1
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件종족 = 악마족
+	효과条件종류 = 융합
+	효과条件소환可 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
 		RETURN 0
 	RETURN 1
-
-;
-;지속마법설치処理
 ELSEIF 종류 == 마함起動 || 종류 == 손패起動
 	IF 종류 == 마함起動
 		SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
@@ -88,13 +93,7 @@ ELSEIF 종류 == 마함起動 || 종류 == 손패起動
 		RETURN 0
 	SIF ターンプレイヤー != 듀얼리스트
 		RETURN 0
-	;とりあえずチェックだけ
-	CALL FULLRESET
-	효과範囲덱 = 1
-효과条件カテゴリ = 사신
-	효과条件종류 = 지속마법
-	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
-
+	CALL CARD_DRAW_CHECK
 	RETURN 1
 ENDIF
 
@@ -105,31 +104,54 @@ ENDIF
 #DIM DYNAMIC 場所
 #DIM DYNAMIC 選択カード
 #DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+
 CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 
 
-IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1 || 종류 == 필드起動
+IF 종류 == 마함起動 && GETVAR(@"%듀얼리스트%_魔_表:場所") == 1
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72870,2)
 	IF RESULT == 0
+		CALL RESETAREA_MAT
+		素材範囲묘지 = 1
+		素材範囲필드 = 1
+		素材範囲손패 = 1
 		CALL FULLRESET
-		CALL CARD_REMOVAL_BASIC(듀얼리스트,"両마함全体",場所,"묘지")
-		CALL FULLRESET
-		효과範囲EX덱 = 1
-효과条件名前 = 악마 세계 왈드바롬
-		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		효과条件종류 = 융합
+		효과条件종족 = 악마족
+		효과条件소환可 = 1	
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"EX덱",ゾーン,場所)
+		選択カード = RESULT
+		IF 選択カード != 9999
+			TRYCALLFORM CARDSUMMON_{GETVAR(@"%듀얼리스트%_EX덱:{選択カード}")}(듀얼리스트,選択カード)
+			CALL FUSSUMMON(듀얼리스트,選択カード,제외行き)
+		ENDIF
+		SS소환可能종족 = 악마족
+		CALL CARD_SS_RESTRICTION(듀얼리스트)
 	ENDIF
-
 ELSEIF 종류 == 마함起動 || 종류 == 손패起動
 	;カード발동＆설치まで
 	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,72870,1)
 	IF RESULT == 0
 		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,마함行き)
+		CALL CARDDRAW_BASIC(듀얼리스트,2)
 		CALL FULLRESET
-효과条件カテゴリ = 사신
-		효과条件종류 = 지속마법
-		효과条件任意 = 1
-		CALL CARD_ADD_GY_BASIC(듀얼리스트,"덱",ゾーン,場所)
+		효과範囲손패 = 1
+		효과条件종족 = 악마족
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		IF RESULT != 1
+			FOR カウンタ,0,紙束最大値
+				SIF GETVAR(@"%듀얼리스트%_손패:カウンタ") == -1
+					CONTINUE
+				CALL CARD_DISPOSE(듀얼리스트,"손패",カウンタ,1)
+			NEXT
+		ELSE
+			CALL FULLRESET
+			효과範囲손패 = 1
+			효과条件종족 = 악마족
+			CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		ENDIF
 	ENDIF
 ENDIF
 

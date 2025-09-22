@@ -1,0 +1,230 @@
+﻿@CARDNAME_57911,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 아미야－광장
+	CASE "略称"
+		RESULTS = Amiya,Staff
+	CASE "カテゴリ"
+		RESULTS:0 = 로도스 아일랜드
+		RESULTS:1 = Medic
+		RESULTS:2 = 오퍼레이터
+		RESULTS:4 = 명일방주
+ENDSELECT
+
+
+@CARD_57911(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 미확인족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 2500
+	CASE "성별"
+		RETURN 牝性
+	CASE "単一存在"
+		RETURN 1
+	CASE "連動ID"
+		RETURN 4860
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_57911(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 7
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件종족 = 악마족
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件종족 = 미확인족
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,57911) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_57911(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 악마족튜너＋튜너以外の미확인족モンスター１体以上
+PRINTL フィールドのこのカードは「아미야」としても扱い、「아미야」は자신フィールドに１枚しか存在できない。
+PRINTL 「아미야－광장」の①③の효과は１ターンに１度しか使用できず、②③の효과は마법함정ゾーンでも발동できる。
+CALLFORM CARD_ABLE(1,EX덱起動)
+PRINTL ①：자신フィールドに「오퍼레이터」が６体以上存在する場合、
+PRINTL 자신の마법＆함정ゾーンのＥＸモンスターではない「아미야」１枚を제외して발동できる。
+PRINTL ＥＸ덱のこのカードを자신の마법＆함정ゾーンに表側표시で置く。
+CALLFORM CARD_ABLE(10,소환誘発)
+PRINTL ②：このカードがフィールドに存在する限り１度だけ、상대がモンスターを소환・특수소환する際に발동できる。
+PRINTL それを無効にし、そのモンスターを破壊する。
+PRINTL このターン、このカードがフィールドに存在する限り、
+PRINTL 상대フィールドの全てのモンスターの攻撃力・守備力は、［발동時に存在する상대フィールドのカードの数］×５００ダウンする。
+CALLFORM CARD_ABLE(3,身代효과)
+PRINTL ③：자신フィールドの「오퍼레이터」が戦闘・효과で破壊される場合に발동できる。
+PRINTL 자신フィールドの「오퍼레이터」はその戦闘・효과では破壊されない。
+
+
+@CARDCAN_57911(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 지속효과
+	SIF !GROUPMATCH(ゾーン,"필드","마함")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,57911)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX덱起動
+	SIF 발동済_1(듀얼리스트,57911)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲마함 = 1
+	효과条件名前 = 아미야
+	효과条件종류 = 효과モン
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과範囲마함 = 1
+	효과条件カテゴリ = 오퍼레이터
+	효과条件표시 = 表側표시
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 6
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환誘発
+	SIF !GROUPMATCH(ゾーン,"필드","마함")
+		RETURN 0
+	SIF 효과발동済(듀얼리스트,場所,ゾーン)
+		RETURN 0
+	SIF 最終소환決者 == 듀얼리스트
+		RETURN 0
+	SIF 最終소환타입 == ""
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 身代효과
+	SIF 발동済_3(듀얼리스트,57911)
+		RETURN 0
+	SIF !GROUPMATCH(ゾーン,"필드","마함")
+		RETURN 0
+	TRYCALLFORM CARDNAME_{破壊대상ID}("カテゴリ")
+	SIF !MATCH(RESULTS,"오퍼레이터")
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"효과","戦闘")
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 攻守変動
+	SIF !GROUPMATCH(ゾーン,"필드","마함")
+		RETURN 0
+	IF ゾーン == "필드"
+		SIF GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所") <= 0
+			RETURN 0
+	ELSEIF ゾーン == "마함"
+		SIF GETVAR(@"%듀얼리스트%_魔_T1汎数:場所") <= 0
+			RETURN 0
+	ENDIF
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_57911(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 攻撃力修正
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX덱起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57911,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲마함 = 1
+		효과条件名前 = 아미야
+		효과条件종류 = 효과モン
+		효과条件行先플래그 = 제외行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL CARD_ADD(듀얼리스트,"EX덱", "마함", 場所,"表側표시")
+		ENDIF
+	ENDIF
+
+ELSEIF 종류 == 소환誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57911,11)
+	IF RESULT == 0
+		攻撃力修正 = モンスター数(対面者) + 마함数(対面者)
+		CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"T1汎数",攻撃力修正)
+		CALL FULLRESET
+		CALL CARD_REMOVAL_BASIC(듀얼리스트,"自動処理",最終소환場所,"完全묘지")
+	ENDIF
+
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,57911,3)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과条件カテゴリ = 오퍼레이터
+		CALL STATCHANGE_EFFECT(듀얼리스트,"필드",場所,"破耐",6)
+		CALL STATCHANGE_EFFECT(듀얼리스트,"마함",場所,"破耐",6)
+		RETURN 1
+	ENDIF
+	RETURN 0
+
+ELSEIF 종류 == 攻守変動
+	IF ゾーン == "필드"
+		攻撃力修正 = GETVAR(@"%듀얼리스트%_MZ_T1汎数:場所") * 500
+	ELSEIF ゾーン == "마함"
+		攻撃力修正 = GETVAR(@"%듀얼리스트%_魔_T1汎数:場所") * 500
+	ENDIF
+	CALL FULLRESET
+	CALL STATCHANGE_BASIC(듀얼리스트,"상대필드",場所,攻撃力修正,攻撃力修正)
+ENDIF

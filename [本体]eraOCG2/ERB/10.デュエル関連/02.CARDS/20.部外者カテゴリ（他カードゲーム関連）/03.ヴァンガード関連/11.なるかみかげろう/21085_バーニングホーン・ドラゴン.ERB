@@ -1,0 +1,165 @@
+@CARDNAME_21085,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 버닝혼 드래곤
+	CASE "略称"
+		RESULTS = 버닝혼
+	CASE "カテゴリ"
+		RESULTS:0 = 카게로우
+		RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_21085(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+	
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 7
+	CASE "攻撃力"
+		RETURN 2400
+	CASE "守備力"
+		RETURN 1000
+	CASE "성별"
+		RETURN 雄性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_21085(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：EX덱の「オーバーロード」モンスター１体を상대に見せて발동できる。
+PRINTL このカードを손패から특수소환する。
+PRINTL その後、손패から「버닝혼 드래곤」以外の「카게로우」モンスター１体を특수소환できる。
+CALLFORM CARD_ABLE(2,S素材時효과)
+PRINTL ②：このカードがS소환の素材とされた場合に발동できる。
+PRINTL このゲーム中、자신は以下の효과を得る。（この효과は重複しない）
+PRINTL ●자신フィールドに「オーバーロード」モンスターが存在する場合、
+PRINTL 자신フィールドの화염속성モンスターの攻撃力は５００アップする。
+
+
+@CARDCAN_21085(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,21085)
+SIF RESULT == 1
+	RETURN 0
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 ||  종류 == フリー誘発
+	SIF 발동済_1(듀얼리스트,21085)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,21085,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲EX덱 = 1
+	효과条件カテゴリ = 오버로드
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == S素材時효과
+	SIF 발동済_2(듀얼리스트,21085)
+		RETURN 0
+	SIF 紋章済(듀얼리스트,21085)
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 永攻紋章起動
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 오버로드
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_21085(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC ダメージ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動 ||  종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21085,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 오버로드
+		CALL CARD_CHOOSE_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT != 9999
+			CALL FULLRESET
+			CALL CARD_SP_SUMMON(듀얼리스트,"손패",場所)
+
+			IF モンスター数(듀얼리스트) < 5
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과条件カテゴリ = 카게로우
+				효과条件종류 = モン全般
+				효과条件固名前 = 버닝혼 드래곤
+				CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+				SIF RESULT != 1
+					RETURN 0
+
+				CALL FULLRESET
+				효과範囲손패 = 1
+				효과条件カテゴリ = 카게로우
+				효과条件종류 = モン全般
+				효과条件固名前 = 버닝혼 드래곤
+				효과条件소환可 = 1
+				효과条件任意 = 1
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == S素材時효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,21085,2)
+	IF RESULT == 0
+		CALL CARD_RESERV(듀얼리스트,21085,永攻紋章予約)
+	ENDIF
+ELSEIF 종류 == 永攻紋章起動
+	CALL FULLRESET
+	효과条件속성 = 화염속성
+	CALL STATCHANGE_BASIC(듀얼리스트,"필드",場所,500)
+ENDIF
+
+

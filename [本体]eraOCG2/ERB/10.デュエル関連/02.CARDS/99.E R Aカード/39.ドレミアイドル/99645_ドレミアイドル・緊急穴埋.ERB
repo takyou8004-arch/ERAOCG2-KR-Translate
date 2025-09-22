@@ -1,0 +1,180 @@
+﻿@CARDNAME_99645,参照先
+;ココで지정卡片の名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 도레미아이돌 긴급 구멍메우기
+	CASE "略称"
+		RESULTS = ♫ 긴급 구멍메우기
+	CASE "カテゴリ"
+		RESULTS:0 = 도레미코드
+		RESULTS:1 = 도레미아이돌
+		RESULTS:2 = E.R.A
+ENDSELECT
+
+
+@CARD_99645(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 通常함정
+	CASE "추가日"
+		RETURN 250919
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_99645(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 １턴에 １번、어느쪽인가 １개밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,효과後誘発)
+PRINTL ①：자신 필드의 "도레미아이돌" 몬스터가 상대의 효과로 필드에서 벗어날 경우에 발동할 수 있다。
+PRINTL 덱 / EX덱（앞면 표시）에서 "도레미아이돌" P몬스터의 2장까지 특수 소환할 수 있다。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신의 메인 페이즈에, 
+PRINTL 자신 필드의 "도레미아이돌" 몬스터 1장과 상대 필드의 몬스터 1장을 대상으로 하고 발동할 수 있다、
+PRINTL 묘지의 이 카드를 제외하고, 선택한 상대 몬스터를 선택한 자신 몬스터의 "최애"로 한다。
+
+
+@CARDCAN_99645(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,99645)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 효과後誘発
+	SIF 발동済_1(듀얼리스트,99645)
+		RETURN 0
+	SIF ゾーン != "마함"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") == 3	
+		RETURN 0
+	SIF 処理中_듀얼리스트 == 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 도레미아이돌
+	효과条件종류 = モン全般
+	효과条件分割 = 펜듈럼
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과条件カテゴリ = 도레미아이돌
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"破壊以外")
+	SIF RESULT == 1
+		RETURN 1
+	CALL FULLRESET
+	효과条件カテゴリ = 도레미아이돌
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_FIN_DATA(듀얼리스트,"효과破壊")
+	SIF RESULT == 1
+		RETURN 1
+	RETURN 0
+
+ELSEIF 종류 == 묘지起動
+	SIF ゾーン != "묘지"
+		RETURN 0
+		SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과条件종류 = モン全般
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件종류 = モン全般
+	효과条件カテゴリ = 도레미아이돌
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+
+
+@CARDEFFECT_99645(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択場所
+#DIM DYNAMIC 選択상대場所
+#DIM DYNAMIC レベル
+#DIM DYNAMIC 조교대상
+#DIM DYNAMIC 実行役대상
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 효과後誘発
+	;卡片发动確認
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99645,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과範囲EX덱 = 1
+		효과条件カテゴリ = 도레미아이돌
+		효과条件종류 = EX以外全般
+		효과条件分割 = 펜듈럼
+		효과条件複数 = 98
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,99645,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件표시 = 表側표시
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"상대필드",ゾーン,場所)
+		選択상대場所 = RESULT
+
+		CALL FULLRESET
+		효과条件종류 = モン全般
+		효과条件カテゴリ = 도레미아이돌
+		CALL CARD_CHOOSE_BASIC(듀얼리스트,"필드",ゾーン,場所)
+		選択場所 = RESULT
+
+		IF 選択상대場所 != 9999 &&  選択상대場所 != 9999
+			CALL CARD_EROTICS_FIELD(듀얼리스트,"필드",選択場所)
+			IF RESULT != -1
+				조교대상 = RESULT
+				CALL Doremi_fans(듀얼리스트,選択상대場所,조교대상,"握手会")
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF

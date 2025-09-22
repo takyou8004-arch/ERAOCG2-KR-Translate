@@ -1,0 +1,171 @@
+﻿@CARDNAME_2793,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 스타콜 트럼페터
+	CASE "略称"
+		RESULTS = 트럼페터
+	CASE "カテゴリ"
+		RESULTS:0 = 로열 팔라딘
+		RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_2793(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "外部者"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 빛속성
+	CASE "종족"
+		RETURN 천사족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 1100
+	CASE "성별"
+		RETURN 牝性
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_2793(종류)
+#DIM DYNAMIC 종류
+
+PRINTL このカード名の①②の효과はそれぞれ１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：このカードが손패に存在する場合に발동できる。
+PRINTL 덱からレベル７以上の전사족モンスター１体を묘지へ送り、以下の효과から１つを選択して適用する。
+PRINTL ●このカードを특수소환する。
+PRINTL ●このカードを묘지へ送る。
+PRINTL その後、자신の묘지から「블래스터 블레이드」か「블래스터 다크」１体を選んで특수소환できる。
+CALLFORM CARD_ABLE(2,소환時,특수소환時)
+PRINTL ②：このカードが소환・특수소환した場合、손패を１枚捨てて발동できる。
+PRINTL 덱から「블래스터 블레이드」か「알프레드」마법・함정カード１枚を選んで자신フィールドにセットする。
+
+
+@CARDCAN_2793(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2793)
+SIF RESULT == 1
+	RETURN 0
+
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,2793)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,2793,"손패")
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件종족 = 전사족
+	CALL 효과条件レベル_ADV(7, "以上")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,2793)
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 1
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ:0 = 블래스터 블레이드
+	효과条件カテゴリ:1 = 알프레드
+	효과条件종류 = 마함全般
+	효과条件うらら解除 = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2793(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2793,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件종족 = 전사족
+		CALL 효과条件レベル_ADV(7, "以上")
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲묘지 = 1
+			효과条件名前:0 = 블래스터 블레이드
+			효과条件名前:1 = 블래스터 다크
+			효과条件종류 = モン全般
+			CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+			IF RESULT == 1
+				PRINTL 묘지のモンスターを특수소환しますか？
+				CALL YN_CHOICE(듀얼리스트)
+			ELSE
+				RESULT = 1
+			ENDIF
+			IF RESULT == 0
+				CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+				CALL FULLRESET
+				효과範囲묘지 = 1
+				효과条件名前:0 = 블래스터 블레이드
+				효과条件名前:1 = 블래스터 다크
+				CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+			ELSEIF RESULT == 1
+				CALL FULLRESET
+				CALL CARD_SP_SUMMON(듀얼리스트,ゾーン, 場所)
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2793,2)
+	IF RESULT == 0
+	    CALL FULLRESET
+		효과範囲손패 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+		    CALL FULLRESET
+		    효과範囲덱 = 1
+			효과条件カテゴリ:0 = 블래스터 블레이드
+			효과条件カテゴリ:1 = 알프레드
+			효과条件종류 = 마함全般
+			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+		ENDIF
+	ENDIF
+ENDIF

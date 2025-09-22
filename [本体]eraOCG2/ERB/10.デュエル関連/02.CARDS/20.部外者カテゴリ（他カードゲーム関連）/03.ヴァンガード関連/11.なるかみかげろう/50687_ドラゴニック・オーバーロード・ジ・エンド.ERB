@@ -1,0 +1,197 @@
+﻿@CARDNAME_50687,参照先
+;ココで지정카드의 名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 드래고닉 오버로드 엔드
+	CASE "略称"
+		RESULTS = 디 엔드
+	CASE "カテゴリ"
+		RESULTS:0 = 카게로우
+		RESULTS:1 = 오버로드
+		RESULTS:4 = 뱅가드
+ENDSELECT
+
+
+@CARD_50687(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 1
+	CASE "종류"
+
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 화염속성
+	CASE "종족"
+		RETURN 드래곤족
+	CASE "レベル"
+		RETURN 11
+	CASE "攻撃力"
+		RETURN 3500
+	CASE "守備力"
+		RETURN 3000
+	CASE "성별"
+		RETURN 雄性
+	CASE "レア度"
+		RETURN ULR
+
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_50687(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+;素材条件
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 11
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+ENDIF
+지정素材名前 = ドラゴニック・오버로드
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,50687) 
+	RETURN RESULT
+ENDIF
+
+@CARD_EXPLANATION_50687(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너＋튜너以外のモンスター１体以上
+PRINTL 「ドラゴニック・오버로드」を素材としているこのカードは覚醒状態となる。
+PRINTL このカード名の①の효과は１ターンに１度しか使用できない。
+CALLFORM CARD_ABLE(1,攻撃後誘発)
+PRINTL ①：覚醒状態のこのカードが攻撃を行ったダメージステップ終了時に、손패から「오버로드」カード１枚を捨てて발동できる。
+PRINTL このカードはもう１度攻撃できる。
+PRINTL その後、자신は１枚ドローし、このカードの攻撃力はターン終了時まで５００アップする。
+CALLFORM CARD_ABLE(0,필드起動,フリー誘発)
+PRINTL ②：자신・상대ターンに、자신の묘지からカード５枚を소멸させて발동できる。
+PRINTL 상대フィールドのカードを全て破壊する。
+
+
+@CARDCAN_50687(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 条件달성
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,50687)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 攻撃後誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_1(듀얼리스트,50687)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_条達:場所") == 0
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	SIF 戦闘場所(듀얼리스트) != 場所
+		RETURN 0
+	SIF 손패数(듀얼리스트) < 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲손패 = 1
+	효과条件カテゴリ = 오버로드
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK
+	RETURN 1
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_제외NG置換") >= 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件CNT = 1
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT < 5
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_50687(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 효과先
+#DIM DYNAMIC モンスター数
+#DIM DYNAMIC ダメージ量
+#DIM DYNAMIC 攻撃力修正
+#DIM DYNAMIC カードID
+#DIM DYNAMIC 選択カードID
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+IF 종류 == 攻撃後誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50687,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件カテゴリ = 오버로드
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"戦",1)
+			CALL CARDDRAW_BASIC(듀얼리스트,1)
+			CALL SET_FIELD_INFO(듀얼리스트,"필드",場所,"一攻",500)
+		ENDIF
+	ENDIF
+ELSEIF 종류 == 필드起動 || 종류 == フリー誘発
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,50687)
+	IF RESULT == 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+		효과条件複数 = 5
+		효과条件行先플래그 = 소멸行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			CALL CARD_REMOVAL_ADV(듀얼리스트,"全体除去",場所,"묘지")
+		ENDIF
+	ENDIF
+ENDIF
+
+
+

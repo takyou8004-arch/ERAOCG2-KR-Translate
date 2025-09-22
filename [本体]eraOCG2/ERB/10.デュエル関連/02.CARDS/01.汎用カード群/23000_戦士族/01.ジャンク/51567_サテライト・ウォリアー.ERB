@@ -1,0 +1,209 @@
+﻿@CARDNAME_51567,参照先
+;ココで지정カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 새털라이트 워리어
+	CASE "略称"
+		RESULTS = Satt 워리어
+	CASE "カテゴリ"
+		RESULTS:0 = 워리어
+ENDSELECT
+
+
+@CARD_51567(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 10
+	CASE "攻撃力"
+		RETURN 2500
+	CASE "守備力"
+		RETURN 2000
+	CASE "추가日"
+		RETURN 250919
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_51567(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 10
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件종류 = 싱크로
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,51567) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_51567(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 튜너＋튜너以外のＳモンスター１体以上
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：このカードがＳ소환した場合、자신の묘지のＳモンスターの数まで상대フィールドのカードを대상として발동できる。
+PRINTL そのカードを破壊し、このカードの攻撃力は破壊した数×１０００アップする。
+CALLFORM CARD_ABLE(2,戦破壊→묘지)
+PRINTL ②：Ｓ소환したこのカードが破壊された場合に발동できる。
+PRINTL レベル８以下の「워리어」、「싱크론」、「스타더스트」Ｓモンスターを合計３体まで、
+PRINTL 자신の묘지から특수소환する（同名カードは１枚まで）。
+
+
+@CARDCAN_51567(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,51567)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,51567)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = 싱크로
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲상대필드 = 1
+	효과範囲상대마함 = 1
+	효과条件除去種 = 묘지
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 戦破壊→묘지
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 발동済_2(듀얼리스트,51567)
+		RETURN 0
+	SIF GETVAR(@"%듀얼리스트%_MZ_召種:場所") != 召種EX덱
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件カテゴリ:0 = 워리어
+	효과条件カテゴリ:1 = 싱크론
+	효과条件カテゴリ:2 = 스타더스트
+	효과条件종류 = 싱크로
+	CALLFORM 효과条件レベル_ADV(8,"以下")
+	효과条件소환可 = 2
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_51567(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 破壊数
+#DIMS DYNAMIC 選択カード名前,2
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51567,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = 싱크로
+		효과条件CNT = 1
+		CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+		破壊数 = RESULT
+
+		REPEAT 破壊数
+			CALL FULLRESET
+			효과範囲상대필드 = 1
+			효과範囲상대마함 = 1
+			효과条件任意 = 1
+			CALL CARD_REMOVAL_ADV(듀얼리스트,"単体除去",場所,"묘지")
+			SIF RESULT != 1
+				RETURN 0
+			CALL SET_FIELD_INFO(듀얼리스트,ゾーン,場所,"永攻",1000)
+		REND
+	ENDIF
+
+ELSEIF 종류 == 戦破壊→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,51567,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 워리어
+		효과条件종류 = 싱크로
+		CALLFORM 효과条件レベル_ADV(8,"以下")
+		효과条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			TRYCALLFORM CARDNAME_{RESULT:1},"名前"
+			選択カード名前:0 = %RESULTS%
+		ENDIF
+		
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 스타더스트
+		효과条件종류 = 싱크로
+		CALLFORM 효과条件レベル_ADV(8,"以下")
+		효과条件固名前:0 = ダミー
+		SIF 選択カード名前:0 != ""
+			효과条件固名前:1 = %選択カード名前:0%
+		효과条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			TRYCALLFORM CARDNAME_{RESULT:1},"名前"
+			選択カード名前:1 = %RESULTS%
+		ENDIF
+		
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件カテゴリ = 싱크론
+		효과条件종류 = 싱크로
+		CALLFORM 효과条件レベル_ADV(8,"以下")
+		효과条件固名前:0 = ダミー
+		SIF 選択カード名前:0 != ""
+			효과条件固名前:1 = %選択カード名前:0%
+		SIF 選択カード名前:1 != ""
+			효과条件固名前:2 = %選択カード名前:1%
+		효과条件任意 = 1
+		CALL CARD_SP_SUMMON_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ENDIF
