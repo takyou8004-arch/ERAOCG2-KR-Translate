@@ -1,0 +1,144 @@
+﻿@CARDNAME_52380,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 하이드로 제넥스
+	CASE "略称"
+		RESULTS = 하이드로Gn
+	CASE "カテゴリ"
+		RESULTS:0 = 제넥스
+ENDSELECT
+
+
+@CARD_52380(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 싱크로
+	CASE "속성"
+		RETURN 물속성
+	CASE "종족"
+		RETURN 기계족
+	CASE "レベル"
+		RETURN 6
+	CASE "攻撃力"
+		RETURN 2300
+	CASE "守備力"
+		RETURN 1800
+	CASE "추가日"
+		RETURN 250922
+ENDSELECT
+
+RETURN 0
+
+@CARDSUMMON_52380(듀얼리스트,소환カード,EX参照)
+#DIMS DYNAMIC 듀얼리스트
+#DIM DYNAMIC 소환カード
+#DIM DYNAMIC EX参照
+#DIM DYNAMIC カウンタ
+
+CALL RESETCONDITION_MAT
+必要レベル数 = 6
+IF EX参照 == 0 || EX参照 == 1
+	素材条件튜너 = 1
+	素材条件名前 = 제넥스 컨트롤러
+ELSEIF EX参照 >= 10
+	素材条件튜너 = -1
+	素材条件속성 = 물속성
+ENDIF
+
+IF EX参照 == 1
+	CALL SYNCAN(듀얼리스트,소환カード,52380) 
+	RETURN RESULT
+ENDIF
+
+
+@CARD_EXPLANATION_52380(종류)
+#DIM DYNAMIC 종류
+
+PRINTL "제넥스 컨트롤러"＋튜너 이외의 물속성 몬스터 １장 이상
+PRINTL 이 카드명의 ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,EX소환時)
+PRINTL ①：이 카드가 S소환된 경우에 발동한다。
+PRINTL 덱에서 "제넥스" 몬스터 １장을 패에 넣는다。
+CALLFORM CARD_ABLE(0,소환強制誘発)
+PRINTL ②："하이드로 제넥스" 이외의 몬스터가 EX덱에서 특수 소환될 때 마다 발동한다。
+PRINTL 자신은 ５００LP 회복한다。
+
+
+@CARDCAN_52380(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 必要カード
+#DIMS DYNAMIC 対面者
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,52380)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == EX소환時
+	SIF 발동済_1(듀얼리스트,52380)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 제넥스
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 소환強制誘発
+	SIF ゾーン != "필드"
+		RETURN 0
+	SIF 最終소환タイプ == ""
+		RETURN 0
+	SIF 最終소환出処 != "EX덱"
+		RETURN 0
+	CALLFORM CARDNAME_{最終소환ID}("名前") 
+	SIF !MATCH(RESULTS, "하이드로 제넥스")
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_52380(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 攻撃力修正
+#DIM 選択カード
+
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == EX소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,52380,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 제넥스
+		효과条件종류 = モン全般
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 소환強制誘発
+	CALL LIFE_CHANGE(듀얼리스트,"増加","효과",300)
+ENDIF

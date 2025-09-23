@@ -1,0 +1,146 @@
+﻿@CARDNAME_1036,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 아마조네스의 전사장
+	CASE "略称"
+		RESULTS = 아마조네스전사장
+	CASE "カテゴリ"
+		RESULTS:0 = 아마조네스
+ENDSELECT
+
+
+@CARD_1036(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 전사족
+	CASE "レベル"
+		RETURN 5
+	CASE "攻撃力"
+		RETURN 1900
+	CASE "守備力"
+		RETURN 0
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250922
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_1036(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：자신 필드에 "아마조네스" 몬스터 이외의 몬스터가 존재하지 않는 경우에 발동할 수 있다。
+PRINTL 이 카드를 패에서 특수 소환한다。
+CALLFORM CARD_ABLE(2,소환時,특수소환時)
+PRINTL ②：이 카드가 소환 / 특수 소환된 경우에 발동할 수 있다。
+PRINTL 덱에서 "아마조네스" 마법 / 함정 카드 또는 "융합" １장을 골라 자신 필드에 세트한다。
+PRINTL 그 때、패를 １장 버리고 이하의 효과를 적용할 수 있다。
+PRINTL 이 턴、자신은 "아마조네스" 몬스터로밖에 공격할 수 없다。
+PRINTL ●이 효과로 세트한 카드느 세트한 턴에도 발동할 수 있다。
+
+@CARDSUMMON_AA_1036
+
+
+@CARDCAN_1036(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,1036)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,1036)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,1036,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件固カテゴリ = 아마조네스
+	효과条件표시 = 表側표시
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT == 1
+		RETURN 0
+	RETURN 1
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_2(듀얼리스트,1036)
+		RETURN 0
+	SIF 마함数(듀얼리스트) >= 5
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 아마조네스
+	효과条件종류 = 마함全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL CARD_DRAW_CHECK(1)
+	RETURN 1
+ENDIF
+
+
+@CARDEFFECT_1036(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1036,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		CALL CARD_SP_SUMMON(듀얼리스트,ゾーン,場所)
+	ENDIF
+
+ELSEIF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,1036,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲손패 = 1
+		효과条件任意 = 1
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		SIF RESULT == 1
+			条件達成 = 1
+		
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 아마조네스
+		효과条件종류 = 마함全般
+		IF 条件達成 == 1
+			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"使化裏側표시")
+		ELSE
+			CALL CARD_SET_ADV(듀얼리스트,ゾーン,場所,"裏側표시")
+		ENDIF
+		CALL CARD_ATK_RESTRICTION(듀얼리스트,"아마조네스")
+	ENDIF
+ENDIF
+
+
+

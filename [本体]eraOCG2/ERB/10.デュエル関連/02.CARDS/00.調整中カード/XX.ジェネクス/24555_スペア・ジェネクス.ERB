@@ -1,0 +1,136 @@
+﻿@CARDNAME_24555,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 스페어 제넥스
+	CASE "略称"
+		RESULTS = 스페어Gn
+	CASE "カテゴリ"
+		RESULTS:0 = 제넥스
+ENDSELECT
+
+
+@CARD_24555(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 800
+	CASE "守備力"
+		RETURN 1200
+	CASE "튜너"
+		RETURN 1
+	CASE "추가日"
+		RETURN 250922
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24555(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①②의 효과는 각각 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,손패起動)
+PRINTL ①：자신 필드에 "제넥스" S몬스터가 존재하는 경우、이 카드를 패에서 버리고 발동할 수 있다。
+PRINTL 덱에서 어둠속성 이외의 "제넥스" 몬스터 １장을 패에 넣는다。
+CALLFORM CARD_ABLE(2,묘지起動)
+PRINTL ②：자신의 묘지에 "제넥스 컨트롤러"가 존재하는 경우에 발동할 수 있다。
+PRINTL 이 카드를 묘지에서 특수 소환한다。
+PRINTL 이 방법으로 특수 소환한 이 카드는 필드를 벗어날 경우 제외된다。
+
+@CARDCAN_24555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24555)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 손패起動
+	SIF 발동済_1(듀얼리스트,24555)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL FULLRESET
+	효과範囲필드 = 1
+	효과条件カテゴリ = 제넥스
+	효과条件종류 = 싱크로
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 제넥스
+	CALL 효과条件속성_ADV(어둠속성, "以外")
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0	
+	RETURN 1
+ELSEIF 종류 == 묘지起動
+	SIF 발동済_2(듀얼리스트,24555)
+		RETURN 0
+	SIF メインフェイズ != 1
+		RETURN 0
+	SIF ターンプレイヤー != 듀얼리스트
+		RETURN 0
+	CALL CARD_SS_CHECK(듀얼리스트,24555,ゾーン)
+	SIF RESULT == 1
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件名前 = 제넥스 컨트롤러
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_24555(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+
+IF 종류 == 손패起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24555,1)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所)
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 제넥스
+		CALL 효과条件속성_ADV(어둠속성, "以外")
+		CALL CARD_ADD_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 묘지起動
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24555,2)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과추가종류 = 2
+		효과추가종류:1 = 効追変化ID + 24550
+		CALL CARD_SP_SUMMON(듀얼리스트, ゾーン, 場所)
+	ENDIF
+ENDIF
+

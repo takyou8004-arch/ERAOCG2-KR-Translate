@@ -1,0 +1,134 @@
+﻿@CARDNAME_2319,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 희망의 리체
+	CASE "略称"
+		RESULTS = 희망의 리체
+	CASE "カテゴリ"
+		RESULTS:0 = 없음
+ENDSELECT
+
+
+@CARD_2319(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "외부자"
+		RETURN 0
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 어둠속성
+	CASE "종족"
+		RETURN 언데드족
+	CASE "レベル"
+		RETURN 4
+	CASE "攻撃力"
+		RETURN 700
+	CASE "守備力"
+		RETURN 100
+	CASE "성별"
+		RETURN 牝性
+	CASE "추가日"
+		RETURN 250922
+ENDSELECT
+RETURN 0
+
+@CARD_EXPLANATION_2319(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,소환時,특수소환時)
+PRINTL ①：이 카드가 소환 / 특수 소환된 경우、자신 묘지의 몬스터 １장을 덱 / ＥＸ덱으로 되돌리고 발동할 수 있다。
+PRINTL 덱 위에서 카드를 ３장 묘지로 보낸다。
+PRINTL 이 효과의 발동시에 의식 몬스터 / 리추얼 몬스터를 되돌렸을 경우、
+PRINTL 추가로 자신 묘지의 몬스터 １장을 골라、그 몬스터에 따라 이하의 효과를 적용할 수 있다。
+PRINTL ●언데드족：그 몬스터를 소환 조건을 무시하고 특수 소환한다。
+PRINTL ●그 이외 ：그 몬스터를 패에 넣는다。
+
+
+@CARDCAN_2319(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,2319)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	SIF 발동済_1(듀얼리스트,2319)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲묘지 = 1
+	효과条件종류 = モン全般
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ENDIF
+
+@CARDEFFECT_2319(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 対面者 
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 条件達成
+#DIM DYNAMIC 選択カード_ID
+#DIM DYNAMIC 選択カード
+
+CALL 対面者판정(듀얼리스트)
+対面者 = %RESULTS%
+
+IF 종류 == 소환時 || 종류 == 특수소환時
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,2319,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲묘지 = 1
+		효과条件종류 = モン全般
+		효과条件行先フラグ = 덱行き
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+		IF RESULT == 1
+			選択カード_ID = RESULT:1
+			TRYCALLFORM CARDNAME_{選択カード_ID},"カテゴリ"
+			SIF MATCH(RESULTS,"리추얼")
+				条件達成 = 1
+			TRYCALLFORM CARD_{選択カード_ID},"종류"
+			SIF MATCH(RESULT,의식)
+				条件達成 = 1
+			
+			CALL CARD_DECK_DISPOSE(듀얼리스트,"덱",3)
+			IF RESULT == 1 && 条件達成 != 1
+				CALL FULLRESET
+				효과条件종류 = モン全般
+				효과条件任意 = 1
+				CALL CARD_CHOOSE_BASIC(듀얼리스트,"묘지",ゾーン,場所)
+				SIF RESULT == 9999
+					RETURN 0
+				選択カード = RESULT
+
+				TRYCALLFORM CARD_{RESULT:99},"종족"
+				IF MATCH(RESULT,언데드족)
+					CALL FULLRESET
+					CALL CARD_SP_SUMMON(듀얼리스트,"묘지",選択カード)
+				ELSE
+					CALL CARD_DISPOSE(듀얼리스트,"묘지",選択カード,손패行き)
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+

@@ -1503,7 +1503,7 @@ ENDIF
 #DIM DYNAMIC 条件달성
 
 
-CALL CARD_SS_CHECK(듀얼리스트,カードID,"",1)
+CALL CARD_SS_CHECK(듀얼리스트,カードID,"EX덱",1)
 ;PRINTFORML SS카드 체크:{RESULT}
 SIF RESULT == 1
 	RETURN 1
@@ -1728,8 +1728,6 @@ CALL 対面者판정(듀얼리스트)
 対面者 = %RESULTS%
 
 
-SIF カードID <= 0
-	RETURN 1
 
 SIF GETVAR(@"%듀얼리스트%_SS阻害状態") >= 1
 	RETURN 1
@@ -1796,28 +1794,36 @@ IF ゾーン == "제외"
 	SIF GETVAR(@"%듀얼리스트%_SS소환禁止제외") >= 1
 		RETURN 1
 ENDIF
-IF GETVAR(@"%듀얼리스트%_아르토메기아制限") >= 1
-	;ゾーンがEX덱なら条件パス
-	IF ゾーン != "EX덱"
-		VARSET 条件달성
-		TRYCALLFORM CARDNAME_{カードID}, "名前"
-		SIF RESULTS == "무구한 자 메디우스"
-			条件달성 ++
-		TRYCALLFORM CARDNAME_{カードID}, "カテゴリ"
-		FOR カウンタB,0,5
-			IF RESULTS:カウンタB != ""
-				SIF RESULTS:カウンタB == "아르토메기아"
-					条件달성 ++
-			ENDIF
-		NEXT
-		;메디우스でもメギアでもないならRETURN 0
-		SIF 条件달성 == 0
-			RETURN 1
-	ENDIF
-ENDIF
+
 
 IF カードID > 0
-	CALLFORM CARD_{カードID}, "単一存在"
+	;PRINTFORML GETVAR(@"%듀얼리스트%_アルトメギア制限")：{GETVAR(@"%듀얼리스트%_アルトメギア制限")}
+	IF GETVAR(@"%듀얼리스트%_아르토메기아制限") >= 1
+		;PRINTFORML ここまでOK１！ゾーン:%ゾーン%
+		;ゾーンがEX덱なら条件パス
+		IF ゾーン != "EX덱"
+			;PRINTFORML ここまでOK２！
+			VARSET 条件달성
+			TRYCALLFORM CARDNAME_{カードID}, "名前"
+			SIF RESULTS == "무구한 자 메디우스"
+				条件달성 ++
+			TRYCALLFORM CARDNAME_{カードID}, "カテゴリ"
+			FOR カウンタB,0,5
+				IF RESULTS:カウンタB != ""
+					SIF RESULTS:カウンタB == "아르토메기아"
+						条件달성 ++
+				ENDIF
+			NEXT
+			;PRINTFORML ここまでOK３！：条件達成:{条件達成}
+
+			;메디우스でもメギアでもないならRETURN 0
+			SIF 条件달성 == 0
+				RETURN 1
+		ENDIF
+		;PRINTFORML ここまでOK4！
+	ENDIF
+
+	TRYCALLFORM CARD_{カードID}, "単一存在"
 	IF RESULT == 1
 		FOR カウンタ,0,5
 			SIF GETVAR(@"%듀얼리스트%_필드:カウンタ") == カードID
@@ -1825,21 +1831,21 @@ IF カードID > 0
 		NEXT
 	ENDIF
 
-	CALLFORM CARD_{カードID}, "종류"
+	TRYCALLFORM CARD_{カードID}, "종류"
 	IF GETVAR(@"%듀얼리스트%_SS可종류番号:{RESULT}") == 0
 		RETURN 1
 	ENDIF
 
 
 
-	CALLFORM CARD_{カードID}, "속성"
+	TRYCALLFORM CARD_{カードID}, "속성"
 	IF GETVAR(@"%듀얼리스트%_SS可속성番号:{RESULT}") == 0
 		RETURN 1
 	ENDIF
 
 
 	IF GETVAR(@"%듀얼리스트%_レベル５制限") >= 1
-		CALLFORM CARD_{カードID}, "レベル"
+		TRYCALLFORM CARD_{カードID}, "レベル"
 		IF RESULT >= 5
 			RETURN 1
 		ENDIF
@@ -4057,7 +4063,7 @@ PRINTL
 #DIM DYNAMIC 場所
 
 TRYCALLFORM CARDNAME_{GETVAR(@"%듀얼리스트%_%ゾーン%:場所")}, "名前"
-元カード名称 = RESULTS
+元カード名称 = %RESULTS%
 
 SETVAR @"%듀얼리스트%_%ゾーン%:場所", カードID
 

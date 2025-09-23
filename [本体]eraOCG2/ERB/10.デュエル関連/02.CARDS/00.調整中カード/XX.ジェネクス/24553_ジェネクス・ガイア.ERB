@@ -1,0 +1,117 @@
+﻿@CARDNAME_24553,参照先
+;ココで指定カードの名前、略称を返す予定
+#DIMS DYNAMIC 参照先
+
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "名前"
+		RESULTS = 제넥스 가이아
+	CASE "略称"
+		RESULTS = Gn가이아
+	CASE "カテゴリ"
+		RESULTS:0 = 제넥스
+ENDSELECT
+
+
+@CARD_24553(参照先)
+
+#DIMS DYNAMIC 参照先
+VARSET RESULT
+VARSET RESULTS
+
+SELECTCASE 参照先
+	CASE "종류"
+		RETURN 효과モン
+	CASE "속성"
+		RETURN 땅속성
+	CASE "종족"
+		RETURN 원소정령족
+	CASE "レベル"
+		RETURN 3
+	CASE "攻撃力"
+		RETURN 1000
+	CASE "守備力"
+		RETURN 1900
+	CASE "추가日"
+		RETURN 250922
+ENDSELECT
+
+RETURN 0
+
+@CARD_EXPLANATION_24553(종류)
+#DIM DYNAMIC 종류
+
+PRINTL 이 카드명의 ①의 효과는 １턴에 １번밖에 사용할 수 없다。
+CALLFORM CARD_ABLE(1,필드→묘지 ,손패→묘지 ,덱→묘지 ,破壊→묘지 ,戦闘→묘지)
+PRINTL ①：이 카드가 묘지로 보내졌을 경우에 발동할 수 있다。
+PRINTL 자신의 덱에서 원소정령족인 "제넥스" 몬스터 １장을 묘지로 보낸다。
+CALLFORM CARD_ABLE(0,身代효과)
+PRINTL ②：자신 필드의 "제넥스" 카드가 파괴될 경우、
+PRINTL 대신에 필드 / 묘지의 이 카드를 제외할 수 있다。
+
+@CARDCAN_24553(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+
+CALL CARD_NEGATE(듀얼리스트,종류,ゾーン,場所,24553)
+SIF RESULT == 1
+	RETURN 0
+
+IF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	SIF 발동済_1(듀얼리스트,24553)
+		RETURN 0
+	CALL FULLRESET
+	효과範囲덱 = 1
+	효과条件カテゴリ = 제넥스
+	효과条件종족 = 원소정령족	
+	CALL CARD_CHECK_ADV(듀얼리스트,종류,ゾーン,場所)
+	SIF RESULT != 1
+		RETURN 0
+	RETURN 1
+ELSEIF 종류 == 身代효과
+	SIF !GROUPMATCH(ゾーン,"필드","묘지")
+		RETURN 0
+	SIF !GROUPMATCH(破壊대상ゾーン,"필드","묘지")
+		RETURN 0
+	SIF !GROUPMATCH(破壊종류,"戦闘","효과")
+		RETURN 0
+	TRYCALLFORM CARDNAME_{破壊대상ID}("カテゴリ")
+	SIF !MATCH(RESULTS,"제넥스")
+		RETURN 0
+	RETURN 1
+ENDIF
+@CARDEFFECT_24553(듀얼리스트,종류,ゾーン,場所)
+#DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC ゾーン
+#DIM DYNAMIC 종류
+#DIM DYNAMIC 場所
+#DIMS DYNAMIC 対面者
+#DIM DYNAMIC カウンタ
+#DIM DYNAMIC 選択カード
+#DIM DYNAMIC 選択カード_ID
+#DIMS DYNAMIC 素材名,2
+
+IF 종류 == 필드→묘지 || 종류 == 손패→묘지 || 종류 == 덱→묘지 || 종류 == 破壊→묘지 || 종류 == 戦闘→묘지
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24553,1)
+	IF RESULT == 0
+		CALL FULLRESET
+		효과範囲덱 = 1
+		효과条件カテゴリ = 제넥스
+		효과条件종족 = 원소정령족	
+		CALL CARD_ADD_GY_ADV(듀얼리스트,ゾーン,場所)
+	ENDIF
+ELSEIF 종류 == 身代효과
+	CALL CARD_CHOICE(듀얼리스트,종류,ゾーン,場所,24553)
+	IF RESULT == 0
+		CALL CARD_DISPOSE(듀얼리스트,ゾーン,場所,제외行き)
+		RETURN 1
+	ENDIF
+	RETURN 0
+ENDIF
+
+
+
