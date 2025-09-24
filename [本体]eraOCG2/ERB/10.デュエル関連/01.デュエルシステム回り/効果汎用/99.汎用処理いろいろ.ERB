@@ -2363,8 +2363,9 @@ RETURN 0
 
 ;――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
-@CARD_SETCOLOR(듀얼리스트,参照先,場所,裏側플래그,明度ダウン)
+@CARD_SETCOLOR(듀얼리스트,参照先,場所,灰色플래그,明度ダウン)
 #DIMS DYNAMIC 듀얼리스트
+#DIMS DYNAMIC 実行者
 #DIMS DYNAMIC 参照先
 #DIM DYNAMIC 場所
 #DIM DYNAMIC カードID
@@ -2372,20 +2373,35 @@ RETURN 0
 #DIM DYNAMIC 덱内枚数
 #DIM DYNAMIC 明度ダウン
 #DIM DYNAMIC 문자색설정
-#DIM DYNAMIC 裏側플래그
+#DIM DYNAMIC 灰色플래그
 #DIM 同名カード枚数
 #DIM 現在カードID
 
-カードID = GETVAR(@"%듀얼리스트%_%参照先%:{場所}")
+
+IF 参照先 == "상대필드" || (듀얼리스트 == "상대" && 参照先 == "필드")
+	듀얼리스트 = 상대
+	参照先 = 필드
+	SIF GETVAR(@"%듀얼리스트%_MZ_表:場所") == 3
+		灰色플래그 = 3
+ELSEIF 参照先 == "상대마함" || (듀얼리스트 == "상대" && 参照先 == "마함")
+	듀얼리스트 = 상대
+	参照先 = 마함
+	SIF GETVAR(@"%듀얼리스트%_魔_表:場所") >= 2
+		灰色플래그 = 3
+ENDIF
+
+カードID = GETVAR(@"%듀얼리스트%_%参照先%:場所")
 SIF カードID <= 0
 	RETURN 0
 
-
 TRYCALLFORM CARD_{カードID}, "종류"
+
+
 
 IF RESULT == 0
 	RESETCOLOR
-ELSEIF 裏側플래그 >= 3
+ELSEIF 灰色플래그 >= 1
+
 	SETCOLOR C_L_GRAY
 ELSEIF RESULT <= 10
 	IF RESULT == 1
@@ -3628,13 +3644,14 @@ VARSET 상대_손패,-1
 상대_손패:1 = 70037
 상대_손패:2 = 23030
 
-@CARD_KANPRINT(元参照先,場所,カードID,설정플래그,裏側플래그)
+@CARD_KANPRINT(元参照先,場所,カードID,설정플래그,使用機能)
 #DIMS DYNAMIC 参照先
 #DIMS DYNAMIC 元参照先
 #DIM DYNAMIC 場所
 #DIM DYNAMIC カードID
-#DIM DYNAMIC 설정플래그
 #DIM DYNAMIC 裏側플래그
+#DIM DYNAMIC 설정플래그
+#DIM DYNAMIC 使用機能
 #DIMS DYNAMIC 표시名
 #DIM DYNAMIC 표시星
 #DIM DYNAMIC 표시属
@@ -3647,21 +3664,57 @@ VARSET 상대_손패,-1
 #DIM DYNAMIC 표시限界
 #DIM DYNAMIC 보존する色
 #DIMS DYNAMIC 대상者 ;Anonym추가
+#DIM DYNAMIC 悪Ｃ数
+;使用機能
+; 0 = フィールド표시
+; 1 = チェーン周り
 
 
 参照先 = %元参照先%
 ;Anonym추가
 SELECTCASE 参照先
+	CASE "필드"
+		参照先 = 필드
+		대상者 = 자신
+		SIF 使用機能 != 1
+			悪Ｃ数 = 자신_MZ_悪Ｃ:場所
+	CASE "마함"
+		参照先 = 마함
+		대상者 = 자신
+		SIF 使用機能 != 1
+			悪Ｃ数 = 자신_魔_悪Ｃ:(場所 - 10)
+	CASE "손패"
+		参照先 = 손패
+		대상者 = 자신
+	CASE "묘지"
+		参照先 = 묘지
+		대상者 = 자신
+	CASE "덱"
+		参照先 = 덱
+		대상者 = 자신
+	CASE "EX덱"
+		参照先 = EX덱
+		대상者 = 자신
+	CASE "제외"
+		参照先 = 제외
+		대상者 = 자신
+
 	CASE "상대필드"
 		参照先 = 필드
 		대상者 = 상대
-;		SIF 상대_MZ_表:(場所 - 2000) >= 3
-;			裏側플래그 = 3
+		IF 使用機能 != 1
+			悪Ｃ数 = 상대_MZ_悪Ｃ:(場所 - 2000)
+			SIF 상대_MZ_表:(場所 - 2000) >= 3
+				裏側플래그 = 3
+		ENDIF
 	CASE "상대마함"
 		参照先 = 마함
 		대상者 = 상대
-;		SIF 상대_魔_表:(場所 - 2010) >= 2
-;			裏側플래그 = 3
+		IF 使用機能 != 1
+			悪Ｃ数 = 상대_魔_悪Ｃ:(場所 - 2010)
+			SIF 상대_魔_表:(場所 - 2010) >= 2
+				裏側플래그 = 3
+		ENDIF
 	CASE "상대손패"
 		参照先 = 손패
 		대상者 = 상대
@@ -3682,7 +3735,17 @@ ENDSELECT
 IF オプション_略표시 == 1
 	TRYCALLFORM CARDNAME_{カードID}, "略称"
 	표시名 = %RESULTS%
-	ELSEIF 参照先 == "필드" && 설정플래그 == 0 && 場所 <= 5 && 대상者 != "상대"
+
+ELSEIF 使用機能 == 1
+	TRYCALLFORM CARDNAME_{カードID}, "名前"
+	STRLENS RESULTS
+	SIF RESULT >= 40
+		표시限界 = 1
+	TRYCALLFORM CARDNAME_{カードID}, "名前"
+	SUBSTRING RESULTS, 0, 38
+	표시名 = %RESULTS%
+
+ELSEIF 参照先 == "필드" && 설정플래그 == 0 && INRANGE(場所,0,5) && 대상者 != "상대"
 	IF GETVAR(@"자신_MZ_変化元ID:場所") > -1
 		TRYCALLFORM CARDNAME_{GETVAR(@"자신_MZ_変化元ID:場所")}, "名前"
 		STRLENS RESULTS
@@ -4052,7 +4115,13 @@ ELSEIF INRANGE(설정플래그,100,300)
 	ENDIF
 ENDIF
 
+IF 使用機能 != 1
+	SIF 悪Ｃ数 >= 1
+		PRINTFORM /악성Ｃ수：{悪Ｃ数}
+ENDIF
+
 PRINTL
+
 
 
 @CARD_RECONSTRUCT(듀얼리스트,ゾーン,場所,カードID)

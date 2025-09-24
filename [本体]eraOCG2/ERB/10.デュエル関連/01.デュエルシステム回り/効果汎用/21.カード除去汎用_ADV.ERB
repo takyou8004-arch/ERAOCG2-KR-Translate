@@ -36,6 +36,8 @@
 #DIM DYNAMIC 除去成功数
 #DIM DYNAMIC 条件달성
 #DIM DYNAMIC 複数カウンタ
+#DIM DYNAMIC 耐性종류
+
 VARSET 효과추가종류除去보존
 VARSET 효과추가カテ보존
 
@@ -187,7 +189,7 @@ SELECTCASE 효과範囲
 				IF 듀얼리스트 == "자신"
 					VARSET 대상カードID
 					대상カードID = GETVAR(@"%듀얼리스트%_마함:カウンタ")
-					CALL CARD_SETCOLOR(듀얼리스트,"마함",カウンタ)
+					CALL CARD_SETCOLOR("자신","마함",カウンタ)
 					CALLFORM CARD_KANPRINT("마함",カウンタ + 10,대상カードID)
 				ELSEIF 듀얼리스트 == "상대"
 					選択カード = カウンタ + 10
@@ -214,21 +216,19 @@ SELECTCASE 효과範囲
 					SIF GETVAR(@"%対面者%_魔_表:カウンタ") != 1
 						裏側플래그 = 3
 					대상カードID = GETVAR(@"%対面者%_마함:カウンタ")
+					;自分が決闘者である場合
+
+					VARSET 耐性종류
 					IF 対面者 != 듀얼리스트
-						SETCOLOR C_GRAY
 						IF GETVAR(@"%対面者%_魔_破耐:カウンタ") >= 1 && 除去種 == "묘지"
-							CALLFORM CARD_KANPRINT("상대마함",カウンタ + 2010,대상カードID,1,裏側플래그)
+							耐性종류 = 1
 						ELSEIF GETVAR(@"%対面者%_魔_対耐:カウンタ") >= 1
-							CALLFORM CARD_KANPRINT("상대마함",カウンタ + 2010,대상カードID,2,裏側플래그)
-						ELSE
-							RESETCOLOR
-							CALL CARD_SETCOLOR(対面者,"마함",カウンタ,裏側플래그)
-							CALLFORM CARD_KANPRINT("상대마함",カウンタ + 2010,대상カードID,0,裏側플래그)
+							耐性종류 = 2
 						ENDIF
-					ELSE
-						CALL CARD_SETCOLOR(対面者,"마함",カウンタ)
-						CALLFORM CARD_KANPRINT("마함",カウンタ + 2010,대상カードID)
 					ENDIF
+					CALL CARD_SETCOLOR("상대","상대마함",カウンタ,耐性종류)
+					CALLFORM CARD_KANPRINT("상대마함",カウンタ + 2010,대상カードID,耐性종류)
+
 					RESETCOLOR
 				ELSEIF 듀얼리스트 == "상대"
 					TRYCALLFORM CARDNAME_{GETVAR(@"%対面者%_마함:カウンタ")}, "名前"
@@ -247,7 +247,7 @@ SELECTCASE 효과範囲
 				IF 듀얼리스트 == "자신"
 					VARSET 대상カードID
 					대상カードID = GETVAR(@"%듀얼리스트%_묘지:カウンタ")
-					CALL CARD_SETCOLOR(듀얼리스트,"묘지",カウンタ)
+					CALL CARD_SETCOLOR("자신","묘지",カウンタ)
 					CALLFORM CARD_KANPRINT("묘지",カウンタ + 200,대상カードID)
 				ELSEIF 듀얼리스트 == "상대"
 					IF 選択カード == 9999
@@ -267,7 +267,7 @@ SELECTCASE 효과範囲
 				IF 듀얼리스트 == "자신"
 					VARSET 대상カードID
 					대상カードID = GETVAR(@"%対面者%_묘지:カウンタ")
-					CALL CARD_SETCOLOR(対面者,"묘지",カウンタ)
+					CALL CARD_SETCOLOR("상대","묘지",カウンタ)
 					CALLFORM CARD_KANPRINT("상대묘지",カウンタ + 2200,대상カードID)
 				ELSEIF 듀얼리스트 == "상대"
 					IF 選択カード == 9999
@@ -301,7 +301,7 @@ SELECTCASE 효과範囲
 					VARSET 대상カード名
 					VARSET 대상カードID
 					대상カードID = GETVAR(@"%듀얼리스트%_필드:カウンタ")
-					CALL CARD_SETCOLOR(듀얼리스트,"필드",カウンタ)
+					CALL CARD_SETCOLOR("자신","필드",カウンタ)
 					CALLFORM CARD_KANPRINT("필드",カウンタ,대상カードID)
 				ELSEIF 듀얼리스트 == "상대"
 					IF  GETVAR(@"%듀얼리스트%_MZ_攻:カウンタ") > 現在最大攻撃力
@@ -329,33 +329,28 @@ SELECTCASE 효과範囲
 				IF 듀얼리스트 == "자신"
 					VARSET 대상カードID
 					VARSET 裏側플래그
-				
+					VARSET 耐性종류
 					裏側플래그 = GETVAR(@"%対面者%_MZ_表:カウンタ") 
 					대상カードID = GETVAR(@"%対面者%_필드:カウンタ")
 					IF 対面者 != 듀얼리스트
-						SETCOLOR C_GRAY
 						IF GETVAR(@"%対面者%_MZ_破耐:カウンタ") >= 1 && 除去種 == "묘지"
-							CALLFORM CARD_KANPRINT("상대필드",カウンタ + 2000,대상カードID,1,裏側플래그)
+							耐性종류 = 1
 						ELSEIF GETVAR(@"%対面者%_MZ_対耐:カウンタ") >= 1
-							CALLFORM CARD_KANPRINT("상대필드",カウンタ + 2000,대상カードID,2,裏側플래그)
+							耐性종류 = 2
 						ELSE
 							TRYCALLFORM CARD_{カードID}, "종류"
 							IF GETVAR(@"%対面者%_MZ_モ耐:カウンタ") >= 1 && INRANGE(RESULT, 0,15)
-								CALLFORM CARD_KANPRINT("상대필드",カウンタ + 2000,대상カードID,3,裏側플래그)
+								耐性종류 = 3
 							ELSEIF GETVAR(@"%対面者%_MZ_魔耐:カウンタ") >= 1 && INRANGE(RESULT, 20,30)
-								CALLFORM CARD_KANPRINT("상대필드",カウンタ + 2000,대상カードID,4,裏側플래그)
+								耐性종류 = 4
 							ELSEIF GETVAR(@"%対面者%_MZ_함정耐:カウンタ") >= 1 && INRANGE(RESULT, 30,40)
-								CALLFORM CARD_KANPRINT("상대필드",カウンタ + 2000,대상カードID,5,裏側플래그)
+								耐性종류 = 5
 							ELSE
-								RESETCOLOR
-								CALL CARD_SETCOLOR(対面者,"필드",カウンタ,裏側플래그)
-								CALLFORM CARD_KANPRINT("상대필드",カウンタ + 2000,대상カードID,0,裏側플래그)
 							ENDIF
 						ENDIF
-					ELSE
-						CALL CARD_SETCOLOR(対面者,"필드",カウンタ)
-						CALLFORM CARD_KANPRINT("필드",カウンタ + 2000,대상カードID)
 					ENDIF
+					CALL CARD_SETCOLOR("상대","필드",カウンタ,耐性종류)
+					CALLFORM CARD_KANPRINT("필드",カウンタ + 2000,대상カードID,耐性종류)
 					RESETCOLOR
 				ELSEIF 듀얼리스트 == "상대"
 					IF  GETVAR(@"%対面者%_MZ_攻:カウンタ") + 9999 > 現在最大攻撃力

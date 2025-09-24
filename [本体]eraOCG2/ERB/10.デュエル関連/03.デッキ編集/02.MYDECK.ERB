@@ -147,13 +147,14 @@ RETURN 選択덱
 #DIM DYNAMIC カウンタC
 #DIMS DYNAMIC 덱名
 #DIM DYNAMIC 選択덱
-#DIM DYNAMIC 덱リスト2,1000
-#DIM DYNAMIC 덱リスト5,1000
+#DIM DYNAMIC 덱リスト2,2000
+#DIM DYNAMIC 덱リスト5,2000
+#DIM DYNAMIC 덱リスト6,2000
 #DIM DYNAMIC ページ開始
 #DIM DYNAMIC ページ最大値
 #DIM DYNAMIC MODE2ページ最大値
-
 #DIM DYNAMIC MODE5ページ最大値
+#DIM DYNAMIC MODE6ページ最大値
 
 
 IF 설정 == 2
@@ -173,15 +174,26 @@ FOR カウンタ,1,2000
 		MODE2ページ最大値 ++
 NEXT
 
-FOR カウンタ,1,2000
+FOR カウンタ,0,2000
+	VARSET RESULT
+	TRYCALLFORM DUELDECK_{70000 + カウンタ}("存在確認")
+	SIF RESULT != 1
+		CONTINUE
+	덱リスト5:カウンタC = 70000 + カウンタ
+	カウンタC ++
+	SIF カウンタC % 60 == 0
+		MODE5ページ最大値 ++
+NEXT
+
+FOR カウンタ,0,2000
 	VARSET RESULT
 	TRYCALLFORM DUELDECK_{60000 + カウンタ}("存在確認")
 	SIF RESULT != 1
 		CONTINUE
-	덱リスト5:カウンタC = 60000 + カウンタ
+	덱リスト6:カウンタC = 60000 + カウンタ
 	カウンタC ++
 	SIF カウンタC % 60 == 0
-		MODE5ページ最大値 ++
+		MODE6ページ最大値 ++
 NEXT
 
 
@@ -191,6 +203,9 @@ IF 덱モード == 2
 	ページ最大値 = MODE2ページ最大値
 ELSEIF 덱モード == 5
 	ページ最大値 = MODE5ページ最大値
+ELSEIF 덱モード == 6
+	ページ最大値 = MODE6ページ最大値
+
 ELSEIF 덱モード == 1
 	ページ最大値 = 2
 ENDIF
@@ -264,11 +279,20 @@ IF 덱モード == 1
 		SETCOLOR C_GRAY
 	PRINTBUTTON "[ ▷▷ ]",8501
 	RESETCOLOR
-ELSEIF 덱モード == 2
+
+
+ELSEIF GROUPMATCH(덱モード,2,5,6)
 	VARSET カウンタB
 	FOR カウンタ,0 + (ページ開始 * 60),60 + (ページ開始 * 60)
 		VARSET RESULT
-		TRYCALLFORM DUELDECK_{덱リスト2:カウンタ}("存在確認")
+
+		IF 덱モード == 2
+			TRYCALLFORM DUELDECK_{덱リスト2:カウンタ}("存在確認")
+		ELSEIF 덱モード == 5
+			TRYCALLFORM DUELDECK_{덱リスト5:カウンタ}("存在確認")
+		ELSEIF 덱モード == 6
+			TRYCALLFORM DUELDECK_{덱リスト6:カウンタ}("存在確認")
+		ENDIF
 		IF RESULT != 1
 			PRINTFORM %"",50,LEFT%
 		ELSE
@@ -312,35 +336,6 @@ ELSEIF 덱モード == 4
 	CALL MONSTER_LIST(8)
 	SIF RESULT == -1
 		RESULT = 9999
-
-ELSEIF 덱モード == 5
-	VARSET カウンタB
-	FOR カウンタ,0 + (ページ開始 * 60),60 + (ページ開始 * 60)
-		VARSET RESULT
-		TRYCALLFORM DUELDECK_{덱リスト5:カウンタ}("存在確認")
-		IF RESULT != 1
-			PRINTFORM %"",50,LEFT%
-		ELSE
-			덱名 = 【%RESULTS%】
-			IF RESULT != 0
-				PRINTFORM 　[{カウンタ,3}] - %덱名,40,LEFT%
-			ENDIF
-		ENDIF
-		カウンタB ++
-		SIF カウンタB % 3 == 0
-			PRINTL
-	NEXT
-	PRINTFORML PAGES（{ページ開始 + 1,2}/{ページ最大値 + 1,2}）―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-	SIF ページ開始 == 0
-		SETCOLOR C_GRAY
-	PRINTBUTTON "[ ◁◁ ]",8500
-	RESETCOLOR
-	PRINTFORM %"",90%
-	SIF ページ開始 == ページ最大値
-		SETCOLOR C_GRAY
-	PRINTBUTTON "[ ▷▷ ]",8501
-	RESETCOLOR
-
 ENDIF
 
 
@@ -368,7 +363,11 @@ IF 덱モード != 4
 	PRINT 　　
 	SIF 덱モード == 5
 		SETCOLOR C_GREEN
-	PRINTBUTTON "[E.R.A 덱]", 6670
+	PRINTBUTTON "[외부자 덱]", 6670
+	PRINT 　　
+	SIF 덱モード == 6
+		SETCOLOR C_GREEN
+	PRINTBUTTON "[E.R.A 덱]", 6671
 
 	RESETCOLOR
 	PRINTL
@@ -416,6 +415,10 @@ ELSEIF RESULT == 6670
 	덱モード = 5
 	ページ開始 = 0
 	GOTO INPUT_LOOP
+ELSEIF RESULT == 6671
+	덱モード = 6
+	ページ開始 = 0
+	GOTO INPUT_LOOP
 ELSEIF RESULT == 8500
 	ページ開始 --
 	SIF ページ開始 <= 0
@@ -443,6 +446,8 @@ ELSEIF 덱モード == 2
 	選択덱 = 덱リスト2:RESULT
 ELSEIF 덱モード == 5
 	選択덱 = 덱リスト5:RESULT
+ELSEIF 덱モード == 6
+	選択덱 = 덱リスト6:RESULT
 ELSEIF 덱モード == 3
 	選択덱 = RESULT + 15000
 ELSEIF 덱モード == 4
